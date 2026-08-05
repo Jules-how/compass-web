@@ -17,7 +17,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
       active="projects"
       role="owner"
       title="Project"
-      subtitle="Overview, progress, and issues"
+      subtitle="Overview, activity, milestones, and issues"
       width="6xl"
     >
       <ProjectDetailPanel projectId={id} />

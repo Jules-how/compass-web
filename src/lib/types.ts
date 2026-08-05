@@ -41,6 +41,12 @@ export interface CompassProject {
   name: string
   business_function_id: string | null
   status: string
+  priority: number
+  health: string
+  start_date: string | null
+  target_date: string | null
+  labels: string[]
+  summary: string | null
   source: string | null
   external_id: string | null
   notes: string | null
@@ -57,6 +63,34 @@ export interface ProjectStats {
 
 export type CompassProjectWithStats = CompassProject & {
   stats: ProjectStats
+}
+
+export interface CompassProjectMilestone {
+  id: string
+  project_id: string
+  title: string
+  description: string | null
+  target_date: string | null
+  sort_order: number
+  completed: boolean
+  created_at: string
+  updated_at: string
+  mirrored_at: string
+}
+
+export interface CompassProjectUpdate {
+  id: string
+  project_id: string
+  health: string
+  body: string
+  created_at: string
+  mirrored_at: string
+}
+
+export interface CompassProjectDependency {
+  project_id: string
+  depends_on_project_id: string
+  created_at: string
 }
 
 export interface CompassBusinessFunction {

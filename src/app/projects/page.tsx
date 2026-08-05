@@ -12,7 +12,7 @@ export default async function ProjectsPage() {
       active="projects"
       role="owner"
       title="Projects"
-      subtitle="All projects · health, issues, and progress"
+      subtitle="List, board, and timeline · health, filters, milestones"
     >
       <ProjectsPanel />
     </OperatorShell>
