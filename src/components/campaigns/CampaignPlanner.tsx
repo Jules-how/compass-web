@@ -601,7 +601,7 @@ export function CampaignPlanner() {
                             </span>
                           </button>
 
-                          <div className="flex shrink-0 items-center gap-1 text-neutral-400">
+                          <div className="flex shrink-0 items-center gap-1.5 pr-0.5 text-neutral-400">
                             {display.showStatus ? <StatusGlyph status={campaign.status} /> : null}
                             {display.showPriority ? (
                               <PriorityGlyph priority={campaign.priority} />
