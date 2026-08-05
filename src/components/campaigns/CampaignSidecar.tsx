@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
+  deleteLocalCampaign,
+  getLocalCampaignDetail,
+  replaceLocalMilestones,
+  updateLocalCampaign
+} from '@/lib/campaign-local-store'
+import {
   CAMPAIGN_COLORS,
   CAMPAIGN_HEALTHS,
   CAMPAIGN_STATUSES,
@@ -12,24 +18,20 @@ import {
   type CompassCampaignMilestone
 } from '@/lib/campaigns'
 
-type DetailPayload = {
-  campaign: CompassCampaign
-  milestones: CompassCampaignMilestone[]
-  activity: CompassCampaignActivity[]
-}
-
 export function CampaignSidecar({
   campaignId,
   onClose,
-  onUpdated
+  onUpdated,
+  onDeleted
 }: {
   campaignId: string
   onClose: () => void
-  onUpdated: (campaign: CompassCampaign) => void
+  onUpdated: (campaign?: CompassCampaign) => void
+  onDeleted?: () => void
 }) {
-  const [data, setData] = useState<DetailPayload | null>(null)
+  const [campaign, setCampaign] = useState<CompassCampaign | null>(null)
+  const [activity, setActivity] = useState<CompassCampaignActivity[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
   const [name, setName] = useState('')
   const [status, setStatus] = useState('planned')
   const [priority, setPriority] = useState(0)
@@ -43,44 +45,38 @@ export function CampaignSidecar({
     Array<{ id?: string; title: string; description: string; target_date: string; completed: boolean }>
   >([])
 
-  useEffect(() => {
-    let cancelled = false
-    setData(null)
-    setError(null)
-    void fetch(`/api/campaigns/${campaignId}`, { headers: { Accept: 'application/json' } })
-      .then(async (res) => {
-        const body = await res.json()
-        if (!res.ok) throw new Error(body.error || 'fetch_failed')
-        return body as DetailPayload
-      })
-      .then((payload) => {
-        if (cancelled) return
-        setData(payload)
-        setName(payload.campaign.name)
-        setStatus(payload.campaign.status)
-        setPriority(payload.campaign.priority)
-        setHealth(payload.campaign.health)
-        setStartDate(payload.campaign.start_date ?? '')
-        setEndDate(payload.campaign.end_date ?? '')
-        setSummary(payload.campaign.summary ?? '')
-        setOwnerLabel(payload.campaign.owner_label ?? '')
-        setColor(payload.campaign.color || '#94a3b8')
-        setMilestones(
-          payload.milestones.map((m) => ({
-            id: m.id,
-            title: m.title,
-            description: m.description ?? '',
-            target_date: m.target_date ?? '',
-            completed: m.completed
-          }))
-        )
-      })
-      .catch((err: Error) => {
-        if (!cancelled) setError(err.message)
-      })
-    return () => {
-      cancelled = true
+  function hydrate(id: string) {
+    const detail = getLocalCampaignDetail(id)
+    if (!detail) {
+      setError('not_found')
+      setCampaign(null)
+      return
     }
+    setError(null)
+    setCampaign(detail.campaign)
+    setActivity(detail.activity)
+    setName(detail.campaign.name)
+    setStatus(detail.campaign.status)
+    setPriority(detail.campaign.priority)
+    setHealth(detail.campaign.health)
+    setStartDate(detail.campaign.start_date ?? '')
+    setEndDate(detail.campaign.end_date ?? '')
+    setSummary(detail.campaign.summary ?? '')
+    setOwnerLabel(detail.campaign.owner_label ?? '')
+    setColor(detail.campaign.color || '#94a3b8')
+    setMilestones(
+      detail.milestones.map((m) => ({
+        id: m.id,
+        title: m.title,
+        description: m.description ?? '',
+        target_date: m.target_date ?? '',
+        completed: m.completed
+      }))
+    )
+  }
+
+  useEffect(() => {
+    hydrate(campaignId)
   }, [campaignId])
 
   const progress = useMemo(() => {
@@ -90,82 +86,53 @@ export function CampaignSidecar({
     return { scope, started, completed }
   }, [milestones])
 
-  async function saveCampaign(patch: Record<string, unknown>) {
-    setSaving(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/campaigns/${campaignId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(patch)
-      })
-      const body = await res.json()
-      if (!res.ok) throw new Error(body.detail || body.error || 'update_failed')
-      const campaign = body as CompassCampaign
-      setData((prev) => (prev ? { ...prev, campaign } : prev))
-      onUpdated(campaign)
-      // Refresh activity
-      const detail = await fetch(`/api/campaigns/${campaignId}`, {
-        headers: { Accept: 'application/json' }
-      })
-      if (detail.ok) {
-        const payload = (await detail.json()) as DetailPayload
-        setData(payload)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'update_failed')
-    } finally {
-      setSaving(false)
+  function saveCampaign(patch: Parameters<typeof updateLocalCampaign>[1]) {
+    const updated = updateLocalCampaign(campaignId, patch)
+    if (!updated) {
+      setError('not_found')
+      return
     }
+    hydrate(campaignId)
+    onUpdated(updated)
   }
 
-  async function saveMilestones(
-    next: Array<{ id?: string; title: string; description: string; target_date: string; completed: boolean }>
+  function saveMilestones(
+    next: Array<{
+      id?: string
+      title: string
+      description: string
+      target_date: string
+      completed: boolean
+    }>
   ) {
-    setSaving(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/campaigns/${campaignId}/milestones`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          milestones: next.map((m) => ({
-            id: m.id,
-            title: m.title,
-            description: m.description || null,
-            target_date: m.target_date || null,
-            completed: m.completed
-          }))
-        })
-      })
-      const body = await res.json()
-      if (!res.ok) throw new Error(body.detail || body.error || 'update_failed')
-      const rows = body.milestones as CompassCampaignMilestone[]
-      setMilestones(
-        rows.map((m) => ({
-          id: m.id,
-          title: m.title,
-          description: m.description ?? '',
-          target_date: m.target_date ?? '',
-          completed: m.completed
-        }))
-      )
-      const detail = await fetch(`/api/campaigns/${campaignId}`, {
-        headers: { Accept: 'application/json' }
-      })
-      if (detail.ok) setData((await detail.json()) as DetailPayload)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'update_failed')
-    } finally {
-      setSaving(false)
-    }
+    const rows = replaceLocalMilestones(
+      campaignId,
+      next.map((m) => ({
+        id: m.id,
+        title: m.title,
+        description: m.description || null,
+        target_date: m.target_date || null,
+        completed: m.completed
+      }))
+    )
+    setMilestones(
+      rows.map((m: CompassCampaignMilestone) => ({
+        id: m.id,
+        title: m.title,
+        description: m.description ?? '',
+        target_date: m.target_date ?? '',
+        completed: m.completed
+      }))
+    )
+    hydrate(campaignId)
+    onUpdated()
   }
 
   return (
-    <aside className="flex h-full w-full max-w-[360px] flex-col border-l border-neutral-200 bg-[#f7f7f8]">
+    <aside className="flex h-full w-full max-w-[360px] shrink-0 flex-col border-l border-neutral-200 bg-[#f7f8f9]">
       <div className="flex items-start gap-2 border-b border-neutral-200 bg-white px-4 py-3">
         <span
-          className="mt-1 h-3.5 w-3.5 shrink-0 rounded-full"
+          className="mt-1 h-3.5 w-3.5 shrink-0 rounded-[4px]"
           style={{ background: color }}
           aria-hidden
         />
@@ -174,8 +141,8 @@ export function CampaignSidecar({
             value={name}
             onChange={(e) => setName(e.target.value)}
             onBlur={() => {
-              if (data && name.trim() && name.trim() !== data.campaign.name) {
-                void saveCampaign({ name: name.trim() })
+              if (campaign && name.trim() && name.trim() !== campaign.name) {
+                saveCampaign({ name: name.trim() })
               }
             }}
             className="w-full bg-transparent text-[15px] font-semibold text-neutral-900 outline-none"
@@ -202,7 +169,7 @@ export function CampaignSidecar({
           </div>
         ) : null}
 
-        {!data ? (
+        {!campaign ? (
           <div className="rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-500">
             Loading…
           </div>
@@ -216,10 +183,9 @@ export function CampaignSidecar({
                 <Field label="Status">
                   <select
                     value={status}
-                    disabled={saving}
                     onChange={(e) => {
                       setStatus(e.target.value)
-                      void saveCampaign({ status: e.target.value })
+                      saveCampaign({ status: e.target.value })
                     }}
                     className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
                   >
@@ -233,11 +199,10 @@ export function CampaignSidecar({
                 <Field label="Priority">
                   <select
                     value={priority}
-                    disabled={saving}
                     onChange={(e) => {
                       const next = Number(e.target.value)
                       setPriority(next)
-                      void saveCampaign({ priority: next })
+                      saveCampaign({ priority: next })
                     }}
                     className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
                   >
@@ -251,10 +216,9 @@ export function CampaignSidecar({
                 <Field label="Health">
                   <select
                     value={health}
-                    disabled={saving}
                     onChange={(e) => {
                       setHealth(e.target.value)
-                      void saveCampaign({ health: e.target.value })
+                      saveCampaign({ health: e.target.value })
                     }}
                     className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
                   >
@@ -268,9 +232,8 @@ export function CampaignSidecar({
                 <Field label="Lead">
                   <input
                     value={ownerLabel}
-                    disabled={saving}
                     onChange={(e) => setOwnerLabel(e.target.value)}
-                    onBlur={() => void saveCampaign({ owner_label: ownerLabel.trim() || null })}
+                    onBlur={() => saveCampaign({ owner_label: ownerLabel.trim() || null })}
                     placeholder="Add lead"
                     className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
                   />
@@ -280,10 +243,9 @@ export function CampaignSidecar({
                     <input
                       type="date"
                       value={startDate}
-                      disabled={saving}
                       onChange={(e) => setStartDate(e.target.value)}
                       onBlur={() =>
-                        void saveCampaign({
+                        saveCampaign({
                           start_date: startDate || null,
                           end_date: endDate || null
                         })
@@ -294,10 +256,9 @@ export function CampaignSidecar({
                     <input
                       type="date"
                       value={endDate}
-                      disabled={saving}
                       onChange={(e) => setEndDate(e.target.value)}
                       onBlur={() =>
-                        void saveCampaign({
+                        saveCampaign({
                           start_date: startDate || null,
                           end_date: endDate || null
                         })
@@ -312,10 +273,9 @@ export function CampaignSidecar({
                       <button
                         key={value}
                         type="button"
-                        disabled={saving}
                         onClick={() => {
                           setColor(value)
-                          void saveCampaign({ color: value })
+                          saveCampaign({ color: value })
                         }}
                         className={`h-5 w-5 rounded-full ring-offset-1 ${
                           color === value ? 'ring-2 ring-neutral-800' : 'ring-1 ring-black/10'
@@ -329,9 +289,8 @@ export function CampaignSidecar({
                 <Field label="Summary">
                   <textarea
                     value={summary}
-                    disabled={saving}
                     onChange={(e) => setSummary(e.target.value)}
-                    onBlur={() => void saveCampaign({ summary: summary.trim() || null })}
+                    onBlur={() => saveCampaign({ summary: summary.trim() || null })}
                     rows={3}
                     placeholder="What is this campaign aiming to do?"
                     className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
@@ -347,7 +306,6 @@ export function CampaignSidecar({
                 </div>
                 <button
                   type="button"
-                  disabled={saving}
                   onClick={() =>
                     setMilestones((rows) => [
                       ...rows,
@@ -367,7 +325,10 @@ export function CampaignSidecar({
               ) : (
                 <ul className="space-y-2">
                   {milestones.map((milestone, index) => (
-                    <li key={milestone.id ?? `new-${index}`} className="rounded-lg border border-neutral-100 p-2">
+                    <li
+                      key={milestone.id ?? `new-${index}`}
+                      className="rounded-lg border border-neutral-100 p-2"
+                    >
                       <div className="flex items-start gap-2">
                         <input
                           type="checkbox"
@@ -377,7 +338,7 @@ export function CampaignSidecar({
                               i === index ? { ...row, completed: e.target.checked } : row
                             )
                             setMilestones(next)
-                            void saveMilestones(next)
+                            saveMilestones(next)
                           }}
                           className="mt-1"
                         />
@@ -392,7 +353,7 @@ export function CampaignSidecar({
                                 )
                               )
                             }
-                            onBlur={() => void saveMilestones(milestones)}
+                            onBlur={() => saveMilestones(milestones)}
                             className="w-full bg-transparent text-sm font-medium outline-none"
                           />
                           <input
@@ -405,7 +366,7 @@ export function CampaignSidecar({
                                 )
                               )
                             }
-                            onBlur={() => void saveMilestones(milestones)}
+                            onBlur={() => saveMilestones(milestones)}
                             className="w-full rounded border border-neutral-200 px-1.5 py-1 text-xs"
                           />
                         </div>
@@ -449,11 +410,11 @@ export function CampaignSidecar({
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
                 Activity
               </div>
-              {(data.activity ?? []).length === 0 ? (
+              {activity.length === 0 ? (
                 <p className="text-xs text-neutral-500">No activity yet.</p>
               ) : (
                 <ul className="space-y-2.5">
-                  {data.activity.map((item) => (
+                  {activity.map((item) => (
                     <li key={item.id} className="text-xs text-neutral-600">
                       <div className="font-medium text-neutral-800">{item.actor}</div>
                       <div>{item.body}</div>
@@ -468,6 +429,17 @@ export function CampaignSidecar({
                 </ul>
               )}
             </section>
+
+            <button
+              type="button"
+              onClick={() => {
+                deleteLocalCampaign(campaignId)
+                onDeleted?.()
+              }}
+              className="w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
+            >
+              Delete campaign
+            </button>
           </>
         )}
       </div>
@@ -500,13 +472,6 @@ function ProgressChart({
     <div className="relative h-24 overflow-hidden rounded-lg bg-neutral-50 ring-1 ring-neutral-100">
       <svg viewBox="0 0 100 40" className="h-full w-full" preserveAspectRatio="none">
         <line x1="0" y1="8" x2="100" y2="8" stroke="#d4d4d8" strokeWidth="0.6" />
-        <polyline
-          fill="none"
-          stroke="#a78bfa"
-          strokeWidth="1.4"
-          strokeDasharray="2 1.5"
-          points={`0,${36 - pct * 0.28} 100,${8 + (100 - pct) * 0.08}`}
-        />
         <polyline
           fill="rgba(167,139,250,0.15)"
           stroke="#8b5cf6"

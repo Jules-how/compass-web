@@ -54,7 +54,9 @@ test('campaign planner files and migration are wired', () => {
   assert.match(planner, /CampaignSidecar/)
   assert.match(planner, /Today/)
   assert.match(planner, /resize-start/)
+  assert.match(planner, /createLocalCampaign/)
+  assert.match(planner, /EMPTY_ROWS/)
 
-  const api = read('src/app/api/campaigns/route.ts')
-  assert.match(api, /compass_pipeline_campaigns/)
+  const store = read('src/lib/campaign-local-store.ts')
+  assert.match(store, /localStorage/)
 })
