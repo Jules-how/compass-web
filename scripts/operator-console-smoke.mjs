@@ -20,6 +20,7 @@ const required = [
   'src/components/ProjectDetailPanel.tsx',
   'src/lib/project-stats.ts',
   'src/lib/project-pm.ts',
+  'src/lib/open-operator.ts',
   'supabase/migrations/0027_compass_project_management.sql',
   'src/app/api/tasks/route.ts',
   'src/app/api/tasks/[id]/route.ts',

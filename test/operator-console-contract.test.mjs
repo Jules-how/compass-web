@@ -23,20 +23,23 @@ test('task mutation routes use portal operator RPCs and same-origin guard', () =
   assert.match(notesRoute, /compass_task_note/)
 })
 
-test('operator access is session-backed and never an open service-role bypass', () => {
+test('operator access remains session-backed with open-operator auto-login', () => {
   const access = read('src/lib/portal-access.ts')
   const serverClient = read('src/lib/supabase-server.ts')
   const middleware = read('src/middleware.ts')
+  const openOperator = read('src/lib/open-operator.ts')
 
   assert.match(access, /getSupabaseServerClient/)
   assert.match(access, /supabase\.auth\.getUser\(\)/)
   assert.match(access, /options\.operator && !operator/)
-  assert.doesNotMatch(access, /getPortalAdminClient|OPEN_OPERATOR|openAccess/)
+  assert.doesNotMatch(access, /getPortalAdminClient/)
+  assert.match(openOperator, /openOperatorCredentials/)
   assert.match(serverClient, /RLS is enforced as the logged-in user/)
-  assert.match(middleware, /await supabase\.auth\.getUser\(\)/)
+  assert.match(middleware, /signInWithPassword/)
+  assert.match(middleware, /openOperatorCredentials/)
 })
 
-test('operator pages gate before rendering panels and login remains available', () => {
+test('operator pages still gate access and login supports open-operator fallback', () => {
   for (const page of [
     'src/app/tasks/page.tsx',
     'src/app/projects/page.tsx',
@@ -47,7 +50,9 @@ test('operator pages gate before rendering panels and login remains available', 
   ]) {
     assert.match(read(page), /requireOperatorPageAccess/)
   }
-  assert.match(read('src/app/login/page.tsx'), /PasswordLoginForm/)
+  const login = read('src/app/login/page.tsx')
+  assert.match(login, /PasswordLoginForm/)
+  assert.match(login, /isOpenOperatorEnabled/)
 })
 
 test('project and function routes are operator-gated with same-origin writes', () => {

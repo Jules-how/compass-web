@@ -13,7 +13,8 @@ export default function SignOutButton({
 
   async function handleSignOut() {
     await signOut()
-    router.push('/login')
+    // Open-operator mode will immediately re-establish a session on the next request.
+    router.push('/tasks')
     router.refresh()
   }
 
