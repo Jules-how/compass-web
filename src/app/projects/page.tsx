@@ -8,7 +8,12 @@ export default async function ProjectsPage() {
   await requireOperatorPageAccess()
 
   return (
-    <OperatorShell active="projects" role="owner" title="Projects" subtitle="Project list">
+    <OperatorShell
+      active="projects"
+      role="owner"
+      title="Projects"
+      subtitle="List, board, and timeline · health, filters, milestones"
+    >
       <ProjectsPanel />
     </OperatorShell>
   )

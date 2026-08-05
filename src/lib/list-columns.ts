@@ -2,7 +2,12 @@ export const TASK_LIST_COLUMNS =
   'id,title,status,priority,due,project_id,parent_task_id,business_function_id,task_type,execution_level,updated_at'
 
 export const PROJECT_LIST_COLUMNS =
-  'id,name,business_function_id,status,updated_at,created_at,mirrored_at,source,notes,external_id'
+  'id,name,business_function_id,status,priority,health,start_date,target_date,labels,summary,updated_at,created_at,mirrored_at,source,notes,external_id'
+
+export const PROJECT_MILESTONE_COLUMNS =
+  'id,project_id,title,description,target_date,sort_order,completed,created_at,updated_at,mirrored_at'
+
+export const PROJECT_UPDATE_COLUMNS = 'id,project_id,health,body,created_at,mirrored_at'
 
 export const FUNCTION_LIST_COLUMNS = 'id,name,slug,sort_order,updated_at,created_at,mirrored_at'
 

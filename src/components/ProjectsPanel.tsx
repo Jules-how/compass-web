@@ -1,12 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import type { CompassBusinessFunction, CompassProject } from '@/lib/types'
+import type { CompassBusinessFunction, CompassProjectWithStats } from '@/lib/types'
 import { ProjectManager } from '@/components/ProjectManager'
 import { LoadingBlock } from '@/components/LoadingBlock'
 
 export function ProjectsPanel() {
-  const [projects, setProjects] = useState<CompassProject[] | null>(null)
+  const [projects, setProjects] = useState<CompassProjectWithStats[] | null>(null)
   const [functions, setFunctions] = useState<CompassBusinessFunction[]>([])
   const [error, setError] = useState<string | null>(null)
 
@@ -16,7 +16,7 @@ export function ProjectsPanel() {
       const res = await fetch('/api/projects', { headers: { Accept: 'application/json' } })
       if (!res.ok) throw new Error(`Failed to load projects (${res.status})`)
       const body = (await res.json()) as {
-        projects: CompassProject[]
+        projects: CompassProjectWithStats[]
         functions: CompassBusinessFunction[]
       }
       setProjects(body.projects ?? [])
