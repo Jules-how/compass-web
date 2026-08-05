@@ -8,7 +8,13 @@ export default async function TasksPage() {
   await requireOperatorPageAccess()
 
   return (
-    <OperatorShell active="tasks" role="owner" title="Tasks" subtitle="Task list" width="3xl">
+    <OperatorShell
+      active="tasks"
+      role="owner"
+      title="My issues"
+      subtitle="Operator task list"
+      width="3xl"
+    >
       <TasksPanel />
     </OperatorShell>
   )

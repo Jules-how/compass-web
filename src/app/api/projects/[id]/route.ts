@@ -1,11 +1,65 @@
 import type { NextRequest } from 'next/server'
 import { requirePortalAccess } from '@/lib/portal-access'
-import { portalAccessResponse, portalJson, readBoundedJson, requireSameOrigin } from '@/lib/portal-http'
+import {
+  portalAccessResponse,
+  portalJson,
+  portalJsonCached,
+  readBoundedJson,
+  requireSameOrigin
+} from '@/lib/portal-http'
+import {
+  FUNCTION_LIST_COLUMNS,
+  PROJECT_LIST_COLUMNS,
+  TASK_LIST_COLUMNS
+} from '@/lib/list-columns'
+import { computeProjectStats, emptyProjectStats } from '@/lib/project-stats'
+import type { CompassBusinessFunction, CompassProject, CompassTask } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
 interface RouteContext {
   params: Promise<{ id: string }>
+}
+
+export async function GET(_request: NextRequest, context: RouteContext) {
+  const { id } = await context.params
+
+  try {
+    const { supabase } = await requirePortalAccess({ operator: true })
+    const [projectRes, tasksRes, functionsRes] = await Promise.all([
+      supabase.from('compass_projects').select(PROJECT_LIST_COLUMNS).eq('id', id).maybeSingle(),
+      supabase
+        .from('compass_tasks')
+        .select(TASK_LIST_COLUMNS)
+        .eq('project_id', id)
+        .order('updated_at', { ascending: false }),
+      supabase.from('compass_business_functions').select(FUNCTION_LIST_COLUMNS).order('sort_order')
+    ])
+
+    if (projectRes.error || tasksRes.error || functionsRes.error) {
+      return portalJson({ error: 'fetch_failed' }, { status: 500 })
+    }
+    if (!projectRes.data) return portalJson({ error: 'not_found' }, { status: 404 })
+
+    const project = projectRes.data as CompassProject
+    const tasks = (tasksRes.data ?? []) as CompassTask[]
+    const stats = computeProjectStats(
+      tasks.map((task) => ({ project_id: task.project_id, status: task.status }))
+    ).get(project.id) ?? emptyProjectStats()
+
+    const functions = (functionsRes.data ?? []) as CompassBusinessFunction[]
+    const businessFunction =
+      functions.find((fn) => fn.id === project.business_function_id) ?? null
+
+    return portalJsonCached({
+      project: { ...project, stats },
+      tasks,
+      businessFunction,
+      functions
+    })
+  } catch (err) {
+    return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })
+  }
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {

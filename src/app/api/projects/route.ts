@@ -8,6 +8,8 @@ import {
   requireSameOrigin
 } from '@/lib/portal-http'
 import { FUNCTION_LIST_COLUMNS, PROJECT_LIST_COLUMNS } from '@/lib/list-columns'
+import { computeProjectStats, emptyProjectStats } from '@/lib/project-stats'
+import type { CompassProject } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,15 +20,23 @@ function nowIso(): string {
 export async function GET() {
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
-    const [projectsRes, functionsRes] = await Promise.all([
+    const [projectsRes, functionsRes, taskStatsRes] = await Promise.all([
       supabase.from('compass_projects').select(PROJECT_LIST_COLUMNS).order('name'),
-      supabase.from('compass_business_functions').select(FUNCTION_LIST_COLUMNS).order('sort_order')
+      supabase.from('compass_business_functions').select(FUNCTION_LIST_COLUMNS).order('sort_order'),
+      supabase.from('compass_tasks').select('project_id,status').not('project_id', 'is', null)
     ])
-    if (projectsRes.error || functionsRes.error) {
+    if (projectsRes.error || functionsRes.error || taskStatsRes.error) {
       return portalJson({ error: 'fetch_failed' }, { status: 500 })
     }
+
+    const statsByProject = computeProjectStats(taskStatsRes.data ?? [])
+    const projects = ((projectsRes.data ?? []) as CompassProject[]).map((project) => ({
+      ...project,
+      stats: statsByProject.get(project.id) ?? emptyProjectStats()
+    }))
+
     return portalJsonCached({
-      projects: projectsRes.data ?? [],
+      projects,
       functions: functionsRes.data ?? []
     })
   } catch (err) {
@@ -71,7 +81,7 @@ export async function POST(request: NextRequest) {
     const { supabase } = await requirePortalAccess({ operator: true })
     const { data, error } = await supabase.from('compass_projects').insert(row).select('*').single()
     if (error) return portalJson({ error: 'create_failed', detail: error.message }, { status: 400 })
-    return portalJson(data, { status: 201 })
+    return portalJson({ ...data, stats: emptyProjectStats() }, { status: 201 })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'create_failed' }, { status: 500 })
   }

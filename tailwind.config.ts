@@ -4,6 +4,10 @@ const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-dm-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['var(--font-fraunces)', 'ui-serif', 'Georgia', 'serif']
+      },
       colors: {
         // Switchflow orange accent (placeholder; replace when context/business/brand.md lands).
         sf: {

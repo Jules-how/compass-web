@@ -4,6 +4,13 @@
 
 :root {
   color-scheme: light;
+  --compass-ink: #14171c;
+  --compass-panel: #ffffff;
+  --compass-muted: #6b7280;
+  --compass-line: #e7e5e4;
+  --compass-wash: #f4f2ef;
+  --compass-sidebar: #171a1f;
+  --compass-accent: #f97316;
 }
 
 html,
@@ -12,7 +19,28 @@ body {
 }
 
 body {
-  @apply bg-neutral-50 text-neutral-900 antialiased;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    Helvetica, Arial, sans-serif;
+  @apply text-neutral-900 antialiased;
+  font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 12% -10%, rgba(249, 115, 22, 0.08), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(15, 23, 42, 0.05), transparent 50%),
+    var(--compass-wash);
+}
+
+.font-display {
+  font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+}
+
+.compass-shell {
+  background: transparent;
+}
+
+.compass-sidebar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 40%),
+    var(--compass-sidebar);
+}
+
+.compass-panel {
+  @apply rounded-xl border border-stone-200/80 bg-white shadow-sm;
 }

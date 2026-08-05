@@ -40,6 +40,7 @@ test('operator pages gate before rendering panels and login remains available', 
   for (const page of [
     'src/app/tasks/page.tsx',
     'src/app/projects/page.tsx',
+    'src/app/projects/[id]/page.tsx',
     'src/app/functions/page.tsx',
     'src/app/inbox/page.tsx',
     'src/app/leads/page.tsx'
@@ -71,6 +72,7 @@ test('operator nav covers the five management surfaces', () => {
   for (const href of ['/leads', '/inbox', '/tasks', '/projects', '/functions']) {
     assert.match(nav, new RegExp(`href: '${href}'`))
   }
+  assert.match(nav, /My issues/)
   assert.doesNotMatch(nav, /href: '\/delivery'/)
   assert.doesNotMatch(nav, /href: '\/leads\/upload'/)
 })

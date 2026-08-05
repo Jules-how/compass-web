@@ -12,6 +12,8 @@ interface TaskCreateProps {
   projectsById: Record<string, CompassProject>
   businessFunctionsById: Record<string, CompassBusinessFunction>
   onCreated: () => void | Promise<void>
+  defaultProjectId?: string
+  defaultBusinessFunctionId?: string
 }
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -25,12 +27,14 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
 export default function TaskCreate({
   projectsById,
   businessFunctionsById,
-  onCreated
+  onCreated,
+  defaultProjectId = '',
+  defaultBusinessFunctionId = ''
 }: TaskCreateProps) {
   const [title, setTitle] = useState('')
   const [status, setStatus] = useState<TaskStatus>('not-started')
-  const [projectId, setProjectId] = useState('')
-  const [businessFunctionId, setBusinessFunctionId] = useState('')
+  const [projectId, setProjectId] = useState(defaultProjectId)
+  const [businessFunctionId, setBusinessFunctionId] = useState(defaultBusinessFunctionId)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -55,8 +59,8 @@ export default function TaskCreate({
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
       setTitle('')
-      setProjectId('')
-      setBusinessFunctionId('')
+      setProjectId(defaultProjectId)
+      setBusinessFunctionId(defaultBusinessFunctionId)
       await onCreated()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))

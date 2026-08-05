@@ -49,6 +49,16 @@ export interface CompassProject {
   mirrored_at: string
 }
 
+export interface ProjectStats {
+  issueCount: number
+  completedCount: number
+  percentComplete: number
+}
+
+export type CompassProjectWithStats = CompassProject & {
+  stats: ProjectStats
+}
+
 export interface CompassBusinessFunction {
   id: string
   name: string

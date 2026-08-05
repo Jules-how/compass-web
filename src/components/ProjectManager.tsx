@@ -1,19 +1,22 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import type { CompassBusinessFunction, CompassProject } from '@/lib/types'
-import { ShellTable } from '@/components/ShellTable'
+import type { CompassBusinessFunction, CompassProjectWithStats } from '@/lib/types'
+import { formatPercentComplete } from '@/lib/project-stats'
 
 const PROJECT_STATUSES = ['active', 'paused', 'archived'] as const
 
-function formatUpdated(value: string): string {
-  try {
-    return new Intl.DateTimeFormat('en-AU', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }).format(new Date(value))
-  } catch {
-    return value
+function statusTone(status: string): string {
+  switch (status) {
+    case 'active':
+      return 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+    case 'paused':
+      return 'bg-amber-50 text-amber-700 ring-amber-200'
+    case 'archived':
+      return 'bg-neutral-100 text-neutral-500 ring-neutral-200'
+    default:
+      return 'bg-neutral-100 text-neutral-600 ring-neutral-200'
   }
 }
 
@@ -22,7 +25,7 @@ export function ProjectManager({
   functions,
   onRefresh
 }: {
-  projects: CompassProject[]
+  projects: CompassProjectWithStats[]
   functions: CompassBusinessFunction[]
   onRefresh?: () => void | Promise<void>
 }) {
@@ -30,12 +33,10 @@ export function ProjectManager({
   const [name, setName] = useState('')
   const [status, setStatus] = useState<(typeof PROJECT_STATUSES)[number]>('active')
   const [businessFunctionId, setBusinessFunctionId] = useState('')
+  const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editStatus, setEditStatus] = useState<(typeof PROJECT_STATUSES)[number]>('active')
-  const [editFunctionId, setEditFunctionId] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | (typeof PROJECT_STATUSES)[number]>('all')
 
   const functionById = useMemo(
     () => Object.fromEntries(functions.map((row) => [row.id, row])),
@@ -46,6 +47,12 @@ export function ProjectManager({
     () => [...functions].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)),
     [functions]
   )
+
+  const visibleProjects = useMemo(() => {
+    const filtered =
+      statusFilter === 'all' ? projects : projects.filter((project) => project.status === statusFilter)
+    return [...filtered].sort((a, b) => a.name.localeCompare(b.name))
+  }, [projects, statusFilter])
 
   async function createProject(event: React.FormEvent) {
     event.preventDefault()
@@ -59,7 +66,8 @@ export function ProjectManager({
         body: JSON.stringify({
           name: name.trim(),
           status,
-          business_function_id: businessFunctionId || null
+          business_function_id: businessFunctionId || null,
+          notes: notes.trim() || null
         })
       })
       if (!res.ok) {
@@ -69,6 +77,7 @@ export function ProjectManager({
       setName('')
       setStatus('active')
       setBusinessFunctionId('')
+      setNotes('')
       setCreating(false)
       await onRefresh?.()
     } catch (err) {
@@ -78,34 +87,7 @@ export function ProjectManager({
     }
   }
 
-  async function saveEdit(projectId: string) {
-    if (!editName.trim()) return
-    setSaving(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: editName.trim(),
-          status: editStatus,
-          business_function_id: editFunctionId || null
-        })
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? `Request failed (${res.status})`)
-      }
-      setEditingId(null)
-      await onRefresh?.()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function removeProject(project: CompassProject) {
+  async function removeProject(project: CompassProjectWithStats) {
     if (!confirm(`Delete project “${project.name}”?`)) return
     setSaving(true)
     setError(null)
@@ -123,105 +105,30 @@ export function ProjectManager({
     }
   }
 
-  const rows = projects.map((project) => {
-    if (editingId === project.id) {
-      return [
-        <input
-          key="name"
-          value={editName}
-          onChange={(e) => setEditName(e.target.value)}
-          className="w-full rounded border border-neutral-300 px-2 py-1 text-sm"
-          disabled={saving}
-        />,
-        <select
-          key="fn"
-          value={editFunctionId}
-          onChange={(e) => setEditFunctionId(e.target.value)}
-          className="w-full rounded border border-neutral-300 px-2 py-1 text-sm"
-          disabled={saving}
-        >
-          <option value="">—</option>
-          {sortedFunctions.map((fn) => (
-            <option key={fn.id} value={fn.id}>
-              {fn.name}
-            </option>
-          ))}
-        </select>,
-        <select
-          key="status"
-          value={editStatus}
-          onChange={(e) => setEditStatus(e.target.value as (typeof PROJECT_STATUSES)[number])}
-          className="w-full rounded border border-neutral-300 px-2 py-1 text-sm"
-          disabled={saving}
-        >
-          {PROJECT_STATUSES.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>,
-        <div key="actions" className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => saveEdit(project.id)}
-            disabled={saving}
-            className="rounded bg-sf-orange px-2 py-1 text-xs font-medium text-white"
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditingId(null)}
-            disabled={saving}
-            className="rounded border border-neutral-300 px-2 py-1 text-xs"
-          >
-            Cancel
-          </button>
-        </div>
-      ]
-    }
-
-    return [
-      project.name,
-      project.business_function_id
-        ? (functionById[project.business_function_id]?.name ?? project.business_function_id)
-        : '—',
-      project.status,
-      <div key="actions" className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-neutral-400">{formatUpdated(project.updated_at)}</span>
-        <button
-          type="button"
-          onClick={() => {
-            setEditingId(project.id)
-            setEditName(project.name)
-            setEditStatus(
-              (PROJECT_STATUSES.includes(project.status as (typeof PROJECT_STATUSES)[number])
-                ? project.status
-                : 'active') as (typeof PROJECT_STATUSES)[number]
-            )
-            setEditFunctionId(project.business_function_id ?? '')
-          }}
-          className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600"
-        >
-          Edit
-        </button>
-        <button
-          type="button"
-          onClick={() => removeProject(project)}
-          className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-red-600"
-        >
-          Delete
-        </button>
-      </div>
-    ]
-  })
-
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-500">
-          {projects.length} project{projects.length === 1 ? '' : 's'}
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm text-neutral-500">
+            {visibleProjects.length} project{visibleProjects.length === 1 ? '' : 's'}
+          </p>
+          <div className="flex rounded-lg border border-stone-200 bg-white p-0.5 text-xs">
+            {(['all', ...PROJECT_STATUSES] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setStatusFilter(value)}
+                className={`rounded-md px-2.5 py-1 font-medium capitalize transition ${
+                  statusFilter === value
+                    ? 'bg-neutral-900 text-white'
+                    : 'text-neutral-500 hover:text-neutral-800'
+                }`}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+        </div>
         <button
           type="button"
           onClick={() => setCreating((value) => !value)}
@@ -232,16 +139,21 @@ export function ProjectManager({
       </div>
 
       {creating ? (
-        <form
-          onSubmit={createProject}
-          className="space-y-3 rounded-lg border border-sf-orange/40 bg-white p-4"
-        >
+        <form onSubmit={createProject} className="compass-panel space-y-3 p-4">
           <input
             autoFocus
             type="text"
             placeholder="Project name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            disabled={saving}
+          />
+          <textarea
+            placeholder="Short description / notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
             className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
             disabled={saving}
           />
@@ -290,11 +202,97 @@ export function ProjectManager({
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <ShellTable
-        columns={['Name', 'Function', 'Status', 'Updated']}
-        rows={rows}
-        emptyMessage="No projects yet. Create one to get started."
-      />
+      <div className="compass-panel overflow-hidden">
+        <div className="hidden gap-3 border-b border-stone-200 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-neutral-400 lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.8fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.5fr)_auto]">
+          <div>Name</div>
+          <div>Function</div>
+          <div>Health</div>
+          <div>Issues</div>
+          <div>Progress</div>
+          <div className="text-right">Actions</div>
+        </div>
+
+        {visibleProjects.length === 0 ? (
+          <div className="px-4 py-10 text-center text-sm text-neutral-500">
+            No projects yet. Create one to get started.
+          </div>
+        ) : (
+          <ul className="divide-y divide-stone-100">
+            {visibleProjects.map((project) => {
+              const fnName = project.business_function_id
+                ? (functionById[project.business_function_id]?.name ?? project.business_function_id)
+                : '—'
+              const stats = project.stats
+              return (
+                <li
+                  key={project.id}
+                  className="flex flex-col gap-3 px-4 py-3 transition hover:bg-stone-50/80 lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.8fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.5fr)_auto] lg:items-center"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className="block truncate text-sm font-medium text-neutral-900 hover:text-sf-orange-dark"
+                    >
+                      {project.name}
+                    </Link>
+                    {project.notes ? (
+                      <p className="mt-0.5 truncate text-xs text-neutral-500">{project.notes}</p>
+                    ) : null}
+                  </div>
+                  <div className="truncate text-sm text-neutral-600">
+                    <span className="mr-2 text-[11px] uppercase tracking-wide text-neutral-400 lg:hidden">
+                      Function
+                    </span>
+                    {fnName}
+                  </div>
+                  <div>
+                    <span
+                      className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium capitalize ring-1 ring-inset ${statusTone(
+                        project.status
+                      )}`}
+                    >
+                      {project.status}
+                    </span>
+                  </div>
+                  <div className="text-sm tabular-nums text-neutral-700">
+                    <span className="mr-2 text-[11px] uppercase tracking-wide text-neutral-400 lg:hidden">
+                      Issues
+                    </span>
+                    {stats.issueCount}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-16 overflow-hidden rounded-full bg-stone-100">
+                      <div
+                        className="h-full rounded-full bg-sf-orange"
+                        style={{ width: `${stats.percentComplete}%` }}
+                      />
+                    </div>
+                    <span className="text-xs tabular-nums text-neutral-500">
+                      {formatPercentComplete(stats.percentComplete)}
+                    </span>
+                  </div>
+                  <div className="flex justify-start gap-2 lg:justify-end">
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600 hover:bg-white"
+                    >
+                      Open
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => removeProject(project)}
+                      disabled={saving}
+                      className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-red-600 hover:bg-white"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   )
 }
