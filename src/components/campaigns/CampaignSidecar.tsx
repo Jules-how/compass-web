@@ -31,6 +31,15 @@ export function CampaignSidecar({
 }) {
   const [campaign, setCampaign] = useState<CompassCampaign | null>(null)
   const [activity, setActivity] = useState<CompassCampaignActivity[]>([])
+  const [favorited, setFavorited] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [showAllActivity, setShowAllActivity] = useState(false)
+  const [openSections, setOpenSections] = useState({
+    properties: true,
+    milestones: true,
+    progress: true,
+    activity: true
+  })
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [status, setStatus] = useState('planned')
@@ -41,6 +50,7 @@ export function CampaignSidecar({
   const [summary, setSummary] = useState('')
   const [ownerLabel, setOwnerLabel] = useState('')
   const [color, setColor] = useState('#94a3b8')
+  const [labelsText, setLabelsText] = useState('')
   const [milestones, setMilestones] = useState<
     Array<{ id?: string; title: string; description: string; target_date: string; completed: boolean }>
   >([])
@@ -64,6 +74,7 @@ export function CampaignSidecar({
     setSummary(detail.campaign.summary ?? '')
     setOwnerLabel(detail.campaign.owner_label ?? '')
     setColor(detail.campaign.color || '#94a3b8')
+    setLabelsText((detail.campaign.labels ?? []).join(', '))
     setMilestones(
       detail.milestones.map((m) => ({
         id: m.id,
@@ -77,12 +88,14 @@ export function CampaignSidecar({
 
   useEffect(() => {
     hydrate(campaignId)
+    setShowAllActivity(false)
+    setMenuOpen(false)
   }, [campaignId])
 
   const progress = useMemo(() => {
     const scope = milestones.length
     const completed = milestones.filter((m) => m.completed).length
-    const started = milestones.filter((m) => m.completed || m.target_date).length
+    const started = milestones.filter((m) => m.completed || Boolean(m.target_date)).length
     return { scope, started, completed }
   }, [milestones])
 
@@ -128,11 +141,13 @@ export function CampaignSidecar({
     onUpdated()
   }
 
+  const visibleActivity = showAllActivity ? activity : activity.slice(0, 5)
+
   return (
-    <aside className="flex h-full w-full max-w-[360px] shrink-0 flex-col border-l border-neutral-200 bg-[#f7f8f9]">
+    <aside className="flex h-full w-full max-w-[380px] shrink-0 flex-col border-l border-neutral-200 bg-[#f7f8f9]">
       <div className="flex items-start gap-2 border-b border-neutral-200 bg-white px-4 py-3">
         <span
-          className="mt-1 h-3.5 w-3.5 shrink-0 rounded-[4px]"
+          className="mt-1 h-4 w-4 shrink-0 rounded-full"
           style={{ background: color }}
           aria-hidden
         />
@@ -147,7 +162,57 @@ export function CampaignSidecar({
             }}
             className="w-full bg-transparent text-[15px] font-semibold text-neutral-900 outline-none"
           />
-          <p className="mt-0.5 text-xs text-neutral-500">Campaign details</p>
+          <p className="mt-0.5 text-xs text-neutral-500">
+            {campaignStatusLabel(status)}
+            {startDate && endDate
+              ? ` · ${formatCampaignDate(startDate)} → ${formatCampaignDate(endDate)}`
+              : ''}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setFavorited((v) => !v)}
+          className={`rounded-md p-1.5 hover:bg-neutral-100 ${
+            favorited ? 'text-amber-500' : 'text-neutral-400'
+          }`}
+          aria-label="Favorite"
+          title="Favorite"
+        >
+          ★
+        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100"
+            aria-label="More"
+          >
+            ···
+          </button>
+          {menuOpen ? (
+            <div className="absolute right-0 top-8 z-20 w-44 rounded-lg border border-neutral-200 bg-white py-1 text-sm shadow-lg">
+              <button
+                type="button"
+                className="block w-full px-3 py-1.5 text-left hover:bg-neutral-50"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(name)
+                  setMenuOpen(false)
+                }}
+              >
+                Copy name
+              </button>
+              <button
+                type="button"
+                className="block w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-50"
+                onClick={() => {
+                  deleteLocalCampaign(campaignId)
+                  onDeleted?.()
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          ) : null}
         </div>
         <button
           type="button"
@@ -175,10 +240,13 @@ export function CampaignSidecar({
           </div>
         ) : (
           <>
-            <section className="rounded-xl border border-neutral-200 bg-white p-3">
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                Properties
-              </div>
+            <Section
+              title="Properties"
+              open={openSections.properties}
+              onToggle={() =>
+                setOpenSections((prev) => ({ ...prev, properties: !prev.properties }))
+              }
+            >
               <dl className="space-y-2.5 text-sm">
                 <Field label="Status">
                   <select
@@ -238,6 +306,11 @@ export function CampaignSidecar({
                     className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
                   />
                 </Field>
+                <Field label="Members">
+                  <div className="rounded-md border border-dashed border-neutral-200 px-2 py-1.5 text-sm text-neutral-400">
+                    Add members
+                  </div>
+                </Field>
                 <Field label="Dates">
                   <div className="flex items-center gap-1.5">
                     <input
@@ -266,6 +339,27 @@ export function CampaignSidecar({
                       className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs"
                     />
                   </div>
+                </Field>
+                <Field label="Team">
+                  <div className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-sm text-neutral-600">
+                    Sales
+                  </div>
+                </Field>
+                <Field label="Labels">
+                  <input
+                    value={labelsText}
+                    onChange={(e) => setLabelsText(e.target.value)}
+                    onBlur={() =>
+                      saveCampaign({
+                        labels: labelsText
+                          .split(',')
+                          .map((part) => part.trim())
+                          .filter(Boolean)
+                      })
+                    }
+                    placeholder="Add label"
+                    className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
+                  />
                 </Field>
                 <Field label="Color">
                   <div className="flex flex-wrap gap-1.5">
@@ -297,13 +391,15 @@ export function CampaignSidecar({
                   />
                 </Field>
               </dl>
-            </section>
+            </Section>
 
-            <section className="rounded-xl border border-neutral-200 bg-white p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                  Milestones
-                </div>
+            <Section
+              title="Milestones"
+              open={openSections.milestones}
+              onToggle={() =>
+                setOpenSections((prev) => ({ ...prev, milestones: !prev.milestones }))
+              }
+              action={
                 <button
                   type="button"
                   onClick={() =>
@@ -316,7 +412,8 @@ export function CampaignSidecar({
                 >
                   +
                 </button>
-              </div>
+              }
+            >
               {milestones.length === 0 ? (
                 <p className="text-xs leading-relaxed text-neutral-500">
                   Add milestones to organize work within your campaign and break it into sequence
@@ -375,12 +472,13 @@ export function CampaignSidecar({
                   ))}
                 </ul>
               )}
-            </section>
+            </Section>
 
-            <section className="rounded-xl border border-neutral-200 bg-white p-3">
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                Progress
-              </div>
+            <Section
+              title="Progress"
+              open={openSections.progress}
+              onToggle={() => setOpenSections((prev) => ({ ...prev, progress: !prev.progress }))}
+            >
               <div className="mb-3 flex gap-4 text-xs text-neutral-600">
                 <span>
                   <span className="mr-1 inline-block h-2 w-2 rounded-full bg-neutral-400" />
@@ -404,46 +502,85 @@ export function CampaignSidecar({
               <p className="mt-2 text-[11px] text-neutral-400">
                 {formatCampaignDate(startDate)} → {formatCampaignDate(endDate)}
               </p>
-            </section>
+            </Section>
 
-            <section className="rounded-xl border border-neutral-200 bg-white p-3">
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                Activity
-              </div>
-              {activity.length === 0 ? (
+            <Section
+              title="Activity"
+              open={openSections.activity}
+              onToggle={() => setOpenSections((prev) => ({ ...prev, activity: !prev.activity }))}
+              action={
+                activity.length > 5 ? (
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-neutral-500 hover:text-neutral-800"
+                    onClick={() => setShowAllActivity((v) => !v)}
+                  >
+                    {showAllActivity ? 'Show less' : 'See all'}
+                  </button>
+                ) : null
+              }
+            >
+              {visibleActivity.length === 0 ? (
                 <p className="text-xs text-neutral-500">No activity yet.</p>
               ) : (
                 <ul className="space-y-2.5">
-                  {activity.map((item) => (
-                    <li key={item.id} className="text-xs text-neutral-600">
-                      <div className="font-medium text-neutral-800">{item.actor}</div>
-                      <div>{item.body}</div>
-                      <div className="text-neutral-400">
-                        {new Date(item.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric'
-                        })}
+                  {visibleActivity.map((item) => (
+                    <li key={item.id} className="flex gap-2 text-xs text-neutral-600">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-[9px] font-semibold text-neutral-600">
+                        {(item.actor || 'O').slice(0, 1).toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <div>
+                          <span className="font-medium text-neutral-800">{item.actor}</span>{' '}
+                          {item.body.replace(/^[A-Z][^ ]* /, '')}
+                        </div>
+                        <div className="text-neutral-400">
+                          {new Date(item.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </div>
                       </div>
                     </li>
                   ))}
                 </ul>
               )}
-            </section>
-
-            <button
-              type="button"
-              onClick={() => {
-                deleteLocalCampaign(campaignId)
-                onDeleted?.()
-              }}
-              className="w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
-            >
-              Delete campaign
-            </button>
+            </Section>
           </>
         )}
       </div>
     </aside>
+  )
+}
+
+function Section({
+  title,
+  open,
+  onToggle,
+  children,
+  action
+}: {
+  title: string
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+  action?: ReactNode
+}) {
+  return (
+    <section className="rounded-xl border border-neutral-200 bg-white p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex min-w-0 flex-1 items-center gap-1 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400"
+        >
+          <span className="text-[10px]">{open ? '▼' : '▶'}</span>
+          {title}
+        </button>
+        {action}
+      </div>
+      {open ? children : null}
+    </section>
   )
 }
 
@@ -468,16 +605,23 @@ function ProgressChart({
   completed: number
 }) {
   const pct = scope > 0 ? Math.min(100, Math.round((completed / scope) * 100)) : 0
+  const y = 36 - pct * 0.28
   return (
-    <div className="relative h-24 overflow-hidden rounded-lg bg-neutral-50 ring-1 ring-neutral-100">
+    <div className="relative h-28 overflow-hidden rounded-lg bg-neutral-50 ring-1 ring-neutral-100">
       <svg viewBox="0 0 100 40" className="h-full w-full" preserveAspectRatio="none">
-        <line x1="0" y1="8" x2="100" y2="8" stroke="#d4d4d8" strokeWidth="0.6" />
-        <polyline
-          fill="rgba(167,139,250,0.15)"
-          stroke="#8b5cf6"
-          strokeWidth="1.2"
-          points={`0,40 0,${36 - pct * 0.28} 55,${28 - pct * 0.18} 100,${18 - pct * 0.1} 100,40`}
+        <line x1="0" y1="8" x2="100" y2="8" stroke="#d4d4d8" strokeWidth="0.5" strokeDasharray="2 2" />
+        <line x1="0" y1="8" x2="100" y2="36" stroke="#93c5fd" strokeWidth="1" opacity="0.7" />
+        <polygon
+          fill="rgba(139,92,246,0.12)"
+          points={`0,40 0,${y} 55,${(y + 36) / 2} 100,${18 - pct * 0.05} 100,40`}
         />
+        <polyline
+          fill="none"
+          stroke="#8b5cf6"
+          strokeWidth="1.4"
+          points={`0,${y} 55,${(y + 28) / 2} 100,${16 - pct * 0.04}`}
+        />
+        <circle cx="55" cy={(y + 28) / 2} r="1.4" fill="#8b5cf6" />
       </svg>
       {!start || !end ? (
         <div className="absolute inset-0 flex items-center justify-center text-[11px] text-neutral-400">
