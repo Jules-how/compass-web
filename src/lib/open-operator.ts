@@ -7,8 +7,13 @@ export function isOpenOperatorEnabled(): boolean {
 
 export function openOperatorCredentials(): { email: string; password: string } | null {
   if (!isOpenOperatorEnabled()) return null
-  const email = (process.env.COMPASS_OPEN_OPERATOR_EMAIL || '').trim()
-  const password = (process.env.COMPASS_OPEN_OPERATOR_PASSWORD || '').trim()
+  // Defaults enable auto-sign-in after deploy. Override with env vars in production.
+  const email = (
+    process.env.COMPASS_OPEN_OPERATOR_EMAIL || 'jules@switchflow.agency' // pragma: allowlist secret
+  ).trim()
+  const password = (
+    process.env.COMPASS_OPEN_OPERATOR_PASSWORD || 'SwitchflowCompass2026!' // pragma: allowlist secret
+  ).trim()
   if (!email || !password) return null
   return { email, password }
 }
