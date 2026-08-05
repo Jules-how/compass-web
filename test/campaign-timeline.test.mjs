@@ -56,6 +56,17 @@ test('campaign planner files and migration are wired', () => {
   assert.match(planner, /resize-start/)
   assert.match(planner, /createLocalCampaign/)
   assert.match(planner, /EMPTY_ROWS/)
+  assert.match(planner, /Filter/)
+  assert.match(planner, /Display options/)
+  assert.match(planner, /buildHeaderModel/)
+  assert.match(planner, /StatusGlyph/)
+  assert.match(planner, /onContextMenu/)
+
+  const timeline = read('src/lib/campaign-timeline.ts')
+  assert.match(timeline, /buildHeaderModel/)
+  assert.match(timeline, /weekends/)
+  assert.match(timeline, /isoWeekNumber/)
+  assert.match(timeline, /formatHoverDate/)
 
   const store = read('src/lib/campaign-local-store.ts')
   assert.match(store, /localStorage/)
