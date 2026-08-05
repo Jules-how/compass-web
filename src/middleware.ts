@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && request.nextUrl.pathname === '/login') {
-    const redirect = NextResponse.redirect(new URL('/tasks', request.url))
+    const redirect = NextResponse.redirect(new URL('/home', request.url))
     response.cookies.getAll().forEach((cookie) => {
       redirect.cookies.set(cookie.name, cookie.value)
     })

@@ -9,8 +9,8 @@
   --compass-muted: #6b7280;
   --compass-line: #e7e5e4;
   --compass-wash: #f4f2ef;
-  --compass-sidebar: #171a1f;
-  --compass-accent: #f97316;
+  --compass-sidebar: #f3f2ef;
+  --compass-accent: #e85d2a;
 }
 
 html,
@@ -37,7 +37,7 @@ body {
 
 .compass-sidebar {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.2) 40%),
     var(--compass-sidebar);
 }
 

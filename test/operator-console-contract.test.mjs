@@ -72,12 +72,14 @@ test('project and function routes are operator-gated with same-origin writes', (
   assert.match(functions, /compass_business_functions/)
 })
 
-test('operator nav covers the five management surfaces', () => {
+test('operator nav covers the sectioned Compass surfaces', () => {
   const nav = read('src/components/NavLinks.tsx')
-  for (const href of ['/leads', '/inbox', '/tasks', '/projects', '/functions']) {
+  for (const href of ['/home', '/inbox', '/tasks', '/projects', '/functions', '/clients', '/sales', '/sales/pipeline', '/operations/finances', '/settings']) {
     assert.match(nav, new RegExp(`href: '${href}'`))
   }
-  assert.match(nav, /My issues/)
+  assert.match(nav, /My Tasks/)
+  assert.match(nav, /Pipeline/)
+  assert.match(nav, /Finances/)
   assert.doesNotMatch(nav, /href: '\/delivery'/)
   assert.doesNotMatch(nav, /href: '\/leads\/upload'/)
 })

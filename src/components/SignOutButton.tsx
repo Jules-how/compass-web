@@ -14,13 +14,13 @@ export default function SignOutButton({
   async function handleSignOut() {
     await signOut()
     // Open-operator mode will immediately re-establish a session on the next request.
-    router.push('/tasks')
+    router.push('/home')
     router.refresh()
   }
 
   const className =
     variant === 'sidebar'
-      ? 'w-full rounded-md px-2.5 py-1.5 text-left text-[13px] font-medium text-neutral-400 transition hover:bg-white/5 hover:text-neutral-100'
+      ? 'w-full rounded-lg px-2.5 py-1.5 text-left text-[13px] font-medium text-neutral-500 transition hover:bg-white hover:text-neutral-900'
       : 'rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-neutral-100'
 
   return (

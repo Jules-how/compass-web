@@ -2,26 +2,103 @@
 
 import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
 import Link from 'next/link'
+import type { ComponentType, SVGProps } from 'react'
+import {
+  ClientsIcon,
+  FinancesIcon,
+  FunctionsIcon,
+  HomeIcon,
+  InboxIcon,
+  OverviewIcon,
+  PipelineIcon,
+  ProjectsIcon,
+  SettingsIcon,
+  TasksIcon
+} from '@/components/nav-icons'
 
 export type NavKey =
-  | 'leads'
+  | 'home'
   | 'inbox'
   | 'tasks'
   | 'projects'
   | 'functions'
+  | 'clients'
+  | 'sales-overview'
+  | 'pipeline'
+  | 'finances'
+  | 'settings'
+  | 'leads'
   | 'delivery'
   | 'upload'
 
-const OPERATOR_LINKS: { href: string; label: string; key: NavKey; api?: string }[] = [
-  { href: '/inbox', label: 'Inbox', key: 'inbox', api: '/api/inbox' },
-  { href: '/tasks', label: 'My issues', key: 'tasks', api: '/api/tasks' },
-  { href: '/projects', label: 'Projects', key: 'projects', api: '/api/projects' },
-  { href: '/functions', label: 'Functions', key: 'functions', api: '/api/functions' },
-  { href: '/leads', label: 'Leads', key: 'leads', api: '/api/leads/list?page=1' }
+type IconComponent = ComponentType<SVGProps<SVGSVGElement> & { title?: string }>
+
+type NavItem = {
+  href: string
+  label: string
+  key: NavKey
+  icon: IconComponent
+  api?: string
+  badge?: 'inbox'
+}
+
+type NavSection = {
+  id: string
+  label?: string
+  items: NavItem[]
+}
+
+const OPERATOR_TOP: NavItem[] = [
+  { href: '/home', label: 'Home', key: 'home', icon: HomeIcon },
+  { href: '/inbox', label: 'Inbox', key: 'inbox', icon: InboxIcon, api: '/api/inbox', badge: 'inbox' }
 ]
 
-const CUSTOMER_LINKS: { href: string; label: string; key: NavKey; api?: string }[] = [
-  { href: '/leads', label: 'Leads', key: 'leads' }
+const OPERATOR_SECTIONS: NavSection[] = [
+  {
+    id: 'workspace',
+    label: 'Workspace',
+    items: [
+      { href: '/tasks', label: 'My Tasks', key: 'tasks', icon: TasksIcon, api: '/api/tasks' },
+      { href: '/projects', label: 'Projects', key: 'projects', icon: ProjectsIcon, api: '/api/projects' },
+      {
+        href: '/functions',
+        label: 'Functions',
+        key: 'functions',
+        icon: FunctionsIcon,
+        api: '/api/functions'
+      },
+      { href: '/clients', label: 'Clients', key: 'clients', icon: ClientsIcon }
+    ]
+  },
+  {
+    id: 'sales',
+    label: 'Sales',
+    items: [
+      { href: '/sales', label: 'Overview', key: 'sales-overview', icon: OverviewIcon },
+      {
+        href: '/sales/pipeline',
+        label: 'Pipeline',
+        key: 'pipeline',
+        icon: PipelineIcon,
+        api: '/api/campaigns'
+      }
+    ]
+  },
+  {
+    id: 'operations',
+    label: 'Operations',
+    items: [
+      { href: '/operations/finances', label: 'Finances', key: 'finances', icon: FinancesIcon }
+    ]
+  }
+]
+
+const OPERATOR_FOOTER: NavItem[] = [
+  { href: '/settings', label: 'Settings', key: 'settings', icon: SettingsIcon }
+]
+
+const CUSTOMER_LINKS: NavItem[] = [
+  { href: '/leads', label: 'Leads', key: 'leads', icon: InboxIcon }
 ]
 
 function prefetchApi(api?: string) {
@@ -29,47 +106,115 @@ function prefetchApi(api?: string) {
   void fetch(api, { headers: { Accept: 'application/json' } }).catch(() => {})
 }
 
+function NavItemLink({
+  item,
+  active,
+  inboxCount
+}: {
+  item: NavItem
+  active: NavKey
+  inboxCount?: number | null
+}) {
+  const isActive = active === item.key
+  const Icon = item.icon
+  const showBadge =
+    item.badge === 'inbox' && typeof inboxCount === 'number' && inboxCount > 0
+
+  return (
+    <Link
+      href={item.href}
+      prefetch
+      onMouseEnter={() => prefetchApi(item.api)}
+      onFocus={() => prefetchApi(item.api)}
+      className={`group flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition ${
+        isActive
+          ? 'bg-white text-neutral-900 shadow-sm ring-1 ring-black/[0.04]'
+          : 'text-neutral-600 hover:bg-white/70 hover:text-neutral-900'
+      }`}
+    >
+      <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-neutral-800' : 'text-neutral-500'}`} />
+      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      {showBadge ? (
+        <span className="rounded-full bg-[#e85d2a] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+          {inboxCount! > 99 ? '99+' : inboxCount}
+        </span>
+      ) : null}
+    </Link>
+  )
+}
+
 export function NavLinks({
   active,
   role,
-  orientation = 'horizontal'
+  orientation = 'horizontal',
+  inboxCount = null
 }: {
   active: NavKey
   role: PortalRole
   orientation?: 'horizontal' | 'vertical'
+  inboxCount?: number | null
 }) {
-  const links = isOperatorRole(role) ? OPERATOR_LINKS : CUSTOMER_LINKS
-  const vertical = orientation === 'vertical'
+  if (!isOperatorRole(role)) {
+    const vertical = orientation === 'vertical'
+    return (
+      <nav className={vertical ? 'flex flex-col gap-0.5' : 'flex flex-wrap items-center gap-1'}>
+        {CUSTOMER_LINKS.map((item) => (
+          <NavItemLink key={item.href} item={item} active={active} />
+        ))}
+      </nav>
+    )
+  }
+
+  if (orientation === 'horizontal') {
+    const flat = [
+      ...OPERATOR_TOP,
+      ...OPERATOR_SECTIONS.flatMap((section) => section.items),
+      ...OPERATOR_FOOTER
+    ]
+    return (
+      <nav className="flex flex-wrap items-center gap-1">
+        {flat.map((item) => (
+          <NavItemLink key={item.href} item={item} active={active} inboxCount={inboxCount} />
+        ))}
+      </nav>
+    )
+  }
 
   return (
-    <nav className={vertical ? 'flex flex-col gap-0.5' : 'flex flex-wrap items-center gap-1'}>
-      {links.map((link) => {
-        const isActive = active === link.key
-        return (
-          <Link
-            key={link.href}
-            href={link.href}
-            prefetch
-            onMouseEnter={() => prefetchApi(link.api)}
-            onFocus={() => prefetchApi(link.api)}
-            className={
-              vertical
-                ? `rounded-md px-2.5 py-1.5 text-[13px] font-medium transition ${
-                    isActive
-                      ? 'bg-white/10 text-white'
-                      : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-100'
-                  }`
-                : `rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                    isActive
-                      ? 'bg-sf-orange/10 text-sf-orange-dark'
-                      : 'text-neutral-600 hover:bg-neutral-100'
-                  }`
-            }
-          >
-            {link.label}
-          </Link>
-        )
-      })}
+    <nav className="flex h-full flex-col gap-4">
+      <div className="flex flex-col gap-0.5">
+        {OPERATOR_TOP.map((item) => (
+          <NavItemLink key={item.href} item={item} active={active} inboxCount={inboxCount} />
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-4">
+        {OPERATOR_SECTIONS.map((section) => (
+          <div key={section.id} className="flex flex-col gap-1">
+            {section.label ? (
+              <div className="px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
+                {section.label}
+              </div>
+            ) : null}
+            <div className="flex flex-col gap-0.5">
+              {section.items.map((item) => (
+                <NavItemLink
+                  key={item.href}
+                  item={item}
+                  active={active}
+                  inboxCount={inboxCount}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-auto flex flex-col gap-0.5 border-t border-neutral-200/80 pt-3">
+        {OPERATOR_FOOTER.map((item) => (
+          <NavItemLink key={item.href} item={item} active={active} inboxCount={inboxCount} />
+        ))}
+      </div>
     </nav>
   )
 }
