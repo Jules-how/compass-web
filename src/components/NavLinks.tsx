@@ -153,7 +153,7 @@ function NavItemLink({
         href: item.href,
         label: item.label,
         icon: (
-          <Icon className={cn('h-4 w-4', isActive ? 'text-neutral-800' : 'text-neutral-500')} />
+          <Icon className={cn('h-[18px] w-[18px]', isActive ? 'text-neutral-800' : 'text-neutral-500')} />
         )
       }}
       active={isActive}
@@ -161,7 +161,7 @@ function NavItemLink({
       onFocus={() => prefetchApi(item.api)}
       badge={
         showBadge ? (
-          <span className="rounded-full bg-[#e85d2a] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+          <span className="rounded-full bg-[#e85d2a] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white">
             {inboxCount! > 99 ? '99+' : inboxCount}
           </span>
         ) : undefined
