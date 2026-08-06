@@ -74,7 +74,11 @@ test('brain dump module exports a stable reorganize contract', () => {
   assert.match(source, /export function reorganizeBrainDump/)
   assert.match(source, /BrainDumpSuggestion/)
   assert.match(source, /suggestedPriority/)
-  assert.match(read('src/components/home/HomeDashboard.tsx'), /reorganizeBrainDump/)
+  assert.match(read('src/lib/brain-dump-ai.ts'), /reorganizeBrainDumpSmart/)
+  assert.match(read('src/lib/brain-dump-ai.ts'), /generateText/)
+  assert.match(read('src/lib/brain-dump-ai.ts'), /Output\.object/)
+  assert.match(read('src/app/api/brain-dump/reorganize/route.ts'), /reorganizeBrainDumpSmart/)
+  assert.match(read('src/components/home/HomeDashboard.tsx'), /\/api\/brain-dump\/reorganize/)
   assert.match(read('src/app/(console)/home/page.tsx'), /HomeDashboard/)
 })
 
@@ -105,4 +109,14 @@ test('reorganizeBrainDump skips duplicates and empty noise', () => {
     'Follow up with ParcelOps'
   ])
   assert.equal(result.suggestions.length, 0)
+})
+
+test('AI brain-dump path stays lean: nano model + bounded dump + heuristic fallback', () => {
+  const ai = read('src/lib/brain-dump-ai.ts')
+  assert.match(ai, /gpt-5\.4-nano/)
+  assert.match(ai, /MAX_DUMP_CHARS = 4_000/)
+  assert.match(ai, /source: 'heuristic'/)
+  assert.match(ai, /source: 'ai'/)
+  assert.match(read('.env.example'), /AI_GATEWAY_API_KEY/)
+  assert.match(read('package.json'), /"ai":/)
 })

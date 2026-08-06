@@ -82,6 +82,26 @@ test('project and function routes are operator-gated with same-origin writes', (
   assert.match(functions, /compass_business_functions/)
 })
 
+test('client routes are operator-gated with same-origin writes', () => {
+  const clients = read('src/app/api/clients/route.ts')
+  const clientId = read('src/app/api/clients/[id]/route.ts')
+  const issues = read('src/app/api/clients/[id]/issues/route.ts')
+  const channel = read('src/app/api/clients/[id]/channel/route.ts')
+  const page = read('src/app/(console)/clients/page.tsx')
+  const detail = read('src/app/(console)/clients/[id]/page.tsx')
+
+  for (const source of [clients, clientId, issues, channel]) {
+    assert.match(source, /requirePortalAccess\(\{\s*operator:\s*true\s*\}\)/)
+  }
+  assert.match(clients, /requireSameOrigin/)
+  assert.match(clientId, /requireSameOrigin/)
+  assert.match(issues, /requireSameOrigin/)
+  assert.match(channel, /requireSameOrigin/)
+  assert.match(clients, /compass_clients/)
+  assert.match(page, /ClientsPanel/)
+  assert.match(detail, /ClientDetailPanel/)
+})
+
 test('operator nav covers the sectioned Compass surfaces', () => {
   const nav = read('src/components/NavLinks.tsx')
   for (const href of ['/home', '/inbox', '/tasks', '/projects', '/functions', '/clients', '/sales', '/sales/pipeline', '/operations/finances', '/settings']) {

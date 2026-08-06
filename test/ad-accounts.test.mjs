@@ -15,7 +15,7 @@ function read(rel) {
 // The real modules are typechecked via `npm run typecheck`.
 
 test('ad accounts migration enables operator RLS', () => {
-  const sql = read('supabase/migrations/0029_compass_ad_accounts.sql')
+  const sql = read('supabase/migrations/0030_compass_ad_accounts.sql')
   assert.match(sql, /compass_ad_accounts/)
   assert.match(sql, /compass_ad_creatives/)
   assert.match(sql, /compass_ad_glance/)

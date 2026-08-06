@@ -40,6 +40,7 @@ export interface CompassProject {
   id: string
   name: string
   business_function_id: string | null
+  client_id: string | null
   status: string
   priority: number
   health: string
@@ -53,6 +54,106 @@ export interface CompassProject {
   created_at: string
   updated_at: string
   mirrored_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Clients CRM (supabase/migrations/0029_compass_clients.sql).
+// ---------------------------------------------------------------------------
+
+export interface CompassClient {
+  id: string
+  name: string
+  industry: string | null
+  website: string | null
+  main_contact_name: string | null
+  main_contact_role: string | null
+  engagement_type: string | null
+  retainer_status: string | null
+  status: string
+  priority: number
+  health: string
+  summary: string | null
+  tags: string[]
+  notes: string | null
+  archived_at: string | null
+  vault_dossier_id: string | null
+  portal_client_slug: string | null
+  last_touch_at: string | null
+  created_at: string
+  updated_at: string
+  mirrored_at: string
+}
+
+export type CompassClientCard = CompassClient & {
+  next_action: string | null
+  open_issue_count: number
+}
+
+export interface CompassClientUpdate {
+  id: string
+  client_id: string
+  health: string
+  body: string
+  created_at: string
+  mirrored_at: string
+}
+
+export interface CompassClientActivity {
+  id: string
+  client_id: string
+  actor: string
+  action: string
+  body: string
+  created_at: string
+}
+
+export interface CompassClientIssue {
+  id: string
+  client_id: string
+  title: string
+  status: string
+  priority: number
+  due: string | null
+  notes: string | null
+  project_id: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+  mirrored_at: string
+}
+
+export interface CompassClientOffer {
+  id: string
+  client_id: string
+  channel: string
+  title: string
+  description: string | null
+  status: string
+  amount: number | null
+  currency: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CompassClientAdSpend {
+  id: string
+  client_id: string
+  channel: string
+  spend_date: string
+  amount: number
+  currency: string
+  campaign_name: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CompassClientChannelNote {
+  id: string
+  client_id: string
+  channel: string
+  body: string
+  created_at: string
 }
 
 export interface ProjectStats {

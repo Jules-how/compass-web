@@ -25,8 +25,8 @@ function Brand({ href = '/home' }: { href?: string }) {
     <Link href={href} className="flex items-center gap-2.5 rounded-lg px-1 py-0.5">
       <CompassMark />
       <div className="min-w-0 overflow-hidden whitespace-nowrap leading-tight">
-        <span className="text-[14px] font-semibold tracking-tight text-neutral-900">switchflow</span>{' '}
-        <span className="text-[14px] font-medium tracking-tight text-neutral-500">compass</span>
+        <span className="text-[15px] font-semibold tracking-tight text-neutral-900">switchflow</span>{' '}
+        <span className="text-[15px] font-medium tracking-tight text-neutral-500">compass</span>
       </div>
     </Link>
   )

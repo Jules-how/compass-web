@@ -46,7 +46,7 @@ to guess. An administrator must call `portal_bootstrap_operator(email)` with
 Ad account connections (Home live metrics) use:
 
 ```text
-0029_compass_ad_accounts.sql
+0030_compass_ad_accounts.sql
 ```
 
 Connect Meta / Google / LinkedIn under **Settings → Ad accounts**, then Sync.

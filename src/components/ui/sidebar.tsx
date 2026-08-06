@@ -134,10 +134,10 @@ export const MobileSidebar = ({
               </svg>
             </span>
             <div className="leading-tight">
-              <span className="text-[14px] font-semibold tracking-tight text-neutral-900">
+              <span className="text-[15px] font-semibold tracking-tight text-neutral-900">
                 switchflow
               </span>{' '}
-              <span className="text-[14px] font-medium tracking-tight text-neutral-500">compass</span>
+              <span className="text-[15px] font-medium tracking-tight text-neutral-500">compass</span>
             </div>
           </Link>
           <button
@@ -196,7 +196,7 @@ export const SidebarLink = ({
       href={link.href}
       prefetch
       className={cn(
-        'group/sidebar flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition',
+        'group/sidebar flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[15px] font-medium transition',
         active
           ? 'bg-white text-neutral-900 shadow-sm ring-1 ring-black/[0.04]'
           : 'text-neutral-600 hover:bg-white/70 hover:text-neutral-900',
@@ -245,7 +245,7 @@ export const SidebarLabel = ({
         height: animate ? (open ? 'auto' : 0) : 'auto'
       }}
       className={cn(
-        'overflow-hidden px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400',
+        'overflow-hidden px-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500',
         className
       )}
     >

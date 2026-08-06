@@ -230,7 +230,7 @@ export function AdAccountsSettings({
         <CardContent className="space-y-5">
           {migrationRequired ? (
             <div className="rounded-xl border border-amber-300/70 bg-amber-50/50 px-3.5 py-3 text-sm text-amber-900">
-              Apply migration <code className="text-xs">0029_compass_ad_accounts.sql</code> in
+              Apply migration <code className="text-xs">0030_compass_ad_accounts.sql</code> in
               Supabase, then reload this page.
             </div>
           ) : null}

@@ -127,6 +127,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     labels?: string[]
     summary?: string | null
     business_function_id?: string | null
+    client_id?: string | null
     notes?: string | null
     milestones?: Array<{
       id?: string
@@ -172,6 +173,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
   if (Object.prototype.hasOwnProperty.call(body, 'business_function_id')) {
     patch.business_function_id = body.business_function_id ?? null
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'client_id')) {
+    patch.client_id = body.client_id ?? null
   }
   if (Object.prototype.hasOwnProperty.call(body, 'notes')) {
     patch.notes = body.notes ?? null
