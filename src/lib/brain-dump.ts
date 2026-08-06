@@ -60,8 +60,8 @@ function rationaleFor(kind: BrainDumpKind, line: string): string {
 }
 
 /**
- * Lightweight “AI brain” pass: turn free-form dump lines into ordered suggestions.
- * Swap the body for an LLM later; keep this contract stable for the Home UI.
+ * Local heuristic pass used as a fast offline fallback when the AI Gateway
+ * call is unavailable. Keep this contract stable for the Home UI + API.
  */
 export function reorganizeBrainDump(
   dump: string,

@@ -5,11 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LoadingBlock } from '@/components/LoadingBlock'
-import {
-  reorganizeBrainDump,
-  type BrainDumpReorganizeResult,
-  type BrainDumpSuggestion
-} from '@/lib/brain-dump'
+import type { BrainDumpReorganizeResult, BrainDumpSuggestion } from '@/lib/brain-dump'
 import {
   HOME_AD_DEMO,
   HOME_COLD_EMAIL_DEMO,
@@ -153,8 +149,12 @@ export function HomeDashboard() {
 
   const [dump, setDump] = useState('')
   const [dumpHydrated, setDumpHydrated] = useState(false)
-  const [plan, setPlan] = useState<BrainDumpReorganizeResult | null>(null)
+  const [plan, setPlan] = useState<(BrainDumpReorganizeResult & { source?: string }) | null>(
+    null
+  )
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [reorganizing, setReorganizing] = useState(false)
+  const [reorganizeError, setReorganizeError] = useState<string | null>(null)
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState<string | null>(null)
   const [applyNote, setApplyNote] = useState<string | null>(null)
@@ -208,16 +208,38 @@ export function HomeDashboard() {
     [tasks.data]
   )
 
-  const runReorganize = useCallback(() => {
-    const result = reorganizeBrainDump(
-      dump,
-      openTasks.map((t) => t.title)
-    )
-    setPlan(result)
-    setSelected(new Set(result.suggestions.map((s) => s.id)))
+  const runReorganize = useCallback(async () => {
+    if (!dump.trim() || reorganizing) return
+    setReorganizing(true)
+    setReorganizeError(null)
     setApplyError(null)
     setApplyNote(null)
-  }, [dump, openTasks])
+    try {
+      const res = await fetch('/api/brain-dump/reorganize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          dump,
+          existingTitles: openTasks.map((t) => t.title)
+        })
+      })
+      const body = (await res.json().catch(() => ({}))) as BrainDumpReorganizeResult & {
+        source?: string
+        error?: string
+      }
+      if (!res.ok) {
+        throw new Error(body.error ?? `Reorganize failed (${res.status})`)
+      }
+      setPlan(body)
+      setSelected(new Set((body.suggestions ?? []).map((s) => s.id)))
+    } catch (err) {
+      setPlan(null)
+      setSelected(new Set())
+      setReorganizeError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setReorganizing(false)
+    }
+  }, [dump, openTasks, reorganizing])
 
   function toggleSuggestion(id: string) {
     setSelected((prev) => {
@@ -415,7 +437,7 @@ export function HomeDashboard() {
             <div>
               <CardTitle>Brain Dump</CardTitle>
               <CardDescription>
-                Get it out of your head — then let the AI brain reorder priorities
+                Dump messy thoughts — AI turns them into ordered priorities you can apply
               </CardDescription>
             </div>
           </CardHeader>
@@ -433,11 +455,11 @@ export function HomeDashboard() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={runReorganize}
-                disabled={!dump.trim()}
+                onClick={() => void runReorganize()}
+                disabled={!dump.trim() || reorganizing}
                 className="rounded-lg bg-[#e85d2a] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#c2410c] disabled:opacity-50"
               >
-                Reorganize with AI
+                {reorganizing ? 'Thinking…' : 'Reorganize with AI'}
               </button>
               {dump.trim() ? (
                 <button
@@ -446,6 +468,7 @@ export function HomeDashboard() {
                     setDump('')
                     setPlan(null)
                     setApplyNote(null)
+                    setReorganizeError(null)
                   }}
                   className="rounded-lg border border-stone-200 px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-stone-50"
                 >
@@ -457,11 +480,19 @@ export function HomeDashboard() {
             {applyNote ? (
               <p className="text-sm text-emerald-700">{applyNote}</p>
             ) : null}
+            {reorganizeError ? <p className="text-sm text-red-600">{reorganizeError}</p> : null}
             {applyError ? <p className="text-sm text-red-600">{applyError}</p> : null}
 
             {plan ? (
               <div className="space-y-2 rounded-xl border border-stone-200/80 bg-stone-50/60 p-3">
-                <p className="text-sm text-neutral-700">{plan.summary}</p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm text-neutral-700">{plan.summary}</p>
+                  {plan.source ? (
+                    <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-neutral-400">
+                      {plan.source === 'ai' ? 'AI' : 'Local'}
+                    </span>
+                  ) : null}
+                </div>
                 <ul className="space-y-2">
                   {plan.suggestions.map((item) => (
                     <SuggestionRow
