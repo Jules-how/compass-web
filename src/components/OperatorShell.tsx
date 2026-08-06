@@ -100,11 +100,11 @@ export function OperatorConsoleLayout({
 
   return (
     <ConsoleChromeContext.Provider value={true}>
-      <div className="compass-shell min-h-screen md:flex">
+      <div className="compass-shell min-h-screen md:flex md:h-[100dvh] md:max-h-[100dvh] md:overflow-hidden">
         <Sidebar open={open} setOpen={setOpen} animate={false}>
           <ConsoleSidebarFrame role={role} active={active} inboxCount={inboxCount} />
         </Sidebar>
-        <div className="min-w-0 flex-1">{children}</div>
+        <div className="min-w-0 flex-1 md:min-h-0 md:overflow-y-auto">{children}</div>
       </div>
     </ConsoleChromeContext.Provider>
   )
@@ -126,7 +126,7 @@ function PageMain({
   children: ReactNode
 }) {
   if (flush) {
-    return <main className="flex h-[100dvh] flex-col md:h-screen">{children}</main>
+    return <main className="flex h-[100dvh] flex-col md:h-full md:min-h-0">{children}</main>
   }
 
   return (

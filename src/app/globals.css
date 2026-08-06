@@ -36,8 +36,9 @@ body {
 }
 
 .compass-sidebar {
+  /* Opaque wash so page gradients never show through as a bottom-left box. */
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.2) 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.35) 45%, var(--compass-sidebar) 100%),
     var(--compass-sidebar);
 }
 
