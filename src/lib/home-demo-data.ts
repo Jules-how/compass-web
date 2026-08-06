@@ -1,4 +1,4 @@
-/** Demo glances for Home until ad platforms and Instantly sync land. */
+/** Demo glances for Home. Ads stay demo until ad platforms sync; Instantly cold email uses live API when configured. */
 
 export type AdCreativeMetric = {
   id: string
