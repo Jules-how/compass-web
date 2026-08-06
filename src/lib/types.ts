@@ -222,6 +222,8 @@ export interface LeadListFilters {
   source?: string
   outbound_status?: string
   city?: string
+  /** Leads tab vs Prospects tab segmentation. */
+  bucket?: 'leads' | 'prospects'
 }
 
 export interface LeadUploadResult {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import type { LeadContact, LeadListFilters } from '@/lib/types'
+import { parseLeadBucket } from '@/lib/lead-buckets'
 import LeadTable from '@/components/LeadTable'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { LEAD_PAGE_SIZE } from '@/lib/list-columns'
@@ -17,7 +18,8 @@ export function LeadsPanel() {
     vertical: searchParams.get('vertical') ?? undefined,
     source: searchParams.get('source') ?? undefined,
     outbound_status: searchParams.get('outbound_status') ?? undefined,
-    city: searchParams.get('city') ?? undefined
+    city: searchParams.get('city') ?? undefined,
+    bucket: parseLeadBucket(searchParams.get('bucket'))
   }
   const pageParam = Number(searchParams.get('page') ?? '1')
   const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1
@@ -30,6 +32,7 @@ export function LeadsPanel() {
       if (filters.source) params.set('source', filters.source)
       if (filters.outbound_status) params.set('outbound_status', filters.outbound_status)
       if (filters.city) params.set('city', filters.city)
+      params.set('bucket', filters.bucket ?? 'leads')
       params.set('page', String(page))
       params.set('pageSize', String(LEAD_PAGE_SIZE))
       const res = await fetch(`/api/leads/list?${params.toString()}`, {
@@ -47,7 +50,14 @@ export function LeadsPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     }
-  }, [filters.city, filters.outbound_status, filters.source, filters.vertical, page])
+  }, [
+    filters.bucket,
+    filters.city,
+    filters.outbound_status,
+    filters.source,
+    filters.vertical,
+    page
+  ])
 
   useEffect(() => {
     void load()

@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import type { LeadContact, LeadListFilters } from '@/lib/types'
+import { PROSPECT_OUTBOUND_STATUSES, parseLeadBucket } from '@/lib/lead-buckets'
 import { requirePortalAccess } from '@/lib/portal-access'
 import { portalAccessResponse, portalJson, portalJsonCached } from '@/lib/portal-http'
 import { LEAD_LIST_COLUMNS, LEAD_PAGE_SIZE } from '@/lib/list-columns'
@@ -12,7 +13,8 @@ export async function GET(request: NextRequest) {
     vertical: searchParams.get('vertical') ?? undefined,
     source: searchParams.get('source') ?? undefined,
     outbound_status: searchParams.get('outbound_status') ?? undefined,
-    city: searchParams.get('city') ?? undefined
+    city: searchParams.get('city') ?? undefined,
+    bucket: parseLeadBucket(searchParams.get('bucket'))
   }
   const pageParam = Number(searchParams.get('page') ?? '1')
   const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1
@@ -42,6 +44,20 @@ export async function GET(request: NextRequest) {
     if (filters.outbound_status) query = query.eq('outbound_status', filters.outbound_status)
     if (filters.city) query = query.ilike('city', `%${filters.city}%`)
 
+    // Bucket segmentation (Leads vs Prospects tabs). Explicit outbound_status
+    // filter still wins when set.
+    if (!filters.outbound_status) {
+      const prospectList = PROSPECT_OUTBOUND_STATUSES.join(',')
+      if (filters.bucket === 'prospects') {
+        query = query.in('outbound_status', [...PROSPECT_OUTBOUND_STATUSES])
+      } else {
+        // Keep null / unknown / Instantly / unreplied / not-interested on Leads.
+        query = query.or(
+          `outbound_status.is.null,outbound_status.not.in.(${prospectList})`
+        )
+      }
+    }
+
     if (exportLimit) {
       query = query.limit(exportLimit)
     } else {
@@ -56,7 +72,8 @@ export async function GET(request: NextRequest) {
       leads: (data ?? []) as LeadContact[],
       total: count ?? 0,
       page,
-      pageSize: exportLimit ?? pageSize
+      pageSize: exportLimit ?? pageSize,
+      bucket: filters.bucket ?? 'leads'
     })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })

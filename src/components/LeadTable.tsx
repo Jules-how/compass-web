@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import type { LeadContact, LeadListFilters } from '@/lib/types'
+import type { LeadBucket } from '@/lib/lead-buckets'
+import { LeadSidecar } from '@/components/LeadSidecar'
 import { exportToCsv } from '@/lib/csv'
 
 interface LeadTableProps {
@@ -18,6 +20,7 @@ interface LeadTableProps {
 const OUTBOUND_STATUSES = [
   'uncontacted',
   'contacted',
+  'in_instantly',
   'replied',
   'interested',
   'not_interested',
@@ -58,6 +61,7 @@ function buildQuery(filters: LeadListFilters, page: number): string {
   if (filters.source) params.set('source', filters.source)
   if (filters.outbound_status) params.set('outbound_status', filters.outbound_status)
   if (filters.city) params.set('city', filters.city)
+  params.set('bucket', filters.bucket ?? 'leads')
   params.set('page', String(page))
   return params.toString()
 }
@@ -147,13 +151,21 @@ export default function LeadTable({
   const [exporting, setExporting] = useState(false)
   const [exportNote, setExportNote] = useState<string | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
-  const [viewOpen, setViewOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [visible, setVisible] = useState<ViewColumnId[]>(DEFAULT_VISIBLE)
   const filterRef = useRef<HTMLDivElement>(null)
   const settingsRef = useRef<HTMLDivElement>(null)
-  const viewRef = useRef<HTMLDivElement>(null)
+  const bucket: LeadBucket = filters.bucket === 'prospects' ? 'prospects' : 'leads'
+  const selectedLead = useMemo(
+    () => leads.find((l) => l.id === selectedId) ?? null,
+    [leads, selectedId]
+  )
+
+  function switchBucket(next: LeadBucket) {
+    const nextFilters = { ...filters, bucket: next }
+    window.location.href = `/leads?${buildQuery(nextFilters, 1)}`
+  }
 
   const activeFilterCount = useMemo(() => {
     return [filters.vertical, filters.source, filters.outbound_status, filters.city].filter(Boolean)
@@ -161,12 +173,12 @@ export default function LeadTable({
   }, [filters])
 
   function applyFilters() {
-    const qs = buildQuery(draftFilters, 1)
+    const qs = buildQuery({ ...draftFilters, bucket }, 1)
     window.location.href = `/leads?${qs}`
   }
 
   function resetFilters() {
-    window.location.href = '/leads'
+    window.location.href = `/leads?bucket=${bucket}`
   }
 
   function goToPage(next: number) {
@@ -194,6 +206,7 @@ export default function LeadTable({
       if (filters.source) params.set('source', filters.source)
       if (filters.outbound_status) params.set('outbound_status', filters.outbound_status)
       if (filters.city) params.set('city', filters.city)
+      params.set('bucket', filters.bucket ?? 'leads')
       params.set('limit', '5000')
       const res = await fetch(`/api/leads/list?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) {
@@ -408,8 +421,9 @@ export default function LeadTable({
   const orderedVisible = VIEW_COLUMNS.filter((c) => visible.includes(c.id))
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-white">
-      {/* Attio-style object header */}
+    <div className="flex min-h-0 flex-1 bg-white">
+      <div className="flex min-w-0 flex-1 flex-col">
+      {/* Object header */}
       <div className="flex flex-wrap items-center gap-2 border-b border-neutral-200/90 px-4 py-2.5">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#e8f0ff] text-[#3b6ef5]">
@@ -418,45 +432,31 @@ export default function LeadTable({
               <path d="M5.5 18.5c1.6-3 4-4.5 6.5-4.5s4.9 1.5 6.5 4.5" />
             </svg>
           </span>
-          <h1 className="text-[15px] font-semibold tracking-tight text-neutral-900">Leads</h1>
+          <h1 className="text-[15px] font-semibold tracking-tight text-neutral-900">People</h1>
 
-          <div className="relative" ref={viewRef}>
+          <div className="ml-1 flex items-center rounded-lg bg-neutral-100/80 p-0.5">
             <button
               type="button"
-              onClick={() => {
-                setViewOpen((v) => !v)
-                setSettingsOpen(false)
-                setFilterOpen(false)
-              }}
-              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] font-medium text-neutral-800 hover:bg-neutral-100"
+              onClick={() => switchBucket('leads')}
+              className={`rounded-md px-2.5 py-1 text-[13px] font-medium transition ${
+                bucket === 'leads'
+                  ? 'bg-white text-neutral-900 shadow-sm'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
             >
-              <span className="flex h-4 w-4 items-center justify-center rounded-[3px] bg-emerald-100 text-emerald-700">
-                <svg className="h-2.5 w-2.5" viewBox="0 0 12 12" fill="currentColor">
-                  <path d="M2 2h3v3H2V2Zm5 0h3v3H7V2ZM2 7h3v3H2V7Zm5 0h3v3H7V7Z" />
-                </svg>
-              </span>
-              Recently contacted
-              <ChevronDown />
+              Leads
             </button>
-            {viewOpen ? (
-              <div className="absolute left-0 z-30 mt-1 w-64 rounded-lg border border-neutral-200 bg-white p-1.5 shadow-lg">
-                <div className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                  Views
-                </div>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded-md bg-neutral-50 px-2 py-1.5 text-left text-[13px] font-medium text-neutral-900"
-                  onClick={() => setViewOpen(false)}
-                >
-                  <span className="flex h-4 w-4 items-center justify-center rounded-[3px] bg-emerald-100 text-emerald-700">
-                    <svg className="h-2.5 w-2.5" viewBox="0 0 12 12" fill="currentColor">
-                      <path d="M2 2h3v3H2V2Zm5 0h3v3H7V2ZM2 7h3v3H2V7Zm5 0h3v3H7V7Z" />
-                    </svg>
-                  </span>
-                  Recently contacted
-                </button>
-              </div>
-            ) : null}
+            <button
+              type="button"
+              onClick={() => switchBucket('prospects')}
+              className={`rounded-md px-2.5 py-1 text-[13px] font-medium transition ${
+                bucket === 'prospects'
+                  ? 'bg-white text-neutral-900 shadow-sm'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              Prospects
+            </button>
           </div>
 
           <div className="relative" ref={settingsRef}>
@@ -464,19 +464,18 @@ export default function LeadTable({
               type="button"
               onClick={() => {
                 setSettingsOpen((v) => !v)
-                setViewOpen(false)
                 setFilterOpen(false)
               }}
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[13px] text-neutral-600 hover:bg-neutral-100"
             >
               <GearIcon />
-              View settings
+              Columns
               <ChevronDown />
             </button>
             {settingsOpen ? (
               <div className="absolute left-0 z-30 mt-1 w-72 rounded-lg border border-neutral-200 bg-white p-1.5 shadow-lg">
                 <div className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                  Attributes in view
+                  Add / remove columns
                 </div>
                 {VIEW_COLUMNS.map((col) => {
                   const on = visible.includes(col.id)
@@ -540,7 +539,6 @@ export default function LeadTable({
             type="button"
             onClick={() => {
               setFilterOpen((v) => !v)
-              setViewOpen(false)
               setSettingsOpen(false)
             }}
             className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] font-medium hover:bg-neutral-100 ${
@@ -655,7 +653,7 @@ export default function LeadTable({
                   colSpan={1 + orderedVisible.length}
                   className="px-4 py-16 text-center text-sm text-neutral-500"
                 >
-                  No leads match these filters.
+                  {`No ${bucket === 'prospects' ? 'prospects' : 'leads'} match these filters.`}
                 </td>
               </tr>
             ) : (
@@ -696,48 +694,38 @@ export default function LeadTable({
         </table>
       </div>
 
-      {/* Attio-style count row + pagination */}
-      <div className="border-t border-neutral-200/90">
-        <div className="flex min-w-[960px] items-stretch overflow-x-auto text-[12px]">
-          <div className="sticky left-0 z-[1] flex min-w-[200px] items-center bg-white px-4 py-2 text-neutral-500">
-            {total.toLocaleString()} count
-          </div>
-          {orderedVisible.map((col) => (
-            <div
-              key={col.id}
-              className="flex min-w-[140px] flex-1 items-center px-3 py-2 text-neutral-400"
-            >
-              <button type="button" className="hover:text-neutral-600">
-                + Add calculation
-              </button>
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center justify-between border-t border-neutral-100 px-4 py-2 text-[13px] text-neutral-500">
-          <span>
-            Showing {totalShown === 0 ? 0 : (page - 1) * pageSize + 1}–{totalShown}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => goToPage(page - 1)}
-              disabled={page <= 1}
-              className="rounded-md border border-neutral-200 px-2.5 py-1 text-neutral-600 hover:bg-neutral-50 disabled:opacity-40"
-            >
-              Previous
-            </button>
-            <span className="px-1">Page {page}</span>
-            <button
-              type="button"
-              onClick={() => goToPage(page + 1)}
-              disabled={!hasMore}
-              className="rounded-md border border-neutral-200 px-2.5 py-1 text-neutral-600 hover:bg-neutral-50 disabled:opacity-40"
-            >
-              Load more
-            </button>
-          </div>
+      {/* Count + pagination */}
+      <div className="flex items-center justify-between border-t border-neutral-200/90 px-4 py-2 text-[13px] text-neutral-500">
+        <span>
+          {total.toLocaleString()} count
+          <span className="mx-2 text-neutral-300">·</span>
+          Showing {totalShown === 0 ? 0 : (page - 1) * pageSize + 1}–{totalShown}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => goToPage(page - 1)}
+            disabled={page <= 1}
+            className="rounded-md border border-neutral-200 px-2.5 py-1 text-neutral-600 hover:bg-neutral-50 disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span className="px-1">Page {page}</span>
+          <button
+            type="button"
+            onClick={() => goToPage(page + 1)}
+            disabled={!hasMore}
+            className="rounded-md border border-neutral-200 px-2.5 py-1 text-neutral-600 hover:bg-neutral-50 disabled:opacity-40"
+          >
+            Load more
+          </button>
         </div>
       </div>
+      </div>
+
+      {selectedLead ? (
+        <LeadSidecar lead={selectedLead} onClose={() => setSelectedId(null)} />
+      ) : null}
     </div>
   )
 }
