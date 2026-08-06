@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('lead_contacts')
       .select(LEAD_LIST_COLUMNS, { count: 'exact' })
+      .order('last_outbound_at', { ascending: false, nullsFirst: false })
       .order('mirrored_at', { ascending: false })
 
     if (filters.vertical) query = query.eq('vertical', filters.vertical)

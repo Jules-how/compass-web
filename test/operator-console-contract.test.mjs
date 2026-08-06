@@ -47,14 +47,12 @@ test('operator pages still gate access and login supports open-operator fallback
     'src/app/(console)/projects/[id]/page.tsx',
     'src/app/(console)/functions/page.tsx',
     'src/app/(console)/inbox/page.tsx',
-    'src/app/leads/page.tsx'
+    'src/app/(console)/leads/page.tsx'
   ]) {
-    // Console pages inherit the shared layout gate; leads stays page-gated.
-    if (page.includes('(console)') && !page.includes('leads')) {
-      assert.match(read(page), /OperatorShell|TasksPanel|ProjectsPanel|FunctionsPanel|InboxPanel|ProjectDetailPanel/)
-    } else {
-      assert.match(read(page), /requireOperatorPageAccess/)
-    }
+    assert.match(
+      read(page),
+      /OperatorShell|TasksPanel|ProjectsPanel|FunctionsPanel|InboxPanel|ProjectDetailPanel|LeadsPanel/
+    )
   }
   const login = read('src/app/login/page.tsx')
   assert.match(login, /PasswordLoginForm/)
@@ -80,12 +78,13 @@ test('project and function routes are operator-gated with same-origin writes', (
 
 test('operator nav covers the sectioned Compass surfaces', () => {
   const nav = read('src/components/NavLinks.tsx')
-  for (const href of ['/home', '/inbox', '/tasks', '/projects', '/functions', '/clients', '/sales', '/sales/pipeline', '/operations/finances', '/settings']) {
+  for (const href of ['/home', '/inbox', '/tasks', '/projects', '/functions', '/clients', '/sales', '/leads', '/sales/pipeline', '/operations/finances', '/settings']) {
     assert.match(nav, new RegExp(`href: '${href}'`))
   }
   assert.match(nav, /My Tasks/)
   assert.match(nav, /Pipeline/)
   assert.match(nav, /Finances/)
+  assert.match(nav, /Leads/)
   assert.doesNotMatch(nav, /href: '\/delivery'/)
   assert.doesNotMatch(nav, /href: '\/leads\/upload'/)
 })

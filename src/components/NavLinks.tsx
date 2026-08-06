@@ -8,6 +8,7 @@ import {
   FunctionsIcon,
   HomeIcon,
   InboxIcon,
+  LeadsIcon,
   OverviewIcon,
   PipelineIcon,
   ProjectsIcon,
@@ -77,6 +78,13 @@ const OPERATOR_SECTIONS: NavSection[] = [
     label: 'Sales',
     items: [
       { href: '/sales', label: 'Overview', key: 'sales-overview', icon: OverviewIcon },
+      {
+        href: '/leads',
+        label: 'Leads',
+        key: 'leads',
+        icon: LeadsIcon,
+        api: '/api/leads/list'
+      },
       {
         href: '/sales/pipeline',
         label: 'Pipeline',

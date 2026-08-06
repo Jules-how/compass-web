@@ -87,6 +87,15 @@ export function ClientsIcon(props: IconProps) {
   )
 }
 
+export function LeadsIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="8" r="3.25" />
+      <path d="M5.5 18.5c1.6-3 4-4.5 6.5-4.5s4.9 1.5 6.5 4.5" />
+    </Icon>
+  )
+}
+
 export function OverviewIcon(props: IconProps) {
   return (
     <Icon {...props}>

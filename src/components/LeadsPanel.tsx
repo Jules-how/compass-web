@@ -55,7 +55,7 @@ export function LeadsPanel() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      <div className="m-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
         {error}{' '}
         <button type="button" className="underline" onClick={() => void load()}>
           Retry
@@ -64,22 +64,26 @@ export function LeadsPanel() {
     )
   }
 
-  if (!leads) return <LoadingBlock label="Loading leads…" />
+  if (!leads) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-8">
+        <LoadingBlock label="Loading leads…" />
+      </div>
+    )
+  }
 
   const from = (page - 1) * LEAD_PAGE_SIZE
   const totalShown = from + leads.length
   const hasMore = totalShown < total
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-neutral-500">
-        {total} lead{total === 1 ? '' : 's'} total
-      </p>
+    <div className="flex min-h-0 flex-1 flex-col">
       <LeadTable
         leads={leads}
         filters={filters}
         page={page}
         pageSize={LEAD_PAGE_SIZE}
+        total={total}
         totalShown={totalShown}
         hasMore={hasMore}
       />
