@@ -26,6 +26,7 @@ type TasksPayload = {
 
 type InboxPayload = {
   total?: number
+  badgeTotal?: number
   leads?: unknown[]
 }
 
@@ -221,11 +222,13 @@ export function HomeDashboard() {
     (t) => t.due && Date.parse(t.due) < Date.now() && t.status !== 'completed'
   ).length
   const inboxCount =
-    typeof inbox.data?.total === 'number'
-      ? inbox.data.total
-      : Array.isArray(inbox.data?.leads)
-        ? inbox.data.leads.length
-        : null
+    typeof inbox.data?.badgeTotal === 'number'
+      ? inbox.data.badgeTotal
+      : typeof inbox.data?.total === 'number'
+        ? inbox.data.total
+        : Array.isArray(inbox.data?.leads)
+          ? inbox.data.leads.length
+          : null
 
   const projectsById = useMemo(
     () => Object.fromEntries((tasks.data?.projects ?? []).map((p) => [p.id, p])),
