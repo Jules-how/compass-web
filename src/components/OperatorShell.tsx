@@ -50,7 +50,7 @@ function ConsoleSidebarFrame({
         </div>
         <NavLinks active={active} role={role} orientation="vertical" inboxCount={inboxCount} />
       </div>
-      <div className="border-t border-neutral-200/80 pt-3">
+      <div className="border-t border-neutral-200/80 px-0 pb-3 pt-3">
         <SignOutButton variant="sidebar" />
       </div>
     </SidebarBody>

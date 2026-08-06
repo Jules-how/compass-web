@@ -88,7 +88,7 @@ export const DesktopSidebar = ({
   return (
     <motion.aside
       className={cn(
-        'compass-sidebar sticky top-0 hidden h-[100dvh] max-h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-neutral-200/80 px-2 py-3 md:flex',
+        'compass-sidebar sticky top-0 hidden h-[100dvh] max-h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-neutral-200/80 px-2 pb-0 pt-3 md:flex',
         className
       )}
       initial={false}
