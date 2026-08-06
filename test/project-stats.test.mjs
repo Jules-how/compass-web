@@ -55,7 +55,8 @@ test('project stats aggregate issue counts and percent complete', () => {
 test('projects API returns stats and project detail GET is operator-gated', () => {
   const listRoute = read('src/app/api/projects/route.ts')
   const idRoute = read('src/app/api/projects/[id]/route.ts')
-  const detailPage = read('src/app/projects/[id]/page.tsx')
+  const detailPage = read('src/app/(console)/projects/[id]/page.tsx')
+  const consoleLayout = read('src/app/(console)/layout.tsx')
   const statsLib = read('src/lib/project-stats.ts')
 
   assert.match(statsLib, /export function computeProjectStats/)
@@ -63,17 +64,18 @@ test('projects API returns stats and project detail GET is operator-gated', () =
   assert.match(listRoute, /compass_tasks/)
   assert.match(idRoute, /export async function GET/)
   assert.match(idRoute, /requirePortalAccess\(\{\s*operator:\s*true\s*\}\)/)
-  assert.match(detailPage, /requireOperatorPageAccess/)
+  assert.match(consoleLayout, /requireOperatorPageAccess/)
   assert.match(detailPage, /ProjectDetailPanel/)
 })
 
 test('operator shell is sidebar-first with Compass brand and sectioned surfaces', () => {
   const shell = read('src/components/OperatorShell.tsx')
+  const sidebar = read('src/components/ui/sidebar.tsx')
   const nav = read('src/components/NavLinks.tsx')
 
   assert.match(shell, /switchflow/)
   assert.match(shell, /compass/)
-  assert.match(shell, /compass-sidebar/)
+  assert.match(sidebar, /compass-sidebar/)
   assert.match(shell, /orientation="vertical"/)
   for (const href of ['/home', '/inbox', '/tasks', '/projects', '/functions', '/sales/pipeline']) {
     assert.match(nav, new RegExp(`href: '${href}'`))

@@ -1,7 +1,6 @@
 'use client'
 
 import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
-import Link from 'next/link'
 import type { ComponentType, SVGProps } from 'react'
 import {
   ClientsIcon,
@@ -15,6 +14,9 @@ import {
   SettingsIcon,
   TasksIcon
 } from '@/components/nav-icons'
+import { SidebarLabel, SidebarLink } from '@/components/ui/sidebar'
+import { prefetchJson } from '@/lib/use-cached-json'
+import { cn } from '@/lib/utils'
 
 export type NavKey =
   | 'home'
@@ -101,9 +103,34 @@ const CUSTOMER_LINKS: NavItem[] = [
   { href: '/leads', label: 'Leads', key: 'leads', icon: InboxIcon }
 ]
 
+export const OPERATOR_PREFETCH = [
+  ...OPERATOR_TOP,
+  ...OPERATOR_SECTIONS.flatMap((section) => section.items),
+  ...OPERATOR_FOOTER
+].map((item) => ({ href: item.href, api: item.api }))
+
+export function navKeyFromPathname(pathname: string | null): NavKey {
+  if (!pathname) return 'home'
+  if (pathname === '/sales' || pathname.startsWith('/sales/')) {
+    if (pathname.startsWith('/sales/pipeline')) return 'pipeline'
+    return 'sales-overview'
+  }
+  if (pathname.startsWith('/operations/finances')) return 'finances'
+  if (pathname.startsWith('/projects')) return 'projects'
+  if (pathname.startsWith('/functions')) return 'functions'
+  if (pathname.startsWith('/tasks')) return 'tasks'
+  if (pathname.startsWith('/inbox')) return 'inbox'
+  if (pathname.startsWith('/clients')) return 'clients'
+  if (pathname.startsWith('/settings')) return 'settings'
+  if (pathname.startsWith('/leads')) return 'leads'
+  if (pathname.startsWith('/delivery')) return 'delivery'
+  if (pathname.startsWith('/home')) return 'home'
+  return 'home'
+}
+
 function prefetchApi(api?: string) {
   if (!api || typeof window === 'undefined') return
-  void fetch(api, { headers: { Accept: 'application/json' } }).catch(() => {})
+  prefetchJson(api, api)
 }
 
 function NavItemLink({
@@ -121,25 +148,25 @@ function NavItemLink({
     item.badge === 'inbox' && typeof inboxCount === 'number' && inboxCount > 0
 
   return (
-    <Link
-      href={item.href}
-      prefetch
+    <SidebarLink
+      link={{
+        href: item.href,
+        label: item.label,
+        icon: (
+          <Icon className={cn('h-4 w-4', isActive ? 'text-neutral-800' : 'text-neutral-500')} />
+        )
+      }}
+      active={isActive}
       onMouseEnter={() => prefetchApi(item.api)}
       onFocus={() => prefetchApi(item.api)}
-      className={`group flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition ${
-        isActive
-          ? 'bg-white text-neutral-900 shadow-sm ring-1 ring-black/[0.04]'
-          : 'text-neutral-600 hover:bg-white/70 hover:text-neutral-900'
-      }`}
-    >
-      <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-neutral-800' : 'text-neutral-500'}`} />
-      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-      {showBadge ? (
-        <span className="rounded-full bg-[#e85d2a] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
-          {inboxCount! > 99 ? '99+' : inboxCount}
-        </span>
-      ) : null}
-    </Link>
+      badge={
+        showBadge ? (
+          <span className="rounded-full bg-[#e85d2a] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+            {inboxCount! > 99 ? '99+' : inboxCount}
+          </span>
+        ) : undefined
+      }
+    />
   )
 }
 
@@ -191,11 +218,7 @@ export function NavLinks({
       <div className="flex flex-col gap-4">
         {OPERATOR_SECTIONS.map((section) => (
           <div key={section.id} className="flex flex-col gap-1">
-            {section.label ? (
-              <div className="px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-                {section.label}
-              </div>
-            ) : null}
+            {section.label ? <SidebarLabel>{section.label}</SidebarLabel> : null}
             <div className="flex flex-col gap-0.5">
               {section.items.map((item) => (
                 <NavItemLink
