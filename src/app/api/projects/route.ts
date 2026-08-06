@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
     labels?: string[]
     summary?: string | null
     business_function_id?: string | null
+    client_id?: string | null
     notes?: string | null
     milestones?: Array<{
       title?: string
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
     labels: normalizeLabels(body.labels),
     summary: body.summary?.trim() || null,
     business_function_id: body.business_function_id ?? null,
+    client_id: body.client_id ?? null,
     source: 'compass-web',
     external_id: null,
     notes: body.notes ?? null,

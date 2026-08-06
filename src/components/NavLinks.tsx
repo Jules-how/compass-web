@@ -69,7 +69,7 @@ const OPERATOR_SECTIONS: NavSection[] = [
         icon: FunctionsIcon,
         api: '/api/functions'
       },
-      { href: '/clients', label: 'Clients', key: 'clients', icon: ClientsIcon }
+      { href: '/clients', label: 'Clients', key: 'clients', icon: ClientsIcon, api: '/api/clients' }
     ]
   },
   {

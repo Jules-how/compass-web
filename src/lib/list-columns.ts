@@ -2,7 +2,25 @@ export const TASK_LIST_COLUMNS =
   'id,title,status,priority,due,project_id,parent_task_id,business_function_id,task_type,execution_level,updated_at'
 
 export const PROJECT_LIST_COLUMNS =
-  'id,name,business_function_id,status,priority,health,start_date,target_date,labels,summary,updated_at,created_at,mirrored_at,source,notes,external_id'
+  'id,name,business_function_id,client_id,status,priority,health,start_date,target_date,labels,summary,updated_at,created_at,mirrored_at,source,notes,external_id'
+
+export const CLIENT_LIST_COLUMNS =
+  'id,name,industry,website,main_contact_name,main_contact_role,engagement_type,retainer_status,status,priority,health,summary,tags,notes,archived_at,vault_dossier_id,portal_client_slug,last_touch_at,created_at,updated_at,mirrored_at'
+
+export const CLIENT_UPDATE_COLUMNS = 'id,client_id,health,body,created_at,mirrored_at'
+
+export const CLIENT_ACTIVITY_COLUMNS = 'id,client_id,actor,action,body,created_at'
+
+export const CLIENT_ISSUE_COLUMNS =
+  'id,client_id,title,status,priority,due,notes,project_id,sort_order,created_at,updated_at,mirrored_at'
+
+export const CLIENT_OFFER_COLUMNS =
+  'id,client_id,channel,title,description,status,amount,currency,created_at,updated_at'
+
+export const CLIENT_AD_SPEND_COLUMNS =
+  'id,client_id,channel,spend_date,amount,currency,campaign_name,notes,created_at,updated_at'
+
+export const CLIENT_CHANNEL_NOTE_COLUMNS = 'id,client_id,channel,body,created_at'
 
 export const PROJECT_MILESTONE_COLUMNS =
   'id,project_id,title,description,target_date,sort_order,completed,created_at,updated_at,mirrored_at'
