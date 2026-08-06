@@ -42,6 +42,7 @@ test('operator access remains session-backed with open-operator auto-login', () 
 test('operator pages still gate access and login supports open-operator fallback', () => {
   assert.match(read('src/app/(console)/layout.tsx'), /requireOperatorPageAccess/)
   for (const page of [
+    'src/app/(console)/home/page.tsx',
     'src/app/(console)/tasks/page.tsx',
     'src/app/(console)/projects/page.tsx',
     'src/app/(console)/projects/[id]/page.tsx',
@@ -51,7 +52,10 @@ test('operator pages still gate access and login supports open-operator fallback
   ]) {
     // Console pages inherit the shared layout gate; leads stays page-gated.
     if (page.includes('(console)') && !page.includes('leads')) {
-      assert.match(read(page), /OperatorShell|TasksPanel|ProjectsPanel|FunctionsPanel|InboxPanel|ProjectDetailPanel/)
+      assert.match(
+        read(page),
+        /OperatorShell|TasksPanel|ProjectsPanel|FunctionsPanel|InboxPanel|ProjectDetailPanel|HomeDashboard/
+      )
     } else {
       assert.match(read(page), /requireOperatorPageAccess/)
     }
