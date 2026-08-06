@@ -5,8 +5,14 @@ import { LoadingBlock } from '@/components/LoadingBlock'
 
 export default function InboxPage() {
   return (
-    <OperatorShell title="Inbox" subtitle="Client inbound leads">
-      <Suspense fallback={<LoadingBlock label="Loading inbox…" />}>
+    <OperatorShell flush>
+      <Suspense
+        fallback={
+          <div className="flex flex-1 items-center justify-center p-6">
+            <LoadingBlock label="Loading inbox…" />
+          </div>
+        }
+      >
         <InboxPanel />
       </Suspense>
     </OperatorShell>

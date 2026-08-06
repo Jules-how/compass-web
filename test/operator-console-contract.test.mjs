@@ -121,6 +121,8 @@ test('operator console uses persistent layout with animated sidebar and sales ov
   const sales = read('src/app/(console)/sales/page.tsx')
   const overview = read('src/components/sales/SalesOverview.tsx')
   const chart = read('src/components/sales/EmailVolumeChart.tsx')
+  const inbox = read('src/components/InboxPanel.tsx')
+  const inboxApi = read('src/app/api/inbox/route.ts')
 
   assert.match(layout, /OperatorConsoleLayout/)
   assert.match(shell, /OperatorConsoleLayout/)
@@ -133,4 +135,7 @@ test('operator console uses persistent layout with animated sidebar and sales ov
   assert.match(chart, /Campaigns/)
   assert.match(chart, /Offers/)
   assert.match(chart, /Lists/)
+  assert.match(inbox, /INBOX_TAB_LABELS/)
+  assert.match(inbox, /INBOX_TABS/)
+  assert.match(inboxApi, /badgeTotal/)
 })

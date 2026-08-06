@@ -85,7 +85,12 @@ export function OperatorConsoleLayout({
     void fetch('/api/inbox', { headers: { Accept: 'application/json' } })
       .then(async (res) => {
         if (!res.ok) return null
-        const body = (await res.json()) as { leads?: unknown[]; total?: number }
+        const body = (await res.json()) as {
+          leads?: unknown[]
+          total?: number
+          badgeTotal?: number
+        }
+        if (typeof body.badgeTotal === 'number') return body.badgeTotal
         return typeof body.total === 'number' ? body.total : body.leads?.length ?? null
       })
       .then((count) => {
