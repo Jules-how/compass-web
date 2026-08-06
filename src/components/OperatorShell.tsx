@@ -4,14 +4,12 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
 import { CompassMark } from '@/components/nav-icons'
 import { NavLinks, navKeyFromPathname, type NavKey, OPERATOR_PREFETCH } from '@/components/NavLinks'
 import SignOutButton from '@/components/SignOutButton'
-import { Sidebar, SidebarBody, useSidebar } from '@/components/ui/sidebar'
+import { Sidebar, SidebarBody } from '@/components/ui/sidebar'
 import { prefetchJson } from '@/lib/use-cached-json'
 import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
-import { cn } from '@/lib/utils'
 
 const WIDTH = {
   '3xl': 'max-w-3xl',
@@ -23,21 +21,13 @@ const WIDTH = {
 const ConsoleChromeContext = createContext(false)
 
 function Brand({ href = '/home' }: { href?: string }) {
-  const { open, animate } = useSidebar()
   return (
     <Link href={href} className="flex items-center gap-2.5 rounded-lg px-1 py-0.5">
       <CompassMark />
-      <motion.div
-        initial={false}
-        animate={{
-          opacity: animate ? (open ? 1 : 0) : 1,
-          width: animate ? (open ? 'auto' : 0) : 'auto'
-        }}
-        className="min-w-0 overflow-hidden whitespace-nowrap leading-tight"
-      >
+      <div className="min-w-0 overflow-hidden whitespace-nowrap leading-tight">
         <span className="text-[14px] font-semibold tracking-tight text-neutral-900">switchflow</span>{' '}
         <span className="text-[14px] font-medium tracking-tight text-neutral-500">compass</span>
-      </motion.div>
+      </div>
     </Link>
   )
 }
@@ -51,7 +41,6 @@ function ConsoleSidebarFrame({
   active: NavKey
   inboxCount: number | null
 }) {
-  const { open } = useSidebar()
   const homeHref = isOperatorRole(role) ? '/home' : '/leads'
   return (
     <SidebarBody className="justify-between gap-6">
@@ -61,10 +50,8 @@ function ConsoleSidebarFrame({
         </div>
         <NavLinks active={active} role={role} orientation="vertical" inboxCount={inboxCount} />
       </div>
-      <div className={cn('border-t border-neutral-200/80 pt-3', !open && 'md:px-0')}>
-        <div className={cn(!open && 'md:flex md:justify-center')}>
-          <SignOutButton variant="sidebar" />
-        </div>
+      <div className="border-t border-neutral-200/80 pt-3">
+        <SignOutButton variant="sidebar" />
       </div>
     </SidebarBody>
   )
@@ -83,6 +70,7 @@ export function OperatorConsoleLayout({
   const operator = isOperatorRole(role)
   const active = useMemo(() => navKeyFromPathname(pathname), [pathname])
   const [inboxCount, setInboxCount] = useState<number | null>(null)
+  // Mobile drawer open state only — desktop sidebar stays permanently expanded.
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -113,7 +101,7 @@ export function OperatorConsoleLayout({
   return (
     <ConsoleChromeContext.Provider value={true}>
       <div className="compass-shell min-h-screen md:flex">
-        <Sidebar open={open} setOpen={setOpen} animate={operator}>
+        <Sidebar open={open} setOpen={setOpen} animate={false}>
           <ConsoleSidebarFrame role={role} active={active} inboxCount={inboxCount} />
         </Sidebar>
         <div className="min-w-0 flex-1">{children}</div>
