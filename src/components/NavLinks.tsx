@@ -51,7 +51,7 @@ type NavSection = {
 }
 
 const OPERATOR_TOP: NavItem[] = [
-  { href: '/home', label: 'Home', key: 'home', icon: HomeIcon },
+  { href: '/home', label: 'Home', key: 'home', icon: HomeIcon, api: '/api/instantly/cold-email' },
   { href: '/inbox', label: 'Inbox', key: 'inbox', icon: InboxIcon, api: '/api/inbox', badge: 'inbox' }
 ]
 

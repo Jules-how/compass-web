@@ -10,6 +10,7 @@ import {
   HOME_AD_DEMO,
   HOME_COLD_EMAIL_DEMO,
   type AdCreativeMetric,
+  type ColdEmailGlance,
   type HomeAdGlance
 } from '@/lib/home-demo-data'
 import type { CompassProject, CompassTask } from '@/lib/types'
@@ -26,6 +27,12 @@ type TasksPayload = {
 type InboxPayload = {
   total?: number
   leads?: unknown[]
+}
+
+type ColdEmailPayload = ColdEmailGlance & {
+  source?: 'instantly' | 'demo' | 'error'
+  warning?: string
+  error?: string
 }
 
 type AdsGlancePayload = HomeAdGlance & {
@@ -156,7 +163,13 @@ export function HomeDashboard() {
   const ads = adsGlance.data ?? HOME_AD_DEMO
   const adsSource = adsGlance.data?.source ?? 'demo'
   const adsConnected = adsGlance.data?.connectedAccounts ?? 0
-  const cold = HOME_COLD_EMAIL_DEMO
+  const coldEmail = useCachedJson<ColdEmailPayload>(
+    '/api/instantly/cold-email',
+    '/api/instantly/cold-email',
+    { staleMs: 60_000 }
+  )
+  const cold: ColdEmailGlance = coldEmail.data ?? HOME_COLD_EMAIL_DEMO
+  const coldLive = coldEmail.data?.source === 'instantly'
 
   const [dump, setDump] = useState('')
   const [dumpHydrated, setDumpHydrated] = useState(false)
@@ -348,8 +361,16 @@ export function HomeDashboard() {
         <GlanceLink
           href="/sales"
           label="Replies waiting"
-          value={String(cold.repliesWaiting)}
-          hint="Positive / unanswered"
+          value={
+            coldEmail.loading && !coldEmail.data ? '—' : String(cold.repliesWaiting)
+          }
+          hint={
+            coldLive
+              ? 'Unread in Instantly Unibox'
+              : coldEmail.error
+                ? 'Instantly sync unavailable'
+                : 'Positive / unanswered'
+          }
           tone={cold.repliesWaiting > 0 ? 'warn' : 'neutral'}
         />
         <GlanceLink
@@ -614,52 +635,72 @@ export function HomeDashboard() {
           <div>
             <CardTitle>Cold email campaigns</CardTitle>
             <CardDescription>
-              Throughput and reply pressure — jump into the planner when something stalls
+              {coldLive
+                ? 'Live from Instantly — jump into the planner when something stalls'
+                : coldEmail.error
+                  ? 'Instantly unavailable — showing last demo glance'
+                  : 'Throughput and reply pressure — jump into the planner when something stalls'}
             </CardDescription>
           </div>
           <SectionLink href="/sales/pipeline">Campaign planner</SectionLink>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricTile
-              label="Sent today"
-              value={cold.emailsSentToday.toLocaleString()}
-              hint="Across live sequences"
-            />
-            <MetricTile
-              label="Replies waiting"
-              value={String(cold.repliesWaiting)}
-              hint="Handle before new sends"
-              emphasize={cold.repliesWaiting > 0}
-            />
-            <MetricTile label="Meetings booked" value={String(cold.meetingsBooked)} hint="Today" />
-            <MetricTile label="Reply rate" value={`${cold.replyRate}%`} hint="Rolling 30d" />
-          </div>
-          <div className="space-y-2">
-            {cold.campaigns.map((campaign) => (
-              <div
-                key={campaign.id}
-                className="rounded-xl border border-stone-200/70 bg-stone-50/40 p-3.5"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <div className="font-medium text-neutral-900">{campaign.name}</div>
-                    <div className="mt-0.5 text-xs text-neutral-500">
-                      {campaign.sent.toLocaleString()} sent · {campaign.replies} replies ·{' '}
-                      {campaign.meetings} meetings
-                    </div>
-                  </div>
-                  {campaignStatusBadge(campaign.status)}
-                </div>
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-200/80">
-                  <div
-                    className="h-full rounded-full bg-[#e85d2a]"
-                    style={{ width: `${campaign.progress}%` }}
-                  />
-                </div>
+          {coldEmail.loading && !coldEmail.data ? (
+            <LoadingBlock label="Loading Instantly campaigns…" />
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <MetricTile
+                  label="Sent today"
+                  value={cold.emailsSentToday.toLocaleString()}
+                  hint="Across live sequences"
+                />
+                <MetricTile
+                  label="Replies waiting"
+                  value={String(cold.repliesWaiting)}
+                  hint="Unread in Unibox"
+                  emphasize={cold.repliesWaiting > 0}
+                />
+                <MetricTile
+                  label="Meetings booked"
+                  value={String(cold.meetingsBooked)}
+                  hint="Today"
+                />
+                <MetricTile label="Reply rate" value={`${cold.replyRate}%`} hint="Rolling 30d" />
               </div>
-            ))}
-          </div>
+              <div className="space-y-2">
+                {cold.campaigns.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-stone-200 px-3.5 py-6 text-center text-sm text-neutral-500">
+                    No Instantly campaigns to show yet.
+                  </div>
+                ) : (
+                  cold.campaigns.map((campaign) => (
+                    <div
+                      key={campaign.id}
+                      className="rounded-xl border border-stone-200/70 bg-stone-50/40 p-3.5"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <div className="font-medium text-neutral-900">{campaign.name}</div>
+                          <div className="mt-0.5 text-xs text-neutral-500">
+                            {campaign.sent.toLocaleString()} sent · {campaign.replies} replies ·{' '}
+                            {campaign.meetings} meetings
+                          </div>
+                        </div>
+                        {campaignStatusBadge(campaign.status)}
+                      </div>
+                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-200/80">
+                        <div
+                          className="h-full rounded-full bg-[#e85d2a]"
+                          style={{ width: `${campaign.progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
