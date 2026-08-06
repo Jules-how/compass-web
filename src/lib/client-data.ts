@@ -1,0 +1,75 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { isOpenClientIssue } from '@/lib/client-pm'
+import type { CompassClientIssue } from '@/lib/types'
+
+export function nowIso(): string {
+  return new Date().toISOString()
+}
+
+export function normalizeTags(value: unknown): string[] {
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 30)
+  }
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter(Boolean)
+    .slice(0, 30)
+}
+
+export function normalizeClientRow<T extends { tags?: unknown; priority?: unknown; health?: string | null }>(
+  row: T
+): T & { tags: string[]; priority: number; health: string } {
+  return {
+    ...row,
+    tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
+    priority: typeof row.priority === 'number' ? row.priority : 0,
+    health: row.health || 'no_updates'
+  }
+}
+
+export function pickNextAction(issues: CompassClientIssue[]): string | null {
+  const open = issues
+    .filter((issue) => isOpenClientIssue(issue.status))
+    .sort((a, b) => {
+      // Lower priority number is higher urgency (1 urgent before 4 low), but 0 = none.
+      const rank = (p: number) => (p === 0 ? 99 : p)
+      const byPriority = rank(a.priority || 0) - rank(b.priority || 0)
+      if (byPriority !== 0) return byPriority
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    })
+  return open[0]?.title ?? null
+}
+
+export async function recordClientActivity(
+  supabase: SupabaseClient,
+  input: {
+    clientId: string
+    action: string
+    body: string
+    actor?: string
+    touch?: boolean
+  }
+) {
+  const stamp = nowIso()
+  const activity = {
+    id: `cact-${crypto.randomUUID()}`,
+    client_id: input.clientId,
+    actor: input.actor ?? 'operator',
+    action: input.action,
+    body: input.body,
+    created_at: stamp
+  }
+  await supabase.from('compass_client_activity').insert(activity)
+  if (input.touch !== false) {
+    await supabase
+      .from('compass_clients')
+      .update({ last_touch_at: stamp, updated_at: stamp, mirrored_at: stamp })
+      .eq('id', input.clientId)
+  }
+  return activity
+}
