@@ -17,6 +17,7 @@ function normalizeClientStatus(status) {
       return 'active'
     case 'paused':
       return 'paused'
+    case 'prospect':
     case 'onboarding':
     default:
       return 'onboarding'
@@ -54,7 +55,15 @@ test('client helper sources export the CRM model', () => {
 test('normalizeClientStatus maps account relationship states', () => {
   assert.equal(normalizeClientStatus('active'), 'active')
   assert.equal(normalizeClientStatus('paused'), 'paused')
+  assert.equal(normalizeClientStatus('prospect'), 'onboarding')
   assert.equal(normalizeClientStatus('weird'), 'onboarding')
+})
+
+test('clients migration alters legacy compass_clients instead of only CREATE IF NOT EXISTS', () => {
+  const migration = read('supabase/migrations/0029_compass_clients.sql')
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS industry/)
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS client_id/)
+  assert.match(migration, /legacy desktop sync/i)
 })
 
 test('pickNextAction prefers urgent open issues then recent', () => {

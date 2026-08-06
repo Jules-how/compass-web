@@ -21,14 +21,22 @@ export function normalizeTags(value: unknown): string[] {
     .slice(0, 30)
 }
 
-export function normalizeClientRow<T extends { tags?: unknown; priority?: unknown; health?: string | null }>(
-  row: T
-): T & { tags: string[]; priority: number; health: string } {
+export function normalizeClientRow<
+  T extends {
+    tags?: unknown
+    priority?: unknown
+    health?: string | null
+    industry?: string | null
+    vertical?: string | null
+  }
+>(row: T): T & { tags: string[]; priority: number; health: string; industry: string | null } {
   return {
     ...row,
     tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
     priority: typeof row.priority === 'number' ? row.priority : 0,
-    health: row.health || 'no_updates'
+    health: row.health || 'no_updates',
+    // Legacy desktop rows store vertical instead of industry.
+    industry: row.industry?.trim() || row.vertical?.trim() || null
   }
 }
 

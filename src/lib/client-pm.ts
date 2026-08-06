@@ -33,8 +33,10 @@ export function normalizeClientStatus(status: string | null | undefined): Client
       return 'active'
     case 'paused':
       return 'paused'
+    case 'prospect':
     case 'onboarding':
     default:
+      // Legacy desktop sync used "prospect"; treat as onboarding in the web CRM.
       return 'onboarding'
   }
 }
