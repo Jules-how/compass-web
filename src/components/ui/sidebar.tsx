@@ -96,8 +96,8 @@ export const DesktopSidebar = ({
         width: animate ? (open ? 232 : 68) : 232
       }}
       transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={animate ? () => setOpen(true) : undefined}
+      onMouseLeave={animate ? () => setOpen(false) : undefined}
       {...props}
     >
       {children}
