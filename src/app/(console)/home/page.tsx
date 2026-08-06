@@ -1,15 +1,8 @@
 import { OperatorShell } from '@/components/OperatorShell'
-import { requireOperatorPageAccess } from '@/lib/operator-page'
 
-export const dynamic = 'force-dynamic'
-
-export default async function HomePage() {
-  await requireOperatorPageAccess()
-
+export default function HomePage() {
   return (
     <OperatorShell
-      active="home"
-      role="owner"
       title="Home"
       subtitle="Operator home · shortcuts and focus for the day"
     >

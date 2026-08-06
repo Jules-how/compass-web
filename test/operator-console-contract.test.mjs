@@ -40,15 +40,21 @@ test('operator access remains session-backed with open-operator auto-login', () 
 })
 
 test('operator pages still gate access and login supports open-operator fallback', () => {
+  assert.match(read('src/app/(console)/layout.tsx'), /requireOperatorPageAccess/)
   for (const page of [
-    'src/app/tasks/page.tsx',
-    'src/app/projects/page.tsx',
-    'src/app/projects/[id]/page.tsx',
-    'src/app/functions/page.tsx',
-    'src/app/inbox/page.tsx',
+    'src/app/(console)/tasks/page.tsx',
+    'src/app/(console)/projects/page.tsx',
+    'src/app/(console)/projects/[id]/page.tsx',
+    'src/app/(console)/functions/page.tsx',
+    'src/app/(console)/inbox/page.tsx',
     'src/app/leads/page.tsx'
   ]) {
-    assert.match(read(page), /requireOperatorPageAccess/)
+    // Console pages inherit the shared layout gate; leads stays page-gated.
+    if (page.includes('(console)') && !page.includes('leads')) {
+      assert.match(read(page), /OperatorShell|TasksPanel|ProjectsPanel|FunctionsPanel|InboxPanel|ProjectDetailPanel/)
+    } else {
+      assert.match(read(page), /requireOperatorPageAccess/)
+    }
   }
   const login = read('src/app/login/page.tsx')
   assert.match(login, /PasswordLoginForm/)
@@ -82,4 +88,25 @@ test('operator nav covers the sectioned Compass surfaces', () => {
   assert.match(nav, /Finances/)
   assert.doesNotMatch(nav, /href: '\/delivery'/)
   assert.doesNotMatch(nav, /href: '\/leads\/upload'/)
+})
+
+test('operator console uses persistent layout with animated sidebar and sales overview', () => {
+  const layout = read('src/app/(console)/layout.tsx')
+  const shell = read('src/components/OperatorShell.tsx')
+  const sidebar = read('src/components/ui/sidebar.tsx')
+  const sales = read('src/app/(console)/sales/page.tsx')
+  const overview = read('src/components/sales/SalesOverview.tsx')
+  const chart = read('src/components/sales/EmailVolumeChart.tsx')
+
+  assert.match(layout, /OperatorConsoleLayout/)
+  assert.match(shell, /OperatorConsoleLayout/)
+  assert.match(shell, /router\.prefetch/)
+  assert.match(shell, /prefetchJson/)
+  assert.match(sidebar, /framer-motion|motion\./)
+  assert.match(sales, /SalesOverview/)
+  assert.match(overview, /EmailVolumeChart/)
+  assert.match(overview, /Expected revenue|Deal flow|Campaign progress/)
+  assert.match(chart, /Campaigns/)
+  assert.match(chart, /Offers/)
+  assert.match(chart, /Lists/)
 })

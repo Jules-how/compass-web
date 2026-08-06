@@ -1,52 +1,39 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { InboundLeadTable } from '@/components/InboundLeadTable'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import type { PortalInboundLead } from '@/lib/inbound-leads-ui'
+import { useCachedJson } from '@/lib/use-cached-json'
 
 export function InboxPanel({ basePath = '/inbox' }: { basePath?: string }) {
   const searchParams = useSearchParams()
   const sourceFilter = searchParams.get('source') ?? undefined
-  const [leads, setLeads] = useState<PortalInboundLead[] | null>(null)
-  const [total, setTotal] = useState(0)
-  const [error, setError] = useState<string | null>(null)
+  const params = new URLSearchParams()
+  if (sourceFilter) params.set('source', sourceFilter)
+  const qs = params.toString()
+  const url = `/api/inbox${qs ? `?${qs}` : ''}`
 
-  const load = useCallback(async () => {
-    setError(null)
-    try {
-      const params = new URLSearchParams()
-      if (sourceFilter) params.set('source', sourceFilter)
-      const qs = params.toString()
-      const res = await fetch(`/api/inbox${qs ? `?${qs}` : ''}`, {
-        headers: { Accept: 'application/json' }
-      })
-      if (!res.ok) throw new Error(`Failed to load inbox (${res.status})`)
-      const body = (await res.json()) as { leads: PortalInboundLead[]; total: number }
-      setLeads(body.leads ?? [])
-      setTotal(body.total ?? 0)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    }
-  }, [sourceFilter])
+  const { data, error, loading, reload } = useCachedJson<{
+    leads: PortalInboundLead[]
+    total: number
+  }>(url, url)
 
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  if (error) {
+  if (error && !data) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
         {error}{' '}
-        <button type="button" className="underline" onClick={() => void load()}>
+        <button type="button" className="underline" onClick={() => void reload(true)}>
           Retry
         </button>
       </div>
     )
   }
 
-  if (!leads) return <LoadingBlock label="Loading inbox…" />
+  if (loading || !data) return <LoadingBlock label="Loading inbox…" />
+
+  const leads = data.leads ?? []
+  const total = data.total ?? 0
 
   return (
     <div className="space-y-3">
