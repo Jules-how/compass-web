@@ -125,7 +125,13 @@ function initials(name: string | null | undefined, email: string | null | undefi
 }
 
 function descriptionFor(lead: LeadContact): string {
-  return (lead.interest_label || lead.tags || '').trim()
+  const interest = (lead.interest_label || '').trim()
+  if (interest) return interest
+  const tags = (lead.tags || '').trim()
+  if (!tags) return ''
+  // Skip machine tag payloads like ["src:prospeo","segment:broad"] — Attio Description is free text.
+  if (tags.startsWith('[') || tags.startsWith('{')) return ''
+  return tags
 }
 
 export default function LeadTable({
@@ -687,46 +693,49 @@ export default function LeadTable({
               })
             )}
           </tbody>
-          <tfoot>
-            <tr>
-              <td className="sticky left-0 bg-white px-4 py-2.5 text-[12px] text-neutral-500">
-                {total.toLocaleString()} count
-              </td>
-              {orderedVisible.map((col) => (
-                <td key={col.id} className="px-3 py-2.5 text-[12px] text-neutral-400">
-                  <button type="button" className="hover:text-neutral-600">
-                    + Add calculation
-                  </button>
-                </td>
-              ))}
-            </tr>
-          </tfoot>
         </table>
       </div>
 
-      {/* Pagination footer */}
-      <div className="flex items-center justify-between border-t border-neutral-200/90 px-4 py-2 text-[13px] text-neutral-500">
-        <span>
-          Showing {totalShown === 0 ? 0 : (page - 1) * pageSize + 1}–{totalShown}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => goToPage(page - 1)}
-            disabled={page <= 1}
-            className="rounded-md border border-neutral-200 px-2.5 py-1 text-neutral-600 hover:bg-neutral-50 disabled:opacity-40"
-          >
-            Previous
-          </button>
-          <span className="px-1">Page {page}</span>
-          <button
-            type="button"
-            onClick={() => goToPage(page + 1)}
-            disabled={!hasMore}
-            className="rounded-md border border-neutral-200 px-2.5 py-1 text-neutral-600 hover:bg-neutral-50 disabled:opacity-40"
-          >
-            Load more
-          </button>
+      {/* Attio-style count row + pagination */}
+      <div className="border-t border-neutral-200/90">
+        <div className="flex min-w-[960px] items-stretch overflow-x-auto text-[12px]">
+          <div className="sticky left-0 z-[1] flex min-w-[200px] items-center bg-white px-4 py-2 text-neutral-500">
+            {total.toLocaleString()} count
+          </div>
+          {orderedVisible.map((col) => (
+            <div
+              key={col.id}
+              className="flex min-w-[140px] flex-1 items-center px-3 py-2 text-neutral-400"
+            >
+              <button type="button" className="hover:text-neutral-600">
+                + Add calculation
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-between border-t border-neutral-100 px-4 py-2 text-[13px] text-neutral-500">
+          <span>
+            Showing {totalShown === 0 ? 0 : (page - 1) * pageSize + 1}–{totalShown}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => goToPage(page - 1)}
+              disabled={page <= 1}
+              className="rounded-md border border-neutral-200 px-2.5 py-1 text-neutral-600 hover:bg-neutral-50 disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <span className="px-1">Page {page}</span>
+            <button
+              type="button"
+              onClick={() => goToPage(page + 1)}
+              disabled={!hasMore}
+              className="rounded-md border border-neutral-200 px-2.5 py-1 text-neutral-600 hover:bg-neutral-50 disabled:opacity-40"
+            >
+              Load more
+            </button>
+          </div>
         </div>
       </div>
     </div>
