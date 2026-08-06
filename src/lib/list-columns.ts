@@ -5,7 +5,7 @@ export const PROJECT_LIST_COLUMNS =
   'id,name,business_function_id,client_id,status,priority,health,start_date,target_date,labels,summary,updated_at,created_at,mirrored_at,source,notes,external_id'
 
 export const CLIENT_LIST_COLUMNS =
-  'id,name,industry,vertical,website,main_contact_name,main_contact_role,engagement_type,retainer_status,status,priority,health,summary,tags,notes,archived_at,vault_dossier_id,portal_client_slug,last_touch_at,created_at,updated_at,mirrored_at'
+  'id,name,industry,website,main_contact_name,main_contact_role,engagement_type,retainer_status,status,priority,health,summary,tags,notes,archived_at,vault_dossier_id,portal_client_slug,last_touch_at,created_at,updated_at,mirrored_at'
 
 export const CLIENT_UPDATE_COLUMNS = 'id,client_id,health,body,created_at,mirrored_at'
 
