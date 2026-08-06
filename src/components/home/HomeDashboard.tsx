@@ -10,7 +10,8 @@ import {
   HOME_AD_DEMO,
   HOME_COLD_EMAIL_DEMO,
   type AdCreativeMetric,
-  type ColdEmailGlance
+  type ColdEmailGlance,
+  type HomeAdGlance
 } from '@/lib/home-demo-data'
 import type { CompassProject, CompassTask } from '@/lib/types'
 import { useCachedJson } from '@/lib/use-cached-json'
@@ -32,6 +33,13 @@ type ColdEmailPayload = ColdEmailGlance & {
   source?: 'instantly' | 'demo' | 'error'
   warning?: string
   error?: string
+}
+
+type AdsGlancePayload = HomeAdGlance & {
+  source?: 'live' | 'demo'
+  syncedAt?: string | null
+  connectedAccounts?: number
+  migrationRequired?: boolean
 }
 
 function formatMoney(value: number) {
@@ -151,12 +159,15 @@ function SectionLink({ href, children }: { href: string; children: React.ReactNo
 export function HomeDashboard() {
   const tasks = useCachedJson<TasksPayload>('/api/tasks', '/api/tasks')
   const inbox = useCachedJson<InboxPayload>('/api/inbox', '/api/inbox')
+  const adsGlance = useCachedJson<AdsGlancePayload>('/api/ads/glance', '/api/ads/glance')
+  const ads = adsGlance.data ?? HOME_AD_DEMO
+  const adsSource = adsGlance.data?.source ?? 'demo'
+  const adsConnected = adsGlance.data?.connectedAccounts ?? 0
   const coldEmail = useCachedJson<ColdEmailPayload>(
     '/api/instantly/cold-email',
     '/api/instantly/cold-email',
     { staleMs: 60_000 }
   )
-  const ads = HOME_AD_DEMO
   const cold: ColdEmailGlance = coldEmail.data ?? HOME_COLD_EMAIL_DEMO
   const coldLive = coldEmail.data?.source === 'instantly'
 
@@ -548,56 +559,74 @@ export function HomeDashboard() {
           <div>
             <CardTitle>Ad creative / metrics</CardTitle>
             <CardDescription>
-              Spend health and creatives that need a decision — not a full ads console
+              {adsSource === 'live'
+                ? 'Live spend health and creatives that need a decision'
+                : adsConnected > 0
+                  ? 'Connected accounts need a sync — showing demo until Sync finishes'
+                  : 'Spend health and creatives that need a decision — connect accounts in Settings'}
             </CardDescription>
           </div>
-          <SectionLink href="/sales">Sales overview</SectionLink>
+          <SectionLink href="/settings">
+            {adsSource === 'live' ? 'Manage accounts' : 'Connect ad accounts'}
+          </SectionLink>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricTile
-              label="Spend today"
-              value={formatMoney(ads.spendToday)}
-              hint={`${ads.spendDelta >= 0 ? '+' : ''}${ads.spendDelta}% vs yesterday`}
-            />
-            <MetricTile
-              label="ROAS"
-              value={`${ads.roas.toFixed(1)}x`}
-              hint={`${ads.roasDelta >= 0 ? '+' : ''}${ads.roasDelta.toFixed(1)} vs 7d`}
-            />
-            <MetricTile label="CPA" value={formatMoney(ads.cpa)} hint="Blended" />
-            <MetricTile
-              label="Needs review"
-              value={String(ads.creativesNeedingReview)}
-              hint="Fatigued or underperforming"
-              emphasize={ads.creativesNeedingReview > 0}
-            />
-          </div>
-          <div className="space-y-2">
-            {ads.creatives.map((creative) => (
-              <div
-                key={creative.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-200/70 px-3.5 py-3"
-              >
-                <div className="min-w-0">
-                  <div className="font-medium text-neutral-900">{creative.name}</div>
-                  <div className="mt-0.5 text-xs text-neutral-500">
-                    {creative.channel} · {formatMoney(creative.spend)} spend · CTR {creative.ctr}%
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
-                  <span>
-                    CPA <span className="font-medium text-neutral-800">{formatMoney(creative.cpa)}</span>
-                  </span>
-                  <span>
-                    ROAS{' '}
-                    <span className="font-medium text-neutral-800">{creative.roas.toFixed(1)}x</span>
-                  </span>
-                  {creativeStatusBadge(creative.status)}
-                </div>
+          {adsGlance.loading && !adsGlance.data ? (
+            <LoadingBlock label="Loading ad metrics…" />
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <MetricTile
+                  label="Spend today"
+                  value={formatMoney(ads.spendToday)}
+                  hint={`${ads.spendDelta >= 0 ? '+' : ''}${ads.spendDelta}% vs yesterday`}
+                />
+                <MetricTile
+                  label="ROAS"
+                  value={`${ads.roas.toFixed(1)}x`}
+                  hint={`${ads.roasDelta >= 0 ? '+' : ''}${ads.roasDelta.toFixed(1)} vs 7d`}
+                />
+                <MetricTile label="CPA" value={formatMoney(ads.cpa)} hint="Blended" />
+                <MetricTile
+                  label="Needs review"
+                  value={String(ads.creativesNeedingReview)}
+                  hint="Fatigued or underperforming"
+                  emphasize={ads.creativesNeedingReview > 0}
+                />
               </div>
-            ))}
-          </div>
+              <div className="space-y-2">
+                {ads.creatives.map((creative) => (
+                  <div
+                    key={creative.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-200/70 px-3.5 py-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-medium text-neutral-900">{creative.name}</div>
+                      <div className="mt-0.5 text-xs text-neutral-500">
+                        {creative.channel} · {formatMoney(creative.spend)} spend · CTR{' '}
+                        {creative.ctr}%
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+                      <span>
+                        CPA{' '}
+                        <span className="font-medium text-neutral-800">
+                          {formatMoney(creative.cpa)}
+                        </span>
+                      </span>
+                      <span>
+                        ROAS{' '}
+                        <span className="font-medium text-neutral-800">
+                          {creative.roas.toFixed(1)}x
+                        </span>
+                      </span>
+                      {creativeStatusBadge(creative.status)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

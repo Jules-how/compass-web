@@ -43,6 +43,15 @@ the owner membership. If the project already has multiple Auth users, it refuses
 to guess. An administrator must call `portal_bootstrap_operator(email)` with
 `service_role` once, naming the intended operator.
 
+Ad account connections (Home live metrics) use:
+
+```text
+0030_compass_ad_accounts.sql
+```
+
+Connect Meta / Google / LinkedIn under **Settings → Ad accounts**, then Sync.
+Until accounts are connected and synced, Home keeps the demo glance.
+
 ## Environment
 
 ```text
@@ -52,6 +61,11 @@ SUPABASE_SERVICE_ROLE_KEY=...
 PORTAL_RATE_LIMIT_SALT=...
 COMPASS_PORTAL_V1=1
 COMPASS_LEAD_INGEST_SECRET=...
+AD_TOKEN_ENCRYPTION_KEY=...
+AD_DEFAULT_LEAD_VALUE=200
+META_APP_ID=...
+META_APP_SECRET=...
+GOOGLE_ADS_DEVELOPER_TOKEN=...
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` is used by narrow server routes: invitation
@@ -60,6 +74,11 @@ ingest (`POST /api/ingest/leads`). The eligibility RPC is not executable by `ano
 Customer delivery routes and legacy task/lead routes never use the service role.
 Leave `COMPASS_PORTAL_V1` unset to keep the customer delivery slice disabled
 while retaining the private operator console.
+
+`AD_TOKEN_ENCRYPTION_KEY` encrypts ad-platform tokens at rest. If unset, the
+server derives a key from `SUPABASE_SERVICE_ROLE_KEY`. Prefer an explicit key in
+production. Optional `META_APP_ID` / `META_APP_SECRET` enable Facebook OAuth on
+Settings; otherwise paste a Meta system-user or long-lived token.
 
 Never expose the service-role key to browser code or a `NEXT_PUBLIC_*` variable.
 

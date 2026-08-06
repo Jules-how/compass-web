@@ -1,6 +1,28 @@
 -- Operator Clients CRM (directory + mini workspace).
--- Compass-native accounts; vault/portal link fields reserved for later.
+-- Compat: legacy desktop sync already created public.compass_clients with a
+-- different shape (vertical/onboarding_*/commercial_scope). CREATE TABLE IF
+-- NOT EXISTS would silently skip and leave the CRM columns missing, which
+-- breaks /api/clients and (via projects.client_id) /api/projects + /api/tasks.
+-- Always ALTER-add CRM columns onto the existing table.
 
+ALTER TABLE public.compass_clients
+  ADD COLUMN IF NOT EXISTS industry text,
+  ADD COLUMN IF NOT EXISTS website text,
+  ADD COLUMN IF NOT EXISTS main_contact_name text,
+  ADD COLUMN IF NOT EXISTS main_contact_role text,
+  ADD COLUMN IF NOT EXISTS engagement_type text,
+  ADD COLUMN IF NOT EXISTS retainer_status text,
+  ADD COLUMN IF NOT EXISTS priority integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS health text NOT NULL DEFAULT 'no_updates',
+  ADD COLUMN IF NOT EXISTS summary text,
+  ADD COLUMN IF NOT EXISTS tags text[] NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS notes text,
+  ADD COLUMN IF NOT EXISTS archived_at timestamptz,
+  ADD COLUMN IF NOT EXISTS vault_dossier_id text,
+  ADD COLUMN IF NOT EXISTS portal_client_slug text,
+  ADD COLUMN IF NOT EXISTS last_touch_at timestamptz;
+
+-- Fresh environments without the legacy table still need the base relation.
 CREATE TABLE IF NOT EXISTS public.compass_clients (
   id text PRIMARY KEY,
   name text NOT NULL,
@@ -26,13 +48,33 @@ CREATE TABLE IF NOT EXISTS public.compass_clients (
 );
 
 COMMENT ON TABLE public.compass_clients IS
-  'Operator client accounts (Clients tab). Soft-archive via archived_at.';
+  'Operator client accounts (Clients tab). Soft-archive via archived_at. Legacy desktop columns may also be present.';
 COMMENT ON COLUMN public.compass_clients.status IS
-  'onboarding|active|paused';
+  'onboarding|active|paused (legacy values like prospect map to onboarding in the web UI)';
 COMMENT ON COLUMN public.compass_clients.priority IS
   '0=none,1=urgent,2=high,3=medium,4=low';
 COMMENT ON COLUMN public.compass_clients.health IS
   'no_updates|on_track|at_risk|off_track';
+
+-- Seed CRM industry from legacy vertical when blank.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'compass_clients'
+      AND column_name = 'vertical'
+  ) THEN
+    UPDATE public.compass_clients
+    SET industry = vertical
+    WHERE industry IS NULL AND vertical IS NOT NULL;
+  END IF;
+END $$;
+
+UPDATE public.compass_clients
+SET last_touch_at = COALESCE(last_touch_at, updated_at, created_at)
+WHERE last_touch_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS compass_clients_archived_idx
   ON public.compass_clients (archived_at NULLS FIRST, name);
