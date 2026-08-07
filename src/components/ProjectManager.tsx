@@ -16,7 +16,7 @@ import {
   type ProjectBoardStatus
 } from '@/lib/project-pm'
 import type { TimelineZoom } from '@/lib/campaign-timeline'
-import { ProjectTimeline } from '@/components/ProjectTimeline'
+import { ProjectTimeline, TimelineZoomControls, type ProjectTimelineHandle } from '@/components/ProjectTimeline'
 import { cn } from '@/lib/utils'
 
 type ViewMode = 'list' | 'board' | 'timeline'
@@ -311,6 +311,8 @@ export function ProjectManager({
   const [cardMenuId, setCardMenuId] = useState<string | null>(null)
   const filterRef = useRef<HTMLDivElement>(null)
   const displayRef = useRef<HTMLDivElement>(null)
+  const timelineRef = useRef<ProjectTimelineHandle>(null)
+  const createTitleRef = useRef<HTMLInputElement>(null)
 
   const [name, setName] = useState('')
   const [summary, setSummary] = useState('')
@@ -439,6 +441,24 @@ export function ProjectManager({
     setCardMenuId(null)
   }
 
+  useEffect(() => {
+    if (!creating) return
+    const frame = window.requestAnimationFrame(() => createTitleRef.current?.focus())
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setCreating(false)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [creating])
+
   function resetCreateForm() {
     setName('')
     setSummary('')
@@ -522,6 +542,22 @@ export function ProjectManager({
     }
   }
 
+  async function patchProjectDates(projectId: string, start: string, end: string) {
+    setError(null)
+    const res = await fetch(`/api/projects/${projectId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ start_date: start, target_date: end })
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      const message = body.error ?? `Request failed (${res.status})`
+      setError(message)
+      throw new Error(message)
+    }
+    await onRefresh?.()
+  }
+
   async function removeProject(project: CompassProjectWithStats) {
     if (!confirm(`Delete project “${project.name}”?`)) return
     setSaving(true)
@@ -541,7 +577,7 @@ export function ProjectManager({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="relative flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1">
           <button
@@ -563,6 +599,16 @@ export function ProjectManager({
         </div>
 
         <div className="flex items-center gap-0.5">
+          {view === 'timeline' ? (
+            <div className="mr-1">
+              <TimelineZoomControls
+                zoom={timelineZoom}
+                onZoomChange={setTimelineZoom}
+                onToday={() => timelineRef.current?.scrollToToday('smooth')}
+              />
+            </div>
+          ) : null}
+
           <div className="relative" ref={filterRef}>
             <ToolbarIconButton
               label="Filter"
@@ -708,229 +754,281 @@ export function ProjectManager({
 
           <button
             type="button"
-            onClick={() => (creating ? setCreating(false) : openCreate(status))}
-            className="ml-1 flex h-7 w-7 items-center justify-center rounded-lg text-lg leading-none text-neutral-600 transition hover:bg-white hover:text-neutral-900"
-            aria-label={creating ? 'Cancel new project' : 'New project'}
-            title={creating ? 'Cancel' : 'New project'}
+            onClick={() => openCreate(status)}
+            className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-900"
+            aria-label="New project"
+            title="New project"
           >
-            {creating ? '×' : '+'}
+            +
           </button>
         </div>
       </div>
 
       {creating ? (
-        <form onSubmit={createProject} className="compass-panel space-y-4 p-5">
-          <div>
-            <input
-              autoFocus
-              type="text"
-              placeholder="Project name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 font-display text-lg"
-              disabled={saving}
-            />
-            <input
-              type="text"
-              placeholder="Add a short summary…"
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              className="mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-              disabled={saving}
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as ProjectBoardStatus)}
-              className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs"
-              disabled={saving}
-            >
-              {PROJECT_BOARD_STATUSES.map((value) => (
-                <option key={value} value={value}>
-                  {projectStatusLabel(value)}
-                </option>
-              ))}
-            </select>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(Number(e.target.value))}
-              className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs"
-              disabled={saving}
-            >
-              {PROJECT_PRIORITIES.map((row) => (
-                <option key={row.value} value={row.value}>
-                  {row.label}
-                </option>
-              ))}
-            </select>
-            <select
-              value={businessFunctionId}
-              onChange={(e) => setBusinessFunctionId(e.target.value)}
-              className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs"
-              disabled={saving}
-            >
-              <option value="">Team / Function</option>
-              {sortedFunctions.map((fn) => (
-                <option key={fn.id} value={fn.id}>
-                  {fn.name}
-                </option>
-              ))}
-            </select>
-            {sortedClients.length > 0 ? (
-              <select
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs"
-                disabled={saving}
-              >
-                <option value="">Client (optional)</option>
-                {sortedClients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            <label className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs">
-              Start
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-transparent"
-                disabled={saving}
-              />
-            </label>
-            <label className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs">
-              Target
-              <input
-                type="date"
-                value={targetDate}
-                onChange={(e) => setTargetDate(e.target.value)}
-                className="bg-transparent"
-                disabled={saving}
-              />
-            </label>
-          </div>
-
-          <textarea
-            placeholder="Write a description, a project brief, or collect ideas…"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={4}
-            className="compass-input"
-            disabled={saving}
-          />
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="block text-sm">
-              <span className="mb-1 block text-xs text-neutral-500">Labels (comma separated)</span>
-              <input
-                type="text"
-                value={labels}
-                onChange={(e) => setLabels(e.target.value)}
-                className="compass-input"
-                disabled={saving}
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block text-xs text-neutral-500">Dependencies</span>
-              <select
-                multiple
-                value={dependsOn}
-                onChange={(e) =>
-                  setDependsOn([...e.target.selectedOptions].map((option) => option.value))
-                }
-                className="h-24 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
-                disabled={saving}
-              >
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-neutral-800">Milestones</h3>
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-950/40 px-4 py-10 sm:py-16"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !saving) setCreating(false)
+          }}
+        >
+          <form
+            onSubmit={createProject}
+            className="relative w-full max-w-[720px] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
+          >
+            <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5">
+              <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-neutral-500">
+                <ProjectGlyph seed="new-project" />
+                <span className="truncate font-medium text-neutral-700">Switchflow</span>
+                <span className="text-neutral-300">›</span>
+                <span className="font-medium text-neutral-800">New project</span>
+              </div>
               <button
                 type="button"
-                onClick={() =>
-                  setMilestones((rows) => [...rows, { title: '', description: '', target_date: '' }])
-                }
-                className="text-xs font-medium text-sf-orange-dark"
+                onClick={() => {
+                  if (!saving) setCreating(false)
+                }}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+                aria-label="Close"
               >
-                + Milestone
+                ×
               </button>
             </div>
-            {milestones.length === 0 ? (
-              <p className="text-xs text-neutral-500">No milestones yet.</p>
-            ) : (
-              milestones.map((milestone, index) => (
-                <div key={index} className="grid gap-2 rounded-lg border border-stone-200 p-3 md:grid-cols-3">
-                  <input
-                    type="text"
-                    placeholder="Milestone title"
-                    value={milestone.title}
-                    onChange={(e) =>
-                      setMilestones((rows) =>
-                        rows.map((row, i) => (i === index ? { ...row, title: e.target.value } : row))
-                      )
-                    }
-                    className="rounded border border-neutral-300 px-2 py-1.5 text-sm md:col-span-1"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Description"
-                    value={milestone.description}
-                    onChange={(e) =>
-                      setMilestones((rows) =>
-                        rows.map((row, i) =>
-                          i === index ? { ...row, description: e.target.value } : row
-                        )
-                      )
-                    }
-                    className="rounded border border-neutral-300 px-2 py-1.5 text-sm md:col-span-1"
-                  />
-                  <div className="flex gap-2">
-                    <input
-                      type="date"
-                      value={milestone.target_date}
-                      onChange={(e) =>
-                        setMilestones((rows) =>
-                          rows.map((row, i) =>
-                            i === index ? { ...row, target_date: e.target.value } : row
-                          )
-                        )
-                      }
-                      className="w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setMilestones((rows) => rows.filter((_, i) => i !== index))}
-                      className="text-xs text-red-600"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
 
-          <button
-            type="submit"
-            disabled={saving || !name.trim()}
-            className="compass-btn-primary"
-          >
-            {saving ? 'Creating…' : 'Create project'}
-          </button>
-        </form>
+            <div className="space-y-4 px-5 py-5">
+              <div className="flex items-start gap-3">
+                <ProjectGlyph seed={name || 'new-project'} className="mt-1.5 h-6 w-6 rounded-md text-[11px]" />
+                <div className="min-w-0 flex-1">
+                  <input
+                    ref={createTitleRef}
+                    type="text"
+                    placeholder="Project name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full border-0 bg-transparent p-0 text-[22px] font-semibold tracking-tight text-neutral-900 outline-none placeholder:text-neutral-300"
+                    disabled={saving}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Add a short summary…"
+                    value={summary}
+                    onChange={(e) => setSummary(e.target.value)}
+                    className="mt-1 w-full border-0 bg-transparent p-0 text-[13px] text-neutral-600 outline-none placeholder:text-neutral-400"
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as ProjectBoardStatus)}
+                  className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] text-neutral-700"
+                  disabled={saving}
+                >
+                  {PROJECT_BOARD_STATUSES.map((value) => (
+                    <option key={value} value={value}>
+                      {projectStatusLabel(value)}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(Number(e.target.value))}
+                  className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] text-neutral-700"
+                  disabled={saving}
+                >
+                  {PROJECT_PRIORITIES.map((row) => (
+                    <option key={row.value} value={row.value}>
+                      {row.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={businessFunctionId}
+                  onChange={(e) => setBusinessFunctionId(e.target.value)}
+                  className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] text-neutral-700"
+                  disabled={saving}
+                >
+                  <option value="">Lead / Function</option>
+                  {sortedFunctions.map((fn) => (
+                    <option key={fn.id} value={fn.id}>
+                      {fn.name}
+                    </option>
+                  ))}
+                </select>
+                {sortedClients.length > 0 ? (
+                  <select
+                    value={clientId}
+                    onChange={(e) => setClientId(e.target.value)}
+                    className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] text-neutral-700"
+                    disabled={saving}
+                  >
+                    <option value="">Members / Client</option>
+                    {sortedClients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] text-neutral-700">
+                  Start
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="bg-transparent text-[12px] outline-none"
+                    disabled={saving}
+                  />
+                </label>
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] text-neutral-700">
+                  Target
+                  <input
+                    type="date"
+                    value={targetDate}
+                    onChange={(e) => setTargetDate(e.target.value)}
+                    className="bg-transparent text-[12px] outline-none"
+                    disabled={saving}
+                  />
+                </label>
+                <label className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] text-neutral-700">
+                  Labels
+                  <input
+                    type="text"
+                    value={labels}
+                    onChange={(e) => setLabels(e.target.value)}
+                    placeholder="comma separated"
+                    className="w-28 bg-transparent text-[12px] outline-none placeholder:text-neutral-400"
+                    disabled={saving}
+                  />
+                </label>
+              </div>
+
+              <textarea
+                placeholder="Write a description, a project brief, or collect ideas…"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={5}
+                className="w-full resize-y border-0 bg-transparent p-0 text-[13px] leading-relaxed text-neutral-700 outline-none placeholder:text-neutral-400"
+                disabled={saving}
+              />
+
+              <div className="rounded-lg border border-neutral-200/80">
+                <div className="flex items-center justify-between px-3 py-2">
+                  <h3 className="text-[13px] font-medium text-neutral-800">Milestones</h3>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMilestones((rows) => [...rows, { title: '', description: '', target_date: '' }])
+                    }
+                    className="flex h-6 w-6 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+                    aria-label="Add milestone"
+                  >
+                    +
+                  </button>
+                </div>
+                {milestones.length === 0 ? (
+                  <p className="border-t border-neutral-100 px-3 py-3 text-[12px] text-neutral-400">
+                    No milestones yet.
+                  </p>
+                ) : (
+                  <div className="space-y-2 border-t border-neutral-100 px-3 py-3">
+                    {milestones.map((milestone, index) => (
+                      <div key={index} className="grid gap-2 md:grid-cols-[1fr_1fr_auto_auto]">
+                        <input
+                          type="text"
+                          placeholder="Milestone title"
+                          value={milestone.title}
+                          onChange={(e) =>
+                            setMilestones((rows) =>
+                              rows.map((row, i) => (i === index ? { ...row, title: e.target.value } : row))
+                            )
+                          }
+                          className="rounded-md border border-neutral-200 px-2 py-1.5 text-sm"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Description"
+                          value={milestone.description}
+                          onChange={(e) =>
+                            setMilestones((rows) =>
+                              rows.map((row, i) =>
+                                i === index ? { ...row, description: e.target.value } : row
+                              )
+                            )
+                          }
+                          className="rounded-md border border-neutral-200 px-2 py-1.5 text-sm"
+                        />
+                        <input
+                          type="date"
+                          value={milestone.target_date}
+                          onChange={(e) =>
+                            setMilestones((rows) =>
+                              rows.map((row, i) =>
+                                i === index ? { ...row, target_date: e.target.value } : row
+                              )
+                            )
+                          }
+                          className="rounded-md border border-neutral-200 px-2 py-1.5 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setMilestones((rows) => rows.filter((_, i) => i !== index))}
+                          className="text-xs text-red-600"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <details className="text-[12px] text-neutral-500">
+                <summary className="cursor-pointer select-none font-medium text-neutral-600 hover:text-neutral-800">
+                  Dependencies
+                </summary>
+                <select
+                  multiple
+                  value={dependsOn}
+                  onChange={(e) =>
+                    setDependsOn([...e.target.selectedOptions].map((option) => option.value))
+                  }
+                  className="mt-2 h-24 w-full rounded-md border border-neutral-200 px-2 py-1.5 text-sm"
+                  disabled={saving}
+                >
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </details>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-neutral-100 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!saving) {
+                    resetCreateForm()
+                    setCreating(false)
+                  }
+                }}
+                className="rounded-md px-3 py-1.5 text-[13px] font-medium text-neutral-600 hover:bg-neutral-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving || !name.trim()}
+                className="rounded-md bg-[#5e6ad2] px-3 py-1.5 text-[13px] font-medium text-white hover:bg-[#5058c1] disabled:opacity-50"
+              >
+                {saving ? 'Creating…' : 'Create project'}
+              </button>
+            </div>
+          </form>
+        </div>
       ) : null}
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
@@ -961,7 +1059,7 @@ export function ProjectManager({
                       {group.items.map((project) => (
                         <li
                           key={project.id}
-                          className="flex flex-col gap-3 px-4 py-3 transition hover:bg-stone-50/80 lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.6fr)_minmax(0,0.5fr)_auto] lg:items-center"
+                          className="flex flex-col gap-3 px-4 py-5 transition hover:bg-stone-50/80 lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.6fr)_minmax(0,0.5fr)_auto] lg:items-center"
                         >
                           <div className="min-w-0">
                             <Link
@@ -1072,7 +1170,7 @@ export function ProjectManager({
                           </button>
                         </div>
                       </header>
-                      <ul className="flex flex-1 flex-col gap-1.5 px-2 pb-2">
+                      <ul className="flex flex-1 flex-col gap-2.5 px-2 pb-2">
                         {items.length === 0 ? (
                           <li className="rounded-lg border border-dashed border-neutral-200/80 px-3 py-6 text-center text-[12px] text-neutral-400">
                             No projects
@@ -1200,10 +1298,13 @@ export function ProjectManager({
 
           {view === 'timeline' ? (
             <ProjectTimeline
+              ref={timelineRef}
               projects={visibleProjects}
               clientById={clientById}
               zoom={timelineZoom}
               onZoomChange={setTimelineZoom}
+              onDatesChange={patchProjectDates}
+              showToolbar={false}
             />
           ) : null}
         </div>

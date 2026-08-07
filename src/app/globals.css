@@ -131,6 +131,10 @@ body {
     @apply font-display text-[1.65rem] font-semibold tracking-tight text-neutral-900;
   }
 
+  .compass-page-title-compact {
+    @apply text-[15px] font-semibold tracking-tight text-neutral-900;
+  }
+
   .compass-page-subtitle {
     @apply mt-1.5 max-w-2xl text-sm leading-relaxed text-neutral-500;
   }
