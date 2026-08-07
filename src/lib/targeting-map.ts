@@ -248,13 +248,23 @@ export function buildTargetingMap(
 
   const targeted = rows.length - missingLocation
   const maxSuccess = Math.max(0, ...rawPoints.map((p) => p.successes))
+  const maxReplies = Math.max(0, ...rawPoints.map((p) => p.replies))
   const maxTargeted = Math.max(0, ...rawPoints.map((p) => p.targeted))
 
   for (const point of rawPoints) {
     const successShare = maxSuccess > 0 ? point.successes / maxSuccess : 0
+    const replyShare = maxReplies > 0 ? point.replies / maxReplies : 0
     const volumeShare = maxTargeted > 0 ? point.targeted / maxTargeted : 0
-    // Prefer places with real wins; volume still shows where you spend effort.
-    point.heat = Math.min(1, successShare * 0.75 + volumeShare * 0.25 + point.successRate * 0.15)
+    const replyRate = point.targeted > 0 ? point.replies / point.targeted : 0
+    // Wins dominate; replies still light up places that are working when bookings are rare.
+    point.heat = Math.min(
+      1,
+      successShare * 0.55 +
+        replyShare * 0.25 +
+        point.successRate * 0.12 +
+        replyRate * 0.08 +
+        volumeShare * 0.12
+    )
   }
 
   const points = rawPoints

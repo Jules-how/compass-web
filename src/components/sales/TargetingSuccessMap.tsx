@@ -61,7 +61,7 @@ export function TargetingSuccessMap() {
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-neutral-600">
             Lead locations from your CRM. Marker size is how many people you&apos;ve targeted;
-            colour heat is where interested / booked / converted outcomes concentrate.
+            colour heat is where replies and wins (interested / booked / converted) concentrate.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
