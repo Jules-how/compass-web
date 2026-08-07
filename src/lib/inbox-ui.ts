@@ -2,9 +2,26 @@ import {
   inboundSourceLabel,
   type PortalInboundLead
 } from '@/lib/inbound-leads-ui'
+import {
+  effectiveTriage,
+  inboxIdentityKey,
+  isAgentAttentionTask,
+  isAgentBlockedTask,
+  isInstantlyInboundLead,
+  isLeadLifecycleActionable,
+  isTriageActionable,
+  isUnreadTriage,
+  scoreInboxItem,
+  type InboxChannel,
+  type InboxTriageState,
+  type LeadLifecycleStatus,
+  type RelatedInboxHit,
+  type TriageLookup
+} from '@/lib/inbox-triage'
 import type { CompassTask, LeadContact } from '@/lib/types'
 
-export const INBOX_TABS = ['agents', 'gmails', 'instantly', 'leads'] as const
+/** Visible Inbox tabs — Gmail stays reserved until sync ships. */
+export const INBOX_TABS = ['agents', 'instantly', 'leads'] as const
 
 export type InboxTab = (typeof INBOX_TABS)[number]
 
@@ -13,10 +30,18 @@ export type InboxTabCounts = Record<InboxTab, number>
 export type InboxItem = {
   id: string
   tab: InboxTab
+  sourceId: string
   title: string
   preview: string
   occurredAt: string
   unread: boolean
+  triage: InboxTriageState
+  snoozedUntil: string | null
+  actionable: boolean
+  score: number
+  identityKey: string | null
+  related: RelatedInboxHit[]
+  lifecycle: LeadLifecycleStatus | null
   sourceLabel: string | null
   contactName: string | null
   email: string | null
@@ -24,6 +49,8 @@ export type InboxItem = {
   body: string | null
   href: string | null
   meta: { label: string; value: string }[]
+  agentStatus?: string | null
+  instantlyStatus?: string | null
 }
 
 export type InboxPayload = {
@@ -31,28 +58,30 @@ export type InboxPayload = {
   items: InboxItem[]
   total: number
   counts: InboxTabCounts
-  /** Backward-compatible total used by nav badge + Home. */
+  /** Actionable unread total used by nav badge + Home. */
   badgeTotal: number
+  /** Cross-tab priority strip. */
+  needsYou: InboxItem[]
   /** Legacy shape for older consumers. */
   leads: PortalInboundLead[]
 }
 
 export const INBOX_TAB_LABELS: Record<InboxTab, string> = {
   agents: 'Agents',
-  gmails: 'Gmail',
   instantly: 'Instantly',
   leads: 'Leads'
 }
 
 export const INBOX_TAB_HINTS: Record<InboxTab, string> = {
-  agents: 'Agents completing work that need you',
-  gmails: 'Inbound Gmail that needs a reply or review',
-  instantly: 'Instantly replies and positive interest',
-  leads: 'Client website, guide, and Meta inbound leads'
+  agents: 'Blocked agent work first — completions stay for review until Done',
+  instantly: 'Instantly replies and positive interest, ranked by intent',
+  leads: 'Website, guide, and Meta inbound — new through qualified'
 }
 
 export function parseInboxTab(value: string | null | undefined): InboxTab {
   if (value === 'website') return 'leads'
+  // Gmail tab is hidden until sync — fall back to leads.
+  if (value === 'gmails' || value === 'gmail') return 'leads'
   if (value && (INBOX_TABS as readonly string[]).includes(value)) {
     return value as InboxTab
   }
@@ -60,7 +89,7 @@ export function parseInboxTab(value: string | null | undefined): InboxTab {
 }
 
 export function emptyInboxCounts(): InboxTabCounts {
-  return { agents: 0, gmails: 0, instantly: 0, leads: 0 }
+  return { agents: 0, instantly: 0, leads: 0 }
 }
 
 export function formatInboxWhen(iso: string): string {
@@ -79,25 +108,14 @@ export function formatInboxWhen(iso: string): string {
 export function formatInboxRelative(iso: string, now = Date.now()): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ''
-  const diffMs = now - date.getTime()
-  const abs = Math.abs(diffMs)
+  const abs = Math.abs(now - date.getTime())
   const minute = 60_000
   const hour = 60 * minute
   const day = 24 * hour
-
   if (abs < minute) return 'now'
-  if (abs < hour) {
-    const n = Math.round(abs / minute)
-    return `${n}m`
-  }
-  if (abs < day) {
-    const n = Math.round(abs / hour)
-    return `${n}h`
-  }
-  if (abs < 7 * day) {
-    const n = Math.round(abs / day)
-    return `${n}d`
-  }
+  if (abs < hour) return `${Math.round(abs / minute)}m`
+  if (abs < day) return `${Math.round(abs / hour)}h`
+  if (abs < 7 * day) return `${Math.round(abs / day)}d`
   return formatInboxWhen(iso)
 }
 
@@ -108,13 +126,26 @@ function clip(text: string | null | undefined, max = 120): string {
   return `${value.slice(0, max - 1).trimEnd()}…`
 }
 
-/** Tasks that need operator attention after agent / async work. */
-export function isAgentAttentionTask(task: Pick<CompassTask, 'status' | 'parent_task_id'>): boolean {
-  if (task.parent_task_id) return false
-  return task.status === 'blocked' || task.status === 'completed'
+function triageFor(
+  lookup: TriageLookup | undefined,
+  channel: InboxChannel,
+  sourceId: string
+): { triage: InboxTriageState; snoozedUntil: string | null; identityKey: string | null } {
+  const row = lookup?.get(`${channel}:${sourceId}`)
+  return {
+    triage: effectiveTriage(row?.triage, row?.snoozed_until),
+    snoozedUntil: row?.snoozed_until ?? null,
+    identityKey: row?.identity_key ?? null
+  }
 }
 
-export function projectAgentInboxItem(task: CompassTask): InboxItem {
+export { isAgentAttentionTask, isAgentBlockedTask, isInstantlyInboundLead }
+
+export function projectAgentInboxItem(
+  task: CompassTask,
+  lookup?: TriageLookup,
+  now = Date.now()
+): InboxItem {
   const statusLabel =
     task.status === 'blocked'
       ? 'Blocked — needs you'
@@ -129,33 +160,59 @@ export function projectAgentInboxItem(task: CompassTask): InboxItem {
   if (task.task_type) meta.push({ label: 'Type', value: task.task_type })
   if (task.due) meta.push({ label: 'Due', value: formatInboxWhen(task.due) })
 
+  const { triage, snoozedUntil, identityKey } = triageFor(lookup, 'agents', task.id)
+  const occurredAt = task.updated_at || task.created_at
+  const unread = isUnreadTriage(triage, snoozedUntil, now)
+  const actionable =
+    isTriageActionable(triage, snoozedUntil, now) &&
+    (task.status === 'blocked' || task.status === 'completed')
+  const score = scoreInboxItem(
+    {
+      tab: 'agents',
+      occurredAt,
+      agentStatus: task.status,
+      unread
+    },
+    now
+  )
+
   return {
     id: `agent:${task.id}`,
     tab: 'agents',
+    sourceId: task.id,
     title: task.title,
     preview,
-    occurredAt: task.updated_at || task.created_at,
-    unread: task.status === 'blocked',
+    occurredAt,
+    unread,
+    triage,
+    snoozedUntil,
+    actionable,
+    score,
+    identityKey,
+    related: [],
+    lifecycle: null,
     sourceLabel: 'Agent',
     contactName: null,
     email: null,
     phone: null,
     body: task.notes?.trim() || statusLabel,
     href: '/tasks',
-    meta
+    meta,
+    agentStatus: task.status,
+    instantlyStatus: null
   }
 }
 
-export function projectInstantlyInboxItem(lead: LeadContact): InboxItem {
+export function projectInstantlyInboxItem(
+  lead: LeadContact,
+  lookup?: TriageLookup,
+  now = Date.now()
+): InboxItem {
   const interest = lead.interest_label?.trim() || null
   const campaign =
-    lead.instantly_campaign_name?.trim() ||
-    lead.instantly_campaign?.trim() ||
-    null
+    lead.instantly_campaign_name?.trim() || lead.instantly_campaign?.trim() || null
   const preview =
-    clip(interest) ||
-    clip(campaign ? `Replied on ${campaign}` : null) ||
-    'Instantly reply'
+    clip(interest) || clip(campaign ? `Replied on ${campaign}` : null) || 'Instantly reply'
   const meta: InboxItem['meta'] = [
     { label: 'Outbound status', value: lead.outbound_status || 'replied' }
   ]
@@ -164,13 +221,36 @@ export function projectInstantlyInboxItem(lead: LeadContact): InboxItem {
   if (lead.company) meta.push({ label: 'Company', value: lead.company })
   if (lead.role) meta.push({ label: 'Role', value: lead.role })
 
+  const identity = inboxIdentityKey(lead.email, lead.phone)
+  const { triage, snoozedUntil, identityKey } = triageFor(lookup, 'instantly', lead.id)
+  const occurredAt = lead.updated_at || lead.last_outbound_at || lead.mirrored_at
+  const unread = isUnreadTriage(triage, snoozedUntil, now)
+  const actionable = isTriageActionable(triage, snoozedUntil, now)
+  const score = scoreInboxItem(
+    {
+      tab: 'instantly',
+      occurredAt,
+      instantlyStatus: lead.outbound_status,
+      unread
+    },
+    now
+  )
+
   return {
     id: `instantly:${lead.id}`,
     tab: 'instantly',
+    sourceId: lead.id,
     title: lead.name?.trim() || lead.email || 'Instantly reply',
     preview,
-    occurredAt: lead.updated_at || lead.last_outbound_at || lead.mirrored_at,
-    unread: true,
+    occurredAt,
+    unread,
+    triage,
+    snoozedUntil,
+    actionable,
+    score,
+    identityKey: identityKey || identity,
+    related: [],
+    lifecycle: null,
     sourceLabel: 'Instantly',
     contactName: lead.name,
     email: lead.email,
@@ -179,19 +259,50 @@ export function projectInstantlyInboxItem(lead: LeadContact): InboxItem {
       interest ||
       (campaign ? `Reply associated with campaign “${campaign}”.` : 'Instantly inbound reply.'),
     href: `/leads?outbound_status=replied`,
-    meta
+    meta,
+    agentStatus: null,
+    instantlyStatus: lead.outbound_status
   }
 }
 
-export function projectWebsiteInboxItem(lead: PortalInboundLead): InboxItem {
+export function projectWebsiteInboxItem(
+  lead: PortalInboundLead,
+  lookup?: TriageLookup,
+  now = Date.now()
+): InboxItem {
   const source = inboundSourceLabel(lead.source)
+  const identity = inboxIdentityKey(lead.email, lead.phone)
+  const { triage, snoozedUntil, identityKey } = triageFor(lookup, 'leads', lead.id)
+  const lifecycle = lead.lifecycleStatus ?? 'new'
+  const unread = isUnreadTriage(triage, snoozedUntil, now)
+  const actionable =
+    isTriageActionable(triage, snoozedUntil, now) && isLeadLifecycleActionable(lifecycle)
+  const score = scoreInboxItem(
+    {
+      tab: 'leads',
+      occurredAt: lead.submittedAt,
+      leadChannel: lead.channel,
+      lifecycle,
+      unread
+    },
+    now
+  )
+
   return {
     id: `leads:${lead.id}`,
     tab: 'leads',
+    sourceId: lead.id,
     title: lead.name,
     preview: clip(lead.summary) || source,
     occurredAt: lead.submittedAt,
-    unread: true,
+    unread,
+    triage,
+    snoozedUntil,
+    actionable,
+    score,
+    identityKey: identityKey || identity,
+    related: [],
+    lifecycle,
     sourceLabel: source,
     contactName: lead.name,
     email: lead.email,
@@ -201,12 +312,79 @@ export function projectWebsiteInboxItem(lead: PortalInboundLead): InboxItem {
     meta: [
       { label: 'Source', value: source },
       { label: 'Channel', value: lead.channel },
+      { label: 'Lifecycle', value: lifecycle },
       { label: 'Submitted', value: formatInboxWhen(lead.submittedAt) }
-    ]
+    ],
+    agentStatus: null,
+    instantlyStatus: null
   }
 }
 
-export function isInstantlyInboundLead(lead: Pick<LeadContact, 'outbound_status'>): boolean {
-  const status = (lead.outbound_status || '').toLowerCase()
-  return status === 'replied' || status === 'interested' || status === 'meeting_booked'
+export function sortInboxItems(items: InboxItem[]): InboxItem[] {
+  return [...items].sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    return Date.parse(b.occurredAt) - Date.parse(a.occurredAt)
+  })
+}
+
+/** Attach related cross-channel hits that share an identity key. */
+export function linkRelatedInboxItems(items: InboxItem[]): InboxItem[] {
+  const byIdentity = new Map<string, InboxItem[]>()
+  for (const item of items) {
+    if (!item.identityKey) continue
+    const list = byIdentity.get(item.identityKey) ?? []
+    list.push(item)
+    byIdentity.set(item.identityKey, list)
+  }
+
+  return items.map((item) => {
+    if (!item.identityKey) return item
+    const peers = byIdentity.get(item.identityKey) ?? []
+    const related: RelatedInboxHit[] = peers
+      .filter((peer) => peer.id !== item.id)
+      .map((peer) => ({
+        tab: peer.tab,
+        itemId: peer.id,
+        title: peer.title
+      }))
+    return related.length ? { ...item, related } : item
+  })
+}
+
+/**
+ * Needs-you strip: highest-scoring actionable items, one per identity when possible.
+ */
+export function pickNeedsYou(items: InboxItem[], limit = 8): InboxItem[] {
+  const actionable = sortInboxItems(items.filter((item) => item.actionable))
+  const preferred = actionable.filter((item) => {
+    if (item.tab === 'agents') return item.agentStatus === 'blocked'
+    return item.unread
+  })
+  const pool = preferred.length ? preferred : actionable
+  const seenIdentity = new Set<string>()
+  const picked: InboxItem[] = []
+  for (const item of pool) {
+    if (item.identityKey) {
+      if (seenIdentity.has(item.identityKey)) continue
+      seenIdentity.add(item.identityKey)
+    }
+    picked.push(item)
+    if (picked.length >= limit) break
+  }
+  return picked
+}
+
+/** Badge counts: blocked agents + actionable Instantly + actionable leads. */
+export function countActionableBadge(items: {
+  agents: InboxItem[]
+  instantly: InboxItem[]
+  leads: InboxItem[]
+}): InboxTabCounts {
+  return {
+    agents: items.agents.filter(
+      (item) => item.actionable && item.agentStatus === 'blocked' && item.unread
+    ).length,
+    instantly: items.instantly.filter((item) => item.actionable && item.unread).length,
+    leads: items.leads.filter((item) => item.actionable && item.unread).length
+  }
 }

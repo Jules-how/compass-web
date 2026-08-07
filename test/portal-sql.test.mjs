@@ -99,3 +99,13 @@ test('inbound leads migration is tenant-scoped and select-only for members', () 
   assert.match(sql, /else '\/leads'/i)
   assert.match(sql, /grant select on table public\.portal_inbound_leads to authenticated/i)
 })
+
+test('inbox triage migration adds lifecycle and cross-channel triage table', () => {
+  const sql = migration('0033_inbox_triage.sql')
+  assert.match(sql, /lifecycle_status/i)
+  assert.match(sql, /create table(?: if not exists)? public\.portal_inbox_triage/i)
+  assert.match(sql, /alter table public\.portal_inbox_triage force row level security/i)
+  assert.match(sql, /portal_inbox_triage_operator_all/i)
+  assert.match(sql, /portal_inbound_leads_operator_update/i)
+  assert.match(sql, /grant update on table public\.portal_inbound_leads to authenticated/i)
+})
