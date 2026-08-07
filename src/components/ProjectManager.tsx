@@ -416,6 +416,8 @@ export function ProjectManager({
   useEffect(() => {
     if (!creating) return
     const frame = window.requestAnimationFrame(() => createTitleRef.current?.focus())
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     function onKey(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setCreating(false)
@@ -424,6 +426,7 @@ export function ProjectManager({
     document.addEventListener('keydown', onKey)
     return () => {
       window.cancelAnimationFrame(frame)
+      document.body.style.overflow = previousOverflow
       document.removeEventListener('keydown', onKey)
     }
   }, [creating])
@@ -569,7 +572,7 @@ export function ProjectManager({
 
         <div className="flex items-center gap-0.5">
           {view === 'timeline' ? (
-            <div className="mr-1 hidden sm:block">
+            <div className="mr-1">
               <TimelineZoomControls
                 zoom={timelineZoom}
                 onZoomChange={setTimelineZoom}

@@ -9,8 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
-  type MouseEvent,
-  type PointerEvent as ReactPointerEvent
+  type MouseEvent
 } from 'react'
 import type { CompassProjectWithStats } from '@/lib/types'
 import {
@@ -313,15 +312,26 @@ export const ProjectTimeline = forwardRef<
     await persistDates(current.projectId, current.start, current.end)
   }
 
-  function onCreatePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
-    if (!createDragRef.current) return
-    updateCreateDrag(e.clientX)
-  }
+  useEffect(() => {
+    if (!createDrag) return
 
-  function onCreatePointerUp() {
-    if (!createDragRef.current) return
-    void endCreateDrag()
-  }
+    function onMove(e: PointerEvent) {
+      updateCreateDrag(e.clientX)
+    }
+    function onUp() {
+      void endCreateDrag()
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- drag handlers close over latest range/zoom via refs+state setters
+  }, [createDrag, range, zoom])
 
   return (
     <div className="flex min-h-[560px] flex-col overflow-hidden rounded-xl border border-neutral-200/80 bg-[#f7f8f9]">
@@ -351,9 +361,6 @@ export const ProjectTimeline = forwardRef<
             setHoverX(null)
             setHoverRowId(null)
           }}
-          onPointerMove={onCreatePointerMove}
-          onPointerUp={onCreatePointerUp}
-          onPointerCancel={onCreatePointerUp}
         >
           <div
             className="sticky top-0 z-30 flex border-b border-neutral-200/80 bg-[#f7f8f9]"
@@ -554,7 +561,6 @@ export const ProjectTimeline = forwardRef<
                     onPointerDown={(e) => {
                       if (hasDates || e.button !== 0) return
                       e.preventDefault()
-                      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
                       beginCreateDrag(project.id, e.clientX)
                     }}
                   >
