@@ -156,6 +156,74 @@ export interface CompassClientChannelNote {
   created_at: string
 }
 
+// ---------------------------------------------------------------------------
+// Meta Ads Manager planning (supabase/migrations/0031_compass_meta_ads.sql).
+// ---------------------------------------------------------------------------
+
+export interface CompassMetaCampaign {
+  id: string
+  client_id: string
+  name: string
+  objective: string
+  status: string
+  buying_type: string
+  special_ad_categories: string[]
+  budget_type: string
+  daily_budget: number | null
+  lifetime_budget: number | null
+  currency: string
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CompassMetaAdSet {
+  id: string
+  client_id: string
+  campaign_id: string
+  name: string
+  status: string
+  optimization_goal: string
+  billing_event: string
+  bid_strategy: string
+  budget_type: string
+  daily_budget: number | null
+  lifetime_budget: number | null
+  currency: string
+  start_date: string | null
+  end_date: string | null
+  age_min: number
+  age_max: number
+  genders: string
+  locations: string | null
+  detailed_targeting: string | null
+  placements: string
+  placement_notes: string | null
+  destination_type: string
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CompassMetaAd {
+  id: string
+  client_id: string
+  ad_set_id: string
+  name: string
+  status: string
+  format: string
+  primary_text: string | null
+  headline: string | null
+  description: string | null
+  call_to_action: string
+  destination_url: string | null
+  display_link: string | null
+  media_notes: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface ProjectStats {
   issueCount: number
   completedCount: number

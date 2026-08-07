@@ -10,6 +10,9 @@ import type {
   CompassClientIssue,
   CompassClientOffer,
   CompassClientUpdate,
+  CompassMetaAd,
+  CompassMetaAdSet,
+  CompassMetaCampaign,
   CompassProjectWithStats
 } from '@/lib/types'
 import {
@@ -32,8 +35,10 @@ import {
 import { formatPercentComplete } from '@/lib/project-stats'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { ClientChannelPanel } from '@/components/clients/ClientChannelPanel'
+import { MetaAdsManagerPanel } from '@/components/clients/MetaAdsManagerPanel'
 
 type TabKey = 'overview' | 'activity' | 'issues' | 'meta' | 'google' | 'projects'
+type MetaSubView = 'ads_manager' | 'channel_log'
 
 interface ClientDetailPayload {
   client: CompassClientCard
@@ -43,6 +48,9 @@ interface ClientDetailPayload {
   offers: CompassClientOffer[]
   adSpend: CompassClientAdSpend[]
   channelNotes: CompassClientChannelNote[]
+  metaCampaigns: CompassMetaCampaign[]
+  metaAdSets: CompassMetaAdSet[]
+  metaAds: CompassMetaAd[]
   projects: CompassProjectWithStats[]
 }
 
@@ -96,6 +104,7 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
   const [data, setData] = useState<ClientDetailPayload | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<TabKey>('overview')
+  const [metaSubView, setMetaSubView] = useState<MetaSubView>('ads_manager')
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
@@ -826,17 +835,62 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
       ) : null}
 
       {tab === 'meta' ? (
-        <ClientChannelPanel
-          clientId={clientId}
-          channel="meta"
-          offers={data.offers}
-          adSpend={data.adSpend}
-          notes={data.channelNotes}
-          saving={saving}
-          onBusy={setSaving}
-          onError={setError}
-          onRefresh={load}
-        />
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="inline-flex rounded-lg border border-stone-200 p-0.5">
+              <button
+                type="button"
+                onClick={() => setMetaSubView('ads_manager')}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                  metaSubView === 'ads_manager'
+                    ? 'bg-neutral-900 text-white'
+                    : 'text-neutral-600 hover:bg-stone-50'
+                }`}
+              >
+                Ads Manager
+              </button>
+              <button
+                type="button"
+                onClick={() => setMetaSubView('channel_log')}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                  metaSubView === 'channel_log'
+                    ? 'bg-neutral-900 text-white'
+                    : 'text-neutral-600 hover:bg-stone-50'
+                }`}
+              >
+                Channel log
+              </button>
+            </div>
+            <p className="text-xs text-neutral-500">
+              Build Campaign → Ad set → Ad drafts that match Meta upload fields.
+            </p>
+          </div>
+
+          {metaSubView === 'ads_manager' ? (
+            <MetaAdsManagerPanel
+              clientId={clientId}
+              campaigns={data.metaCampaigns ?? []}
+              adSets={data.metaAdSets ?? []}
+              ads={data.metaAds ?? []}
+              saving={saving}
+              onBusy={setSaving}
+              onError={setError}
+              onRefresh={load}
+            />
+          ) : (
+            <ClientChannelPanel
+              clientId={clientId}
+              channel="meta"
+              offers={data.offers}
+              adSpend={data.adSpend}
+              notes={data.channelNotes}
+              saving={saving}
+              onBusy={setSaving}
+              onError={setError}
+              onRefresh={load}
+            />
+          )}
+        </div>
       ) : null}
 
       {tab === 'google' ? (

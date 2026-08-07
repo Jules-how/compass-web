@@ -22,6 +22,15 @@ export const CLIENT_AD_SPEND_COLUMNS =
 
 export const CLIENT_CHANNEL_NOTE_COLUMNS = 'id,client_id,channel,body,created_at'
 
+export const META_CAMPAIGN_COLUMNS =
+  'id,client_id,name,objective,status,buying_type,special_ad_categories,budget_type,daily_budget,lifetime_budget,currency,notes,created_at,updated_at'
+
+export const META_AD_SET_COLUMNS =
+  'id,client_id,campaign_id,name,status,optimization_goal,billing_event,bid_strategy,budget_type,daily_budget,lifetime_budget,currency,start_date,end_date,age_min,age_max,genders,locations,detailed_targeting,placements,placement_notes,destination_type,notes,created_at,updated_at'
+
+export const META_AD_COLUMNS =
+  'id,client_id,ad_set_id,name,status,format,primary_text,headline,description,call_to_action,destination_url,display_link,media_notes,notes,created_at,updated_at'
+
 export const PROJECT_MILESTONE_COLUMNS =
   'id,project_id,title,description,target_date,sort_order,completed,created_at,updated_at,mirrored_at'
 

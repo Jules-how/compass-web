@@ -87,16 +87,18 @@ test('client routes are operator-gated with same-origin writes', () => {
   const clientId = read('src/app/api/clients/[id]/route.ts')
   const issues = read('src/app/api/clients/[id]/issues/route.ts')
   const channel = read('src/app/api/clients/[id]/channel/route.ts')
+  const metaAds = read('src/app/api/clients/[id]/meta-ads/route.ts')
   const page = read('src/app/(console)/clients/page.tsx')
   const detail = read('src/app/(console)/clients/[id]/page.tsx')
 
-  for (const source of [clients, clientId, issues, channel]) {
+  for (const source of [clients, clientId, issues, channel, metaAds]) {
     assert.match(source, /requirePortalAccess\(\{\s*operator:\s*true\s*\}\)/)
   }
   assert.match(clients, /requireSameOrigin/)
   assert.match(clientId, /requireSameOrigin/)
   assert.match(issues, /requireSameOrigin/)
   assert.match(channel, /requireSameOrigin/)
+  assert.match(metaAds, /requireSameOrigin/)
   assert.match(clients, /compass_clients/)
   assert.match(page, /ClientsPanel/)
   assert.match(detail, /ClientDetailPanel/)
