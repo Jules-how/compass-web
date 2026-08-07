@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   deleteLocalCampaign,
@@ -11,6 +13,7 @@ import {
   CAMPAIGN_COLORS,
   CAMPAIGN_HEALTHS,
   CAMPAIGN_STATUSES,
+  campaignHealthLabel,
   campaignStatusLabel,
   formatCampaignDate,
   type CompassCampaign,
@@ -22,13 +25,18 @@ export function CampaignSidecar({
   campaignId,
   onClose,
   onUpdated,
-  onDeleted
+  onDeleted,
+  variant = 'sidecar'
 }: {
   campaignId: string
-  onClose: () => void
+  onClose?: () => void
   onUpdated: (campaign?: CompassCampaign) => void
   onDeleted?: () => void
+  variant?: 'sidecar' | 'page'
 }) {
+  const router = useRouter()
+  const isPage = variant === 'page'
+  const detailHref = `/sales/pipeline/${campaignId}`
   const [campaign, setCampaign] = useState<CompassCampaign | null>(null)
   const [activity, setActivity] = useState<CompassCampaignActivity[]>([])
   const [favorited, setFavorited] = useState(false)
@@ -144,8 +152,26 @@ export function CampaignSidecar({
   const visibleActivity = showAllActivity ? activity : activity.slice(0, 5)
 
   return (
-    <aside className="flex h-full w-full max-w-[380px] shrink-0 flex-col border-l border-neutral-200 bg-[#f7f8f9]">
+    <aside
+      className={
+        isPage
+          ? 'flex min-h-0 w-full flex-1 flex-col bg-[#f7f8f9]'
+          : 'flex h-full w-full max-w-[380px] shrink-0 flex-col border-l border-neutral-200 bg-[#f7f8f9]'
+      }
+    >
       <div className="flex items-start gap-2 border-b border-neutral-200 bg-white px-4 py-3">
+        {isPage ? (
+          <Link
+            href="/sales/pipeline"
+            className="mt-0.5 rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+            aria-label="Back to Campaign Planner"
+            title="Back to planner"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <path d="M15 6l-6 6 6 6" />
+            </svg>
+          </Link>
+        ) : null}
         <span
           className="mt-1 h-4 w-4 shrink-0 rounded-full"
           style={{ background: color }}
@@ -190,7 +216,16 @@ export function CampaignSidecar({
             ···
           </button>
           {menuOpen ? (
-            <div className="absolute right-0 top-8 z-20 w-44 rounded-lg border border-neutral-200 bg-white py-1 text-sm shadow-lg">
+            <div className="absolute right-0 top-8 z-50 w-44 rounded-lg border border-neutral-200 bg-white py-1 text-sm shadow-lg">
+              {!isPage ? (
+                <Link
+                  href={detailHref}
+                  className="block w-full px-3 py-1.5 text-left text-neutral-700 hover:bg-neutral-50"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Open campaign page
+                </Link>
+              ) : null}
               <button
                 type="button"
                 className="block w-full px-3 py-1.5 text-left hover:bg-neutral-50"
@@ -207,6 +242,7 @@ export function CampaignSidecar({
                 onClick={() => {
                   deleteLocalCampaign(campaignId)
                   onDeleted?.()
+                  if (isPage) router.push('/sales/pipeline')
                 }}
               >
                 Delete
@@ -214,20 +250,40 @@ export function CampaignSidecar({
             </div>
           ) : null}
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
-          aria-label="Close details"
-          title="Close"
-        >
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.75">
-            <path d="M9 6l6 6-6 6" />
-          </svg>
-        </button>
+        {!isPage ? (
+          <>
+            <Link
+              href={detailHref}
+              className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+              aria-label="Open campaign page"
+              title="Open campaign page"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.75">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </Link>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+              aria-label="Close details"
+              title="Close"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.75">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          </>
+        ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+      <div
+        className={
+          isPage
+            ? 'min-h-0 flex-1 space-y-3 overflow-y-auto p-4 md:p-6'
+            : 'min-h-0 flex-1 space-y-3 overflow-y-auto p-3'
+        }
+      >
         {error ? (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
             {error}
@@ -292,7 +348,7 @@ export function CampaignSidecar({
                   >
                     {CAMPAIGN_HEALTHS.map((value) => (
                       <option key={value} value={value}>
-                        {value.replaceAll('_', ' ')}
+                        {campaignHealthLabel(value)}
                       </option>
                     ))}
                   </select>
