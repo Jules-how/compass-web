@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server'
-import type { CompassTask, CompassTaskInsert } from '@/lib/types'
+import type { CompassProject, CompassTask, CompassTaskInsert } from '@/lib/types'
 import { requirePortalAccess } from '@/lib/portal-access'
 import {
   portalAccessResponse,
@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
-    const [topTasksRes, subtasksRes, projectsRes, bfsRes] = await Promise.all([
+    const [topTasksRes, subtasksRes, projectsRes, bfsRes, clientsRes] = await Promise.all([
       supabase
         .from('compass_tasks')
         .select(TASK_LIST_COLUMNS)
@@ -35,23 +35,41 @@ export async function GET() {
         .order('updated_at', { ascending: false })
         .limit(SUBTASK_LIMIT),
       supabase.from('compass_projects').select(PROJECT_LIST_COLUMNS).order('name'),
-      supabase.from('compass_business_functions').select(FUNCTION_LIST_COLUMNS).order('sort_order')
+      supabase.from('compass_business_functions').select(FUNCTION_LIST_COLUMNS).order('sort_order'),
+      supabase.from('compass_clients').select('id,name').is('archived_at', null)
     ])
 
-    if (topTasksRes.error || subtasksRes.error || projectsRes.error || bfsRes.error) {
+    if (
+      topTasksRes.error ||
+      subtasksRes.error ||
+      projectsRes.error ||
+      bfsRes.error ||
+      clientsRes.error
+    ) {
       return portalJson({ error: 'fetch_failed' }, { status: 500 })
     }
+
+    const clientNameById = Object.fromEntries(
+      ((clientsRes.data ?? []) as Array<{ id: string; name: string }>).map((client) => [
+        client.id,
+        client.name
+      ])
+    )
 
     const topTasks = (topTasksRes.data ?? []) as CompassTask[]
     const parentIds = new Set(topTasks.map((task) => task.id))
     const subtasks = ((subtasksRes.data ?? []) as CompassTask[]).filter((task) =>
       task.parent_task_id ? parentIds.has(task.parent_task_id) : false
     )
+    const projects = ((projectsRes.data ?? []) as CompassProject[]).map((project) => ({
+      ...project,
+      client_name: project.client_id ? clientNameById[project.client_id] ?? null : null
+    }))
 
     return portalJsonCached({
       topTasks,
       subtasks,
-      projects: projectsRes.data ?? [],
+      projects,
       businessFunctions: bfsRes.data ?? []
     })
   } catch (err) {

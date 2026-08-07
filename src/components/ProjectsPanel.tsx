@@ -8,6 +8,7 @@ import { useCachedJson } from '@/lib/use-cached-json'
 type ProjectsPayload = {
   projects: CompassProjectWithStats[]
   functions: CompassBusinessFunction[]
+  clients?: Array<{ id: string; name: string }>
 }
 
 export function ProjectsPanel() {
@@ -33,6 +34,7 @@ export function ProjectsPanel() {
     <ProjectManager
       projects={data.projects ?? []}
       functions={data.functions ?? []}
+      clients={data.clients ?? []}
       onRefresh={async () => {
         await reload(true)
       }}

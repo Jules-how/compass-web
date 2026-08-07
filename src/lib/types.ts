@@ -54,6 +54,8 @@ export interface CompassProject {
   created_at: string
   updated_at: string
   mirrored_at: string
+  /** Present when API joins client names for stacked multi-client boards. */
+  client_name?: string | null
 }
 
 // ---------------------------------------------------------------------------

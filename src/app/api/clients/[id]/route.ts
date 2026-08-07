@@ -18,7 +18,8 @@ import {
   META_AD_COLUMNS,
   META_AD_SET_COLUMNS,
   META_CAMPAIGN_COLUMNS,
-  PROJECT_LIST_COLUMNS
+  PROJECT_LIST_COLUMNS,
+  TASK_LIST_COLUMNS
 } from '@/lib/list-columns'
 import {
   normalizeClientRow,
@@ -40,7 +41,8 @@ import type {
   CompassMetaAd,
   CompassMetaAdSet,
   CompassMetaCampaign,
-  CompassProject
+  CompassProject,
+  CompassTask
 } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -165,6 +167,18 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       }
     })
 
+    const projectIds = projects.map((project) => project.id)
+    let tasks: CompassTask[] = []
+    if (projectIds.length > 0) {
+      const tasksRes = await supabase
+        .from('compass_tasks')
+        .select(TASK_LIST_COLUMNS)
+        .in('project_id', projectIds)
+        .order('updated_at', { ascending: false })
+      if (tasksRes.error) return portalJson({ error: 'fetch_failed' }, { status: 500 })
+      tasks = (tasksRes.data ?? []) as CompassTask[]
+    }
+
     const client = normalizeClientRow(clientRes.data as CompassClient)
     const open = issues.filter((issue) => issue.status !== 'completed' && issue.status !== 'cancelled')
 
@@ -183,7 +197,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       metaCampaigns,
       metaAdSets,
       metaAds,
-      projects
+      projects,
+      tasks
     })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })

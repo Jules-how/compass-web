@@ -10,7 +10,7 @@ import {
 import { FUNCTION_LIST_COLUMNS, PROJECT_LIST_COLUMNS } from '@/lib/list-columns'
 import { computeProjectStats, emptyProjectStats } from '@/lib/project-stats'
 import { normalizeProjectStatus } from '@/lib/project-pm'
-import type { CompassProject } from '@/lib/types'
+import type { CompassClient, CompassProject } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,14 +29,18 @@ function normalizeLabels(value: unknown): string[] {
 export async function GET() {
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
-    const [projectsRes, functionsRes, taskStatsRes] = await Promise.all([
+    const [projectsRes, functionsRes, taskStatsRes, clientsRes] = await Promise.all([
       supabase.from('compass_projects').select(PROJECT_LIST_COLUMNS).order('name'),
       supabase.from('compass_business_functions').select(FUNCTION_LIST_COLUMNS).order('sort_order'),
-      supabase.from('compass_tasks').select('project_id,status').not('project_id', 'is', null)
+      supabase.from('compass_tasks').select('project_id,status').not('project_id', 'is', null),
+      supabase.from('compass_clients').select('id,name').is('archived_at', null).order('name')
     ])
-    if (projectsRes.error || functionsRes.error || taskStatsRes.error) {
+    if (projectsRes.error || functionsRes.error || taskStatsRes.error || clientsRes.error) {
       return portalJson({ error: 'fetch_failed' }, { status: 500 })
     }
+
+    const clients = (clientsRes.data ?? []) as Pick<CompassClient, 'id' | 'name'>[]
+    const clientNameById = Object.fromEntries(clients.map((client) => [client.id, client.name]))
 
     const statsByProject = computeProjectStats(taskStatsRes.data ?? [])
     const projects = ((projectsRes.data ?? []) as CompassProject[]).map((project) => ({
@@ -44,12 +48,14 @@ export async function GET() {
       labels: Array.isArray(project.labels) ? project.labels : [],
       priority: typeof project.priority === 'number' ? project.priority : 0,
       health: project.health || 'no_updates',
+      client_name: project.client_id ? clientNameById[project.client_id] ?? null : null,
       stats: statsByProject.get(project.id) ?? emptyProjectStats()
     }))
 
     return portalJsonCached({
       projects,
-      functions: functionsRes.data ?? []
+      functions: functionsRes.data ?? [],
+      clients
     })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })
