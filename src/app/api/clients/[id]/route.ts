@@ -138,7 +138,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     }
     if (!clientRes.data) return portalJson({ error: 'not_found' }, { status: 404 })
 
-    // Meta Ads Manager tables land in 0031; treat missing relation as empty until migrated.
+    // Meta Ads Manager tables land in 0032; treat missing relation as empty until migrated.
     const metaCampaigns = metaCampaignsRes.error
       ? []
       : ((metaCampaignsRes.data ?? []) as CompassMetaCampaign[]).map((row) => ({
