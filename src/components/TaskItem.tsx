@@ -103,7 +103,7 @@ export default function TaskItem({
   return (
     <li>
       <div
-        className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm transition hover:border-neutral-300"
+        className="rounded-xl border border-stone-200/70 bg-white p-3.5 shadow-soft transition hover:border-stone-300 hover:shadow-lift"
         style={{ marginLeft: depth * 16 }}
       >
         <div className="flex items-start gap-3">
@@ -121,12 +121,12 @@ export default function TaskItem({
                 {task.title}
               </span>
               {project && (
-                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600">
+                <span className="rounded-md bg-stone-100 px-2 py-0.5 text-xs text-neutral-600">
                   {project.client_name ? `${project.client_name} · ${project.name}` : project.name}
                 </span>
               )}
               {bf && (
-                <span className="rounded-full bg-sf-orange-light/40 px-2 py-0.5 text-xs text-sf-orange-dark">
+                <span className="rounded-md bg-sf-orange-light/50 px-2 py-0.5 text-xs text-sf-orange-dark">
                   {bf.name}
                 </span>
               )}

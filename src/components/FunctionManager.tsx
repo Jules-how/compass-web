@@ -201,7 +201,7 @@ export function FunctionManager({
         <button
           type="button"
           onClick={() => setCreating((value) => !value)}
-          className="rounded-lg bg-sf-orange px-3 py-1.5 text-sm font-medium text-white hover:bg-sf-orange-dark"
+          className="compass-btn-primary"
         >
           {creating ? 'Cancel' : 'New function'}
         </button>
@@ -221,7 +221,7 @@ export function FunctionManager({
               setName(e.target.value)
               if (!slug || slug === slugify(name)) setSlug(slugify(e.target.value))
             }}
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            className="compass-input"
             disabled={saving}
           />
           <div className="grid gap-3 sm:grid-cols-2">
@@ -249,7 +249,7 @@ export function FunctionManager({
           <button
             type="submit"
             disabled={saving || !name.trim()}
-            className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+            className="compass-btn-primary"
           >
             {saving ? 'Creating…' : 'Create function'}
           </button>

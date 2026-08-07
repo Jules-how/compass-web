@@ -133,25 +133,26 @@ function GlanceLink({
     <Link
       href={href}
       className={cn(
-        'compass-panel block p-3.5 transition hover:border-stone-300 hover:bg-stone-50/60',
-        tone === 'action' && 'border-[#e85d2a]/35 bg-orange-50/40',
-        tone === 'warn' && 'border-amber-300/70 bg-amber-50/40'
+        'compass-panel block p-4 transition hover:-translate-y-0.5 hover:shadow-lift',
+        tone === 'action' && 'border-[#e85d2a]/30 bg-gradient-to-br from-orange-50/80 to-white',
+        tone === 'warn' && 'border-amber-300/60 bg-gradient-to-br from-amber-50/70 to-white'
       )}
     >
-      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-        {label}
-      </div>
-      <div className="mt-1.5 text-xl font-semibold tracking-tight text-neutral-900 tabular-nums">
+      <div className="compass-section-label">{label}</div>
+      <div className="mt-2 text-xl font-semibold tracking-tight text-neutral-900 tabular-nums">
         {value}
       </div>
-      {hint ? <div className="mt-1 text-xs text-neutral-500">{hint}</div> : null}
+      {hint ? <div className="mt-1.5 text-xs leading-snug text-neutral-500">{hint}</div> : null}
     </Link>
   )
 }
 
 function SectionLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="text-sm font-medium text-[#c2410c] hover:underline">
+    <Link
+      href={href}
+      className="text-sm font-medium text-[#c2410c] transition hover:text-[#9a3412] hover:underline"
+    >
       {children}
     </Link>
   )
@@ -333,7 +334,7 @@ export function HomeDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <GlanceLink
           href="/tasks"
@@ -389,7 +390,7 @@ export function HomeDashboard() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <div>
@@ -400,9 +401,9 @@ export function HomeDashboard() {
             </div>
             <SectionLink href="/tasks">Open tasks</SectionLink>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2.5">
             {tasks.error && !tasks.data ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-700">
                 {tasks.error}{' '}
                 <button type="button" className="underline" onClick={() => void tasks.reload(true)}>
                   Retry
@@ -411,7 +412,7 @@ export function HomeDashboard() {
             ) : null}
             {tasks.loading && !tasks.data ? <LoadingBlock label="Loading priorities…" /> : null}
             {!tasks.loading && priorities.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-stone-300 px-4 py-8 text-center text-sm text-neutral-500">
+              <div className="rounded-xl border border-dashed border-stone-300/80 bg-stone-50/40 px-4 py-10 text-center text-sm text-neutral-500">
                 No open priorities yet. Capture a brain dump or{' '}
                 <Link href="/tasks" className="font-medium text-[#c2410c] hover:underline">
                   create a task
@@ -425,9 +426,9 @@ export function HomeDashboard() {
                 <Link
                   key={task.id}
                   href="/tasks"
-                  className="flex items-start gap-3 rounded-xl border border-stone-200/70 bg-stone-50/40 px-3.5 py-3 transition hover:border-stone-300 hover:bg-stone-50"
+                  className="flex items-start gap-3 rounded-xl border border-transparent bg-stone-50/60 px-3.5 py-3 transition hover:border-stone-200 hover:bg-white hover:shadow-soft"
                 >
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white text-xs font-semibold tabular-nums text-neutral-500 ring-1 ring-stone-200">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-semibold tabular-nums text-neutral-500 ring-1 ring-stone-200/80">
                     {index + 1}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -444,11 +445,9 @@ export function HomeDashboard() {
             })}
 
             {activeProjects.length > 0 ? (
-              <div className="border-t border-stone-200/80 pt-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                    Active projects
-                  </div>
+              <div className="border-t border-stone-100 pt-3.5">
+                <div className="mb-2.5 flex items-center justify-between">
+                  <div className="compass-section-label">Active projects</div>
                   <SectionLink href="/projects">All projects</SectionLink>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -485,14 +484,14 @@ export function HomeDashboard() {
               }}
               placeholder="Messy thoughts, follow-ups, half-ideas… one line per thought works best."
               rows={10}
-              className="w-full resize-y rounded-xl border border-stone-200 bg-stone-50/50 px-3.5 py-3 text-sm text-neutral-800 placeholder:text-neutral-400 focus:border-[#e85d2a]/50 focus:outline-none focus:ring-1 focus:ring-[#e85d2a]/40"
+              className="compass-input min-h-[12rem] resize-y"
             />
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => void runReorganize()}
                 disabled={!dump.trim() || reorganizing}
-                className="rounded-lg bg-[#e85d2a] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#c2410c] disabled:opacity-50"
+                className="compass-btn-primary"
               >
                 {reorganizing ? 'Thinking…' : 'Reorganize with AI'}
               </button>
@@ -505,7 +504,7 @@ export function HomeDashboard() {
                     setApplyNote(null)
                     setReorganizeError(null)
                   }}
-                  className="rounded-lg border border-stone-200 px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-stone-50"
+                  className="compass-btn-secondary"
                 >
                   Clear
                 </button>
@@ -519,7 +518,7 @@ export function HomeDashboard() {
             {applyError ? <p className="text-sm text-red-600">{applyError}</p> : null}
 
             {plan ? (
-              <div className="space-y-2 rounded-xl border border-stone-200/80 bg-stone-50/60 p-3">
+              <div className="space-y-2 rounded-xl border border-stone-200/70 bg-stone-50/50 p-3.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm text-neutral-700">{plan.summary}</p>
                   {plan.source ? (
@@ -547,7 +546,7 @@ export function HomeDashboard() {
                   type="button"
                   onClick={() => void applySuggestions()}
                   disabled={applying || selected.size === 0}
-                  className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-neutral-800 transition hover:bg-stone-50 disabled:opacity-50"
+                  className="compass-btn-secondary mt-1 w-full"
                 >
                   {applying ? 'Applying…' : 'Apply selected to priorities'}
                 </button>
@@ -601,7 +600,7 @@ export function HomeDashboard() {
                 {ads.creatives.map((creative) => (
                   <div
                     key={creative.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-200/70 px-3.5 py-3"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-100 bg-stone-50/40 px-3.5 py-3 transition hover:bg-white"
                   >
                     <div className="min-w-0">
                       <div className="font-medium text-neutral-900">{creative.name}</div>
@@ -680,7 +679,7 @@ export function HomeDashboard() {
                   cold.campaigns.map((campaign) => (
                     <div
                       key={campaign.id}
-                      className="rounded-xl border border-stone-200/70 bg-stone-50/40 p-3.5"
+                      className="rounded-xl border border-stone-100 bg-stone-50/40 p-3.5 transition hover:bg-white"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
@@ -724,14 +723,12 @@ function MetricTile({
   return (
     <div
       className={cn(
-        'rounded-xl border border-stone-200/70 bg-stone-50/50 p-3.5',
-        emphasize && 'border-amber-300/70 bg-amber-50/50'
+        'rounded-xl border border-stone-100 bg-stone-50/60 p-3.5',
+        emphasize && 'border-amber-200/80 bg-amber-50/50'
       )}
     >
-      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-        {label}
-      </div>
-      <div className="mt-1.5 text-xl font-semibold tracking-tight text-neutral-900 tabular-nums">
+      <div className="compass-section-label">{label}</div>
+      <div className="mt-2 text-xl font-semibold tracking-tight text-neutral-900 tabular-nums">
         {value}
       </div>
       {hint ? <div className="mt-1 text-xs text-neutral-500">{hint}</div> : null}

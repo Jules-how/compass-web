@@ -85,19 +85,19 @@ export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-1 items-center gap-2">
+        <div className="flex flex-1 items-center gap-3">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search clients…"
-            className="w-full max-w-sm rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
+            className="compass-input max-w-sm"
           />
-          <span className="text-xs text-neutral-500">{filtered.length} active</span>
+          <span className="text-xs tabular-nums text-neutral-500">{filtered.length} active</span>
         </div>
         <button
           type="button"
           onClick={() => setShowCreate((open) => !open)}
-          className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white hover:bg-sf-orange-dark"
+          className={showCreate ? 'compass-btn-secondary' : 'compass-btn-primary'}
         >
           {showCreate ? 'Cancel' : 'Add client'}
         </button>
@@ -106,84 +106,86 @@ export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       {showCreate ? (
-        <form onSubmit={createClient} className="compass-panel space-y-4 p-5">
+        <form onSubmit={createClient} className="compass-panel space-y-4 p-6">
           <div>
             <h2 className="font-display text-lg font-semibold text-neutral-900">New client</h2>
-            <p className="text-sm text-neutral-500">Short create flow — refine the profile inside the account.</p>
+            <p className="mt-1 text-sm text-neutral-500">
+              Short create flow — refine the profile inside the account.
+            </p>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <label className="block text-sm md:col-span-2">
-              <span className="mb-1 block text-xs text-neutral-500">Company name</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Company name</span>
               <input
                 required
                 value={form.name}
                 onChange={(e) => setForm((row) => ({ ...row, name: e.target.value }))}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block text-xs text-neutral-500">Industry</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Industry</span>
               <input
                 value={form.industry}
                 onChange={(e) => setForm((row) => ({ ...row, industry: e.target.value }))}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block text-xs text-neutral-500">Website</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Website</span>
               <input
                 value={form.website}
                 onChange={(e) => setForm((row) => ({ ...row, website: e.target.value }))}
                 placeholder="https://"
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block text-xs text-neutral-500">Main contact</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Main contact</span>
               <input
                 value={form.main_contact_name}
                 onChange={(e) => setForm((row) => ({ ...row, main_contact_name: e.target.value }))}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block text-xs text-neutral-500">Role</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Role</span>
               <input
                 value={form.main_contact_role}
                 onChange={(e) => setForm((row) => ({ ...row, main_contact_role: e.target.value }))}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block text-xs text-neutral-500">Engagement type</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Engagement type</span>
               <input
                 value={form.engagement_type}
                 onChange={(e) => setForm((row) => ({ ...row, engagement_type: e.target.value }))}
                 placeholder="Growth, AI build, mixed…"
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block text-xs text-neutral-500">Retainer status</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Retainer status</span>
               <input
                 value={form.retainer_status}
                 onChange={(e) => setForm((row) => ({ ...row, retainer_status: e.target.value }))}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block text-xs text-neutral-500">Status</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Status</span>
               <select
                 value={form.status}
                 onChange={(e) => setForm((row) => ({ ...row, status: e.target.value }))}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2"
+                className="compass-input"
                 disabled={saving}
               >
                 {CLIENT_STATUSES.map((status) => (
@@ -194,12 +196,12 @@ export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
               </select>
             </label>
             <label className="block text-sm md:col-span-2">
-              <span className="mb-1 block text-xs text-neutral-500">Tags</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Tags</span>
               <input
                 value={form.tags}
                 onChange={(e) => setForm((row) => ({ ...row, tags: e.target.value }))}
                 placeholder="growth, ai-build, meta…"
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
@@ -207,7 +209,7 @@ export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
           <button
             type="submit"
             disabled={saving || !form.name.trim()}
-            className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+            className="compass-btn-primary"
           >
             {saving ? 'Creating…' : 'Create client'}
           </button>
@@ -215,7 +217,7 @@ export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
       ) : null}
 
       {filtered.length === 0 ? (
-        <div className="compass-panel p-8 text-center text-sm text-neutral-500">
+        <div className="compass-panel px-8 py-12 text-center text-sm text-neutral-500">
           {clients.length === 0
             ? 'No clients yet. Add your first account to open a workspace.'
             : 'No clients match that search.'}
@@ -226,18 +228,20 @@ export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
             <Link
               key={client.id}
               href={`/clients/${client.id}`}
-              className="block rounded-lg border border-stone-200 bg-stone-50 p-5 transition hover:border-stone-300 hover:bg-white"
+              className="compass-panel block p-5 transition hover:-translate-y-0.5 hover:shadow-lift"
             >
               <div className="flex items-start justify-between gap-3">
-                <h3 className="font-display text-base font-semibold text-neutral-900">{client.name}</h3>
-                <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-neutral-600 ring-1 ring-inset ring-stone-200">
+                <h3 className="font-display text-base font-semibold text-neutral-900">
+                  {client.name}
+                </h3>
+                <span className="shrink-0 rounded-md bg-stone-50 px-2 py-0.5 text-[11px] font-medium text-neutral-600 ring-1 ring-inset ring-stone-200/80">
                   {clientStatusLabel(client.status)}
                 </span>
               </div>
-              <p className="mt-3 text-sm text-neutral-500">
+              <p className="mt-4 text-sm text-neutral-500">
                 Last touch · {formatRelativeTouch(client.last_touch_at)}
               </p>
-              <p className="mt-1 text-sm text-neutral-600">
+              <p className="mt-1 text-sm text-neutral-700">
                 Next · {client.next_action || 'No open issues'}
               </p>
             </Link>

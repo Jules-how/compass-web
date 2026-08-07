@@ -90,8 +90,8 @@ function NotificationRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex w-full gap-3 border-b border-neutral-100 px-3 py-3 text-left transition',
-        selected ? 'bg-sky-50/80' : 'hover:bg-neutral-50'
+        'flex w-full gap-3 border-b border-stone-100 px-3.5 py-3 text-left transition',
+        selected ? 'bg-[#e85d2a]/[0.06]' : 'hover:bg-stone-50/80'
       )}
     >
       <SourceGlyph tab={item.tab} />
@@ -108,9 +108,9 @@ function NotificationRow({
               {formatInboxRelative(item.occurredAt)}
             </span>
             {item.unread ? (
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-500" aria-label="Unread" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#e85d2a]" aria-label="Unread" />
             ) : (
-              <span className="h-1.5 w-1.5 rounded-full border border-neutral-300" aria-hidden />
+              <span className="h-1.5 w-1.5 rounded-full border border-stone-300" aria-hidden />
             )}
           </div>
         </div>
@@ -136,7 +136,7 @@ function ContextPane({ item }: { item: InboxItem | null }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-200/80 px-5 py-3">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stone-100 px-5 py-3.5">
         <div className="min-w-0">
           <div className="truncate text-[13px] text-neutral-500">
             {INBOX_TAB_LABELS[item.tab]}
@@ -147,10 +147,7 @@ function ContextPane({ item }: { item: InboxItem | null }) {
           </h2>
         </div>
         {item.href ? (
-          <Link
-            href={item.href}
-            className="shrink-0 rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
-          >
+          <Link href={item.href} className="compass-btn-secondary shrink-0 !px-2.5 !py-1.5 text-[12px]">
             Open
           </Link>
         ) : null}
@@ -265,17 +262,17 @@ export function InboxPanel() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-white text-neutral-900">
-      <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-neutral-200/80 px-4">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-stone-100 px-5">
         <div className="min-w-0">
           <h1 className="text-[15px] font-semibold tracking-tight">Inbox</h1>
           <p className="truncate text-[12px] text-neutral-500">{INBOX_TAB_HINTS[tab]}</p>
         </div>
-        <div className="text-[12px] tabular-nums text-neutral-400">
+        <div className="rounded-md bg-stone-50 px-2 py-1 text-[12px] tabular-nums text-neutral-500 ring-1 ring-stone-200/70">
           {data.total} item{data.total === 1 ? '' : 's'}
         </div>
       </header>
 
-      <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-neutral-200/80 px-2 py-1.5">
+      <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-stone-100 px-3 py-2">
         {INBOX_TABS.map((key) => {
           const count = counts?.[key] ?? 0
           const active = tab === key
@@ -285,17 +282,17 @@ export function InboxPanel() {
               type="button"
               onClick={() => setTab(key)}
               className={cn(
-                'inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition',
+                'inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition',
                 active
-                  ? 'bg-neutral-900 text-white'
-                  : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800'
+                  ? 'bg-neutral-900 text-white shadow-soft'
+                  : 'text-neutral-500 hover:bg-stone-100 hover:text-neutral-800'
               )}
             >
               {INBOX_TAB_LABELS[key]}
               <span
                 className={cn(
-                  'rounded px-1 text-[11px] tabular-nums',
-                  active ? 'bg-white/15 text-white' : 'bg-neutral-100 text-neutral-500'
+                  'rounded-md px-1 text-[11px] tabular-nums',
+                  active ? 'bg-white/15 text-white' : 'bg-stone-100 text-neutral-500'
                 )}
               >
                 {count}

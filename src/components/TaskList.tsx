@@ -39,7 +39,7 @@ export default function TaskList({
         <button
           type="button"
           onClick={() => setCreating((v) => !v)}
-          className="rounded-lg bg-sf-orange px-3 py-1.5 text-sm font-medium text-white transition hover:bg-sf-orange-dark"
+          className="compass-btn-primary"
         >
           {creating ? 'Cancel' : 'New task'}
         </button>
@@ -58,7 +58,7 @@ export default function TaskList({
 
       <ul className="space-y-2">
         {topTasks.length === 0 && (
-          <li className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-500">
+          <li className="rounded-2xl border border-dashed border-stone-300/80 bg-stone-50/40 px-8 py-12 text-center text-sm text-neutral-500">
             No tasks yet. Create one to get started.
           </li>
         )}

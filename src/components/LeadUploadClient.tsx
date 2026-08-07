@@ -250,7 +250,7 @@ export default function LeadUploadClient() {
             type="button"
             onClick={handleUpload}
             disabled={!canUpload}
-            className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white transition hover:bg-sf-orange-dark disabled:opacity-60"
+            className="compass-btn-primary"
           >
             {status === 'uploading' ? 'Uploading…' : 'Upload'}
           </button>
