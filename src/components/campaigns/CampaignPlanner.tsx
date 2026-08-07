@@ -844,7 +844,7 @@ export function CampaignPlanner() {
                     return (
                       <div
                         key={campaign.id}
-                        className={`group relative flex border-b border-neutral-100 ${
+                        className={`group relative flex shrink-0 border-b border-neutral-100 ${
                           isSelected ? 'bg-white' : 'hover:bg-white/90'
                         }`}
                         style={{ height: ROW_HEIGHT }}
