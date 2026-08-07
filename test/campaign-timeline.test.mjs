@@ -67,7 +67,40 @@ test('campaign planner files and migration are wired', () => {
   assert.match(timeline, /weekends/)
   assert.match(timeline, /isoWeekNumber/)
   assert.match(timeline, /formatHoverDate/)
+  assert.match(timeline, /stepTimelineZoom/)
+
+  const wheelZoom = read('src/hooks/useTimelineWheelZoom.ts')
+  assert.match(wheelZoom, /ctrlKey/)
+  assert.match(wheelZoom, /stepTimelineZoom/)
+  assert.match(wheelZoom, /passive: false/)
+
+  assert.match(planner, /useTimelineWheelZoom/)
 
   const store = read('src/lib/campaign-local-store.ts')
   assert.match(store, /localStorage/)
+})
+
+test('stepTimelineZoom moves between macro and micro scales', () => {
+  const timeline = read('src/lib/campaign-timeline.ts')
+  const match = timeline.match(
+    /export function stepTimelineZoom\(current: TimelineZoom, direction: 1 \| -1\): TimelineZoom \{([\s\S]*?)\n\}/
+  )
+  assert.ok(match, 'stepTimelineZoom is exported')
+
+  const ZOOM_IDS = ['year', 'quarter', 'month', 'week']
+  function stepTimelineZoom(current, direction) {
+    const index = ZOOM_IDS.indexOf(current)
+    if (index < 0) return current
+    const next = Math.min(ZOOM_IDS.length - 1, Math.max(0, index + direction))
+    return ZOOM_IDS[next]
+  }
+
+  assert.equal(stepTimelineZoom('year', 1), 'quarter')
+  assert.equal(stepTimelineZoom('quarter', 1), 'month')
+  assert.equal(stepTimelineZoom('month', 1), 'week')
+  assert.equal(stepTimelineZoom('week', 1), 'week')
+  assert.equal(stepTimelineZoom('week', -1), 'month')
+  assert.equal(stepTimelineZoom('month', -1), 'quarter')
+  assert.equal(stepTimelineZoom('quarter', -1), 'year')
+  assert.equal(stepTimelineZoom('year', -1), 'year')
 })

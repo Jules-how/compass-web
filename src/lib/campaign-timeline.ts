@@ -7,6 +7,16 @@ export const ZOOM_OPTIONS: { id: TimelineZoom; label: string; shortcut: string }
   { id: 'week', label: 'Week', shortcut: 'W' }
 ]
 
+const ZOOM_IDS = ZOOM_OPTIONS.map((option) => option.id)
+
+/** Step toward a more micro (+1) or macro (-1) timeline scale. */
+export function stepTimelineZoom(current: TimelineZoom, direction: 1 | -1): TimelineZoom {
+  const index = ZOOM_IDS.indexOf(current)
+  if (index < 0) return current
+  const next = Math.min(ZOOM_IDS.length - 1, Math.max(0, index + direction))
+  return ZOOM_IDS[next]
+}
+
 /** Pixels per day at each zoom. */
 export function pxPerDay(zoom: TimelineZoom): number {
   switch (zoom) {

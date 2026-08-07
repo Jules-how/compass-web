@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { useTimelineWheelZoom } from '@/hooks/useTimelineWheelZoom'
 import type { CompassProjectWithStats } from '@/lib/types'
 import {
   ZOOM_OPTIONS,
@@ -119,9 +120,16 @@ export function ProjectTimeline({
     didCenterToday.current = true
   }, [scrollToToday])
 
-  useEffect(() => {
-    didCenterToday.current = false
-  }, [zoom])
+  useTimelineWheelZoom({
+    scrollRef,
+    zoom,
+    range,
+    labelWidth: LABEL_WIDTH,
+    onZoomChange,
+    onBeforeZoom: () => {
+      didCenterToday.current = true
+    }
+  })
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -130,6 +138,7 @@ export function ProjectTimeline({
       const key = e.key.toLowerCase()
       if (key === 't') scrollToToday('smooth')
       if (key === 'y' || key === 'q' || key === 'm' || key === 'w') {
+        didCenterToday.current = false
         onZoomChange(key === 'y' ? 'year' : key === 'q' ? 'quarter' : key === 'm' ? 'month' : 'week')
       }
     }
@@ -167,7 +176,10 @@ export function ProjectTimeline({
           <label className="relative">
             <select
               value={zoom}
-              onChange={(e) => onZoomChange(e.target.value as TimelineZoom)}
+              onChange={(e) => {
+                didCenterToday.current = false
+                onZoomChange(e.target.value as TimelineZoom)
+              }}
               className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
             >
               {ZOOM_OPTIONS.map((option) => (

@@ -10,6 +10,7 @@ import {
   type ReactNode
 } from 'react'
 import { CampaignSidecar } from '@/components/campaigns/CampaignSidecar'
+import { useTimelineWheelZoom } from '@/hooks/useTimelineWheelZoom'
 import {
   createLocalCampaign,
   deleteLocalCampaign,
@@ -149,6 +150,18 @@ export function CampaignPlanner() {
     scrollToToday('auto')
     didCenterToday.current = true
   }, [ready, scrollToToday])
+
+  useTimelineWheelZoom({
+    scrollRef,
+    zoom,
+    range,
+    labelWidth: listWidth,
+    onZoomChange: setZoom,
+    onBeforeZoom: () => {
+      // Keep the date under the cursor; skip the "center on today" path.
+      didCenterToday.current = true
+    }
+  })
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
