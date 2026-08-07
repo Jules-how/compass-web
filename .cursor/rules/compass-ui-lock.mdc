@@ -1,0 +1,31 @@
+---
+description: Locked Compass operator UI aesthetic — depth, rounding, separation. Do not restyle unless explicitly asked.
+alwaysApply: true
+---
+
+# Compass UI lock (do not casually restyle)
+
+The operator console visual language is **intentional and locked**. Preserve it on every change unless the user **explicitly** asks to change look, theme, depth, rounding, spacing, or typography.
+
+## What must stay
+
+1. **Depth** — Soft layered elevation: white panels float on the warm wash via `shadow-soft` / `--compass-shadow` / `--compass-shadow-sm`. Do not flatten cards, remove shadows, or switch to harsh/heavy shadows.
+2. **Rounded corners** — Primary surfaces use `rounded-2xl` (cards, panels). Controls use `rounded-xl`. Do not square off the UI or mix in sharp/minimal radii for main containers.
+3. **Separation** — Generous gaps between cards and padding inside them (card content `p-5`, airy page grids). Do not tighten into dense dashboards or collapse whitespace for “efficiency.”
+4. **Surface stack** — Warm wash background (`--compass-wash` + subtle radial gradients) → white cards (`bg-white`, light stone borders) → nested inner surfaces when needed. Keep the card-based hierarchy.
+5. **Typography** — Page titles: Fraunces via `.font-display` / `.compass-page-title`. Body/UI: DM Sans. Keep serif for display titles and sans for data/labels.
+6. **Accent** — Muted orange `--compass-accent` / `sf-orange` sparingly for CTAs, active states, and emphasis — not as a purple/indigo redesign or dark-mode flip.
+
+## Source of truth
+
+- Tokens & utilities: `src/app/globals.css` (`--compass-*`, `.compass-panel`, `.compass-*` helpers)
+- Shadows: `tailwind.config.ts` → `boxShadow.soft` / `boxShadow.lift`
+- Cards: `src/components/ui/card.tsx` (`rounded-2xl`, `shadow-soft`, soft borders)
+- Shell: `src/components/OperatorShell.tsx`, `src/components/ui/sidebar.tsx`
+
+## Rules of engagement
+
+- **Default:** reuse `Card`, `compass-*` classes, and existing tokens. Prefer matching Sales / Home patterns over inventing new chrome.
+- **Forbidden without explicit ask:** new themes, dark mode, flattening elevation, card-less full-bleed layouts for operator pages, redesigning radius/shadow/spacing tokens, swapping display fonts, or “cleaning up” the look into a different aesthetic.
+- **Allowed without ask:** content, copy, data wiring, bugfixes, accessibility, and new screens that **follow** this language.
+- If a change would alter depth, rounding, or separation, **stop** and keep the current treatment unless the user directed the visual change.
