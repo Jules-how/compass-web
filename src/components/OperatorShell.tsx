@@ -124,8 +124,13 @@ export function OperatorConsoleLayout({
         <Sidebar open={open} setOpen={setOpen} animate={false}>
           <ConsoleSidebarFrame role={role} active={active} inboxCount={inboxCount} />
         </Sidebar>
-        <div className="min-w-0 flex-1 md:min-h-0 md:overflow-y-auto">
-          <div className="animate-fade-up">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col md:overflow-y-auto">
+          {/*
+            min-h-full + flex-1 lets flush pages (Inbox, Campaign Planner) fill the
+            viewport like Linear, while still growing with tall non-flush pages so
+            this column remains the scroll container.
+          */}
+          <div className="flex min-h-full flex-1 flex-col animate-fade-up">{children}</div>
         </div>
       </div>
     </ConsoleChromeContext.Provider>
@@ -150,7 +155,9 @@ function PageMain({
   children: ReactNode
 }) {
   if (flush) {
-    return <main className="flex h-[100dvh] flex-col md:h-full md:min-h-0">{children}</main>
+    return (
+      <main className="flex h-[100dvh] min-h-0 flex-1 flex-col md:h-auto">{children}</main>
+    )
   }
 
   return (
