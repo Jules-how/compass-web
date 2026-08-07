@@ -45,7 +45,7 @@ export const PROJECT_UPDATE_COLUMNS = 'id,project_id,health,body,created_at,mirr
 export const FUNCTION_LIST_COLUMNS = 'id,name,slug,sort_order,updated_at,created_at,mirrored_at'
 
 export const LEAD_LIST_COLUMNS =
-  'id,name,email,phone,company,role,vertical,source,tags,city,state,linkedin,outbound_status,interest_label,lead_status_source,instantly_campaign,instantly_campaign_id,instantly_campaign_ids,instantly_campaign_name,last_outbound_at,mirrored_at,updated_at'
+  'id,name,email,phone,company,role,vertical,source,tags,city,state,linkedin,list_ids,import_batch_id,outbound_status,interest_label,lead_status_source,instantly_campaign,instantly_campaign_id,instantly_campaign_ids,instantly_campaign_name,instantly_lead_id,instantly_uploaded_at,instantly_synced_at,recontact_ok,suppression_reason,last_outbound_at,lead_context_status,lead_context_updated_at,created_at,updated_at,mirrored_at'
 
 export const TOP_TASK_LIMIT = 50
 export const SUBTASK_LIMIT = 200
