@@ -35,7 +35,7 @@ function normalizeSpecialCategories(value) {
 }
 
 test('meta ads migration defines campaign → ad set → ad hierarchy', () => {
-  const migration = read('supabase/migrations/0031_compass_meta_ads.sql')
+  const migration = read('supabase/migrations/0032_compass_meta_ads.sql')
   assert.match(migration, /compass_meta_campaigns/)
   assert.match(migration, /compass_meta_ad_sets/)
   assert.match(migration, /compass_meta_ads/)
