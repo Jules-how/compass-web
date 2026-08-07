@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeft,
@@ -367,9 +368,16 @@ export function SequenceEditor({
     })
   }
 
-  const shell = (children: React.ReactNode) => {
+  const [portalReady, setPortalReady] = useState(false)
+  useEffect(() => {
+    setPortalReady(true)
+  }, [])
+
+  const shell = (children: ReactNode) => {
     if (variant === 'overlay') {
-      return (
+      if (!portalReady) return null
+      // Portal to body so parent transforms (e.g. animate-fade-up) don't trap `fixed`.
+      return createPortal(
         <AnimatePresence>
           <motion.div
             className="fixed inset-0 z-[110] flex flex-col bg-[var(--compass-wash)]"
@@ -380,7 +388,8 @@ export function SequenceEditor({
           >
             {children}
           </motion.div>
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
       )
     }
     return (

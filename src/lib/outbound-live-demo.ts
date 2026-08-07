@@ -253,10 +253,16 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
 ]
 
 export function listActiveOutboundCampaigns(rows = OUTBOUND_LIVE_DEMO): OutboundLiveCampaign[] {
+  const rank = (status: OutboundLiveCampaign['status']) =>
+    status === 'live' ? 0 : status === 'launching' ? 1 : 2
   return rows
     .filter((c) => c.status === 'live' || c.status === 'launching' || c.status === 'paused')
     .slice()
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .sort((a, b) => {
+      const byStatus = rank(a.status) - rank(b.status)
+      if (byStatus !== 0) return byStatus
+      return b.updatedAt.localeCompare(a.updatedAt)
+    })
 }
 
 export function listHistoryOutboundCampaigns(rows = OUTBOUND_LIVE_DEMO): OutboundLiveCampaign[] {
