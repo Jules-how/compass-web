@@ -3,17 +3,18 @@ import type { LeadContact, LeadListFilters } from '@/lib/types'
 import { requirePortalAccess } from '@/lib/portal-access'
 import { portalAccessResponse, portalJson, portalJsonCached } from '@/lib/portal-http'
 import { LEAD_LIST_COLUMNS, LEAD_PAGE_SIZE } from '@/lib/list-columns'
+import { applyLeadFilters, parseLeadListFilters, type LeadFilterQuery } from '@/lib/leads-query'
 
 export const dynamic = 'force-dynamic'
 
+type ListQuery = LeadFilterQuery & {
+  limit: (n: number) => ListQuery
+  range: (from: number, to: number) => ListQuery
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const filters: LeadListFilters = {
-    vertical: searchParams.get('vertical') ?? undefined,
-    source: searchParams.get('source') ?? undefined,
-    outbound_status: searchParams.get('outbound_status') ?? undefined,
-    city: searchParams.get('city') ?? undefined
-  }
+  const filters: LeadListFilters = parseLeadListFilters(searchParams)
   const pageParam = Number(searchParams.get('page') ?? '1')
   const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1
   const pageSizeParam = Number(searchParams.get('pageSize') ?? String(LEAD_PAGE_SIZE))
@@ -31,15 +32,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
+    // Cast away supabase-js deep generics before dynamic filter chaining.
     let query = supabase
       .from('lead_contacts')
       .select(LEAD_LIST_COLUMNS, { count: 'exact' })
-      .order('mirrored_at', { ascending: false })
+      .order('mirrored_at', { ascending: false }) as unknown as ListQuery
 
-    if (filters.vertical) query = query.eq('vertical', filters.vertical)
-    if (filters.source) query = query.eq('source', filters.source)
-    if (filters.outbound_status) query = query.eq('outbound_status', filters.outbound_status)
-    if (filters.city) query = query.ilike('city', `%${filters.city}%`)
+    query = applyLeadFilters(query, filters) as ListQuery
 
     if (exportLimit) {
       query = query.limit(exportLimit)
@@ -47,15 +46,25 @@ export async function GET(request: NextRequest) {
       query = query.range(from, to)
     }
 
-    const { data, error, count } = await query
+    const { data, error, count } = (await (query as unknown as PromiseLike<{
+      data: LeadContact[] | null
+      error: { message: string } | null
+      count: number | null
+    }>)) as {
+      data: LeadContact[] | null
+      error: { message: string } | null
+      count: number | null
+    }
+
     if (error) {
-      return portalJson({ error: 'fetch_failed' }, { status: 400 })
+      return portalJson({ error: 'fetch_failed', detail: error.message }, { status: 400 })
     }
     return portalJsonCached({
-      leads: (data ?? []) as LeadContact[],
+      leads: data ?? [],
       total: count ?? 0,
       page,
-      pageSize: exportLimit ?? pageSize
+      pageSize: exportLimit ?? pageSize,
+      filters
     })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })

@@ -4,6 +4,7 @@ import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
 import type { ComponentType, SVGProps } from 'react'
 import {
   ClientsIcon,
+  CrmIcon,
   FinancesIcon,
   FunctionsIcon,
   HomeIcon,
@@ -51,7 +52,8 @@ type NavSection = {
 }
 
 const OPERATOR_TOP: NavItem[] = [
-  { href: '/home', label: 'Home', key: 'home', icon: HomeIcon, api: '/api/instantly/cold-email' },
+  // Home loads several APIs itself; do not hover-prefetch Instantly (4 upstream calls).
+  { href: '/home', label: 'Home', key: 'home', icon: HomeIcon },
   { href: '/inbox', label: 'Inbox', key: 'inbox', icon: InboxIcon, api: '/api/inbox', badge: 'inbox' }
 ]
 
@@ -83,6 +85,13 @@ const OPERATOR_SECTIONS: NavSection[] = [
         key: 'pipeline',
         icon: PipelineIcon,
         api: '/api/campaigns'
+      },
+      {
+        href: '/leads',
+        label: 'CRM',
+        key: 'leads',
+        icon: CrmIcon,
+        api: '/api/leads/list'
       }
     ]
   },
@@ -153,7 +162,7 @@ function NavItemLink({
         href: item.href,
         label: item.label,
         icon: (
-          <Icon className={cn('h-[18px] w-[18px]', isActive ? 'text-neutral-800' : 'text-neutral-500')} />
+          <Icon className={cn('h-[17px] w-[17px]', isActive ? 'text-[#e85d2a]' : 'text-current')} />
         )
       }}
       active={isActive}
@@ -161,7 +170,7 @@ function NavItemLink({
       onFocus={() => prefetchApi(item.api)}
       badge={
         showBadge ? (
-          <span className="rounded-full bg-[#e85d2a] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white">
+          <span className="min-w-[1.25rem] rounded-md bg-[#e85d2a] px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white">
             {inboxCount! > 99 ? '99+' : inboxCount}
           </span>
         ) : undefined
@@ -233,7 +242,7 @@ export function NavLinks({
         ))}
       </div>
 
-      <div className="mt-auto flex flex-col gap-0.5 border-t border-neutral-200/80 pt-3">
+      <div className="mt-auto flex flex-col gap-0.5 border-t border-stone-200/70 pt-3">
         {OPERATOR_FOOTER.map((item) => (
           <NavItemLink key={item.href} item={item} active={active} inboxCount={inboxCount} />
         ))}

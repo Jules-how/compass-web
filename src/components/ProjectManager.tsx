@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CompassBusinessFunction, CompassProjectWithStats } from '@/lib/types'
 import { formatPercentComplete } from '@/lib/project-stats'
 import {
@@ -15,11 +15,25 @@ import {
   projectStatusLabel,
   type ProjectBoardStatus
 } from '@/lib/project-pm'
+import type { TimelineZoom } from '@/lib/campaign-timeline'
+import { ProjectTimeline } from '@/components/ProjectTimeline'
+import { cn } from '@/lib/utils'
 
 type ViewMode = 'list' | 'board' | 'timeline'
 type GroupBy = 'none' | 'status' | 'function' | 'health'
 type OrderBy = 'name' | 'priority' | 'target_date' | 'updated_at'
 type InsightsTab = 'health' | 'leads'
+
+const PROJECT_ICON_COLORS = [
+  '#5E6AD2',
+  '#26B5CE',
+  '#4CB782',
+  '#F2C94C',
+  '#F2994A',
+  '#EB5757',
+  '#BB87FC',
+  '#95A2B3'
+] as const
 
 function healthTone(health: string): string {
   switch (health) {
@@ -34,19 +48,210 @@ function healthTone(health: string): string {
   }
 }
 
-function statusTone(status: string): string {
-  switch (normalizeProjectStatus(status)) {
-    case 'in_progress':
-      return 'bg-sky-50 text-sky-700 ring-sky-200'
-    case 'planned':
-      return 'bg-violet-50 text-violet-700 ring-violet-200'
-    case 'completed':
-      return 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-    case 'canceled':
-      return 'bg-neutral-100 text-neutral-500 ring-neutral-200'
-    default:
-      return 'bg-stone-100 text-stone-600 ring-stone-200'
+function projectIconColor(seed: string): string {
+  let hash = 0
+  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
+  return PROJECT_ICON_COLORS[hash % PROJECT_ICON_COLORS.length]
+}
+
+function initialsFromLabel(label: string | null | undefined): string {
+  const parts = (label || '?').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  return parts
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+function StatusGlyph({ status, className }: { status: string; className?: string }) {
+  const normalized = normalizeProjectStatus(status)
+  if (normalized === 'backlog') {
+    return (
+      <svg viewBox="0 0 16 16" className={cn('h-3.5 w-3.5 text-orange-400', className)} aria-hidden>
+        <circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2.2 2" />
+      </svg>
+    )
   }
+  if (normalized === 'planned') {
+    return (
+      <svg viewBox="0 0 16 16" className={cn('h-3.5 w-3.5 text-neutral-400', className)} aria-hidden>
+        <circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      </svg>
+    )
+  }
+  if (normalized === 'in_progress') {
+    return (
+      <svg viewBox="0 0 16 16" className={cn('h-3.5 w-3.5 text-amber-400', className)} aria-hidden>
+        <circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        <circle cx="8" cy="8" r="2" fill="currentColor" />
+      </svg>
+    )
+  }
+  if (normalized === 'completed') {
+    return (
+      <svg viewBox="0 0 16 16" className={cn('h-3.5 w-3.5 text-sky-500', className)} aria-hidden>
+        <circle cx="8" cy="8" r="6" fill="currentColor" />
+        <path d="M5.2 8.1 7.1 10l3.7-4" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 16 16" className={cn('h-3.5 w-3.5 text-neutral-400', className)} aria-hidden>
+      <circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M5.5 5.5 10.5 10.5M10.5 5.5 5.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function HealthGlyph({ health, className }: { health: string; className?: string }) {
+  if (health === 'on_track') {
+    return (
+      <svg viewBox="0 0 16 16" className={cn('h-3.5 w-3.5 text-emerald-500', className)} aria-hidden>
+        <path
+          d="M2.5 9.5c1.2-2 2.2-3 3.5-3s2.2 2 3.5 2 2.3-2 4-2"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
+    )
+  }
+  if (health === 'at_risk') {
+    return (
+      <svg viewBox="0 0 16 16" className={cn('h-3.5 w-3.5 text-amber-500', className)} aria-hidden>
+        <circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2.4 1.8" />
+      </svg>
+    )
+  }
+  if (health === 'off_track') {
+    return (
+      <svg viewBox="0 0 16 16" className={cn('h-3.5 w-3.5 text-red-500', className)} aria-hidden>
+        <circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M8 5v4.2M8 11.2h.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 16 16" className={cn('h-3.5 w-3.5 text-orange-400', className)} aria-hidden>
+      <circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2.2 2" />
+    </svg>
+  )
+}
+
+function ProjectGlyph({ seed, className }: { seed: string; className?: string }) {
+  const color = projectIconColor(seed)
+  return (
+    <span
+      className={cn(
+        'inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] text-[9px] font-bold text-white',
+        className
+      )}
+      style={{ background: color }}
+      aria-hidden
+    >
+      <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="currentColor">
+        <path d="M2 3.2 6 1.4 10 3.2v5.6L6 10.6 2 8.8V3.2Z" opacity="0.95" />
+      </svg>
+    </span>
+  )
+}
+
+function LeadAvatar({ label }: { label: string | null | undefined }) {
+  return (
+    <span
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-[9px] font-semibold text-neutral-600"
+      title={label || 'No lead'}
+    >
+      {initialsFromLabel(label)}
+    </span>
+  )
+}
+
+function ToolbarIconButton({
+  label,
+  active,
+  onClick,
+  children
+}: {
+  label: string
+  active?: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={cn(
+        'flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-800',
+        active && 'bg-neutral-100 text-neutral-900'
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+function FilterIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M2.5 3.5h11l-4 5v3.5l-3 1.5v-5l-4-5Z" />
+    </svg>
+  )
+}
+
+function DisplayIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M3 5h10" />
+      <path d="M3 8h10" />
+      <path d="M3 11h10" />
+      <circle cx="6" cy="5" r="1" fill="currentColor" />
+      <circle cx="10" cy="8" r="1" fill="currentColor" />
+      <circle cx="7.5" cy="11" r="1" fill="currentColor" />
+    </svg>
+  )
+}
+
+function BoardIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="2" y="3" width="3.5" height="10" rx="1" />
+      <rect x="6.25" y="3" width="3.5" height="7" rx="1" />
+      <rect x="10.5" y="3" width="3.5" height="9" rx="1" />
+    </svg>
+  )
+}
+
+function ListIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M3 4.5h10M3 8h10M3 11.5h10" />
+    </svg>
+  )
+}
+
+function TimelineIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M2.5 8h11" />
+      <circle cx="5" cy="8" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="11" cy="8" r="1.6" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.4">
+      <rect x="2.5" y="3.5" width="11" height="10" rx="1.5" />
+      <path d="M2.5 6.5h11M5.5 2.5v2M10.5 2.5v2" />
+    </svg>
+  )
 }
 
 interface MilestoneDraft {
@@ -66,7 +271,7 @@ export function ProjectManager({
   clients?: Array<{ id: string; name: string }>
   onRefresh?: () => void | Promise<void>
 }) {
-  const [view, setView] = useState<ViewMode>('list')
+  const [view, setView] = useState<ViewMode>('board')
   const [creating, setCreating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -76,6 +281,12 @@ export function ProjectManager({
   const [orderBy, setOrderBy] = useState<OrderBy>('name')
   const [insightsTab, setInsightsTab] = useState<InsightsTab>('health')
   const [insightsOpen, setInsightsOpen] = useState(true)
+  const [timelineZoom, setTimelineZoom] = useState<TimelineZoom>('year')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [displayOpen, setDisplayOpen] = useState(false)
+  const [cardMenuId, setCardMenuId] = useState<string | null>(null)
+  const filterRef = useRef<HTMLDivElement>(null)
+  const displayRef = useRef<HTMLDivElement>(null)
 
   const [name, setName] = useState('')
   const [summary, setSummary] = useState('')
@@ -166,6 +377,39 @@ export function ProjectManager({
   }, [projects])
 
   const noLeadCount = projects.length
+
+  useEffect(() => {
+    function onPointerDown(event: MouseEvent) {
+      const target = event.target as Node
+      if (filterOpen && filterRef.current && !filterRef.current.contains(target)) {
+        setFilterOpen(false)
+      }
+      if (displayOpen && displayRef.current && !displayRef.current.contains(target)) {
+        setDisplayOpen(false)
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setFilterOpen(false)
+        setDisplayOpen(false)
+        setCardMenuId(null)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [filterOpen, displayOpen])
+
+  function openCreate(nextStatus: ProjectBoardStatus = 'backlog') {
+    setStatus(nextStatus)
+    setCreating(true)
+    setFilterOpen(false)
+    setDisplayOpen(false)
+    setCardMenuId(null)
+  }
 
   function resetCreateForm() {
     setName('')
@@ -268,112 +512,180 @@ export function ProjectManager({
     }
   }
 
-  const timelineBounds = useMemo(() => {
-    const today = new Date()
-    const start = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-    const end = new Date(today.getFullYear() + 1, today.getMonth() + 2, 1)
-    for (const project of visibleProjects) {
-      for (const value of [project.start_date, project.target_date]) {
-        if (!value) continue
-        const date = new Date(`${value}T00:00:00`)
-        if (date < start) start.setTime(date.getTime())
-        if (date > end) end.setTime(date.getTime())
-      }
-    }
-    return { start, end, today }
-  }, [visibleProjects])
-
-  function dateToPercent(value: string | null | undefined): number | null {
-    if (!value) return null
-    const date = new Date(`${value}T00:00:00`).getTime()
-    const start = timelineBounds.start.getTime()
-    const end = timelineBounds.end.getTime()
-    if (end <= start) return 0
-    return Math.min(100, Math.max(0, ((date - start) / (end - start)) * 100))
-  }
-
-  const todayPercent = dateToPercent(timelineBounds.today.toISOString().slice(0, 10)) ?? 0
-
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-stone-200 bg-white p-0.5 text-xs">
-            {(['list', 'board', 'timeline'] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setView(mode)}
-                className={`rounded-md px-2.5 py-1 font-medium capitalize transition ${
-                  view === mode ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-800'
-                }`}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-            className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"
-          >
-            <option value="all">All statuses</option>
-            {PROJECT_BOARD_STATUSES.map((value) => (
-              <option key={value} value={value}>
-                {projectStatusLabel(value)}
-              </option>
-            ))}
-          </select>
-          {sortedClients.length > 0 ? (
-            <select
-              value={clientFilter}
-              onChange={(e) => setClientFilter(e.target.value)}
-              className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"
-            >
-              <option value="all">All clients</option>
-              <option value="unassigned">No client</option>
-              {sortedClients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          <select
-            value={groupBy}
-            onChange={(e) => setGroupBy(e.target.value as GroupBy)}
-            className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"
-          >
-            <option value="none">No grouping</option>
-            <option value="status">Group by status</option>
-            <option value="function">Group by function</option>
-            <option value="health">Group by health</option>
-          </select>
-          <select
-            value={orderBy}
-            onChange={(e) => setOrderBy(e.target.value as OrderBy)}
-            className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"
-          >
-            <option value="name">Order by name</option>
-            <option value="priority">Order by priority</option>
-            <option value="target_date">Order by target</option>
-            <option value="updated_at">Order by updated</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
+    <div className="space-y-3">
+      <div className="relative flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1">
           <button
             type="button"
-            onClick={() => setInsightsOpen((value) => !value)}
-            className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm text-neutral-600"
+            onClick={() => {
+              setFilterOpen((value) => !value)
+              setDisplayOpen(false)
+            }}
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[13px] font-medium text-neutral-700 hover:bg-neutral-100"
           >
-            {insightsOpen ? 'Hide insights' : 'Insights'}
+            All projects
+            <span className="text-[10px] text-neutral-400">▾</span>
           </button>
+          {(statusFilter !== 'all' || clientFilter !== 'all') && (
+            <span className="rounded-md bg-neutral-100 px-1.5 py-0.5 text-[11px] tabular-nums text-neutral-500">
+              Filtered
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-0.5">
+          <div className="relative" ref={filterRef}>
+            <ToolbarIconButton
+              label="Filter"
+              active={filterOpen || statusFilter !== 'all' || clientFilter !== 'all'}
+              onClick={() => {
+                setFilterOpen((value) => !value)
+                setDisplayOpen(false)
+              }}
+            >
+              <FilterIcon />
+            </ToolbarIconButton>
+            {filterOpen ? (
+              <div className="absolute right-0 top-9 z-40 w-64 rounded-lg border border-neutral-200 bg-white p-3 shadow-lg">
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+                  Filter
+                </div>
+                <label className="mb-2 block text-xs text-neutral-500">
+                  Status
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+                    className="mt-1 w-full rounded-md border border-neutral-200 px-2 py-1.5 text-sm"
+                  >
+                    <option value="all">All statuses</option>
+                    {PROJECT_BOARD_STATUSES.map((value) => (
+                      <option key={value} value={value}>
+                        {projectStatusLabel(value)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {sortedClients.length > 0 ? (
+                  <label className="mb-2 block text-xs text-neutral-500">
+                    Client
+                    <select
+                      value={clientFilter}
+                      onChange={(e) => setClientFilter(e.target.value)}
+                      className="mt-1 w-full rounded-md border border-neutral-200 px-2 py-1.5 text-sm"
+                    >
+                      <option value="all">All clients</option>
+                      <option value="unassigned">No client</option>
+                      {sortedClients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                <button
+                  type="button"
+                  className="mt-1 text-xs font-medium text-neutral-500 hover:text-neutral-800"
+                  onClick={() => {
+                    setStatusFilter('all')
+                    setClientFilter('all')
+                  }}
+                >
+                  Reset filters
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="relative" ref={displayRef}>
+            <ToolbarIconButton
+              label="Display options"
+              active={displayOpen}
+              onClick={() => {
+                setDisplayOpen((value) => !value)
+                setFilterOpen(false)
+              }}
+            >
+              <DisplayIcon />
+            </ToolbarIconButton>
+            {displayOpen ? (
+              <div className="absolute right-0 top-9 z-40 w-72 rounded-lg border border-neutral-200 bg-white p-3 shadow-lg">
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+                  Display
+                </div>
+                <div className="mb-3 flex rounded-lg border border-neutral-200 p-0.5 text-xs">
+                  {(
+                    [
+                      ['list', 'List', <ListIcon key="list" />],
+                      ['board', 'Board', <BoardIcon key="board" />],
+                      ['timeline', 'Timeline', <TimelineIcon key="timeline" />]
+                    ] as const
+                  ).map(([mode, label, icon]) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setView(mode)}
+                      className={cn(
+                        'flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1.5 font-medium',
+                        view === mode ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-800'
+                      )}
+                      title={label}
+                    >
+                      {icon}
+                      <span className="hidden sm:inline">{label}</span>
+                    </button>
+                  ))}
+                </div>
+                <label className="mb-2 block text-xs text-neutral-500">
+                  Grouping
+                  <select
+                    value={groupBy}
+                    onChange={(e) => setGroupBy(e.target.value as GroupBy)}
+                    className="mt-1 w-full rounded-md border border-neutral-200 px-2 py-1.5 text-sm"
+                  >
+                    <option value="none">No grouping</option>
+                    <option value="status">Group by status</option>
+                    <option value="function">Group by function</option>
+                    <option value="health">Group by health</option>
+                  </select>
+                </label>
+                <label className="block text-xs text-neutral-500">
+                  Ordering
+                  <select
+                    value={orderBy}
+                    onChange={(e) => setOrderBy(e.target.value as OrderBy)}
+                    className="mt-1 w-full rounded-md border border-neutral-200 px-2 py-1.5 text-sm"
+                  >
+                    <option value="name">Order by name</option>
+                    <option value="priority">Order by priority</option>
+                    <option value="target_date">Order by target</option>
+                    <option value="updated_at">Order by updated</option>
+                  </select>
+                </label>
+              </div>
+            ) : null}
+          </div>
+
+          <ToolbarIconButton
+            label={insightsOpen ? 'Hide insights' : 'Show insights'}
+            active={insightsOpen}
+            onClick={() => setInsightsOpen((value) => !value)}
+          >
+            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="2.5" y="3" width="11" height="10" rx="1.5" />
+              <path d="M10 3v10" />
+            </svg>
+          </ToolbarIconButton>
+
           <button
             type="button"
-            onClick={() => setCreating((value) => !value)}
-            className="rounded-lg bg-sf-orange px-3 py-1.5 text-sm font-medium text-white hover:bg-sf-orange-dark"
+            onClick={() => (creating ? setCreating(false) : openCreate(status))}
+            className="ml-1 flex h-7 w-7 items-center justify-center rounded-lg text-lg leading-none text-neutral-600 transition hover:bg-white hover:text-neutral-900"
+            aria-label={creating ? 'Cancel new project' : 'New project'}
+            title={creating ? 'Cancel' : 'New project'}
           >
-            {creating ? 'Cancel' : 'New project'}
+            {creating ? '×' : '+'}
           </button>
         </div>
       </div>
@@ -480,7 +792,7 @@ export function ProjectManager({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={4}
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            className="compass-input"
             disabled={saving}
           />
 
@@ -491,7 +803,7 @@ export function ProjectManager({
                 type="text"
                 value={labels}
                 onChange={(e) => setLabels(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
@@ -586,7 +898,7 @@ export function ProjectManager({
           <button
             type="submit"
             disabled={saving || !name.trim()}
-            className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+            className="compass-btn-primary"
           >
             {saving ? 'Creating…' : 'Create project'}
           </button>
@@ -595,7 +907,7 @@ export function ProjectManager({
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <div className={`grid gap-4 ${insightsOpen ? 'xl:grid-cols-[minmax(0,1fr)_260px]' : ''}`}>
+      <div className={`grid gap-3 ${insightsOpen ? 'xl:grid-cols-[minmax(0,1fr)_240px]' : ''}`}>
         <div className="min-w-0 space-y-4">
           {view === 'list'
             ? grouped.map((group) => (
@@ -695,169 +1007,220 @@ export function ProjectManager({
             : null}
 
           {view === 'board' ? (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              {PROJECT_BOARD_STATUSES.map((column) => {
-                const items = visibleProjects.filter(
-                  (project) => normalizeProjectStatus(project.status) === column
-                )
-                return (
-                  <section key={column} className="compass-panel min-h-[280px] p-3">
-                    <header className="mb-3 flex items-center justify-between">
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                        {projectStatusLabel(column)}
-                      </h3>
-                      <span className="text-xs tabular-nums text-neutral-400">{items.length}</span>
-                    </header>
-                    <ul className="space-y-2">
-                      {items.map((project) => (
-                        <li key={project.id} className="rounded-lg border border-stone-200 bg-stone-50/70 p-3">
-                          <Link
-                            href={`/projects/${project.id}`}
-                            className="block text-sm font-medium text-neutral-900 hover:text-sf-orange-dark"
+            <div className="-mx-1 overflow-x-auto pb-2">
+              <div className="flex min-w-max gap-3 px-1">
+                {PROJECT_BOARD_STATUSES.map((column) => {
+                  const items = visibleProjects.filter(
+                    (project) => normalizeProjectStatus(project.status) === column
+                  )
+                  return (
+                    <section
+                      key={column}
+                      className="flex w-[260px] shrink-0 flex-col rounded-xl bg-[#f4f5f7]/80"
+                    >
+                      <header className="flex items-center gap-1.5 px-2.5 pb-1.5 pt-2.5">
+                        <StatusGlyph status={column} />
+                        <h3 className="text-[13px] font-medium text-neutral-700">
+                          {projectStatusLabel(column)}
+                        </h3>
+                        <span className="text-[12px] tabular-nums text-neutral-400">{items.length}</span>
+                        <div className="ml-auto flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            className="flex h-6 w-6 items-center justify-center rounded-md text-neutral-400 hover:bg-white hover:text-neutral-700"
+                            aria-label={`${projectStatusLabel(column)} options`}
+                            title="Column options"
                           >
-                            {project.name}
-                          </Link>
-                          {(project.client_name ||
-                            (project.client_id ? clientById[project.client_id]?.name : null)) && (
-                            <div className="mt-1 text-[11px] font-medium text-neutral-600">
-                              {project.client_name || clientById[project.client_id!]?.name}
-                            </div>
-                          )}
-                          {project.summary ? (
-                            <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{project.summary}</p>
-                          ) : null}
-                          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
-                            <span>{formatProjectDate(project.target_date)}</span>
-                            <span>{project.stats.issueCount} issues</span>
-                            <span
-                              className={`rounded px-1.5 py-0.5 ring-1 ring-inset ${healthTone(
-                                project.health
-                              )}`}
-                            >
-                              {projectHealthLabel(project.health)}
-                            </span>
-                          </div>
-                          <select
-                            value={normalizeProjectStatus(project.status)}
-                            onChange={(e) =>
-                              void patchProjectStatus(
-                                project.id,
-                                e.target.value as ProjectBoardStatus
-                              )
-                            }
-                            disabled={saving}
-                            className="mt-2 w-full rounded border border-stone-200 bg-white px-2 py-1 text-xs"
+                            ···
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openCreate(column)}
+                            className="flex h-6 w-6 items-center justify-center rounded-md text-neutral-400 hover:bg-white hover:text-neutral-700"
+                            aria-label={`New project in ${projectStatusLabel(column)}`}
+                            title="New project"
                           >
-                            {PROJECT_BOARD_STATUSES.map((value) => (
-                              <option key={value} value={value}>
-                                Move to {projectStatusLabel(value)}
-                              </option>
-                            ))}
-                          </select>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )
-              })}
+                            +
+                          </button>
+                        </div>
+                      </header>
+                      <ul className="flex flex-1 flex-col gap-1.5 px-2 pb-2">
+                        {items.length === 0 ? (
+                          <li className="rounded-lg border border-dashed border-neutral-200/80 px-3 py-6 text-center text-[12px] text-neutral-400">
+                            No projects
+                          </li>
+                        ) : (
+                          items.map((project) => {
+                            const clientLabel =
+                              project.client_name ||
+                              (project.client_id ? clientById[project.client_id]?.name : null)
+                            const teamLabel = project.business_function_id
+                              ? functionById[project.business_function_id]?.name
+                              : null
+                            const menuOpen = cardMenuId === project.id
+                            return (
+                              <li
+                                key={project.id}
+                                className="group relative rounded-[8px] border border-neutral-200/90 bg-white p-2.5 shadow-[0_1px_1px_rgba(16,24,40,0.04)] transition hover:border-neutral-300"
+                              >
+                                <div className="mb-1.5 flex items-center gap-1.5">
+                                  <ProjectGlyph seed={project.id || project.name} />
+                                  <div className="ml-auto flex items-center gap-1">
+                                    <span title={projectHealthLabel(project.health)}>
+                                      <HealthGlyph health={project.health || 'no_updates'} />
+                                    </span>
+                                    <LeadAvatar label={teamLabel || clientLabel} />
+                                    <button
+                                      type="button"
+                                      className={cn(
+                                        'flex h-5 w-5 items-center justify-center rounded text-[11px] text-neutral-400 opacity-0 transition hover:bg-neutral-100 hover:text-neutral-700 group-hover:opacity-100',
+                                        menuOpen && 'opacity-100'
+                                      )}
+                                      aria-label="Project actions"
+                                      onClick={() =>
+                                        setCardMenuId((id) => (id === project.id ? null : project.id))
+                                      }
+                                    >
+                                      ···
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <Link
+                                  href={`/projects/${project.id}`}
+                                  className="block text-[13px] font-medium leading-snug text-neutral-900 hover:text-neutral-700"
+                                >
+                                  {project.name}
+                                </Link>
+
+                                {(project.summary || clientLabel) && (
+                                  <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-500">
+                                    {project.summary || clientLabel}
+                                  </p>
+                                )}
+
+                                <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-neutral-500">
+                                  {project.target_date ? (
+                                    <span className="inline-flex items-center gap-1">
+                                      <CalendarIcon />
+                                      {formatProjectDate(project.target_date)}
+                                    </span>
+                                  ) : null}
+                                  {clientLabel && project.summary ? (
+                                    <span className="truncate">{clientLabel}</span>
+                                  ) : null}
+                                </div>
+
+                                <div className="mt-2 text-[11px] tabular-nums text-neutral-400">
+                                  {project.stats.issueCount}{' '}
+                                  {project.stats.issueCount === 1 ? 'issue' : 'issues'}
+                                </div>
+
+                                {menuOpen ? (
+                                  <div className="absolute right-2 top-8 z-30 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 text-[13px] shadow-lg">
+                                    <Link
+                                      href={`/projects/${project.id}`}
+                                      className="block px-3 py-1.5 text-neutral-700 hover:bg-neutral-50"
+                                      onClick={() => setCardMenuId(null)}
+                                    >
+                                      Open project
+                                    </Link>
+                                    <div className="my-1 border-t border-neutral-100" />
+                                    <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+                                      Move to
+                                    </div>
+                                    {PROJECT_BOARD_STATUSES.map((value) => (
+                                      <button
+                                        key={value}
+                                        type="button"
+                                        disabled={saving || normalizeProjectStatus(project.status) === value}
+                                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
+                                        onClick={() => {
+                                          setCardMenuId(null)
+                                          void patchProjectStatus(project.id, value)
+                                        }}
+                                      >
+                                        <StatusGlyph status={value} />
+                                        {projectStatusLabel(value)}
+                                      </button>
+                                    ))}
+                                    <div className="my-1 border-t border-neutral-100" />
+                                    <button
+                                      type="button"
+                                      disabled={saving}
+                                      className="block w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-50"
+                                      onClick={() => {
+                                        setCardMenuId(null)
+                                        void removeProject(project)
+                                      }}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                ) : null}
+                              </li>
+                            )
+                          })
+                        )}
+                      </ul>
+                    </section>
+                  )
+                })}
+              </div>
             </div>
           ) : null}
 
           {view === 'timeline' ? (
-            <div className="compass-panel overflow-x-auto p-4">
-              <div className="mb-3 flex items-center justify-between text-xs text-neutral-500">
-                <span>
-                  {formatProjectDate(timelineBounds.start.toISOString().slice(0, 10))} →{' '}
-                  {formatProjectDate(timelineBounds.end.toISOString().slice(0, 10))}
-                </span>
-                <span>Today</span>
-              </div>
-              <div className="relative min-w-[720px] space-y-3">
-                <div
-                  className="pointer-events-none absolute bottom-0 top-0 w-px bg-sky-500"
-                  style={{ left: `${todayPercent}%` }}
-                />
-                {visibleProjects.length === 0 ? (
-                  <p className="py-10 text-center text-sm text-neutral-500">No projects on the timeline.</p>
-                ) : (
-                  visibleProjects.map((project) => {
-                    const startPct = dateToPercent(project.start_date) ?? todayPercent
-                    const endPct = dateToPercent(project.target_date) ?? startPct + 4
-                    const left = Math.min(startPct, endPct)
-                    const width = Math.max(3, Math.abs(endPct - startPct))
-                    return (
-                      <div key={project.id} className="grid grid-cols-[180px_minmax(0,1fr)] items-center gap-3">
-                        <div className="min-w-0">
-                          <Link
-                            href={`/projects/${project.id}`}
-                            className="block truncate text-sm font-medium text-neutral-800 hover:text-sf-orange-dark"
-                          >
-                            {project.name}
-                          </Link>
-                          {(project.client_name ||
-                            (project.client_id ? clientById[project.client_id]?.name : null)) && (
-                            <div className="truncate text-[11px] text-neutral-500">
-                              {project.client_name || clientById[project.client_id!]?.name}
-                            </div>
-                          )}
-                        </div>
-                        <div className="relative h-8 rounded-md bg-stone-100">
-                          <Link
-                            href={`/projects/${project.id}`}
-                            className="absolute top-1/2 h-5 -translate-y-1/2 rounded-full bg-sf-orange/80 px-2 text-[10px] font-medium leading-5 text-white"
-                            style={{ left: `${left}%`, width: `${width}%` }}
-                            title={`${formatProjectDate(project.start_date)} – ${formatProjectDate(project.target_date)}`}
-                          >
-                            <span className="truncate">{project.name}</span>
-                          </Link>
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-            </div>
+            <ProjectTimeline
+              projects={visibleProjects}
+              clientById={clientById}
+              zoom={timelineZoom}
+              onZoomChange={setTimelineZoom}
+            />
           ) : null}
         </div>
 
         {insightsOpen ? (
-          <aside className="compass-panel h-fit p-4">
-            <div className="mb-3 flex rounded-lg border border-stone-200 p-0.5 text-xs">
+          <aside className="h-fit rounded-xl border border-neutral-200/80 bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="mb-3 flex rounded-full bg-neutral-100 p-0.5 text-[12px]">
               {(['health', 'leads'] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => setInsightsTab(tab)}
-                  className={`flex-1 rounded-md px-2 py-1.5 font-medium capitalize ${
-                    insightsTab === tab ? 'bg-neutral-900 text-white' : 'text-neutral-500'
-                  }`}
+                  className={cn(
+                    'flex-1 rounded-full px-2.5 py-1 font-medium capitalize transition',
+                    insightsTab === tab
+                      ? 'bg-white text-neutral-900 shadow-sm'
+                      : 'text-neutral-500 hover:text-neutral-700'
+                  )}
                 >
                   {tab}
                 </button>
               ))}
             </div>
             {insightsTab === 'health' ? (
-              <ul className="space-y-2 text-sm">
+              <ul className="space-y-1.5">
                 {PROJECT_HEALTHS.map((health) => (
-                  <li key={health} className="flex items-center justify-between gap-3">
-                    <span
-                      className={`rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${healthTone(
-                        health
-                      )}`}
-                    >
-                      {projectHealthLabel(health)}
+                  <li
+                    key={health}
+                    className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-[13px] text-neutral-700"
+                  >
+                    <HealthGlyph health={health} />
+                    <span className="min-w-0 flex-1 truncate">
+                      {health === 'no_updates' ? 'Update missing' : projectHealthLabel(health)}
                     </span>
-                    <span className="tabular-nums text-neutral-600">{healthCounts[health] ?? 0}</span>
+                    <span className="tabular-nums text-neutral-400">{healthCounts[health] ?? 0}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="space-y-2 text-sm text-neutral-600">
+              <div className="space-y-2 px-1.5 py-1 text-[13px] text-neutral-600">
                 <p>
                   <span className="font-medium text-neutral-900">{noLeadCount}</span> project
                   {noLeadCount === 1 ? '' : 's'} with no dedicated lead field yet.
                 </p>
-                <p className="text-xs text-neutral-500">
+                <p className="text-[12px] text-neutral-500">
                   Function is used as the current team signal. A first-class lead assignee can land next.
                 </p>
               </div>

@@ -414,6 +414,7 @@ export interface LeadSourceRow {
 }
 
 export type LeadVertical =
+  | 'mortgage-brokers'
   | 'hvac'
   | 'electrician'
   | 'broker'
@@ -433,8 +434,29 @@ export type LeadSourceService =
 export interface LeadListFilters {
   vertical?: string
   source?: string
+  /** Pipeline stage (contacted, replied, …) or legacy Instantly status values. */
   outbound_status?: string
+  /** Sync / review lane: in_instantly, not_uploaded, stale_sync, … */
+  sync_state?: string
+  completeness?: 'any' | 'has_phone' | 'no_phone' | 'has_email' | 'no_email'
   city?: string
+  /** Free-text search across name, email, company, phone. */
+  q?: string
+  recontact_ok?: '1' | '0'
+  suppressed?: '1' | '0'
+}
+
+export interface LeadSummaryCounts {
+  total: number
+  filtered: number
+  uncontacted: number
+  in_instantly: number
+  replied: number
+  interested: number
+  suppressed: number
+  no_phone: number
+  no_email: number
+  needs_review: number
 }
 
 export interface LeadUploadResult {

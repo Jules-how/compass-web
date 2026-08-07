@@ -31,12 +31,15 @@ function reorganizeBrainDump(dump, existingTitles = []) {
   }
 
   const priorityFor = (kind, line, index) => {
-    let score = Math.max(1, 10 - index)
-    if (/\b(urgent|asap|today|blocker|blocked)\b/i.test(line)) score += 4
-    if (kind === 'priority') score += 2
-    if (kind === 'project') score += 1
-    if (kind === 'note') score = Math.min(score, 3)
-    return Math.min(10, score)
+    let score = 3
+    if (index === 0) score -= 1
+    if (index >= 4) score += 1
+    if (/\b(urgent|asap|today|blocker|blocked)\b/i.test(line)) score = 1
+    else if (/\b(high|important|must)\b/i.test(line)) score = Math.min(score, 2)
+    else if (/\b(later|someday|low)\b/i.test(line)) score = 4
+    if (kind === 'priority') score = Math.min(score, 2)
+    if (kind === 'note') score = Math.max(score, 4)
+    return Math.min(4, Math.max(1, score))
   }
 
   const existing = new Set(existingTitles.map((t) => t.trim().toLowerCase()).filter(Boolean))
@@ -65,7 +68,7 @@ function reorganizeBrainDump(dump, existingTitles = []) {
     })
   })
 
-  suggestions.sort((a, b) => b.suggestedPriority - a.suggestedPriority)
+  suggestions.sort((a, b) => a.suggestedPriority - b.suggestedPriority)
   return { suggestions, leftoverNotes }
 }
 
@@ -99,9 +102,10 @@ test('reorganizeBrainDump turns messy lines into prioritized suggestions', () =>
   assert.ok(result.suggestions.some((s) => s.kind === 'project'))
   assert.ok(result.leftoverNotes.some((n) => /pricing/i.test(n)))
   assert.ok(
-    result.suggestions[0].suggestedPriority >=
+    result.suggestions[0].suggestedPriority <=
       result.suggestions[result.suggestions.length - 1].suggestedPriority
   )
+  assert.ok(result.suggestions.every((s) => s.suggestedPriority >= 1 && s.suggestedPriority <= 4))
 })
 
 test('reorganizeBrainDump skips duplicates and empty noise', () => {

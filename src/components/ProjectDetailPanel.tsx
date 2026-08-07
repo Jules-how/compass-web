@@ -301,7 +301,7 @@ export function ProjectDetailPanel({ projectId }: { projectId: string }) {
                 value={editSummary}
                 onChange={(e) => setEditSummary(e.target.value)}
                 placeholder="Short summary"
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                className="compass-input"
                 disabled={saving}
               />
               <textarea
@@ -309,7 +309,7 @@ export function ProjectDetailPanel({ projectId }: { projectId: string }) {
                 onChange={(e) => setEditNotes(e.target.value)}
                 rows={7}
                 placeholder="Project overview, brief, and notes…"
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                className="compass-input"
                 disabled={saving}
               />
 
@@ -411,7 +411,7 @@ export function ProjectDetailPanel({ projectId }: { projectId: string }) {
                 <button
                   type="submit"
                   disabled={saving || !editName.trim()}
-                  className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                  className="compass-btn-primary"
                 >
                   {saving ? 'Saving…' : 'Save changes'}
                 </button>
@@ -426,7 +426,7 @@ export function ProjectDetailPanel({ projectId }: { projectId: string }) {
                 onChange={(e) => setUpdateBody(e.target.value)}
                 rows={3}
                 placeholder="Write a project update…"
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                className="compass-input"
                 disabled={saving}
               />
               <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -673,7 +673,7 @@ export function ProjectDetailPanel({ projectId }: { projectId: string }) {
             <button
               type="button"
               onClick={() => setCreatingTask((value) => !value)}
-              className="rounded-lg bg-sf-orange px-3 py-1.5 text-sm font-medium text-white hover:bg-sf-orange-dark"
+              className="compass-btn-primary"
             >
               {creatingTask ? 'Cancel' : 'New issue'}
             </button>

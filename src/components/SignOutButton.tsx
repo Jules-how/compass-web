@@ -20,8 +20,8 @@ export default function SignOutButton({
 
   const className =
     variant === 'sidebar'
-      ? 'w-full rounded-lg px-2.5 py-2 text-left text-[15px] font-medium text-neutral-500 transition hover:bg-white hover:text-neutral-900'
-      : 'rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-neutral-100'
+      ? 'w-full rounded-xl px-2.5 py-2 text-left text-[14px] font-medium text-neutral-500 transition hover:bg-white hover:text-neutral-900'
+      : 'compass-btn-secondary'
 
   return (
     <button type="button" onClick={handleSignOut} className={className}>

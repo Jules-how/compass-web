@@ -8,7 +8,6 @@ import { CompassMark } from '@/components/nav-icons'
 import { NavLinks, navKeyFromPathname, type NavKey, OPERATOR_PREFETCH } from '@/components/NavLinks'
 import SignOutButton from '@/components/SignOutButton'
 import { Sidebar, SidebarBody } from '@/components/ui/sidebar'
-import { prefetchJson } from '@/lib/use-cached-json'
 import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
 
 const WIDTH = {
@@ -22,11 +21,16 @@ const ConsoleChromeContext = createContext(false)
 
 function Brand({ href = '/home' }: { href?: string }) {
   return (
-    <Link href={href} className="flex items-center gap-2.5 rounded-lg px-1 py-0.5">
+    <Link
+      href={href}
+      className="group flex items-center gap-2.5 rounded-xl px-1.5 py-1 transition hover:bg-white/60"
+    >
       <CompassMark />
       <div className="min-w-0 overflow-hidden whitespace-nowrap leading-tight">
         <span className="text-[15px] font-semibold tracking-tight text-neutral-900">switchflow</span>{' '}
-        <span className="text-[15px] font-medium tracking-tight text-neutral-500">compass</span>
+        <span className="text-[15px] font-medium tracking-tight text-neutral-500 transition group-hover:text-neutral-700">
+          compass
+        </span>
       </div>
     </Link>
   )
@@ -45,12 +49,12 @@ function ConsoleSidebarFrame({
   return (
     <SidebarBody className="justify-between gap-6">
       <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
-        <div className="mb-4 px-1">
+        <div className="mb-5 px-1">
           <Brand href={homeHref} />
         </div>
         <NavLinks active={active} role={role} orientation="vertical" inboxCount={inboxCount} />
       </div>
-      <div className="border-t border-neutral-200/80 px-0 pb-3 pt-3">
+      <div className="border-t border-stone-200/70 px-0 pb-3 pt-3">
         <SignOutButton variant="sidebar" />
       </div>
     </SidebarBody>
@@ -77,9 +81,11 @@ export function OperatorConsoleLayout({
     if (!operator) return
     let cancelled = false
 
+    // Prefetch RSC routes only. Eager API prefetch of Instantly / clients /
+    // projects / campaigns on every console mount was a thundering herd —
+    // hover/focus on NavLinks still warms individual APIs on demand.
     for (const item of OPERATOR_PREFETCH) {
       router.prefetch(item.href)
-      if (item.api) prefetchJson(item.api, item.api)
     }
 
     void fetch('/api/inbox', { headers: { Accept: 'application/json' } })
@@ -109,7 +115,9 @@ export function OperatorConsoleLayout({
         <Sidebar open={open} setOpen={setOpen} animate={false}>
           <ConsoleSidebarFrame role={role} active={active} inboxCount={inboxCount} />
         </Sidebar>
-        <div className="min-w-0 flex-1 md:min-h-0 md:overflow-y-auto">{children}</div>
+        <div className="min-w-0 flex-1 md:min-h-0 md:overflow-y-auto">
+          <div className="animate-fade-up">{children}</div>
+        </div>
       </div>
     </ConsoleChromeContext.Provider>
   )
@@ -135,16 +143,12 @@ function PageMain({
   }
 
   return (
-    <main className={`mx-auto ${WIDTH[width]} px-4 py-6 sm:px-6 lg:px-8`}>
+    <main className={`mx-auto ${WIDTH[width]} px-4 py-7 sm:px-6 lg:px-8`}>
       {(title || actions) && (
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            {title ? (
-              <h1 className="font-display text-2xl font-semibold tracking-tight text-neutral-900">
-                {title}
-              </h1>
-            ) : null}
-            {subtitle ? <p className="mt-1 text-sm text-neutral-500">{subtitle}</p> : null}
+        <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            {title ? <h1 className="compass-page-title">{title}</h1> : null}
+            {subtitle ? <p className="compass-page-subtitle">{subtitle}</p> : null}
           </div>
           {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </header>

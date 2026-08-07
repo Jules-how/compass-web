@@ -219,6 +219,7 @@ export function MetaAdsManagerPanel({
         </div>
       </div>
 
+
       <div className="compass-panel overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -283,7 +284,7 @@ export function MetaAdsManagerPanel({
             type="button"
             onClick={openCreate}
             disabled={saving || (level === 'ad_sets' && campaigns.length === 0) || (level === 'ads' && adSets.length === 0)}
-            className="rounded-lg bg-sf-orange px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+            className="compass-btn-primary"
           >
             {createLabel}
           </button>
@@ -920,7 +921,7 @@ function CampaignForm({
         <button
           type="submit"
           disabled={saving || !name.trim()}
-          className="rounded-lg bg-sf-orange px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+          className="compass-btn-primary"
         >
           {mode === 'edit' ? 'Save campaign' : 'Create campaign'}
         </button>
@@ -1178,7 +1179,7 @@ function AdSetForm({
         <button
           type="submit"
           disabled={saving || !name.trim() || !campaignId}
-          className="rounded-lg bg-sf-orange px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+          className="compass-btn-primary"
         >
           {mode === 'edit' ? 'Save ad set' : 'Create ad set'}
         </button>
@@ -1402,7 +1403,7 @@ function AdForm({
         <button
           type="submit"
           disabled={saving || !name.trim() || !adSetId}
-          className="rounded-lg bg-sf-orange px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+          className="compass-btn-primary"
         >
           {mode === 'edit' ? 'Save ad' : 'Create ad'}
         </button>

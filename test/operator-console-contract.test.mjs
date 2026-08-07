@@ -109,11 +109,12 @@ test('client routes are operator-gated with same-origin writes', () => {
 
 test('operator nav covers the sectioned Compass surfaces', () => {
   const nav = read('src/components/NavLinks.tsx')
-  for (const href of ['/home', '/inbox', '/tasks', '/projects', '/functions', '/clients', '/sales', '/sales/pipeline', '/operations/finances', '/settings']) {
+  for (const href of ['/home', '/inbox', '/tasks', '/projects', '/functions', '/clients', '/sales', '/sales/pipeline', '/leads', '/operations/finances', '/settings']) {
     assert.match(nav, new RegExp(`href: '${href}'`))
   }
   assert.match(nav, /My Tasks/)
   assert.match(nav, /Pipeline/)
+  assert.match(nav, /label: 'CRM'/)
   assert.match(nav, /Finances/)
   assert.doesNotMatch(nav, /href: '\/delivery'/)
   assert.doesNotMatch(nav, /href: '\/leads\/upload'/)
@@ -122,6 +123,7 @@ test('operator nav covers the sectioned Compass surfaces', () => {
 test('operator console uses persistent layout with animated sidebar and sales overview', () => {
   const layout = read('src/app/(console)/layout.tsx')
   const shell = read('src/components/OperatorShell.tsx')
+  const navLinks = read('src/components/NavLinks.tsx')
   const sidebar = read('src/components/ui/sidebar.tsx')
   const sales = read('src/app/(console)/sales/page.tsx')
   const overview = read('src/components/sales/SalesOverview.tsx')
@@ -132,7 +134,9 @@ test('operator console uses persistent layout with animated sidebar and sales ov
   assert.match(layout, /OperatorConsoleLayout/)
   assert.match(shell, /OperatorConsoleLayout/)
   assert.match(shell, /router\.prefetch/)
-  assert.match(shell, /prefetchJson/)
+  // Route prefetch only — eager API prefetchJson on mount was a thundering herd.
+  assert.doesNotMatch(shell, /prefetchJson/)
+  assert.match(navLinks, /prefetchJson/)
   assert.match(shell, /md:h-\[100dvh\]/)
   assert.match(shell, /md:overflow-y-auto/)
   assert.match(sidebar, /framer-motion|motion\./)
@@ -146,4 +150,24 @@ test('operator console uses persistent layout with animated sidebar and sales ov
   assert.match(inbox, /INBOX_TAB_LABELS/)
   assert.match(inbox, /INBOX_TABS/)
   assert.match(inboxApi, /badgeTotal/)
+})
+
+test('console middleware skips API routes to avoid double Auth round-trips', () => {
+  const middleware = read('src/middleware.ts')
+  assert.match(middleware, /api\(\?:\/\|\$\)/)
+  assert.match(middleware, /signInWithPassword/)
+  // Prefer user from sign-in response — no second getUser() after auto-login.
+  assert.match(middleware, /data\.user/)
+})
+
+test('Home does not hover-prefetch Instantly cold-email', () => {
+  const nav = read('src/components/NavLinks.tsx')
+  assert.match(nav, /href: '\/home'/)
+  assert.doesNotMatch(nav, /api: '\/api\/instantly\/cold-email'/)
+})
+
+test('Instantly cold-email glance is process-cached', () => {
+  const client = read('src/lib/instantly.ts')
+  assert.match(client, /COLD_EMAIL_CACHE_TTL_MS/)
+  assert.match(client, /coldEmailCache/)
 })

@@ -3,10 +3,7 @@ import { ProjectsPanel } from '@/components/ProjectsPanel'
 
 export default function ProjectsPage() {
   return (
-    <OperatorShell
-      title="Projects"
-      subtitle="List, board, and timeline · health, filters, milestones"
-    >
+    <OperatorShell title="Projects" subtitle="Board, list, and timeline" width="full">
       <ProjectsPanel />
     </OperatorShell>
   )

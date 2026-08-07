@@ -184,7 +184,7 @@ export function ClientChannelPanel({
             value={offerTitle}
             onChange={(e) => setOfferTitle(e.target.value)}
             placeholder="Offer title"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            className="compass-input"
             disabled={saving}
           />
           <input
@@ -193,13 +193,13 @@ export function ClientChannelPanel({
             placeholder="Amount"
             type="number"
             step="0.01"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            className="compass-input"
             disabled={saving}
           />
           <button
             type="submit"
             disabled={saving || !offerTitle.trim()}
-            className="rounded-lg bg-sf-orange px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+            className="compass-btn-primary"
           >
             Add offer
           </button>
@@ -272,7 +272,7 @@ export function ClientChannelPanel({
             type="date"
             value={spendDate}
             onChange={(e) => setSpendDate(e.target.value)}
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            className="compass-input"
             disabled={saving}
           />
           <input
@@ -281,14 +281,14 @@ export function ClientChannelPanel({
             value={spendAmount}
             onChange={(e) => setSpendAmount(e.target.value)}
             placeholder="Amount"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            className="compass-input"
             disabled={saving}
           />
           <input
             value={spendCampaign}
             onChange={(e) => setSpendCampaign(e.target.value)}
             placeholder="Campaign name"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            className="compass-input"
             disabled={saving}
           />
           <button

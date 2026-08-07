@@ -1,7 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+  type ReactNode
+} from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import {
@@ -15,25 +22,22 @@ import {
   type InboxPayload,
   type InboxTab
 } from '@/lib/inbox-ui'
+import type { InboxSuggestion, InboxTriageState, LeadLifecycleStatus } from '@/lib/inbox-triage'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
 const EMPTY_COPY: Record<InboxTab, { title: string; body: string }> = {
   agents: {
     title: 'No agent notifications',
-    body: 'When an agent finishes work or gets blocked, it will show up here for you to review.'
-  },
-  gmails: {
-    title: 'No Gmail yet',
-    body: 'Inbound Gmail that needs a reply or review will land in this tab once sync is connected.'
+    body: 'Blocked agent work and recent completions that still need review show up here.'
   },
   instantly: {
     title: 'No Instantly replies',
     body: 'Replies and positive Instantly interest will appear here as they come in.'
   },
   leads: {
-    title: 'No inbound leads',
-    body: 'Client website, guide, and Meta inbound leads will show up in this list.'
+    title: 'No open inbound leads',
+    body: 'Website, guide, and Meta leads stay here until Contacted, Qualified, or Discarded.'
   }
 }
 
@@ -59,14 +63,12 @@ function InboxEmptyIllustration() {
 }
 
 function SourceGlyph({ tab }: { tab: InboxTab }) {
-  const label =
-    tab === 'agents' ? 'A' : tab === 'gmails' ? 'G' : tab === 'instantly' ? 'I' : 'L'
+  const label = tab === 'agents' ? 'A' : tab === 'instantly' ? 'I' : 'L'
   return (
     <span
       className={cn(
         'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold',
         tab === 'agents' && 'bg-amber-100 text-amber-800',
-        tab === 'gmails' && 'bg-sky-100 text-sky-800',
         tab === 'instantly' && 'bg-emerald-100 text-emerald-800',
         tab === 'leads' && 'bg-neutral-200 text-neutral-700'
       )}
@@ -90,8 +92,9 @@ function NotificationRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex w-full gap-3 border-b border-neutral-100 px-3 py-3 text-left transition',
-        selected ? 'bg-sky-50/80' : 'hover:bg-neutral-50'
+        'flex w-full gap-3 border-b border-stone-100 px-3.5 py-3 text-left transition',
+        selected ? 'bg-[#e85d2a]/[0.06]' : 'hover:bg-stone-50/80',
+        !item.unread && 'opacity-75'
       )}
     >
       <SourceGlyph tab={item.tab} />
@@ -102,15 +105,20 @@ function NotificationRow({
             <div className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-500">
               {item.preview}
             </div>
+            {item.related.length > 0 ? (
+              <div className="mt-1 text-[11px] text-neutral-400">
+                Also in {item.related.map((r) => INBOX_TAB_LABELS[r.tab]).join(', ')}
+              </div>
+            ) : null}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1 pt-0.5">
             <span className="text-[11px] tabular-nums text-neutral-400">
               {formatInboxRelative(item.occurredAt)}
             </span>
             {item.unread ? (
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-500" aria-label="Unread" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#e85d2a]" aria-label="Unread" />
             ) : (
-              <span className="h-1.5 w-1.5 rounded-full border border-neutral-300" aria-hidden />
+              <span className="h-1.5 w-1.5 rounded-full border border-stone-300" aria-hidden />
             )}
           </div>
         </div>
@@ -119,7 +127,51 @@ function NotificationRow({
   )
 }
 
-function ContextPane({ item }: { item: InboxItem | null }) {
+function ActionButton({
+  children,
+  onClick,
+  tone = 'neutral',
+  disabled
+}: {
+  children: ReactNode
+  onClick: () => void
+  tone?: 'neutral' | 'primary' | 'danger'
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'rounded-md border px-2.5 py-1.5 text-[12px] font-medium transition disabled:opacity-50',
+        tone === 'primary' && 'border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800',
+        tone === 'danger' && 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100',
+        tone === 'neutral' && 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+function ContextPane({
+  item,
+  busy,
+  suggestion,
+  onTriage,
+  onLifecycle,
+  onCreateTask,
+  onRefreshSuggest
+}: {
+  item: InboxItem | null
+  busy: boolean
+  suggestion: InboxSuggestion | null
+  onTriage: (triage: InboxTriageState) => void
+  onLifecycle: (lifecycle: LeadLifecycleStatus) => void
+  onCreateTask: () => void
+  onRefreshSuggest: () => void
+}) {
   if (!item) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
@@ -127,7 +179,7 @@ function ContextPane({ item }: { item: InboxItem | null }) {
         <div>
           <p className="text-sm font-medium text-neutral-700">Select a notification</p>
           <p className="mt-1 max-w-sm text-sm text-neutral-500">
-            Context for the selected item shows here — contact details, source, and full summary.
+            Context, triage actions, and a suggested next step show here.
           </p>
         </div>
       </div>
@@ -136,7 +188,7 @@ function ContextPane({ item }: { item: InboxItem | null }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-200/80 px-5 py-3">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stone-100 px-5 py-3.5">
         <div className="min-w-0">
           <div className="truncate text-[13px] text-neutral-500">
             {INBOX_TAB_LABELS[item.tab]}
@@ -147,10 +199,7 @@ function ContextPane({ item }: { item: InboxItem | null }) {
           </h2>
         </div>
         {item.href ? (
-          <Link
-            href={item.href}
-            className="shrink-0 rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
-          >
+          <Link href={item.href} className="compass-btn-secondary shrink-0 !px-2.5 !py-1.5 text-[12px]">
             Open
           </Link>
         ) : null}
@@ -159,6 +208,83 @@ function ContextPane({ item }: { item: InboxItem | null }) {
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
         <h3 className="text-2xl font-semibold tracking-tight text-neutral-900">{item.title}</h3>
         <p className="mt-1 text-sm text-neutral-500">{formatInboxWhen(item.occurredAt)}</p>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {item.unread ? (
+            <ActionButton disabled={busy} onClick={() => onTriage('read')}>
+              Mark read
+            </ActionButton>
+          ) : (
+            <ActionButton disabled={busy} onClick={() => onTriage('unread')}>
+              Mark unread
+            </ActionButton>
+          )}
+          <ActionButton disabled={busy} onClick={() => onTriage('snoozed')}>
+            Snooze 24h
+          </ActionButton>
+          <ActionButton disabled={busy} tone="primary" onClick={() => onTriage('done')}>
+            Done
+          </ActionButton>
+          {(item.tab === 'leads' || item.email) && (
+            <ActionButton disabled={busy} onClick={onCreateTask}>
+              Create task
+            </ActionButton>
+          )}
+        </div>
+
+        {item.tab === 'leads' ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <ActionButton disabled={busy} onClick={() => onLifecycle('contacted')}>
+              Contacted
+            </ActionButton>
+            <ActionButton disabled={busy} onClick={() => onLifecycle('qualified')}>
+              Qualified
+            </ActionButton>
+            <ActionButton disabled={busy} tone="danger" onClick={() => onLifecycle('discarded')}>
+              Discard
+            </ActionButton>
+          </div>
+        ) : null}
+
+        {suggestion ? (
+          <div className="mt-5 rounded-lg border border-neutral-200/80 bg-neutral-50/70 px-3 py-3">
+            <div className="flex items-start justify-between gap-2">
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
+                Suggested next step
+                {suggestion.source === 'ai' ? ' · AI' : ''}
+              </h4>
+              <button
+                type="button"
+                className="text-[11px] text-neutral-500 underline-offset-2 hover:underline"
+                onClick={onRefreshSuggest}
+              >
+                Refresh
+              </button>
+            </div>
+            <p className="mt-1 text-sm font-medium text-neutral-900">{suggestion.nextStep}</p>
+            <p className="mt-1 text-[12px] text-neutral-500">{suggestion.rationale}</p>
+          </div>
+        ) : null}
+
+        {item.related.length > 0 ? (
+          <div className="mt-5">
+            <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
+              Same person
+            </h4>
+            <ul className="mt-2 space-y-1">
+              {item.related.map((rel) => (
+                <li key={rel.itemId} className="text-sm text-neutral-700">
+                  <Link
+                    href={`/inbox?tab=${rel.tab}&id=${encodeURIComponent(rel.itemId)}`}
+                    className="underline-offset-2 hover:underline"
+                  >
+                    {INBOX_TAB_LABELS[rel.tab]} · {rel.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <dl className="mt-6 grid gap-3 sm:grid-cols-2">
           {(item.contactName || item.email || item.phone) && (
@@ -203,12 +329,16 @@ export function InboxPanel() {
   const tab = parseInboxTab(searchParams.get('tab'))
   const selectedParam = searchParams.get('id')
   const [mobileShowContext, setMobileShowContext] = useState(false)
+  const [suggestion, setSuggestion] = useState<InboxSuggestion | null>(null)
+  const [busy, startTransition] = useTransition()
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const url = `/api/inbox?tab=${tab}`
   const { data, error, loading, reload } = useCachedJson<InboxPayload>(url, url)
 
   const items = data?.items ?? []
   const counts = data?.counts
+  const needsYou = data?.needsYou ?? []
 
   const selectedId = useMemo(() => {
     if (selectedParam && items.some((item) => item.id === selectedParam)) return selectedParam
@@ -225,6 +355,41 @@ export function InboxPanel() {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }, [items, pathname, router, selectedParam, tab])
 
+  const loadSuggestion = useCallback(async (item: InboxItem) => {
+    setSuggestion(null)
+    try {
+      const res = await fetch('/api/inbox/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          tab: item.tab,
+          title: item.title,
+          preview: item.preview,
+          body: item.body,
+          email: item.email,
+          phone: item.phone,
+          agentStatus: item.agentStatus,
+          instantlyStatus: item.instantlyStatus,
+          lifecycle: item.lifecycle,
+          sourceLabel: item.sourceLabel
+        })
+      })
+      if (!res.ok) return
+      const json = (await res.json()) as InboxSuggestion
+      setSuggestion(json)
+    } catch {
+      // Heuristic endpoint should rarely fail; ignore soft errors.
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selected) {
+      setSuggestion(null)
+      return
+    }
+    void loadSuggestion(selected)
+  }, [selected, loadSuggestion])
+
   function setTab(next: InboxTab) {
     const params = new URLSearchParams()
     params.set('tab', next)
@@ -234,10 +399,95 @@ export function InboxPanel() {
 
   function selectItem(item: InboxItem) {
     const params = new URLSearchParams(searchParams.toString())
-    params.set('tab', tab)
+    params.set('tab', item.tab)
     params.set('id', item.id)
     setMobileShowContext(true)
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    if (item.unread) {
+      void patchTriage(item, 'read', { silent: true })
+    }
+  }
+
+  async function patchTriage(
+    item: InboxItem,
+    triage: InboxTriageState,
+    opts?: { lifecycle?: LeadLifecycleStatus; silent?: boolean }
+  ) {
+    setActionError(null)
+    const res = await fetch('/api/inbox/triage', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        channel: item.tab,
+        sourceId: item.sourceId,
+        triage,
+        email: item.email,
+        phone: item.phone,
+        identityKey: item.identityKey,
+        lifecycle: opts?.lifecycle
+      })
+    })
+    if (!res.ok) {
+      if (!opts?.silent) setActionError('Could not update triage')
+      return false
+    }
+    await reload(true)
+    return true
+  }
+
+  function onTriage(triage: InboxTriageState) {
+    if (!selected) return
+    startTransition(() => {
+      void patchTriage(selected, triage)
+    })
+  }
+
+  function onLifecycle(lifecycle: LeadLifecycleStatus) {
+    if (!selected) return
+    const triage: InboxTriageState =
+      lifecycle === 'discarded' ? 'done' : selected.unread ? 'read' : selected.triage
+    startTransition(() => {
+      void patchTriage(selected, triage, { lifecycle })
+    })
+  }
+
+  function onCreateTask() {
+    if (!selected) return
+    startTransition(() => {
+      void (async () => {
+        setActionError(null)
+        const title =
+          selected.tab === 'leads'
+            ? `Follow up: ${selected.title}`
+            : selected.tab === 'instantly'
+              ? `Reply: ${selected.title}`
+              : selected.title
+        const notes = [
+          selected.email ? `Email: ${selected.email}` : null,
+          selected.phone ? `Phone: ${selected.phone}` : null,
+          selected.body || selected.preview,
+          `From Inbox (${selected.tab})`
+        ]
+          .filter(Boolean)
+          .join('\n')
+        const res = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            title,
+            notes,
+            priority: selected.tab === 'instantly' ? 2 : 3,
+            source: 'inbox'
+          })
+        })
+        if (!res.ok) {
+          setActionError('Could not create task')
+          return
+        }
+        await patchTriage(selected, 'read')
+        router.push('/tasks')
+      })()
+    })
   }
 
   if (error && !data) {
@@ -265,17 +515,57 @@ export function InboxPanel() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-white text-neutral-900">
-      <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-neutral-200/80 px-4">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-stone-100 px-5">
         <div className="min-w-0">
           <h1 className="text-[15px] font-semibold tracking-tight">Inbox</h1>
           <p className="truncate text-[12px] text-neutral-500">{INBOX_TAB_HINTS[tab]}</p>
         </div>
-        <div className="text-[12px] tabular-nums text-neutral-400">
-          {data.total} item{data.total === 1 ? '' : 's'}
+        <div className="rounded-md bg-stone-50 px-2 py-1 text-[12px] tabular-nums text-neutral-500 ring-1 ring-stone-200/70">
+          {data.badgeTotal} need{data.badgeTotal === 1 ? 's' : ''} you · {data.total} shown
         </div>
       </header>
 
-      <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-neutral-200/80 px-2 py-1.5">
+      {needsYou.length > 0 ? (
+        <div className="shrink-0 border-b border-stone-100 bg-stone-50/60 px-3 py-2.5">
+          <div className="compass-section-label mb-1.5">Needs you</div>
+          <div className="flex gap-2 overflow-x-auto pb-0.5">
+            {needsYou.map((item) => (
+              <button
+                key={`needs-${item.id}`}
+                type="button"
+                onClick={() => {
+                  const params = new URLSearchParams()
+                  params.set('tab', item.tab)
+                  params.set('id', item.id)
+                  setMobileShowContext(true)
+                  router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+                }}
+                className={cn(
+                  'inline-flex max-w-[220px] shrink-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left transition',
+                  item.id === selectedId
+                    ? 'border-neutral-900 bg-neutral-900 text-white shadow-soft'
+                    : 'border-stone-200 bg-white text-neutral-800 hover:border-stone-300'
+                )}
+              >
+                <SourceGlyph tab={item.tab} />
+                <span className="min-w-0">
+                  <span className="block truncate text-[12px] font-medium">{item.title}</span>
+                  <span
+                    className={cn(
+                      'block truncate text-[11px]',
+                      item.id === selectedId ? 'text-white/70' : 'text-neutral-500'
+                    )}
+                  >
+                    {INBOX_TAB_LABELS[item.tab]} · {formatInboxRelative(item.occurredAt)}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-stone-100 px-3 py-2">
         {INBOX_TABS.map((key) => {
           const count = counts?.[key] ?? 0
           const active = tab === key
@@ -285,17 +575,17 @@ export function InboxPanel() {
               type="button"
               onClick={() => setTab(key)}
               className={cn(
-                'inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition',
+                'inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition',
                 active
-                  ? 'bg-neutral-900 text-white'
-                  : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800'
+                  ? 'bg-neutral-900 text-white shadow-soft'
+                  : 'text-neutral-500 hover:bg-stone-100 hover:text-neutral-800'
               )}
             >
               {INBOX_TAB_LABELS[key]}
               <span
                 className={cn(
-                  'rounded px-1 text-[11px] tabular-nums',
-                  active ? 'bg-white/15 text-white' : 'bg-neutral-100 text-neutral-500'
+                  'rounded-md px-1 text-[11px] tabular-nums',
+                  active ? 'bg-white/15 text-white' : 'bg-stone-100 text-neutral-500'
                 )}
               >
                 {count}
@@ -304,6 +594,12 @@ export function InboxPanel() {
           )
         })}
       </div>
+
+      {actionError ? (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-[12px] text-amber-800">
+          {actionError}
+        </div>
+      ) : null}
 
       <div className="flex min-h-0 flex-1">
         <section
@@ -350,7 +646,17 @@ export function InboxPanel() {
                 ← Back to inbox
               </button>
             ) : null}
-            <ContextPane item={items.length === 0 ? null : selected} />
+            <ContextPane
+              item={items.length === 0 ? null : selected}
+              busy={busy}
+              suggestion={suggestion}
+              onTriage={onTriage}
+              onLifecycle={onLifecycle}
+              onCreateTask={onCreateTask}
+              onRefreshSuggest={() => {
+                if (selected) void loadSuggestion(selected)
+              }}
+            />
           </div>
         </section>
       </div>

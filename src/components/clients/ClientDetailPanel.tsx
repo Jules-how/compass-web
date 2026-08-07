@@ -406,7 +406,7 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
                 value={editSummary}
                 onChange={(e) => setEditSummary(e.target.value)}
                 placeholder="Profile summary — the relationship at a glance"
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                className="compass-input"
                 disabled={saving}
               />
 
@@ -483,7 +483,7 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
                 onChange={(e) => setEditNotes(e.target.value)}
                 rows={6}
                 placeholder="Notes, context, and working agreements…"
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                className="compass-input"
                 disabled={saving}
               />
 
@@ -491,7 +491,7 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
                 <button
                   type="submit"
                   disabled={saving || !editName.trim()}
-                  className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                  className="compass-btn-primary"
                 >
                   {saving ? 'Saving…' : 'Save changes'}
                 </button>
@@ -763,7 +763,7 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
                 value={issueTitle}
                 onChange={(e) => setIssueTitle(e.target.value)}
                 placeholder="What needs doing?"
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
@@ -785,7 +785,7 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
             <button
               type="submit"
               disabled={saving || !issueTitle.trim()}
-              className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              className="compass-btn-primary"
             >
               Add issue
             </button>

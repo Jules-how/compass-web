@@ -4,13 +4,22 @@
 
 :root {
   color-scheme: light;
-  --compass-ink: #14171c;
-  --compass-panel: #ffffff;
+  --compass-ink: #0f1217;
+  --compass-ink-soft: #3f4550;
   --compass-muted: #6b7280;
-  --compass-line: #e7e5e4;
-  --compass-wash: #f4f2ef;
-  --compass-sidebar: #f3f2ef;
+  --compass-faint: #9ca3af;
+  --compass-panel: #ffffff;
+  --compass-line: #e8e6e3;
+  --compass-line-strong: #d6d3d1;
+  --compass-wash: #f6f4f1;
+  --compass-sidebar: #f1efec;
   --compass-accent: #e85d2a;
+  --compass-accent-hover: #c94a1f;
+  --compass-accent-soft: rgba(232, 93, 42, 0.1);
+  --compass-shadow: 0 1px 2px rgba(15, 18, 23, 0.04), 0 8px 24px rgba(15, 18, 23, 0.04);
+  --compass-shadow-sm: 0 1px 2px rgba(15, 18, 23, 0.05);
+  --destructive-foreground: #ffffff;
+  --color-destructive-foreground: var(--destructive-foreground);
 }
 
 html,
@@ -22,9 +31,15 @@ body {
   @apply text-neutral-900 antialiased;
   font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
   background:
-    radial-gradient(1200px 600px at 12% -10%, rgba(249, 115, 22, 0.08), transparent 55%),
-    radial-gradient(900px 500px at 90% 0%, rgba(15, 23, 42, 0.05), transparent 50%),
+    radial-gradient(1000px 520px at 8% -8%, rgba(232, 93, 42, 0.07), transparent 55%),
+    radial-gradient(800px 480px at 96% 0%, rgba(15, 18, 23, 0.035), transparent 48%),
     var(--compass-wash);
+  color: var(--compass-ink);
+}
+
+::selection {
+  background: var(--compass-accent-soft);
+  color: var(--compass-ink);
 }
 
 .font-display {
@@ -36,17 +51,81 @@ body {
 }
 
 .compass-sidebar {
-  /* Opaque wash so page gradients never show through as a bottom-left box. */
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.35) 45%, var(--compass-sidebar) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.28) 42%, var(--compass-sidebar) 100%),
     var(--compass-sidebar);
 }
 
 .compass-panel {
-  @apply rounded-xl border border-stone-200/80 bg-white shadow-sm;
+  @apply rounded-2xl border bg-white;
+  border-color: color-mix(in srgb, var(--compass-line) 90%, transparent);
+  box-shadow: var(--compass-shadow-sm);
 }
 
-:root {
-  --destructive-foreground: #ffffff;
-  --color-destructive-foreground: var(--destructive-foreground);
+@layer components {
+  .compass-input {
+    @apply w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition;
+    border-color: var(--compass-line-strong);
+    box-shadow: var(--compass-shadow-sm);
+  }
+
+  .compass-input:hover {
+    border-color: #c4c0bb;
+  }
+
+  .compass-input:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--compass-accent) 55%, white);
+    box-shadow: 0 0 0 3px var(--compass-accent-soft);
+  }
+
+  .compass-input:disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+
+  .compass-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition;
+  }
+
+  .compass-btn-primary {
+    @apply compass-btn text-white;
+    background: var(--compass-accent);
+  }
+
+  .compass-btn-primary:hover {
+    background: var(--compass-accent-hover);
+  }
+
+  .compass-btn-primary:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .compass-btn-secondary {
+    @apply compass-btn border bg-white text-neutral-700;
+    border-color: var(--compass-line-strong);
+  }
+
+  .compass-btn-secondary:hover {
+    @apply bg-stone-50 text-neutral-900;
+  }
+
+  .compass-btn-ghost {
+    @apply compass-btn text-neutral-600;
+  }
+
+  .compass-btn-ghost:hover {
+    @apply bg-white/80 text-neutral-900;
+  }
+
+  .compass-section-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400;
+  }
+
+  .compass-page-title {
+    @apply font-display text-[1.65rem] font-semibold tracking-tight text-neutral-900;
+  }
+
+  .compass-page-subtitle {
+    @apply mt-1.5 max-w-2xl text-sm leading-relaxed text-neutral-500;
+  }
 }

@@ -8,13 +8,34 @@ const config: Config = {
         sans: ['var(--font-dm-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         display: ['var(--font-fraunces)', 'ui-serif', 'Georgia', 'serif']
       },
+      boxShadow: {
+        soft: '0 1px 2px rgba(15, 18, 23, 0.04), 0 8px 24px rgba(15, 18, 23, 0.04)',
+        lift: '0 2px 4px rgba(15, 18, 23, 0.04), 0 12px 32px rgba(15, 18, 23, 0.06)'
+      },
       colors: {
-        // Switchflow orange accent (placeholder; replace when context/business/brand.md lands).
+        // Switchflow orange accent
         sf: {
-          orange: '#F97316',
-          'orange-dark': '#EA580C',
-          'orange-light': '#FED7AA'
+          orange: '#E85D2A',
+          'orange-dark': '#C94A1F',
+          'orange-light': '#F8D9CB'
+        },
+        compass: {
+          ink: '#0f1217',
+          muted: '#6b7280',
+          line: '#e8e6e3',
+          wash: '#f6f4f1',
+          sidebar: '#f1efec',
+          accent: '#e85d2a'
         }
+      },
+      keyframes: {
+        'fade-up': {
+          '0%': { opacity: '0', transform: 'translateY(6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
+        }
+      },
+      animation: {
+        'fade-up': 'fade-up 0.35s ease-out both'
       }
     }
   },

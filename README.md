@@ -6,8 +6,10 @@ Compass-Web has two deliberately separate surfaces:
 - an invite-only, tenant-safe delivery portal for customers;
 - a customer lead inbox (`/leads`) fed by secret ingest from client websites and Meta workflows.
 
-Operator Leads = outbound `lead_contacts`. Operator Inbox = client inbound
-`portal_inbound_leads`. Delivery stays off the primary operator nav.
+Operator Leads = outbound `lead_contacts`. Operator Inbox is a multi-channel
+work queue (Agents / Instantly / inbound `portal_inbound_leads`) with triage
+state, lead lifecycle, ranking, and a cross-tab “Needs you” strip. Delivery
+stays off the primary operator nav.
 
 The delivery domain is cloud-authoritative. It never projects private Compass
 tasks, CRM records, notes, prompts, billing, ownership, or internal status into
@@ -53,6 +55,12 @@ Client communications (linked email/SMS threads + auto summaries) use:
 
 ```text
 0031_compass_client_comms.sql
+```
+
+Inbox triage (read/done/snooze + inbound lead lifecycle) uses:
+
+```text
+0033_inbox_triage.sql
 ```
 
 Connect Meta / Google / LinkedIn under **Settings → Ad accounts**, then Sync.

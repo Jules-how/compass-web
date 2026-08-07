@@ -14,6 +14,8 @@ import {
   type HomeAdGlance
 } from '@/lib/home-demo-data'
 import type { CompassProject, CompassTask } from '@/lib/types'
+import { compareTasksByFocus, isOpenTask, type TaskFocusContext } from '@/lib/task-organisation'
+import { taskPriorityLabel } from '@/lib/task-priority'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +24,7 @@ const BRAIN_DUMP_KEY = 'compass.home.brainDump'
 type TasksPayload = {
   topTasks: CompassTask[]
   projects: CompassProject[]
+  clientsById?: Record<string, { id: string; name: string; priority: number; health: string }>
 }
 
 type InboxPayload = {
@@ -49,19 +52,6 @@ function formatMoney(value: number) {
     currency: 'USD',
     maximumFractionDigits: 0
   }).format(value)
-}
-
-function isOpenTask(task: CompassTask) {
-  return task.status !== 'completed' && task.status !== 'cancelled'
-}
-
-function priorityRank(task: CompassTask) {
-  const urgency =
-    task.due && !Number.isNaN(Date.parse(task.due))
-      ? Math.max(0, 14 - (Date.parse(task.due) - Date.now()) / 86_400_000)
-      : 0
-  const statusBoost = task.status === 'in-progress' ? 3 : task.status === 'blocked' ? 5 : 0
-  return task.priority * 10 + statusBoost + urgency
 }
 
 function creativeStatusBadge(status: AdCreativeMetric['status']) {
@@ -133,25 +123,26 @@ function GlanceLink({
     <Link
       href={href}
       className={cn(
-        'compass-panel block p-3.5 transition hover:border-stone-300 hover:bg-stone-50/60',
-        tone === 'action' && 'border-[#e85d2a]/35 bg-orange-50/40',
-        tone === 'warn' && 'border-amber-300/70 bg-amber-50/40'
+        'compass-panel block p-4 transition hover:-translate-y-0.5 hover:shadow-lift',
+        tone === 'action' && 'border-[#e85d2a]/30 bg-gradient-to-br from-orange-50/80 to-white',
+        tone === 'warn' && 'border-amber-300/60 bg-gradient-to-br from-amber-50/70 to-white'
       )}
     >
-      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-        {label}
-      </div>
-      <div className="mt-1.5 text-xl font-semibold tracking-tight text-neutral-900 tabular-nums">
+      <div className="compass-section-label">{label}</div>
+      <div className="mt-2 text-xl font-semibold tracking-tight text-neutral-900 tabular-nums">
         {value}
       </div>
-      {hint ? <div className="mt-1 text-xs text-neutral-500">{hint}</div> : null}
+      {hint ? <div className="mt-1.5 text-xs leading-snug text-neutral-500">{hint}</div> : null}
     </Link>
   )
 }
 
 function SectionLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="text-sm font-medium text-[#c2410c] hover:underline">
+    <Link
+      href={href}
+      className="text-sm font-medium text-[#c2410c] transition hover:text-[#9a3412] hover:underline"
+    >
       {children}
     </Link>
   )
@@ -206,14 +197,29 @@ export function HomeDashboard() {
 
   const openTasks = useMemo(() => {
     const list = (tasks.data?.topTasks ?? []).filter(isOpenTask)
-    return [...list].sort((a, b) => priorityRank(b) - priorityRank(a))
+    const projectsByIdLocal = Object.fromEntries(
+      (tasks.data?.projects ?? []).map((p) => [p.id, p])
+    )
+    const clientsById = tasks.data?.clientsById ?? {}
+    const ctxOf = (task: CompassTask): TaskFocusContext => {
+      const project = task.project_id ? projectsByIdLocal[task.project_id] : null
+      const client = project?.client_id ? clientsById[project.client_id] : null
+      return { project, client }
+    }
+    return [...list].sort((a, b) => compareTasksByFocus(a, b, ctxOf))
   }, [tasks.data])
 
   const activeProjects = useMemo(() => {
     const list = (tasks.data?.projects ?? []).filter(
       (p) => !['done', 'completed', 'cancelled', 'archived'].includes(p.status.toLowerCase())
     )
-    return [...list].sort((a, b) => b.priority - a.priority).slice(0, 4)
+    // Lower non-zero priority number = more urgent (1 before 4); 0 sorts last.
+    return [...list]
+      .sort((a, b) => {
+        const rank = (p: number) => (p === 0 ? 99 : p)
+        return rank(a.priority) - rank(b.priority) || a.name.localeCompare(b.name)
+      })
+      .slice(0, 4)
   }, [tasks.data])
 
   const priorities = openTasks.slice(0, 6)
@@ -334,7 +340,7 @@ export function HomeDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <GlanceLink
           href="/tasks"
@@ -400,9 +406,9 @@ export function HomeDashboard() {
           </div>
           <SectionLink href="/tasks">Open tasks</SectionLink>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-2.5">
           {tasks.error && !tasks.data ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-700">
               {tasks.error}{' '}
               <button type="button" className="underline" onClick={() => void tasks.reload(true)}>
                 Retry
@@ -411,7 +417,7 @@ export function HomeDashboard() {
           ) : null}
           {tasks.loading && !tasks.data ? <LoadingBlock label="Loading priorities…" /> : null}
           {!tasks.loading && priorities.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-stone-300 px-4 py-8 text-center text-sm text-neutral-500">
+            <div className="rounded-xl border border-dashed border-stone-300/80 bg-stone-50/40 px-4 py-10 text-center text-sm text-neutral-500">
               No open priorities yet. Capture a brain dump or{' '}
               <Link href="/tasks" className="font-medium text-[#c2410c] hover:underline">
                 create a task
@@ -425,9 +431,9 @@ export function HomeDashboard() {
               <Link
                 key={task.id}
                 href="/tasks"
-                className="flex items-start gap-3 rounded-xl border border-stone-200/70 bg-stone-50/40 px-3.5 py-3 transition hover:border-stone-300 hover:bg-stone-50"
+                className="flex items-start gap-3 rounded-xl border border-transparent bg-stone-50/60 px-3.5 py-3 transition hover:border-stone-200 hover:bg-white hover:shadow-soft"
               >
-                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white text-xs font-semibold tabular-nums text-neutral-500 ring-1 ring-stone-200">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-semibold tabular-nums text-neutral-500 ring-1 ring-stone-200/80">
                   {index + 1}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -436,7 +442,7 @@ export function HomeDashboard() {
                     <span className="capitalize">{task.status.replace('-', ' ')}</span>
                     {project ? <span>· {project.name}</span> : null}
                     {task.due ? <span>· due {task.due.slice(0, 10)}</span> : null}
-                    {task.priority > 0 ? <span>· P{task.priority}</span> : null}
+                    {task.priority > 0 ? <span>· {taskPriorityLabel(task.priority)}</span> : null}
                   </div>
                 </div>
               </Link>
@@ -444,11 +450,9 @@ export function HomeDashboard() {
           })}
 
           {activeProjects.length > 0 ? (
-            <div className="border-t border-stone-200/80 pt-3">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                  Active projects
-                </div>
+            <div className="border-t border-stone-100 pt-3.5">
+              <div className="mb-2.5 flex items-center justify-between">
+                <div className="compass-section-label">Active projects</div>
                 <SectionLink href="/projects">All projects</SectionLink>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -467,7 +471,7 @@ export function HomeDashboard() {
         </CardContent>
       </Card>
 
-      <section className="overflow-hidden rounded-xl border border-stone-200/60 bg-gradient-to-br from-white via-white to-stone-50/80">
+      <section className="overflow-hidden rounded-2xl border border-stone-200/70 bg-gradient-to-br from-white via-white to-stone-50/80 shadow-soft">
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:gap-6">
           <div className="sm:w-44 sm:shrink-0 lg:w-52">
             <h3 className="text-base font-semibold tracking-tight text-neutral-900">Brain dump</h3>
@@ -484,14 +488,14 @@ export function HomeDashboard() {
               }}
               placeholder="One thought per line — follow-ups, half-ideas, blockers…"
               rows={plan ? 4 : 3}
-              className="w-full resize-y rounded-lg border-0 bg-stone-100/70 px-3.5 py-3 text-sm leading-relaxed text-neutral-800 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d2a]/25"
+              className="compass-input min-h-[5.5rem] resize-y"
             />
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={() => void runReorganize()}
                 disabled={!dump.trim() || reorganizing}
-                className="rounded-md bg-[#e85d2a] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#c2410c] disabled:opacity-40"
+                className="compass-btn-primary"
               >
                 {reorganizing ? 'Thinking…' : 'Reorganize with AI'}
               </button>
@@ -504,7 +508,7 @@ export function HomeDashboard() {
                     setApplyNote(null)
                     setReorganizeError(null)
                   }}
-                  className="text-sm text-neutral-500 transition hover:text-neutral-800"
+                  className="compass-btn-ghost"
                 >
                   Clear
                 </button>
@@ -525,7 +529,7 @@ export function HomeDashboard() {
                     </span>
                   ) : null}
                 </div>
-                <ul className="divide-y divide-stone-100 overflow-hidden rounded-lg border border-stone-200/70 bg-white">
+                <ul className="divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-200/70 bg-white">
                   {plan.suggestions.map((item) => (
                     <SuggestionRow
                       key={item.id}
@@ -544,7 +548,7 @@ export function HomeDashboard() {
                   type="button"
                   onClick={() => void applySuggestions()}
                   disabled={applying || selected.size === 0}
-                  className="rounded-md border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-neutral-800 transition hover:border-stone-300 hover:bg-stone-50 disabled:opacity-50"
+                  className="compass-btn-secondary"
                 >
                   {applying ? 'Applying…' : 'Apply selected to priorities'}
                 </button>
@@ -601,7 +605,7 @@ export function HomeDashboard() {
                   cold.campaigns.map((campaign) => (
                     <div
                       key={campaign.id}
-                      className="rounded-xl border border-stone-200/70 bg-stone-50/40 p-3.5"
+                      className="rounded-xl border border-stone-100 bg-stone-50/40 p-3.5 transition hover:bg-white"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
@@ -628,13 +632,13 @@ export function HomeDashboard() {
         </CardContent>
       </Card>
 
-      <div className="overflow-hidden rounded-xl border border-stone-200/80 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-soft">
         <div className="flex items-center gap-2 px-2 py-1.5 sm:px-3">
           <button
             type="button"
             onClick={() => setAdsOpen((open) => !open)}
             aria-expanded={adsOpen}
-            className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-stone-50/80"
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-stone-50/80"
           >
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -642,7 +646,7 @@ export function HomeDashboard() {
                   Ad creative / metrics
                 </span>
                 {ads.creativesNeedingReview > 0 ? (
-                  <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-amber-800 ring-1 ring-amber-200/80">
+                  <span className="rounded-lg bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-amber-800 ring-1 ring-amber-200/80">
                     {ads.creativesNeedingReview} need review
                   </span>
                 ) : null}
@@ -709,7 +713,7 @@ export function HomeDashboard() {
                   {ads.creatives.map((creative) => (
                     <div
                       key={creative.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-200/70 px-3.5 py-3"
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-100 bg-stone-50/40 px-3.5 py-3 transition hover:bg-white"
                     >
                       <div className="min-w-0">
                         <div className="font-medium text-neutral-900">{creative.name}</div>
@@ -759,14 +763,12 @@ function MetricTile({
   return (
     <div
       className={cn(
-        'rounded-xl border border-stone-200/70 bg-stone-50/50 p-3.5',
-        emphasize && 'border-amber-300/70 bg-amber-50/50'
+        'rounded-xl border border-stone-100 bg-stone-50/60 p-3.5',
+        emphasize && 'border-amber-200/80 bg-amber-50/50'
       )}
     >
-      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-        {label}
-      </div>
-      <div className="mt-1.5 text-xl font-semibold tracking-tight text-neutral-900 tabular-nums">
+      <div className="compass-section-label">{label}</div>
+      <div className="mt-2 text-xl font-semibold tracking-tight text-neutral-900 tabular-nums">
         {value}
       </div>
       {hint ? <div className="mt-1 text-xs text-neutral-500">{hint}</div> : null}
@@ -798,7 +800,9 @@ function SuggestionRow({
           <Badge variant="secondary" appearance="light" size="sm">
             {item.kind}
           </Badge>
-          <span className="text-[11px] tabular-nums text-neutral-400">P{item.suggestedPriority}</span>
+          <span className="text-[11px] tabular-nums text-neutral-400">
+            {taskPriorityLabel(item.suggestedPriority)}
+          </span>
         </div>
         <p className="mt-0.5 text-xs text-neutral-500">{item.rationale}</p>
       </div>

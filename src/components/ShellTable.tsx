@@ -11,29 +11,32 @@ export function ShellTable({
   emptyMessage: string
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+    <div className="overflow-hidden rounded-2xl border border-stone-200/70 bg-white shadow-soft">
       <table className="min-w-full text-left text-sm">
-        <thead className="border-b border-neutral-200 bg-neutral-50 text-neutral-500">
+        <thead className="border-b border-stone-100 bg-stone-50/80 text-neutral-500">
           <tr>
             {columns.map((column) => (
-              <th key={column} className="px-4 py-2.5 font-medium">
+              <th
+                key={column}
+                className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.1em]"
+              >
                 {column}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-stone-100">
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-10 text-center text-neutral-500">
+              <td colSpan={columns.length} className="px-4 py-12 text-center text-neutral-500">
                 {emptyMessage}
               </td>
             </tr>
           ) : (
             rows.map((row, index) => (
-              <tr key={index} className="border-t border-neutral-100">
+              <tr key={index} className="transition hover:bg-stone-50/70">
                 {row.map((cell, cellIndex) => (
-                  <td key={cellIndex} className="px-4 py-2.5 text-neutral-800 align-middle">
+                  <td key={cellIndex} className="px-4 py-3 align-middle text-neutral-800">
                     {cell}
                   </td>
                 ))}

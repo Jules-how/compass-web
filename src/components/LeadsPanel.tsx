@@ -2,41 +2,46 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import type { LeadContact, LeadListFilters } from '@/lib/types'
+import type { LeadContact, LeadListFilters, LeadSummaryCounts } from '@/lib/types'
 import LeadTable from '@/components/LeadTable'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { LEAD_PAGE_SIZE } from '@/lib/list-columns'
+import { leadFiltersToSearchParams, parseLeadListFilters } from '@/lib/leads-query'
 
 export function LeadsPanel() {
   const searchParams = useSearchParams()
   const [leads, setLeads] = useState<LeadContact[] | null>(null)
   const [total, setTotal] = useState(0)
+  const [summary, setSummary] = useState<LeadSummaryCounts | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reloadToken, setReloadToken] = useState(0)
 
-  const filters: LeadListFilters = {
-    vertical: searchParams.get('vertical') ?? undefined,
-    source: searchParams.get('source') ?? undefined,
-    outbound_status: searchParams.get('outbound_status') ?? undefined,
-    city: searchParams.get('city') ?? undefined
-  }
+  const queryString = searchParams.toString()
+  const filters: LeadListFilters = parseLeadListFilters(new URLSearchParams(queryString))
   const pageParam = Number(searchParams.get('page') ?? '1')
   const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1
 
   const load = useCallback(async () => {
     setError(null)
     try {
-      const params = new URLSearchParams()
-      if (filters.vertical) params.set('vertical', filters.vertical)
-      if (filters.source) params.set('source', filters.source)
-      if (filters.outbound_status) params.set('outbound_status', filters.outbound_status)
-      if (filters.city) params.set('city', filters.city)
-      params.set('page', String(page))
-      params.set('pageSize', String(LEAD_PAGE_SIZE))
-      const res = await fetch(`/api/leads/list?${params.toString()}`, {
-        headers: { Accept: 'application/json' }
-      })
-      if (!res.ok) throw new Error(`Failed to load leads (${res.status})`)
-      const body = (await res.json()) as {
+      const currentFilters = parseLeadListFilters(new URLSearchParams(queryString))
+      const listParams = leadFiltersToSearchParams(currentFilters)
+      listParams.set('page', String(page))
+      listParams.set('pageSize', String(LEAD_PAGE_SIZE))
+
+      const summaryParams = leadFiltersToSearchParams(currentFilters)
+
+      const [listRes, summaryRes] = await Promise.all([
+        fetch(`/api/leads/list?${listParams.toString()}`, {
+          headers: { Accept: 'application/json' }
+        }),
+        fetch(`/api/leads/summary?${summaryParams.toString()}`, {
+          headers: { Accept: 'application/json' }
+        })
+      ])
+
+      if (!listRes.ok) throw new Error(`Failed to load leads (${listRes.status})`)
+      const body = (await listRes.json()) as {
         leads: LeadContact[]
         total: number
         page: number
@@ -44,14 +49,21 @@ export function LeadsPanel() {
       }
       setLeads(body.leads ?? [])
       setTotal(body.total ?? 0)
+
+      if (summaryRes.ok) {
+        const summaryBody = (await summaryRes.json()) as { summary: LeadSummaryCounts }
+        setSummary(summaryBody.summary ?? null)
+      } else {
+        setSummary(null)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     }
-  }, [filters.city, filters.outbound_status, filters.source, filters.vertical, page])
+  }, [page, queryString])
 
   useEffect(() => {
     void load()
-  }, [load])
+  }, [load, reloadToken])
 
   if (error) {
     return (
@@ -73,7 +85,11 @@ export function LeadsPanel() {
   return (
     <div className="space-y-3">
       <p className="text-sm text-neutral-500">
-        {total} lead{total === 1 ? '' : 's'} total
+        {(summary?.filtered ?? total).toLocaleString()} lead
+        {(summary?.filtered ?? total) === 1 ? '' : 's'}
+        {summary && summary.filtered !== summary.total
+          ? ` matching filters · ${summary.total.toLocaleString()} total`
+          : ' in outbound database'}
       </p>
       <LeadTable
         leads={leads}
@@ -82,6 +98,9 @@ export function LeadsPanel() {
         pageSize={LEAD_PAGE_SIZE}
         totalShown={totalShown}
         hasMore={hasMore}
+        total={total}
+        summary={summary}
+        onReload={() => setReloadToken((n) => n + 1)}
       />
     </div>
   )

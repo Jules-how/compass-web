@@ -84,7 +84,7 @@ export default function NotesEditor({ task }: NotesEditorProps) {
         onChange={(event) => setBody(event.target.value)}
         placeholder="Add a new context note…"
         rows={4}
-        className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none focus:ring-1 focus:ring-sf-orange"
+        className="compass-input"
       />
       <div className="flex justify-end">
         <button
