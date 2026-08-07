@@ -183,6 +183,7 @@ export function HomeDashboard() {
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState<string | null>(null)
   const [applyNote, setApplyNote] = useState<string | null>(null)
+  const [adsOpen, setAdsOpen] = useState(false)
 
   useEffect(() => {
     try {
@@ -389,110 +390,108 @@ export function HomeDashboard() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div>
-              <CardTitle>Today&apos;s Priorities</CardTitle>
-              <CardDescription>
-                Tasks and projects that should move the needle before anything else
-              </CardDescription>
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Today&apos;s Priorities</CardTitle>
+            <CardDescription>
+              Tasks and projects that should move the needle before anything else
+            </CardDescription>
+          </div>
+          <SectionLink href="/tasks">Open tasks</SectionLink>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {tasks.error && !tasks.data ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {tasks.error}{' '}
+              <button type="button" className="underline" onClick={() => void tasks.reload(true)}>
+                Retry
+              </button>
             </div>
-            <SectionLink href="/tasks">Open tasks</SectionLink>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {tasks.error && !tasks.data ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                {tasks.error}{' '}
-                <button type="button" className="underline" onClick={() => void tasks.reload(true)}>
-                  Retry
-                </button>
-              </div>
-            ) : null}
-            {tasks.loading && !tasks.data ? <LoadingBlock label="Loading priorities…" /> : null}
-            {!tasks.loading && priorities.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-stone-300 px-4 py-8 text-center text-sm text-neutral-500">
-                No open priorities yet. Capture a brain dump or{' '}
-                <Link href="/tasks" className="font-medium text-[#c2410c] hover:underline">
-                  create a task
-                </Link>
-                .
-              </div>
-            ) : null}
-            {priorities.map((task, index) => {
-              const project = task.project_id ? projectsById[task.project_id] : null
-              return (
-                <Link
-                  key={task.id}
-                  href="/tasks"
-                  className="flex items-start gap-3 rounded-xl border border-stone-200/70 bg-stone-50/40 px-3.5 py-3 transition hover:border-stone-300 hover:bg-stone-50"
-                >
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white text-xs font-semibold tabular-nums text-neutral-500 ring-1 ring-stone-200">
-                    {index + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-neutral-900">{task.title}</div>
-                    <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-neutral-500">
-                      <span className="capitalize">{task.status.replace('-', ' ')}</span>
-                      {project ? <span>· {project.name}</span> : null}
-                      {task.due ? <span>· due {task.due.slice(0, 10)}</span> : null}
-                      {task.priority > 0 ? <span>· P{task.priority}</span> : null}
-                    </div>
-                  </div>
-                </Link>
-              )
-            })}
-
-            {activeProjects.length > 0 ? (
-              <div className="border-t border-stone-200/80 pt-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                    Active projects
-                  </div>
-                  <SectionLink href="/projects">All projects</SectionLink>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {activeProjects.map((project) => (
-                    <Link
-                      key={project.id}
-                      href={`/projects/${project.id}`}
-                      className="rounded-lg border border-stone-200/80 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition hover:border-stone-300 hover:text-neutral-900"
-                    >
-                      {project.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Brain Dump</CardTitle>
-              <CardDescription>
-                Dump messy thoughts — AI turns them into ordered priorities you can apply
-              </CardDescription>
+          ) : null}
+          {tasks.loading && !tasks.data ? <LoadingBlock label="Loading priorities…" /> : null}
+          {!tasks.loading && priorities.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-stone-300 px-4 py-8 text-center text-sm text-neutral-500">
+              No open priorities yet. Capture a brain dump or{' '}
+              <Link href="/tasks" className="font-medium text-[#c2410c] hover:underline">
+                create a task
+              </Link>
+              .
             </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
+          ) : null}
+          {priorities.map((task, index) => {
+            const project = task.project_id ? projectsById[task.project_id] : null
+            return (
+              <Link
+                key={task.id}
+                href="/tasks"
+                className="flex items-start gap-3 rounded-xl border border-stone-200/70 bg-stone-50/40 px-3.5 py-3 transition hover:border-stone-300 hover:bg-stone-50"
+              >
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white text-xs font-semibold tabular-nums text-neutral-500 ring-1 ring-stone-200">
+                  {index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium text-neutral-900">{task.title}</div>
+                  <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-neutral-500">
+                    <span className="capitalize">{task.status.replace('-', ' ')}</span>
+                    {project ? <span>· {project.name}</span> : null}
+                    {task.due ? <span>· due {task.due.slice(0, 10)}</span> : null}
+                    {task.priority > 0 ? <span>· P{task.priority}</span> : null}
+                  </div>
+                </div>
+              </Link>
+            )
+          })}
+
+          {activeProjects.length > 0 ? (
+            <div className="border-t border-stone-200/80 pt-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+                  Active projects
+                </div>
+                <SectionLink href="/projects">All projects</SectionLink>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {activeProjects.map((project) => (
+                  <Link
+                    key={project.id}
+                    href={`/projects/${project.id}`}
+                    className="rounded-lg border border-stone-200/80 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition hover:border-stone-300 hover:text-neutral-900"
+                  >
+                    {project.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <section className="overflow-hidden rounded-xl border border-stone-200/60 bg-gradient-to-br from-white via-white to-stone-50/80">
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:gap-6">
+          <div className="sm:w-44 sm:shrink-0 lg:w-52">
+            <h3 className="text-base font-semibold tracking-tight text-neutral-900">Brain dump</h3>
+            <p className="mt-1 text-sm leading-relaxed text-neutral-500">
+              Scratch thoughts here. Reorganize turns them into priorities you can apply.
+            </p>
+          </div>
+          <div className="min-w-0 flex-1 space-y-3">
             <textarea
               value={dump}
               onChange={(e) => {
                 setDump(e.target.value)
                 setApplyNote(null)
               }}
-              placeholder="Messy thoughts, follow-ups, half-ideas… one line per thought works best."
-              rows={10}
-              className="w-full resize-y rounded-xl border border-stone-200 bg-stone-50/50 px-3.5 py-3 text-sm text-neutral-800 placeholder:text-neutral-400 focus:border-[#e85d2a]/50 focus:outline-none focus:ring-1 focus:ring-[#e85d2a]/40"
+              placeholder="One thought per line — follow-ups, half-ideas, blockers…"
+              rows={plan ? 4 : 3}
+              className="w-full resize-y rounded-lg border-0 bg-stone-100/70 px-3.5 py-3 text-sm leading-relaxed text-neutral-800 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d2a]/25"
             />
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={() => void runReorganize()}
                 disabled={!dump.trim() || reorganizing}
-                className="rounded-lg bg-[#e85d2a] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#c2410c] disabled:opacity-50"
+                className="rounded-md bg-[#e85d2a] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#c2410c] disabled:opacity-40"
               >
                 {reorganizing ? 'Thinking…' : 'Reorganize with AI'}
               </button>
@@ -505,22 +504,20 @@ export function HomeDashboard() {
                     setApplyNote(null)
                     setReorganizeError(null)
                   }}
-                  className="rounded-lg border border-stone-200 px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-stone-50"
+                  className="text-sm text-neutral-500 transition hover:text-neutral-800"
                 >
                   Clear
                 </button>
               ) : null}
+              {applyNote ? <p className="text-sm text-emerald-700">{applyNote}</p> : null}
             </div>
 
-            {applyNote ? (
-              <p className="text-sm text-emerald-700">{applyNote}</p>
-            ) : null}
             {reorganizeError ? <p className="text-sm text-red-600">{reorganizeError}</p> : null}
             {applyError ? <p className="text-sm text-red-600">{applyError}</p> : null}
 
             {plan ? (
-              <div className="space-y-2 rounded-xl border border-stone-200/80 bg-stone-50/60 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="space-y-3 border-t border-stone-200/70 pt-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="text-sm text-neutral-700">{plan.summary}</p>
                   {plan.source ? (
                     <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-neutral-400">
@@ -528,7 +525,7 @@ export function HomeDashboard() {
                     </span>
                   ) : null}
                 </div>
-                <ul className="space-y-2">
+                <ul className="divide-y divide-stone-100 overflow-hidden rounded-lg border border-stone-200/70 bg-white">
                   {plan.suggestions.map((item) => (
                     <SuggestionRow
                       key={item.id}
@@ -547,91 +544,15 @@ export function HomeDashboard() {
                   type="button"
                   onClick={() => void applySuggestions()}
                   disabled={applying || selected.size === 0}
-                  className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-neutral-800 transition hover:bg-stone-50 disabled:opacity-50"
+                  className="rounded-md border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-neutral-800 transition hover:border-stone-300 hover:bg-stone-50 disabled:opacity-50"
                 >
                   {applying ? 'Applying…' : 'Apply selected to priorities'}
                 </button>
               </div>
             ) : null}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Ad creative / metrics</CardTitle>
-            <CardDescription>
-              {adsSource === 'live'
-                ? 'Live spend health and creatives that need a decision'
-                : adsConnected > 0
-                  ? 'Connected accounts need a sync — showing demo until Sync finishes'
-                  : 'Spend health and creatives that need a decision — connect accounts in Settings'}
-            </CardDescription>
           </div>
-          <SectionLink href="/settings">
-            {adsSource === 'live' ? 'Manage accounts' : 'Connect ad accounts'}
-          </SectionLink>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {adsGlance.loading && !adsGlance.data ? (
-            <LoadingBlock label="Loading ad metrics…" />
-          ) : (
-            <>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <MetricTile
-                  label="Spend today"
-                  value={formatMoney(ads.spendToday)}
-                  hint={`${ads.spendDelta >= 0 ? '+' : ''}${ads.spendDelta}% vs yesterday`}
-                />
-                <MetricTile
-                  label="ROAS"
-                  value={`${ads.roas.toFixed(1)}x`}
-                  hint={`${ads.roasDelta >= 0 ? '+' : ''}${ads.roasDelta.toFixed(1)} vs 7d`}
-                />
-                <MetricTile label="CPA" value={formatMoney(ads.cpa)} hint="Blended" />
-                <MetricTile
-                  label="Needs review"
-                  value={String(ads.creativesNeedingReview)}
-                  hint="Fatigued or underperforming"
-                  emphasize={ads.creativesNeedingReview > 0}
-                />
-              </div>
-              <div className="space-y-2">
-                {ads.creatives.map((creative) => (
-                  <div
-                    key={creative.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-200/70 px-3.5 py-3"
-                  >
-                    <div className="min-w-0">
-                      <div className="font-medium text-neutral-900">{creative.name}</div>
-                      <div className="mt-0.5 text-xs text-neutral-500">
-                        {creative.channel} · {formatMoney(creative.spend)} spend · CTR{' '}
-                        {creative.ctr}%
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
-                      <span>
-                        CPA{' '}
-                        <span className="font-medium text-neutral-800">
-                          {formatMoney(creative.cpa)}
-                        </span>
-                      </span>
-                      <span>
-                        ROAS{' '}
-                        <span className="font-medium text-neutral-800">
-                          {creative.roas.toFixed(1)}x
-                        </span>
-                      </span>
-                      {creativeStatusBadge(creative.status)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <Card>
         <CardHeader>
@@ -706,6 +627,120 @@ export function HomeDashboard() {
           )}
         </CardContent>
       </Card>
+
+      <div className="overflow-hidden rounded-xl border border-stone-200/80 bg-white shadow-sm">
+        <div className="flex items-center gap-2 px-2 py-1.5 sm:px-3">
+          <button
+            type="button"
+            onClick={() => setAdsOpen((open) => !open)}
+            aria-expanded={adsOpen}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-stone-50/80"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="text-base font-semibold tracking-tight text-neutral-900">
+                  Ad creative / metrics
+                </span>
+                {ads.creativesNeedingReview > 0 ? (
+                  <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-amber-800 ring-1 ring-amber-200/80">
+                    {ads.creativesNeedingReview} need review
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-0.5 truncate text-sm text-neutral-500">
+                {adsGlance.loading && !adsGlance.data
+                  ? 'Loading ad metrics…'
+                  : adsSource === 'live'
+                    ? `${formatMoney(ads.spendToday)} today · ${ads.roas.toFixed(1)}x ROAS · ${formatMoney(ads.cpa)} CPA`
+                    : adsConnected > 0
+                      ? 'Connected accounts need a sync — showing demo until Sync finishes'
+                      : 'Spend health and creatives that need a decision — connect accounts in Settings'}
+              </p>
+            </div>
+            <span
+              className={cn(
+                'flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-neutral-400 transition',
+                adsOpen && 'rotate-180 text-neutral-600'
+              )}
+              aria-hidden
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path
+                  fillRule="evenodd"
+                  d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </span>
+          </button>
+          <div className="shrink-0 pr-2">
+            <SectionLink href="/settings">
+              {adsSource === 'live' ? 'Manage accounts' : 'Connect ad accounts'}
+            </SectionLink>
+          </div>
+        </div>
+
+        {adsOpen ? (
+          <div className="space-y-4 border-t border-stone-200/80 px-5 py-4">
+            {adsGlance.loading && !adsGlance.data ? (
+              <LoadingBlock label="Loading ad metrics…" />
+            ) : (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <MetricTile
+                    label="Spend today"
+                    value={formatMoney(ads.spendToday)}
+                    hint={`${ads.spendDelta >= 0 ? '+' : ''}${ads.spendDelta}% vs yesterday`}
+                  />
+                  <MetricTile
+                    label="ROAS"
+                    value={`${ads.roas.toFixed(1)}x`}
+                    hint={`${ads.roasDelta >= 0 ? '+' : ''}${ads.roasDelta.toFixed(1)} vs 7d`}
+                  />
+                  <MetricTile label="CPA" value={formatMoney(ads.cpa)} hint="Blended" />
+                  <MetricTile
+                    label="Needs review"
+                    value={String(ads.creativesNeedingReview)}
+                    hint="Fatigued or underperforming"
+                    emphasize={ads.creativesNeedingReview > 0}
+                  />
+                </div>
+                <div className="space-y-2">
+                  {ads.creatives.map((creative) => (
+                    <div
+                      key={creative.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-200/70 px-3.5 py-3"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-medium text-neutral-900">{creative.name}</div>
+                        <div className="mt-0.5 text-xs text-neutral-500">
+                          {creative.channel} · {formatMoney(creative.spend)} spend · CTR{' '}
+                          {creative.ctr}%
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+                        <span>
+                          CPA{' '}
+                          <span className="font-medium text-neutral-800">
+                            {formatMoney(creative.cpa)}
+                          </span>
+                        </span>
+                        <span>
+                          ROAS{' '}
+                          <span className="font-medium text-neutral-800">
+                            {creative.roas.toFixed(1)}x
+                          </span>
+                        </span>
+                        {creativeStatusBadge(creative.status)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -749,7 +784,7 @@ function SuggestionRow({
   onToggle: () => void
 }) {
   return (
-    <li className="flex items-start gap-2.5 rounded-lg bg-white px-2.5 py-2 ring-1 ring-stone-200/80">
+    <li className="flex items-start gap-2.5 px-3 py-2.5">
       <input
         type="checkbox"
         checked={checked}
