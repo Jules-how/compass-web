@@ -219,6 +219,7 @@ export function MetaAdsManagerPanel({
         </div>
       </div>
 
+
       <div className="compass-panel overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
