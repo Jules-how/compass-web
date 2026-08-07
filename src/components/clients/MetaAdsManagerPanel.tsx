@@ -26,7 +26,6 @@ import {
   metaPlacementLabel,
   metaSpecialCategoryLabel
 } from '@/lib/meta-ads'
-import { LocationTargetingHeatmap } from '@/components/clients/LocationTargetingHeatmap'
 
 type Level = 'campaigns' | 'ad_sets' | 'ads'
 type EditorMode = 'create' | 'edit' | null
@@ -220,7 +219,6 @@ export function MetaAdsManagerPanel({
         </div>
       </div>
 
-      <LocationTargetingHeatmap adSets={adSets} />
 
       <div className="compass-panel overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-4 py-3">

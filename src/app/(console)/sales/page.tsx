@@ -5,7 +5,7 @@ export default function SalesOverviewPage() {
   return (
     <OperatorShell
       title="Sales"
-      subtitle="Overview · Instantly throughput, offers, replies, and deal flow"
+      subtitle="Overview · Instantly throughput, targeting map, replies, and deal flow"
       width="full"
     >
       <SalesOverview />

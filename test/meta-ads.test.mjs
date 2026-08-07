@@ -76,7 +76,6 @@ test('meta ads sources wire client detail + API', () => {
   assert.match(clientGet, /metaCampaigns/)
   assert.match(panel, /Create campaign/)
   assert.match(panel, /primary_text/)
-  assert.match(panel, /LocationTargetingHeatmap/)
   assert.match(detail, /MetaAdsManagerPanel/)
   assert.match(detail, /ads_manager/)
 })
