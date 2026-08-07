@@ -128,6 +128,7 @@ function PageMain({
   subtitle,
   width = '6xl',
   flush = false,
+  compact = false,
   actions,
   children
 }: {
@@ -135,6 +136,7 @@ function PageMain({
   subtitle?: string
   width?: keyof typeof WIDTH
   flush?: boolean
+  compact?: boolean
   actions?: ReactNode
   children: ReactNode
 }) {
@@ -143,12 +145,20 @@ function PageMain({
   }
 
   return (
-    <main className={`mx-auto ${WIDTH[width]} px-4 py-7 sm:px-6 lg:px-8`}>
+    <main
+      className={`mx-auto ${WIDTH[width]} px-4 sm:px-6 lg:px-8 ${compact ? 'py-3' : 'py-7'}`}
+    >
       {(title || actions) && (
-        <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
+        <header
+          className={`flex flex-wrap items-center justify-between gap-3 ${compact ? 'mb-2' : 'mb-7 items-end gap-4'}`}
+        >
           <div className="min-w-0">
-            {title ? <h1 className="compass-page-title">{title}</h1> : null}
-            {subtitle ? <p className="compass-page-subtitle">{subtitle}</p> : null}
+            {title ? (
+              <h1 className={compact ? 'compass-page-title-compact' : 'compass-page-title'}>
+                {title}
+              </h1>
+            ) : null}
+            {subtitle && !compact ? <p className="compass-page-subtitle">{subtitle}</p> : null}
           </div>
           {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </header>
@@ -166,6 +176,7 @@ export function OperatorShell({
   subtitle,
   width = '6xl',
   flush = false,
+  compact = false,
   actions,
   children
 }: {
@@ -175,12 +186,20 @@ export function OperatorShell({
   subtitle?: string
   width?: keyof typeof WIDTH
   flush?: boolean
+  compact?: boolean
   actions?: ReactNode
   children: ReactNode
 }) {
   const inConsole = useContext(ConsoleChromeContext)
   const main = (
-    <PageMain title={title} subtitle={subtitle} width={width} flush={flush} actions={actions}>
+    <PageMain
+      title={title}
+      subtitle={subtitle}
+      width={width}
+      flush={flush}
+      compact={compact}
+      actions={actions}
+    >
       {children}
     </PageMain>
   )

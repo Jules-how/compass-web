@@ -1,17 +1,31 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent as ReactPointerEvent
+} from 'react'
 import type { CompassProjectWithStats } from '@/lib/types'
 import {
   ZOOM_OPTIONS,
   buildHeaderModel,
   buildTimelineRange,
+  clampDateOrder,
   dateToX,
   formatHoverDate,
   parseDateOnly,
   pxPerDay,
+  toDateOnly,
   xToDate,
+  zoomIn,
+  zoomOut,
   type TimelineZoom
 } from '@/lib/campaign-timeline'
 import {
@@ -22,11 +36,13 @@ import {
   projectStatusLabel
 } from '@/lib/project-pm'
 
-const ROW_HEIGHT = 48
+const ROW_HEIGHT = 68
 const LABEL_WIDTH = 300
 const EMPTY_ROWS = 10
 const HEADER_HEIGHT = 52
 const TODAY_PURPLE = '#5e6ad2'
+const BAR_TOP = 22
+const BAR_HEIGHT = 22
 
 const PROJECT_ICON_COLORS = [
   '#5e6ad2',
@@ -40,6 +56,15 @@ const PROJECT_ICON_COLORS = [
   '#e67e22',
   '#3498db'
 ]
+
+type DraftDates = Record<string, { start: string; end: string }>
+
+type CreateDrag = {
+  projectId: string
+  originDate: string
+  start: string
+  end: string
+}
 
 function projectAccent(id: string): string {
   let hash = 0
@@ -75,29 +100,61 @@ function healthIcon(health: string): { className: string; title: string } {
   }
 }
 
-export function ProjectTimeline({
-  projects,
-  clientById,
-  zoom,
-  onZoomChange
-}: {
-  projects: CompassProjectWithStats[]
-  clientById: Record<string, { id: string; name: string }>
-  zoom: TimelineZoom
-  onZoomChange: (zoom: TimelineZoom) => void
-}) {
+function timelineXFromClient(
+  clientX: number,
+  scrollLeft: number,
+  containerLeft: number
+): number {
+  return clientX - containerLeft + scrollLeft - LABEL_WIDTH
+}
+
+export type ProjectTimelineHandle = {
+  scrollToToday: (behavior?: ScrollBehavior) => void
+}
+
+export const ProjectTimeline = forwardRef<
+  ProjectTimelineHandle,
+  {
+    projects: CompassProjectWithStats[]
+    clientById: Record<string, { id: string; name: string }>
+    zoom: TimelineZoom
+    onZoomChange: (zoom: TimelineZoom) => void
+    onDatesChange?: (projectId: string, start: string, end: string) => Promise<void> | void
+    showToolbar?: boolean
+  }
+>(function ProjectTimeline(
+  {
+    projects,
+    clientById,
+    zoom,
+    onZoomChange,
+    onDatesChange,
+    showToolbar = false
+  },
+  ref
+) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
   const didCenterToday = useRef(false)
+  const zoomAnchorRef = useRef<{ date: Date; offsetX: number } | null>(null)
+  const createDragRef = useRef<CreateDrag | null>(null)
   const [hoverDate, setHoverDate] = useState<Date | null>(null)
   const [hoverX, setHoverX] = useState<number | null>(null)
+  const [hoverRowId, setHoverRowId] = useState<string | null>(null)
+  const [draftDates, setDraftDates] = useState<DraftDates>({})
+  const [createDrag, setCreateDrag] = useState<CreateDrag | null>(null)
+  const [savingId, setSavingId] = useState<string | null>(null)
 
   const range = useMemo(
     () =>
       buildTimelineRange(
-        projects.flatMap((project) => [project.start_date, project.target_date]),
+        projects.flatMap((project) => [
+          draftDates[project.id]?.start ?? project.start_date,
+          draftDates[project.id]?.end ?? project.target_date
+        ]),
         zoom
       ),
-    [projects, zoom]
+    [projects, zoom, draftDates]
   )
 
   const header = useMemo(() => buildHeaderModel(range, zoom, true), [range, zoom])
@@ -113,6 +170,8 @@ export function ProjectTimeline({
     [todayX]
   )
 
+  useImperativeHandle(ref, () => ({ scrollToToday }), [scrollToToday])
+
   useEffect(() => {
     if (didCenterToday.current) return
     scrollToToday('auto')
@@ -122,6 +181,16 @@ export function ProjectTimeline({
   useEffect(() => {
     didCenterToday.current = false
   }, [zoom])
+
+  useEffect(() => {
+    const anchor = zoomAnchorRef.current
+    if (!anchor) return
+    const el = scrollRef.current
+    if (!el) return
+    const nextX = dateToX(anchor.date, range, zoom)
+    el.scrollLeft = Math.max(0, nextX - anchor.offsetX)
+    zoomAnchorRef.current = null
+  }, [range, zoom])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -137,9 +206,42 @@ export function ProjectTimeline({
     return () => window.removeEventListener('keydown', onKey)
   }, [onZoomChange, scrollToToday])
 
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const scroller = el
+
+    function onWheel(e: WheelEvent) {
+      if (!(e.ctrlKey || e.metaKey)) return
+      e.preventDefault()
+      const next = e.deltaY < 0 ? zoomIn(zoom) : zoomOut(zoom)
+      if (next === zoom) return
+
+      const scrollLeft = scroller.scrollLeft
+      const rect = scroller.getBoundingClientRect()
+      const x = timelineXFromClient(e.clientX, scrollLeft, rect.left)
+      const date = xToDate(Math.max(0, x), range, zoom)
+      zoomAnchorRef.current = {
+        date,
+        offsetX: Math.max(0, e.clientX - rect.left - LABEL_WIDTH)
+      }
+      onZoomChange(next)
+    }
+
+    scroller.addEventListener('wheel', onWheel, { passive: false })
+    return () => scroller.removeEventListener('wheel', onWheel)
+  }, [onZoomChange, range, zoom])
+
+  function readTimelineX(clientX: number): number {
+    const el = scrollRef.current
+    const content = contentRef.current
+    if (!el || !content) return 0
+    const rect = content.getBoundingClientRect()
+    return timelineXFromClient(clientX, el.scrollLeft, rect.left)
+  }
+
   function onTimelineMouseMove(e: MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX - rect.left + (scrollRef.current?.scrollLeft ?? 0) - LABEL_WIDTH
+    const x = readTimelineX(e.clientX)
     if (x < 0) {
       setHoverDate(null)
       setHoverX(null)
@@ -149,49 +251,109 @@ export function ProjectTimeline({
     setHoverDate(xToDate(x, range, zoom))
   }
 
-  return (
-    <div className="flex min-h-[520px] flex-col overflow-hidden rounded-xl border border-neutral-200/80 bg-[#f7f8f9]">
-      <div className="flex h-10 shrink-0 items-center justify-between gap-3 border-b border-neutral-200/80 bg-white px-3">
-        <div className="text-[12px] text-neutral-500">
-          <span className="font-medium text-neutral-700">{projects.length}</span> project
-          {projects.length === 1 ? '' : 's'}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => scrollToToday('smooth')}
-            className="h-7 rounded-md border border-neutral-200 bg-white px-2.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
-          >
-            Today
-          </button>
-          <label className="relative">
-            <select
-              value={zoom}
-              onChange={(e) => onZoomChange(e.target.value as TimelineZoom)}
-              className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
-            >
-              {ZOOM_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400">
-              ▾
-            </span>
-          </label>
-        </div>
-      </div>
+  async function persistDates(projectId: string, start: string, end: string) {
+    const ordered = clampDateOrder(start, end)
+    setSavingId(projectId)
+    setDraftDates((prev) => ({ ...prev, [projectId]: ordered }))
+    try {
+      await onDatesChange?.(projectId, ordered.start, ordered.end)
+      setDraftDates((prev) => {
+        const next = { ...prev }
+        delete next[projectId]
+        return next
+      })
+    } catch {
+      setDraftDates((prev) => {
+        const next = { ...prev }
+        delete next[projectId]
+        return next
+      })
+    } finally {
+      setSavingId(null)
+    }
+  }
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
+  function beginCreateDrag(projectId: string, clientX: number) {
+    const x = Math.max(0, readTimelineX(clientX))
+    const date = toDateOnly(xToDate(x, range, zoom))
+    const next: CreateDrag = {
+      projectId,
+      originDate: date,
+      start: date,
+      end: date
+    }
+    createDragRef.current = next
+    setCreateDrag(next)
+    setDraftDates((prev) => ({ ...prev, [projectId]: { start: date, end: date } }))
+    setHoverRowId(projectId)
+  }
+
+  function updateCreateDrag(clientX: number) {
+    const current = createDragRef.current
+    if (!current) return
+    const x = Math.max(0, readTimelineX(clientX))
+    const date = toDateOnly(xToDate(x, range, zoom))
+    const ordered = clampDateOrder(
+      date < current.originDate ? date : current.originDate,
+      date < current.originDate ? current.originDate : date
+    )
+    const next = { ...current, start: ordered.start, end: ordered.end }
+    createDragRef.current = next
+    setCreateDrag(next)
+    setDraftDates((prev) => ({ ...prev, [current.projectId]: ordered }))
+    setHoverX(x)
+    setHoverDate(xToDate(x, range, zoom))
+  }
+
+  async function endCreateDrag() {
+    const current = createDragRef.current
+    createDragRef.current = null
+    setCreateDrag(null)
+    if (!current) return
+    await persistDates(current.projectId, current.start, current.end)
+  }
+
+  function onCreatePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!createDragRef.current) return
+    updateCreateDrag(e.clientX)
+  }
+
+  function onCreatePointerUp() {
+    if (!createDragRef.current) return
+    void endCreateDrag()
+  }
+
+  return (
+    <div className="flex min-h-[560px] flex-col overflow-hidden rounded-xl border border-neutral-200/80 bg-[#f7f8f9]">
+      {showToolbar ? (
+        <div className="flex h-10 shrink-0 items-center justify-between gap-3 border-b border-neutral-200/80 bg-white px-3">
+          <div className="text-[12px] text-neutral-500">
+            <span className="font-medium text-neutral-700">{projects.length}</span> project
+            {projects.length === 1 ? '' : 's'}
+          </div>
+          <TimelineZoomControls
+            zoom={zoom}
+            onZoomChange={onZoomChange}
+            onToday={() => scrollToToday('smooth')}
+          />
+        </div>
+      ) : null}
+
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto overscroll-contain">
         <div
+          ref={contentRef}
           className="relative"
           style={{ minWidth: LABEL_WIDTH + range.widthPx, minHeight: '100%' }}
           onMouseMove={onTimelineMouseMove}
           onMouseLeave={() => {
+            if (createDrag) return
             setHoverDate(null)
             setHoverX(null)
+            setHoverRowId(null)
           }}
+          onPointerMove={onCreatePointerMove}
+          onPointerUp={onCreatePointerUp}
+          onPointerCancel={onCreatePointerUp}
         >
           <div
             className="sticky top-0 z-30 flex border-b border-neutral-200/80 bg-[#f7f8f9]"
@@ -250,7 +412,7 @@ export function ProjectTimeline({
                     .toUpperCase()}
                 </span>
               </div>
-              {hoverDate && hoverX !== null ? (
+              {hoverDate && hoverX !== null && !createDrag ? (
                 <div className="pointer-events-none absolute bottom-0 top-0 z-20" style={{ left: hoverX }}>
                   <div className="absolute inset-y-0 w-px bg-neutral-400/50" />
                   <span className="absolute left-1/2 top-1 z-30 -translate-x-1/2 whitespace-nowrap rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-white">
@@ -296,8 +458,9 @@ export function ProjectTimeline({
             </div>
 
             {projects.map((project) => {
-              const start = parseDateOnly(project.start_date)
-              const end = parseDateOnly(project.target_date)
+              const draft = draftDates[project.id]
+              const start = parseDateOnly(draft?.start ?? project.start_date)
+              const end = parseDateOnly(draft?.end ?? project.target_date)
               const accent = projectAccent(project.id)
               const health = healthIcon(project.health || 'no_updates')
               const clientName =
@@ -318,12 +481,24 @@ export function ProjectTimeline({
               }
 
               const hasDates = Boolean(start || end)
+              const isCreating = createDrag?.projectId === project.id
+              const showPlus =
+                !hasDates &&
+                !isCreating &&
+                hoverRowId === project.id &&
+                hoverX !== null &&
+                hoverDate !== null
 
               return (
                 <div
                   key={project.id}
-                  className="group relative flex border-b border-neutral-100 hover:bg-white/90"
+                  className="group relative flex border-b border-transparent hover:bg-white/80"
                   style={{ height: ROW_HEIGHT }}
+                  onMouseEnter={() => setHoverRowId(project.id)}
+                  onMouseLeave={() => {
+                    if (createDragRef.current?.projectId === project.id) return
+                    setHoverRowId((current) => (current === project.id ? null : current))
+                  }}
                 >
                   <div
                     className="sticky left-0 z-20 flex items-center gap-2 border-r border-neutral-200/80 bg-inherit px-3"
@@ -373,43 +548,99 @@ export function ProjectTimeline({
                     </div>
                   </div>
 
-                  <div className="relative" style={{ width: range.widthPx }}>
-                    {hasDates ? (
-                      <Link
-                        href={`/projects/${project.id}`}
-                        className="absolute block"
-                        style={{ left, width: Math.max(width, 88), top: 6, height: ROW_HEIGHT - 10 }}
-                        title={`${formatProjectDate(project.start_date)} → ${formatProjectDate(project.target_date)}`}
+                  <div
+                    className="relative cursor-crosshair"
+                    style={{ width: range.widthPx }}
+                    onPointerDown={(e) => {
+                      if (hasDates || e.button !== 0) return
+                      e.preventDefault()
+                      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+                      beginCreateDrag(project.id, e.clientX)
+                    }}
+                  >
+                    {hasDates || isCreating ? (
+                      <div
+                        className="absolute"
+                        style={{
+                          left,
+                          width: Math.max(width, 88),
+                          top: 8,
+                          height: ROW_HEIGHT - 14
+                        }}
                       >
                         <span className="mb-1 block truncate pr-1 text-[11px] font-medium leading-none text-neutral-700">
                           {project.name}
                         </span>
-                        <span
-                          className="relative block h-[20px] overflow-hidden rounded-[6px] border border-neutral-300 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition group-hover:border-neutral-400"
-                          style={{ width }}
-                        >
+                        {isCreating ? (
                           <span
-                            className="absolute inset-y-0 left-0 w-[3px] rounded-l-[5px]"
-                            style={{ background: accent }}
-                          />
-                          {project.stats?.percentComplete > 0 ? (
+                            className="relative block overflow-hidden rounded-[6px] border border-[#5e6ad2] bg-white shadow-[0_0_0_1px_rgba(94,106,210,0.2)]"
+                            style={{ width, height: BAR_HEIGHT }}
+                          >
                             <span
-                              className="absolute inset-y-0 left-[3px] opacity-20"
-                              style={{
-                                width: `${Math.min(100, project.stats.percentComplete)}%`,
-                                background: accent
-                              }}
+                              className="absolute inset-y-0 left-0 w-[3px] rounded-l-[5px]"
+                              style={{ background: accent }}
                             />
-                          ) : null}
-                        </span>
-                      </Link>
-                    ) : (
-                      <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] text-neutral-400">
-                          No dates
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/projects/${project.id}`}
+                            className="relative block overflow-hidden rounded-[6px] border border-neutral-300 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition group-hover:border-neutral-400"
+                            style={{ width, height: BAR_HEIGHT }}
+                            title={`${formatProjectDate(project.start_date)} → ${formatProjectDate(project.target_date)}`}
+                          >
+                            <span
+                              className="absolute inset-y-0 left-0 w-[3px] rounded-l-[5px]"
+                              style={{ background: accent }}
+                            />
+                            {project.stats?.percentComplete > 0 ? (
+                              <span
+                                className="absolute inset-y-0 left-[3px] opacity-20"
+                                style={{
+                                  width: `${Math.min(100, project.stats.percentComplete)}%`,
+                                  background: accent
+                                }}
+                              />
+                            ) : null}
+                          </Link>
+                        )}
+                        {savingId === project.id ? (
+                          <span className="mt-1 block text-[10px] text-neutral-400">Saving…</span>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {showPlus && hoverX !== null && hoverDate ? (
+                      <div
+                        className="pointer-events-none absolute z-20 -translate-x-1/2"
+                        style={{ left: hoverX, top: BAR_TOP - 18 }}
+                      >
+                        <div className="mb-1.5 whitespace-nowrap rounded-md bg-[#5e6ad2] px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
+                          {hoverDate.toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </div>
+                        <div className="mx-auto flex h-5 w-5 items-center justify-center rounded-full border border-neutral-300 bg-white text-[14px] leading-none text-neutral-600 shadow-sm">
+                          +
                         </div>
                       </div>
-                    )}
+                    ) : null}
+
+                    {isCreating && createDrag && hoverDate ? (
+                      <div
+                        className="pointer-events-none absolute z-20 -translate-x-1/2"
+                        style={{ left: hoverX ?? left, top: 4 }}
+                      >
+                        <div className="whitespace-nowrap rounded-md bg-[#5e6ad2] px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
+                          {hoverDate.toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               )
@@ -418,7 +649,7 @@ export function ProjectTimeline({
             {Array.from({ length: Math.max(0, EMPTY_ROWS - projects.length) }).map((_, i) => (
               <div
                 key={`empty-${i}`}
-                className="flex border-b border-neutral-100/70"
+                className="flex border-b border-neutral-100/40"
                 style={{ height: ROW_HEIGHT }}
               >
                 <div
@@ -434,7 +665,7 @@ export function ProjectTimeline({
                 <div className="rounded-xl border border-neutral-200 bg-white/95 px-5 py-4 text-center shadow-sm backdrop-blur">
                   <p className="text-sm font-medium text-neutral-800">No projects on the timeline</p>
                   <p className="mt-1 max-w-xs text-xs text-neutral-500">
-                    Add start and target dates to place projects on the roadmap.
+                    Hover a row and drag from the + to set dates, or create a project first.
                   </p>
                 </div>
               </div>
@@ -442,6 +673,44 @@ export function ProjectTimeline({
           </div>
         </div>
       </div>
+    </div>
+  )
+})
+
+export function TimelineZoomControls({
+  zoom,
+  onZoomChange,
+  onToday
+}: {
+  zoom: TimelineZoom
+  onZoomChange: (zoom: TimelineZoom) => void
+  onToday: () => void
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        onClick={onToday}
+        className="h-7 rounded-md border border-neutral-200 bg-white px-2.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
+      >
+        Today
+      </button>
+      <label className="relative">
+        <select
+          value={zoom}
+          onChange={(e) => onZoomChange(e.target.value as TimelineZoom)}
+          className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
+        >
+          {ZOOM_OPTIONS.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400">
+          ▾
+        </span>
+      </label>
     </div>
   )
 }
