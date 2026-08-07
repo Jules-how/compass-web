@@ -88,14 +88,14 @@ export const DesktopSidebar = ({
   return (
     <motion.aside
       className={cn(
-        'compass-sidebar sticky top-0 hidden h-[100dvh] max-h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-neutral-200/80 px-2 pb-0 pt-3 md:flex',
+        'compass-sidebar sticky top-0 hidden h-[100dvh] max-h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-stone-200/60 px-2.5 pb-0 pt-4 md:flex',
         className
       )}
       initial={false}
       animate={{
-        width: animate ? (open ? 232 : 68) : 232
+        width: animate ? (open ? 248 : 72) : 248
       }}
-      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       onMouseEnter={animate ? () => setOpen(true) : undefined}
       onMouseLeave={animate ? () => setOpen(false) : undefined}
       {...props}
@@ -115,14 +115,14 @@ export const MobileSidebar = ({
     <>
       <div
         className={cn(
-          'compass-sidebar flex w-full items-center justify-between border-b border-neutral-200/80 px-3 py-3 md:hidden'
+          'compass-sidebar flex w-full items-center justify-between border-b border-stone-200/70 px-3 py-3 md:hidden'
         )}
         {...props}
       >
         <div className="flex w-full items-center justify-between gap-3">
-          <Link href="/home" className="flex items-center gap-2.5 rounded-lg px-1 py-0.5">
+          <Link href="/home" className="flex items-center gap-2.5 rounded-xl px-1 py-0.5">
             <span
-              className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#f3e4d8] text-[#e85d2a]"
+              className="flex h-8 w-8 items-center justify-center rounded-[11px] bg-[#f3e4d8] text-[#e85d2a]"
               aria-hidden
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
@@ -143,7 +143,7 @@ export const MobileSidebar = ({
           <button
             type="button"
             aria-label="Open navigation"
-            className="rounded-lg p-1.5 text-neutral-700 hover:bg-white/70"
+            className="rounded-xl p-1.5 text-neutral-700 transition hover:bg-white/80"
             onClick={() => setOpen(!open)}
           >
             <Menu className="h-5 w-5" />
@@ -164,7 +164,7 @@ export const MobileSidebar = ({
               <button
                 type="button"
                 aria-label="Close navigation"
-                className="absolute right-6 top-6 z-50 rounded-lg p-1.5 text-neutral-700 hover:bg-white/70"
+                className="absolute right-6 top-6 z-50 rounded-xl p-1.5 text-neutral-700 transition hover:bg-white/80"
                 onClick={() => setOpen(!open)}
               >
                 <X className="h-5 w-5" />
@@ -196,15 +196,28 @@ export const SidebarLink = ({
       href={link.href}
       prefetch
       className={cn(
-        'group/sidebar flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[15px] font-medium transition',
+        'group/sidebar relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[14px] font-medium transition',
         active
-          ? 'bg-white text-neutral-900 shadow-sm ring-1 ring-black/[0.04]'
-          : 'text-neutral-600 hover:bg-white/70 hover:text-neutral-900',
+          ? 'bg-white text-neutral-900 shadow-soft ring-1 ring-black/[0.03]'
+          : 'text-neutral-600 hover:bg-white/75 hover:text-neutral-900',
         className
       )}
       {...props}
     >
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center">{link.icon}</span>
+      {active ? (
+        <span
+          className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-[#e85d2a]"
+          aria-hidden
+        />
+      ) : null}
+      <span
+        className={cn(
+          'flex h-5 w-5 shrink-0 items-center justify-center transition',
+          active ? 'text-[#e85d2a]' : 'text-neutral-500 group-hover/sidebar:text-neutral-700'
+        )}
+      >
+        {link.icon}
+      </span>
       <motion.span
         initial={false}
         animate={{
@@ -212,7 +225,7 @@ export const SidebarLink = ({
           width: animate ? (open ? 'auto' : 0) : 'auto'
         }}
         transition={{ duration: 0.15 }}
-        className="min-w-0 flex-1 truncate whitespace-nowrap !p-0 !m-0 overflow-hidden"
+        className="!m-0 min-w-0 flex-1 overflow-hidden truncate whitespace-nowrap !p-0"
       >
         {link.label}
       </motion.span>
@@ -245,7 +258,7 @@ export const SidebarLabel = ({
         height: animate ? (open ? 'auto' : 0) : 'auto'
       }}
       className={cn(
-        'overflow-hidden px-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500',
+        'overflow-hidden px-2.5 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400',
         className
       )}
     >

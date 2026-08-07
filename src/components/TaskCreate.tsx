@@ -109,7 +109,7 @@ export default function TaskCreate({
         placeholder="Issue title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none focus:ring-1 focus:ring-sf-orange"
+        className="compass-input"
         disabled={saving}
       />
 
@@ -146,7 +146,7 @@ export default function TaskCreate({
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         rows={3}
-        className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+        className="compass-input"
         disabled={saving}
       />
 
@@ -228,7 +228,7 @@ export default function TaskCreate({
         <button
           type="submit"
           disabled={saving || !title.trim()}
-          className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white transition hover:bg-sf-orange-dark disabled:opacity-60"
+          className="compass-btn-primary"
         >
           {saving ? 'Creating…' : 'Create issue'}
         </button>

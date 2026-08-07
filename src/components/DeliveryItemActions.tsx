@@ -76,7 +76,7 @@ export default function DeliveryItemActions({ item }: { item: DeliveryItemCustom
           onChange={(event) => setComment(event.target.value)}
           maxLength={4000}
           rows={3}
-          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+          className="compass-input"
         />
         <button
           type="submit"
@@ -114,7 +114,7 @@ export default function DeliveryItemActions({ item }: { item: DeliveryItemCustom
           onClick={() =>
             void send(`/api/delivery/items/${item.id}/complete`, { baseVersion: item.version })
           }
-          className="rounded-lg bg-sf-orange px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="compass-btn-primary"
         >
           Mark request complete
         </button>
@@ -143,7 +143,7 @@ export default function DeliveryItemActions({ item }: { item: DeliveryItemCustom
             maxLength={2000}
             rows={2}
             placeholder="What should change?"
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+            className="compass-input"
           />
           <button
             type="button"

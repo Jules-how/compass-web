@@ -38,7 +38,7 @@ export default function PasswordLoginForm({ invitationId }: { invitationId?: str
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <label className="block">
-        <span className="mb-1 block text-sm font-medium text-neutral-700">Email</span>
+        <span className="mb-1.5 block text-sm font-medium text-neutral-700">Email</span>
         <input
           type="email"
           required
@@ -46,12 +46,12 @@ export default function PasswordLoginForm({ invitationId }: { invitationId?: str
           onChange={(event) => setEmail(event.target.value)}
           placeholder="you@example.com"
           autoComplete="email"
-          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none focus:ring-1 focus:ring-sf-orange"
+          className="compass-input"
           disabled={status === 'signing_in'}
         />
       </label>
       <label className="block">
-        <span className="mb-1 block text-sm font-medium text-neutral-700">Password</span>
+        <span className="mb-1.5 block text-sm font-medium text-neutral-700">Password</span>
         <input
           type="password"
           required
@@ -60,17 +60,17 @@ export default function PasswordLoginForm({ invitationId }: { invitationId?: str
           onChange={(event) => setPassword(event.target.value)}
           placeholder="••••••••"
           autoComplete="current-password"
-          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none focus:ring-1 focus:ring-sf-orange"
+          className="compass-input"
           disabled={status === 'signing_in'}
         />
       </label>
       {error && (
-        <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
+        <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>
       )}
       <button
         type="submit"
         disabled={status === 'signing_in'}
-        className="w-full rounded-lg bg-sf-orange px-3 py-2 text-sm font-medium text-white transition hover:bg-sf-orange-dark disabled:opacity-60"
+        className="compass-btn-primary w-full"
       >
         {status === 'signing_in' ? 'Signing in…' : 'Sign in'}
       </button>

@@ -162,7 +162,7 @@ function NavItemLink({
         href: item.href,
         label: item.label,
         icon: (
-          <Icon className={cn('h-[18px] w-[18px]', isActive ? 'text-neutral-800' : 'text-neutral-500')} />
+          <Icon className={cn('h-[17px] w-[17px]', isActive ? 'text-[#e85d2a]' : 'text-current')} />
         )
       }}
       active={isActive}
@@ -170,7 +170,7 @@ function NavItemLink({
       onFocus={() => prefetchApi(item.api)}
       badge={
         showBadge ? (
-          <span className="rounded-full bg-[#e85d2a] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white">
+          <span className="min-w-[1.25rem] rounded-md bg-[#e85d2a] px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white">
             {inboxCount! > 99 ? '99+' : inboxCount}
           </span>
         ) : undefined
@@ -242,7 +242,7 @@ export function NavLinks({
         ))}
       </div>
 
-      <div className="mt-auto flex flex-col gap-0.5 border-t border-neutral-200/80 pt-3">
+      <div className="mt-auto flex flex-col gap-0.5 border-t border-stone-200/70 pt-3">
         {OPERATOR_FOOTER.map((item) => (
           <NavItemLink key={item.href} item={item} active={active} inboxCount={inboxCount} />
         ))}

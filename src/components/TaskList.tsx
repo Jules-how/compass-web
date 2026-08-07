@@ -156,7 +156,7 @@ export default function TaskList({
         <button
           type="button"
           onClick={() => setCreating((v) => !v)}
-          className="rounded-lg bg-sf-orange px-3 py-1.5 text-sm font-medium text-white transition hover:bg-sf-orange-dark"
+          className="compass-btn-primary"
         >
           {creating ? 'Cancel' : 'New task'}
         </button>
@@ -268,13 +268,13 @@ export default function TaskList({
       )}
 
       {visibleTasks.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500">
+        <div className="rounded-2xl border border-dashed border-stone-300/80 bg-stone-50/40 px-4 py-12 text-center text-sm text-neutral-500">
           {topTasks.length === 0
             ? 'No tasks yet. Create one to get started.'
             : 'Nothing in this focus window. Try This week or All, or clear a filter.'}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-stone-200 bg-white">
+        <div className="overflow-hidden rounded-2xl border border-stone-200/70 bg-white shadow-soft">
           {groups.map((group) => (
             <section key={group.key} className="border-b border-stone-100 last:border-b-0">
               {groupBy !== 'none' ? (

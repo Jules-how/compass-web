@@ -279,7 +279,7 @@ export function ClientWorkPlanner({
               setCreatingProject((value) => !value)
               setCreatingTask(false)
             }}
-            className="rounded-lg bg-sf-orange px-3 py-1.5 text-sm font-medium text-white hover:bg-sf-orange-dark"
+            className="compass-btn-primary"
           >
             {creatingProject ? 'Cancel' : 'New project'}
           </button>
@@ -370,7 +370,7 @@ export function ClientWorkPlanner({
             <button
               type="submit"
               disabled={saving || !projectName.trim()}
-              className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              className="compass-btn-primary"
             >
               {saving ? 'Creating…' : 'Create project'}
             </button>
@@ -438,7 +438,7 @@ export function ClientWorkPlanner({
             <button
               type="submit"
               disabled={saving || !taskTitle.trim() || !defaultTaskProjectId}
-              className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              className="compass-btn-primary"
             >
               {saving ? 'Adding…' : 'Add task'}
             </button>

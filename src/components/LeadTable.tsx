@@ -556,7 +556,7 @@ export default function LeadTable({
           <button
             type="button"
             onClick={applyFilters}
-            className="rounded-lg bg-sf-orange px-3 py-1.5 text-sm font-medium text-white transition hover:bg-sf-orange-dark"
+            className="compass-btn-primary"
           >
             Apply filters
           </button>

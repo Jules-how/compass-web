@@ -72,9 +72,7 @@ function Kpi({
 }) {
   const inner = (
     <>
-      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-        {label}
-      </div>
+      <div className="compass-section-label">{label}</div>
       <div className="mt-2 text-2xl font-semibold tracking-tight text-neutral-900 tabular-nums">
         {value}
       </div>
@@ -94,7 +92,7 @@ function Kpi({
     return (
       <Link
         href={href}
-        className="compass-panel block p-4 transition hover:border-stone-300 hover:bg-stone-50/50"
+        className="compass-panel block p-4 transition hover:-translate-y-0.5 hover:shadow-lift"
       >
         {inner}
       </Link>
@@ -111,7 +109,7 @@ export function SalesOverview() {
   const dealFlowValue = model.deals.reduce((sum, deal) => sum + deal.value, 0)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi
           label="Emails sent"
@@ -155,7 +153,7 @@ export function SalesOverview() {
 
       <EmailVolumeChart model={model} />
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-5 xl:grid-cols-2">
         <Card>
           <CardHeader>
             <div>

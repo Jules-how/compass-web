@@ -681,7 +681,7 @@ export function ProjectManager({
           <button
             type="button"
             onClick={() => (creating ? setCreating(false) : openCreate(status))}
-            className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-neutral-600 hover:bg-neutral-100"
+            className="ml-1 flex h-7 w-7 items-center justify-center rounded-lg text-lg leading-none text-neutral-600 transition hover:bg-white hover:text-neutral-900"
             aria-label={creating ? 'Cancel new project' : 'New project'}
             title={creating ? 'Cancel' : 'New project'}
           >
@@ -792,7 +792,7 @@ export function ProjectManager({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={4}
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            className="compass-input"
             disabled={saving}
           />
 
@@ -803,7 +803,7 @@ export function ProjectManager({
                 type="text"
                 value={labels}
                 onChange={(e) => setLabels(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
@@ -898,7 +898,7 @@ export function ProjectManager({
           <button
             type="submit"
             disabled={saving || !name.trim()}
-            className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+            className="compass-btn-primary"
           >
             {saving ? 'Creating…' : 'Create project'}
           </button>

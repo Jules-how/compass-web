@@ -160,10 +160,10 @@ export default function TaskItem({
     }
   }
 
-  const rowPad = dense ? 'px-3 py-2' : 'p-3'
+  const rowPad = dense ? 'px-3 py-2' : 'p-3.5'
   const shellClass = dense
     ? `border-b border-stone-100 last:border-b-0 hover:bg-stone-50/80 ${rowPad}`
-    : `rounded-xl border border-neutral-200 bg-white shadow-sm transition hover:border-neutral-300 ${rowPad}`
+    : `rounded-xl border border-stone-200/70 bg-white shadow-soft transition hover:border-stone-300 hover:shadow-lift ${rowPad}`
 
   return (
     <li>
@@ -185,29 +185,29 @@ export default function TaskItem({
               </span>
               {task.priority > 0 ? (
                 <span
-                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded px-1 text-[10px] font-semibold ring-1 ${priorityTone(task.priority)}`}
+                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-[10px] font-semibold ring-1 ${priorityTone(task.priority)}`}
                   title={taskPriorityLabel(task.priority)}
                 >
                   {taskPriorityShort(task.priority)}
                 </span>
               ) : null}
               {task.task_type ? (
-                <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
+                <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
                   {task.task_type}
                 </span>
               ) : null}
               {client ? (
-                <span className="rounded bg-sky-50 px-1.5 py-0.5 text-[11px] text-sky-800">
+                <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-[11px] text-sky-800">
                   {client.name}
                 </span>
               ) : null}
               {project ? (
-                <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[11px] text-neutral-600">
+                <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[11px] text-neutral-600">
                   {project.name}
                 </span>
               ) : null}
               {bf ? (
-                <span className="rounded bg-sf-orange-light/40 px-1.5 py-0.5 text-[11px] text-sf-orange-dark">
+                <span className="rounded-md bg-sf-orange-light/50 px-1.5 py-0.5 text-[11px] text-sf-orange-dark">
                   {bf.name}
                 </span>
               ) : null}
