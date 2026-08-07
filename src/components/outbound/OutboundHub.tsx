@@ -29,30 +29,6 @@ export function OutboundHub() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="compass-page-title font-display text-2xl text-neutral-900">Outbound</h1>
-          <p className="mt-1 max-w-2xl text-sm text-neutral-500">
-            Libraries for offers, expressions, structures, CTAs, subjects, openers, and templates.
-            Compose campaign sequences by copying library text into a forked draft.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            href="/sales/outbound/editor/new"
-            className="rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-[12px] font-semibold text-neutral-800 shadow-soft"
-          >
-            New unbound draft
-          </Link>
-          <Link
-            href="/sales/pipeline"
-            className="rounded-xl bg-[#e85d2a] px-3.5 py-2 text-[12px] font-semibold text-white shadow-soft"
-          >
-            Open planner
-          </Link>
-        </div>
-      </div>
-
       <div className="flex flex-wrap gap-2">
         {[...VERTICAL_TAG_HINTS, ...LOCATION_TAG_HINTS].map((tag) => {
           const isVertical = (VERTICAL_TAG_HINTS as readonly string[]).includes(tag)
