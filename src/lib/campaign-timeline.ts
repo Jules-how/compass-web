@@ -7,14 +7,23 @@ export const ZOOM_OPTIONS: { id: TimelineZoom; label: string; shortcut: string }
   { id: 'week', label: 'Week', shortcut: 'W' }
 ]
 
-const ZOOM_IDS = ZOOM_OPTIONS.map((option) => option.id)
+export const ZOOM_LEVELS: TimelineZoom[] = ZOOM_OPTIONS.map((option) => option.id)
+
+/** Move one step toward week (more detail). */
+export function zoomIn(zoom: TimelineZoom): TimelineZoom {
+  const index = ZOOM_LEVELS.indexOf(zoom)
+  return ZOOM_LEVELS[Math.min(ZOOM_LEVELS.length - 1, index + 1)] ?? zoom
+}
+
+/** Move one step toward year (less detail). */
+export function zoomOut(zoom: TimelineZoom): TimelineZoom {
+  const index = ZOOM_LEVELS.indexOf(zoom)
+  return ZOOM_LEVELS[Math.max(0, index - 1)] ?? zoom
+}
 
 /** Step toward a more micro (+1) or macro (-1) timeline scale. */
 export function stepTimelineZoom(current: TimelineZoom, direction: 1 | -1): TimelineZoom {
-  const index = ZOOM_IDS.indexOf(current)
-  if (index < 0) return current
-  const next = Math.min(ZOOM_IDS.length - 1, Math.max(0, index + direction))
-  return ZOOM_IDS[next]
+  return direction > 0 ? zoomIn(current) : zoomOut(current)
 }
 
 /** Pixels per day at each zoom. */

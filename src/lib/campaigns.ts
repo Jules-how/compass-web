@@ -99,6 +99,36 @@ export function campaignStatusLabel(status: string): string {
   }
 }
 
+export function campaignPriorityLabel(priority: number): string {
+  switch (priority) {
+    case 1:
+      return 'Urgent'
+    case 2:
+      return 'High'
+    case 3:
+      return 'Medium'
+    case 4:
+      return 'Low'
+    default:
+      return 'No priority'
+  }
+}
+
+export function campaignHealthLabel(health: string): string {
+  switch (health) {
+    case 'on_track':
+      return 'On track'
+    case 'at_risk':
+      return 'At risk'
+    case 'off_track':
+      return 'Off track'
+    case 'no_updates':
+      return 'No updates'
+    default:
+      return health.replaceAll('_', ' ')
+  }
+}
+
 export function formatCampaignDate(value: string | null | undefined): string {
   if (!value) return '—'
   const date = new Date(`${value}T00:00:00`)

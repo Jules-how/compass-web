@@ -53,6 +53,8 @@ export type InboxItem = {
   instantlyStatus?: string | null
 }
 
+export type InboxChannels = Record<InboxTab, InboxItem[]>
+
 export type InboxPayload = {
   tab: InboxTab
   items: InboxItem[]
@@ -62,8 +64,27 @@ export type InboxPayload = {
   badgeTotal: number
   /** Cross-tab priority strip. */
   needsYou: InboxItem[]
+  /**
+   * Full work-queue by tab. Present so the client can switch tabs without
+   * re-fetching — the API already loads every channel for counts/Needs you.
+   */
+  channels: InboxChannels
   /** Legacy shape for older consumers. */
   leads: PortalInboundLead[]
+}
+
+/** Shared client cache key — matches nav hover prefetch + badge warm. */
+export const INBOX_CACHE_KEY = '/api/inbox'
+
+export function emptyInboxChannels(): InboxChannels {
+  return { agents: [], instantly: [], leads: [] }
+}
+
+export function itemsForInboxTab(payload: InboxPayload | null | undefined, tab: InboxTab): InboxItem[] {
+  if (!payload) return []
+  if (payload.channels?.[tab]) return payload.channels[tab]
+  if (payload.tab === tab) return payload.items ?? []
+  return (payload.items ?? []).filter((item) => item.tab === tab)
 }
 
 export const INBOX_TAB_LABELS: Record<InboxTab, string> = {

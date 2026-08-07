@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Compass UI tokens — LOCKED aesthetic.
+  Soft depth (--compass-shadow*), warm wash, rounded panels, and muted orange accent
+  are intentional. Do not flatten, retheme, or retune radii/shadows unless explicitly asked.
+  See .cursor/rules/compass-ui-lock.mdc and AGENTS.md.
+*/
 :root {
   color-scheme: light;
   --compass-ink: #0f1217;
@@ -123,6 +129,10 @@ body {
 
   .compass-page-title {
     @apply font-display text-[1.65rem] font-semibold tracking-tight text-neutral-900;
+  }
+
+  .compass-page-title-compact {
+    @apply text-[15px] font-semibold tracking-tight text-neutral-900;
   }
 
   .compass-page-subtitle {

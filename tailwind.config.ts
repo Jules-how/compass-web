@@ -8,6 +8,7 @@ const config: Config = {
         sans: ['var(--font-dm-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         display: ['var(--font-fraunces)', 'ui-serif', 'Georgia', 'serif']
       },
+      // LOCKED depth tokens — prefer shadow-soft on cards; do not retune unless asked.
       boxShadow: {
         soft: '0 1px 2px rgba(15, 18, 23, 0.04), 0 8px 24px rgba(15, 18, 23, 0.04)',
         lift: '0 2px 4px rgba(15, 18, 23, 0.04), 0 12px 32px rgba(15, 18, 23, 0.06)'

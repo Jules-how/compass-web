@@ -8,7 +8,9 @@ import { CompassMark } from '@/components/nav-icons'
 import { NavLinks, navKeyFromPathname, type NavKey, OPERATOR_PREFETCH } from '@/components/NavLinks'
 import SignOutButton from '@/components/SignOutButton'
 import { Sidebar, SidebarBody } from '@/components/ui/sidebar'
+import { INBOX_CACHE_KEY, type InboxPayload } from '@/lib/inbox-ui'
 import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
+import { loadQueryCache } from '@/lib/query-cache'
 
 const WIDTH = {
   '3xl': 'max-w-3xl',
@@ -88,19 +90,26 @@ export function OperatorConsoleLayout({
       router.prefetch(item.href)
     }
 
-    void fetch('/api/inbox', { headers: { Accept: 'application/json' } })
-      .then(async (res) => {
-        if (!res.ok) return null
-        const body = (await res.json()) as {
-          leads?: unknown[]
-          total?: number
-          badgeTotal?: number
-        }
-        if (typeof body.badgeTotal === 'number') return body.badgeTotal
-        return typeof body.total === 'number' ? body.total : body.leads?.length ?? null
-      })
-      .then((count) => {
-        if (!cancelled && typeof count === 'number') setInboxCount(count)
+    // Warm the shared inbox cache so opening Inbox (and tab switches) stay snappy.
+    void loadQueryCache<InboxPayload>(
+      INBOX_CACHE_KEY,
+      async () => {
+        const res = await fetch(INBOX_CACHE_KEY, { headers: { Accept: 'application/json' } })
+        if (!res.ok) throw new Error(`Failed to load (${res.status})`)
+        return (await res.json()) as InboxPayload
+      },
+      { force: false }
+    )
+      .then((entry) => {
+        if (cancelled || !entry.data) return
+        const body = entry.data
+        const count =
+          typeof body.badgeTotal === 'number'
+            ? body.badgeTotal
+            : typeof body.total === 'number'
+              ? body.total
+              : body.leads?.length ?? null
+        if (typeof count === 'number') setInboxCount(count)
       })
       .catch(() => {})
 
@@ -128,6 +137,7 @@ function PageMain({
   subtitle,
   width = '6xl',
   flush = false,
+  compact = false,
   actions,
   children
 }: {
@@ -135,6 +145,7 @@ function PageMain({
   subtitle?: string
   width?: keyof typeof WIDTH
   flush?: boolean
+  compact?: boolean
   actions?: ReactNode
   children: ReactNode
 }) {
@@ -143,12 +154,20 @@ function PageMain({
   }
 
   return (
-    <main className={`mx-auto ${WIDTH[width]} px-4 py-7 sm:px-6 lg:px-8`}>
+    <main
+      className={`mx-auto ${WIDTH[width]} px-4 sm:px-6 lg:px-8 ${compact ? 'py-3' : 'py-7'}`}
+    >
       {(title || actions) && (
-        <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
+        <header
+          className={`flex flex-wrap items-center justify-between gap-3 ${compact ? 'mb-2' : 'mb-7 items-end gap-4'}`}
+        >
           <div className="min-w-0">
-            {title ? <h1 className="compass-page-title">{title}</h1> : null}
-            {subtitle ? <p className="compass-page-subtitle">{subtitle}</p> : null}
+            {title ? (
+              <h1 className={compact ? 'compass-page-title-compact' : 'compass-page-title'}>
+                {title}
+              </h1>
+            ) : null}
+            {subtitle && !compact ? <p className="compass-page-subtitle">{subtitle}</p> : null}
           </div>
           {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </header>
@@ -166,6 +185,7 @@ export function OperatorShell({
   subtitle,
   width = '6xl',
   flush = false,
+  compact = false,
   actions,
   children
 }: {
@@ -175,12 +195,20 @@ export function OperatorShell({
   subtitle?: string
   width?: keyof typeof WIDTH
   flush?: boolean
+  compact?: boolean
   actions?: ReactNode
   children: ReactNode
 }) {
   const inConsole = useContext(ConsoleChromeContext)
   const main = (
-    <PageMain title={title} subtitle={subtitle} width={width} flush={flush} actions={actions}>
+    <PageMain
+      title={title}
+      subtitle={subtitle}
+      width={width}
+      flush={flush}
+      compact={compact}
+      actions={actions}
+    >
       {children}
     </PageMain>
   )

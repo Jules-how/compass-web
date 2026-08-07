@@ -12,17 +12,22 @@ import {
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import {
+  countActionableBadge,
   formatInboxRelative,
   formatInboxWhen,
+  INBOX_CACHE_KEY,
   INBOX_TAB_HINTS,
   INBOX_TAB_LABELS,
   INBOX_TABS,
+  itemsForInboxTab,
   parseInboxTab,
+  pickNeedsYou,
   type InboxItem,
   type InboxPayload,
   type InboxTab
 } from '@/lib/inbox-ui'
 import type { InboxSuggestion, InboxTriageState, LeadLifecycleStatus } from '@/lib/inbox-triage'
+import { peekQueryCache, writeQueryCache } from '@/lib/query-cache'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
@@ -322,6 +327,76 @@ function ContextPane({
   )
 }
 
+function mapInboxItems(
+  items: InboxItem[],
+  update: (item: InboxItem) => InboxItem | null
+): InboxItem[] {
+  const next: InboxItem[] = []
+  for (const item of items) {
+    const mapped = update(item)
+    if (mapped) next.push(mapped)
+  }
+  return next
+}
+
+/** Apply a triage/lifecycle change locally so the UI responds before the network round-trip. */
+function applyOptimisticInboxUpdate(
+  itemId: string,
+  patch: {
+    triage: InboxTriageState
+    unread?: boolean
+    lifecycle?: LeadLifecycleStatus
+    remove?: boolean
+  }
+) {
+  const existing = peekQueryCache<InboxPayload>(INBOX_CACHE_KEY)
+  if (!existing?.data) return
+
+  const data = existing.data
+  const channels = data.channels ?? {
+    agents: data.tab === 'agents' ? data.items : [],
+    instantly: data.tab === 'instantly' ? data.items : [],
+    leads: data.tab === 'leads' ? data.items : []
+  }
+
+  const updateItem = (entry: InboxItem): InboxItem | null => {
+    if (entry.id !== itemId) return entry
+    if (patch.remove) return null
+    return {
+      ...entry,
+      triage: patch.triage,
+      unread: patch.unread ?? (patch.triage === 'unread'),
+      lifecycle: patch.lifecycle ?? entry.lifecycle,
+      snoozedUntil:
+        patch.triage === 'snoozed'
+          ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+          : patch.triage === 'done' || patch.triage === 'read' || patch.triage === 'unread'
+            ? null
+            : entry.snoozedUntil
+    }
+  }
+
+  const agents = mapInboxItems(channels.agents, updateItem)
+  const instantly = mapInboxItems(channels.instantly, updateItem)
+  const leads = mapInboxItems(channels.leads, updateItem)
+  const counts = countActionableBadge({ agents, instantly, leads })
+  const badgeTotal = counts.agents + counts.instantly + counts.leads
+  const needsYou = pickNeedsYou([...agents, ...instantly, ...leads])
+  const activeTab = data.tab
+  const tabItems =
+    activeTab === 'agents' ? agents : activeTab === 'instantly' ? instantly : leads
+
+  writeQueryCache<InboxPayload>(INBOX_CACHE_KEY, {
+    ...data,
+    items: tabItems,
+    total: tabItems.length,
+    counts,
+    badgeTotal,
+    needsYou,
+    channels: { agents, instantly, leads }
+  })
+}
+
 export function InboxPanel() {
   const router = useRouter()
   const pathname = usePathname()
@@ -333,10 +408,13 @@ export function InboxPanel() {
   const [busy, startTransition] = useTransition()
   const [actionError, setActionError] = useState<string | null>(null)
 
-  const url = `/api/inbox?tab=${tab}`
-  const { data, error, loading, reload } = useCachedJson<InboxPayload>(url, url)
+  // One shared payload for all tabs — switching tabs is a local filter, not a refetch.
+  const { data, error, loading, reload } = useCachedJson<InboxPayload>(
+    INBOX_CACHE_KEY,
+    INBOX_CACHE_KEY
+  )
 
-  const items = data?.items ?? []
+  const items = useMemo(() => itemsForInboxTab(data, tab), [data, tab])
   const counts = data?.counts
   const needsYou = data?.needsYou ?? []
 
@@ -355,12 +433,13 @@ export function InboxPanel() {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }, [items, pathname, router, selectedParam, tab])
 
-  const loadSuggestion = useCallback(async (item: InboxItem) => {
+  const loadSuggestion = useCallback(async (item: InboxItem, signal?: AbortSignal) => {
     setSuggestion(null)
     try {
       const res = await fetch('/api/inbox/suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        signal,
         body: JSON.stringify({
           tab: item.tab,
           title: item.title,
@@ -374,10 +453,12 @@ export function InboxPanel() {
           sourceLabel: item.sourceLabel
         })
       })
-      if (!res.ok) return
+      if (signal?.aborted || !res.ok) return
       const json = (await res.json()) as InboxSuggestion
+      if (signal?.aborted) return
       setSuggestion(json)
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       // Heuristic endpoint should rarely fail; ignore soft errors.
     }
   }, [])
@@ -387,14 +468,20 @@ export function InboxPanel() {
       setSuggestion(null)
       return
     }
-    void loadSuggestion(selected)
+    const controller = new AbortController()
+    void loadSuggestion(selected, controller.signal)
+    return () => controller.abort()
   }, [selected, loadSuggestion])
 
   function setTab(next: InboxTab) {
+    if (next === tab) return
     const params = new URLSearchParams()
     params.set('tab', next)
     setMobileShowContext(false)
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    // Transition keeps the previous list painted while the URL/selection updates.
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    })
   }
 
   function selectItem(item: InboxItem) {
@@ -402,7 +489,9 @@ export function InboxPanel() {
     params.set('tab', item.tab)
     params.set('id', item.id)
     setMobileShowContext(true)
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    })
     if (item.unread) {
       void patchTriage(item, 'read', { silent: true })
     }
@@ -414,6 +503,20 @@ export function InboxPanel() {
     opts?: { lifecycle?: LeadLifecycleStatus; silent?: boolean }
   ) {
     setActionError(null)
+
+    // Contacted/qualified stay in the leads queue; done/snooze/discard leave it.
+    const shouldRemove =
+      triage === 'done' ||
+      triage === 'snoozed' ||
+      opts?.lifecycle === 'discarded'
+
+    applyOptimisticInboxUpdate(item.id, {
+      triage,
+      unread: triage === 'unread',
+      lifecycle: opts?.lifecycle,
+      remove: shouldRemove
+    })
+
     const res = await fetch('/api/inbox/triage', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -429,9 +532,11 @@ export function InboxPanel() {
     })
     if (!res.ok) {
       if (!opts?.silent) setActionError('Could not update triage')
+      await reload(true)
       return false
     }
-    await reload(true)
+    // Background reconcile — do not block the click path on a full refetch.
+    void reload(false)
     return true
   }
 
@@ -503,6 +608,7 @@ export function InboxPanel() {
     )
   }
 
+  // Only blank the panel on the very first load — tab switches never hit this gate.
   if (loading || !data) {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
@@ -521,7 +627,7 @@ export function InboxPanel() {
           <p className="truncate text-[12px] text-neutral-500">{INBOX_TAB_HINTS[tab]}</p>
         </div>
         <div className="rounded-md bg-stone-50 px-2 py-1 text-[12px] tabular-nums text-neutral-500 ring-1 ring-stone-200/70">
-          {data.badgeTotal} need{data.badgeTotal === 1 ? 's' : ''} you · {data.total} shown
+          {data.badgeTotal} need{data.badgeTotal === 1 ? 's' : ''} you · {items.length} shown
         </div>
       </header>
 
@@ -533,13 +639,7 @@ export function InboxPanel() {
               <button
                 key={`needs-${item.id}`}
                 type="button"
-                onClick={() => {
-                  const params = new URLSearchParams()
-                  params.set('tab', item.tab)
-                  params.set('id', item.id)
-                  setMobileShowContext(true)
-                  router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-                }}
+                onClick={() => selectItem(item)}
                 className={cn(
                   'inline-flex max-w-[220px] shrink-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left transition',
                   item.id === selectedId
