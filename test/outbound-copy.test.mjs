@@ -52,7 +52,12 @@ test('outbound nav and pages are wired under Sales', () => {
   assert.match(nav, /pathname\.startsWith\('\/sales\/outbound'\)/)
 
   assert.match(read('src/components/nav-icons.tsx'), /export function OutboundIcon/)
-  assert.match(read('src/app/(console)/sales/outbound/page.tsx'), /OutboundHub/)
+  assert.match(read('src/app/(console)/sales/outbound/page.tsx'), /OutboundPageClient/)
+  assert.match(read('src/components/outbound/OutboundPageClient.tsx'), /OutboundHub/)
+  assert.match(read('src/components/outbound/OutboundPageClient.tsx'), /SequenceEditor/)
+  assert.match(read('src/components/outbound/OutboundHub.tsx'), /OutboundLiveSection/)
+  assert.match(read('src/components/outbound/OutboundHub.tsx'), /OutboundHistorySection/)
+  assert.match(read('src/components/outbound/OutboundHub.tsx'), /OutboundLibraryAccordion/)
   assert.match(read('src/app/(console)/sales/outbound/editor/new/page.tsx'), /SequenceEditor/)
   assert.match(
     read('src/app/(console)/sales/outbound/editor/[campaignId]/page.tsx'),
@@ -121,10 +126,13 @@ test('sequence editor fork-copy and subject ban helpers exist', () => {
   assert.match(lib, /spam_act_opt_out/)
 
   const editor = read('src/components/outbound/SequenceEditor.tsx')
-  assert.match(editor, /LibraryPane/)
+  assert.match(editor, /EditorComponentsAccordion/)
   assert.match(editor, /CampaignCopyMeta/)
   assert.match(editor, /forkTemplateIntoSequence/)
-  assert.match(editor, /Save to library/)
+  assert.match(editor, /variant === 'overlay'|variant = 'overlay'|variant\?: 'page' \| 'overlay'/)
+  assert.match(editor, /Subject line/)
+  assert.match(read('src/components/outbound/EditorComponentsAccordion.tsx'), /application\/x-outbound-library/)
+  assert.match(read('src/components/ui/accordion.tsx'), /@radix-ui\/react-accordion/)
   assert.match(read('src/components/outbound/LibraryPane.tsx'), /application\/x-outbound-library/)
 })
 
