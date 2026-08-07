@@ -325,7 +325,7 @@ export function CampaignPlanner() {
   const menuCampaign = rowMenu ? campaigns.find((c) => c.id === rowMenu.campaignId) : null
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-[#f7f8f9] text-neutral-900">
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-[#f7f8f9] text-neutral-900">
       <header className="relative z-40 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-neutral-200/80 bg-white px-4">
         <div className="flex min-w-0 items-center gap-2">
           <h1 className="truncate text-[15px] font-semibold tracking-tight">Campaign Planner</h1>
@@ -719,8 +719,8 @@ export function CampaignPlanner() {
           {view === 'timeline' ? (
             <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
               <div
-                className="relative"
-                style={{ minWidth: listWidth + range.widthPx, minHeight: '100%' }}
+                className="relative flex min-h-full flex-col"
+                style={{ minWidth: listWidth + range.widthPx }}
                 onMouseMove={onTimelineMouseMove}
                 onMouseLeave={() => {
                   setHoverDate(null)
@@ -728,7 +728,7 @@ export function CampaignPlanner() {
                 }}
               >
                 <div
-                  className="sticky top-0 z-30 flex border-b border-neutral-200/80 bg-[#f7f8f9]"
+                  className="sticky top-0 z-30 flex shrink-0 border-b border-neutral-200/80 bg-[#f7f8f9]"
                   style={{ height: HEADER_HEIGHT }}
                 >
                   {display.showList ? (
@@ -796,14 +796,14 @@ export function CampaignPlanner() {
                 </div>
 
                 <div
-                  className="relative"
+                  className="relative flex min-h-0 flex-1 flex-col"
                   style={{ minHeight: gridHeight }}
                   onPointerMove={onPointerMove}
                   onPointerUp={onPointerUp}
                   onPointerCancel={onPointerUp}
                 >
                   <div
-                    className="pointer-events-none absolute bottom-0 top-0"
+                    className="pointer-events-none absolute inset-0"
                     style={{ left: listWidth, width: range.widthPx }}
                   >
                     {header.weekends.map((band) => (
@@ -1003,7 +1003,7 @@ export function CampaignPlanner() {
                   {Array.from({ length: Math.max(0, EMPTY_ROWS - ordered.length) }).map((_, i) => (
                     <div
                       key={`empty-${i}`}
-                      className="flex border-b border-neutral-100/70"
+                      className="flex shrink-0 border-b border-neutral-100/70"
                       style={{ height: ROW_HEIGHT }}
                     >
                       {display.showList ? (
@@ -1015,6 +1015,17 @@ export function CampaignPlanner() {
                       <div style={{ width: range.widthPx }} />
                     </div>
                   ))}
+
+                  {/* Stretch grid chrome to the viewport bottom (Linear-style). */}
+                  <div className="flex min-h-0 flex-1">
+                    {display.showList ? (
+                      <div
+                        className="sticky left-0 z-20 border-r border-neutral-200/80 bg-[#f7f8f9]"
+                        style={{ width: LABEL_WIDTH }}
+                      />
+                    ) : null}
+                    <div style={{ width: range.widthPx }} />
+                  </div>
 
                   {ready && ordered.length === 0 ? (
                     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
