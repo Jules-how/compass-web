@@ -9,6 +9,7 @@ import {
   FunctionsIcon,
   HomeIcon,
   InboxIcon,
+  OutboundIcon,
   OverviewIcon,
   PipelineIcon,
   ProjectsIcon,
@@ -28,6 +29,7 @@ export type NavKey =
   | 'clients'
   | 'sales-overview'
   | 'pipeline'
+  | 'outbound'
   | 'finances'
   | 'settings'
   | 'leads'
@@ -87,6 +89,12 @@ const OPERATOR_SECTIONS: NavSection[] = [
         api: '/api/campaigns'
       },
       {
+        href: '/sales/outbound',
+        label: 'Outbound',
+        key: 'outbound',
+        icon: OutboundIcon
+      },
+      {
         href: '/leads',
         label: 'CRM',
         key: 'leads',
@@ -122,6 +130,7 @@ export function navKeyFromPathname(pathname: string | null): NavKey {
   if (!pathname) return 'home'
   if (pathname === '/sales' || pathname.startsWith('/sales/')) {
     if (pathname.startsWith('/sales/pipeline')) return 'pipeline'
+    if (pathname.startsWith('/sales/outbound')) return 'outbound'
     return 'sales-overview'
   }
   if (pathname.startsWith('/operations/finances')) return 'finances'

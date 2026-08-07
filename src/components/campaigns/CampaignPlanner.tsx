@@ -235,7 +235,7 @@ export function CampaignPlanner() {
     router.push(`/sales/pipeline/${id}`)
   }
 
-  function createCampaign(nextStatus?: CampaignStatus) {
+  function createCampaign(nextStatus?: CampaignStatus, openCopyEditor = false) {
     const today = toDateOnly(range.today)
     const end = toDateOnly(
       new Date(range.today.getFullYear(), range.today.getMonth() + 1, range.today.getDate())
@@ -251,6 +251,8 @@ export function CampaignPlanner() {
     refresh()
     setSelectedId(campaign.id)
     setSidecarOpen(true)
+    if (openCopyEditor) router.push(`/sales/outbound/editor/${campaign.id}`)
+    return campaign
   }
 
   function openCampaign(id: string) {
@@ -421,6 +423,14 @@ export function CampaignPlanner() {
             title="New campaign"
           >
             +
+          </button>
+          <button
+            type="button"
+            onClick={() => createCampaign(undefined, true)}
+            className="flex h-7 items-center rounded-md px-2 text-[11px] font-medium text-neutral-600 hover:bg-neutral-100"
+            title="New campaign with copy editor"
+          >
+            + Copy
           </button>
         </div>
 
@@ -594,9 +604,12 @@ export function CampaignPlanner() {
                               className="h-3.5 w-3.5 shrink-0 rounded-full"
                               style={{ background: campaign.color || '#94a3b8' }}
                             />
-                            <span className="truncate text-sm font-medium text-neutral-900 hover:underline hover:decoration-neutral-300">
-                              {campaign.name}
-                            </span>
+                            <div className="min-w-0">
+                              <span className="block truncate text-sm font-medium text-neutral-900 hover:underline hover:decoration-neutral-300">
+                                {campaign.name}
+                              </span>
+                              <CopyChips campaign={campaign} />
+                            </div>
                           </div>
                           <div className="text-sm text-neutral-600">
                             {campaignStatusLabel(campaign.status)}
@@ -897,6 +910,8 @@ export function CampaignPlanner() {
                               </span>
                             </button>
 
+                            <CopyChips campaign={campaign} compact />
+
                             <div className="flex shrink-0 items-center gap-0.5 pr-0.5 text-neutral-400">
                               {display.showStatus ? (
                                 <GlyphButton
@@ -1098,6 +1113,14 @@ export function CampaignPlanner() {
                 </MenuItem>
                 <MenuItem
                   onClick={() => {
+                    setRowMenu(null)
+                    router.push(`/sales/outbound/editor/${menuCampaign.id}`)
+                  }}
+                >
+                  Add copy
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
                     openCampaign(menuCampaign.id)
                   }}
                 >
@@ -1145,6 +1168,14 @@ export function CampaignPlanner() {
                   }}
                 >
                   Open campaign page
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    setRowMenu(null)
+                    router.push(`/sales/outbound/editor/${menuCampaign.id}`)
+                  }}
+                >
+                  Add copy
                 </MenuItem>
                 <MenuItem
                   onClick={() => {
@@ -1483,6 +1514,34 @@ function LeadGlyph({ label }: { label: string | null }) {
     >
       {initials}
     </span>
+  )
+}
+
+function CopyChips({
+  campaign,
+  compact = false
+}: {
+  campaign: CompassCampaign
+  compact?: boolean
+}) {
+  const bits = [
+    campaign.offer_key,
+    campaign.structure_id,
+    ...(campaign.vertical_tags ?? []).slice(0, 1),
+    ...(campaign.location_tags ?? []).slice(0, 1)
+  ].filter(Boolean) as string[]
+  if (bits.length === 0) return null
+  return (
+    <div className={`flex min-w-0 flex-wrap gap-1 ${compact ? 'max-w-[120px]' : 'mt-0.5'}`}>
+      {bits.map((bit) => (
+        <span
+          key={bit}
+          className="truncate rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-500"
+        >
+          {bit}
+        </span>
+      ))}
+    </div>
   )
 }
 

@@ -110,6 +110,17 @@ export function PipelineIcon(props: IconProps) {
   )
 }
 
+export function OutboundIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4.5 7.5h10.5" />
+      <path d="M4.5 12h15" />
+      <path d="M4.5 16.5h8" />
+      <path d="M16.5 6.5 19.5 12l-3 5.5" />
+    </Icon>
+  )
+}
+
 export function CrmIcon(props: IconProps) {
   return (
     <Icon {...props}>

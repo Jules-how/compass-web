@@ -1,3 +1,6 @@
+import type { OutboundCopyStatus, OutboundSequence } from '@/lib/outbound-copy'
+import { normalizeCopyStatus, normalizeTags as normalizeOutboundTags } from '@/lib/outbound-copy'
+
 export const CAMPAIGN_STATUSES = [
   'draft',
   'planned',
@@ -24,6 +27,15 @@ export interface CompassCampaign {
   summary: string | null
   labels: string[]
   owner_label: string | null
+  instantly_campaign_id?: string | null
+  offer_key?: string | null
+  structure_id?: string | null
+  opener_mode?: string | null
+  vertical_tags?: string[]
+  location_tags?: string[]
+  cold_expression?: string | null
+  sequence_draft?: OutboundSequence | null
+  copy_status?: OutboundCopyStatus | string
   created_at: string
   updated_at: string
 }
@@ -50,7 +62,41 @@ export interface CompassCampaignActivity {
 }
 
 export const CAMPAIGN_LIST_COLUMNS =
-  'id,name,status,priority,health,start_date,end_date,color,summary,labels,owner_label,created_at,updated_at'
+  'id,name,status,priority,health,start_date,end_date,color,summary,labels,owner_label,instantly_campaign_id,offer_key,structure_id,opener_mode,vertical_tags,location_tags,cold_expression,sequence_draft,copy_status,created_at,updated_at'
+
+export function emptyCampaignCopyFields() {
+  return {
+    instantly_campaign_id: null as string | null,
+    offer_key: null as string | null,
+    structure_id: null as string | null,
+    opener_mode: 'nick-tier' as string | null,
+    vertical_tags: [] as string[],
+    location_tags: [] as string[],
+    cold_expression: null as string | null,
+    sequence_draft: null as OutboundSequence | null,
+    copy_status: 'none' as OutboundCopyStatus
+  }
+}
+
+export function projectCampaignCopy(row: CompassCampaign): CompassCampaign {
+  return {
+    ...row,
+    labels: Array.isArray(row.labels) ? row.labels : [],
+    vertical_tags: Array.isArray(row.vertical_tags) ? row.vertical_tags : [],
+    location_tags: Array.isArray(row.location_tags) ? row.location_tags : [],
+    instantly_campaign_id: row.instantly_campaign_id ?? null,
+    offer_key: row.offer_key ?? null,
+    structure_id: row.structure_id ?? null,
+    opener_mode: row.opener_mode ?? 'nick-tier',
+    cold_expression: row.cold_expression ?? null,
+    sequence_draft: row.sequence_draft ?? null,
+    copy_status: normalizeCopyStatus(row.copy_status ?? 'none')
+  }
+}
+
+export function normalizeOutboundTagList(value: unknown): string[] {
+  return normalizeOutboundTags(value)
+}
 
 export const CAMPAIGN_MILESTONE_COLUMNS =
   'id,campaign_id,title,description,target_date,sort_order,completed,created_at,updated_at'
