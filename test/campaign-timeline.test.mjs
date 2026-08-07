@@ -95,8 +95,15 @@ test('campaign planner files and migration are wired', () => {
   assert.match(wheelZoom, /ctrlKey/)
   assert.match(wheelZoom, /stepTimelineZoom/)
   assert.match(wheelZoom, /passive: false/)
+  assert.match(wheelZoom, /enabled/)
+  assert.match(wheelZoom, /WHEEL_ZOOM_THRESHOLD/)
+  assert.match(wheelZoom, /gesturechange/)
+  assert.match(wheelZoom, /ZOOM_COOLDOWN_MS/)
 
   assert.match(planner, /useTimelineWheelZoom/)
+  assert.match(planner, /setTimelineScrollRef/)
+  assert.match(planner, /enabled: view === 'timeline' && scrollNode !== null/)
+  assert.match(planner, /overscroll-contain/)
 
   const store = read('src/lib/campaign-local-store.ts')
   assert.match(store, /localStorage/)
