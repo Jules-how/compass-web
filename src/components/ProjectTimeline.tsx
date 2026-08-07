@@ -378,22 +378,39 @@ export function ProjectTimeline({
                       <Link
                         href={`/projects/${project.id}`}
                         className="absolute block"
-                        style={{ left, width, top: 6, height: ROW_HEIGHT - 12 }}
+                        style={{ left, width: Math.max(width, 88), top: 6, height: ROW_HEIGHT - 10 }}
                         title={`${formatProjectDate(project.start_date)} → ${formatProjectDate(project.target_date)}`}
                       >
-                        <span className="mb-0.5 block truncate px-0.5 text-[11px] font-medium leading-none text-neutral-600">
+                        <span className="mb-1 block truncate pr-1 text-[11px] font-medium leading-none text-neutral-700">
                           {project.name}
                         </span>
-                        <span className="block h-[18px] rounded-md border border-neutral-200 bg-white shadow-sm transition group-hover:border-neutral-300">
+                        <span
+                          className="relative block h-[20px] overflow-hidden rounded-[6px] border border-neutral-300/90 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition group-hover:border-neutral-400"
+                          style={{
+                            width,
+                            background: `linear-gradient(90deg, ${accent}22 0%, #ffffff 28%)`
+                          }}
+                        >
                           <span
-                            className="block h-full w-1 rounded-l-[5px]"
+                            className="absolute inset-y-0 left-0 w-[3px] rounded-l-[5px]"
                             style={{ background: accent }}
                           />
+                          {project.stats?.percentComplete > 0 ? (
+                            <span
+                              className="absolute inset-y-0 left-0 opacity-30"
+                              style={{
+                                width: `${Math.min(100, project.stats.percentComplete)}%`,
+                                background: accent
+                              }}
+                            />
+                          ) : null}
                         </span>
                       </Link>
                     ) : (
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] text-neutral-400">
-                        No dates
+                      <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] text-neutral-400">
+                          No dates
+                        </div>
                       </div>
                     )}
                   </div>
