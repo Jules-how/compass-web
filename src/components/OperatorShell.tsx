@@ -8,7 +8,9 @@ import { CompassMark } from '@/components/nav-icons'
 import { NavLinks, navKeyFromPathname, type NavKey, OPERATOR_PREFETCH } from '@/components/NavLinks'
 import SignOutButton from '@/components/SignOutButton'
 import { Sidebar, SidebarBody } from '@/components/ui/sidebar'
+import { INBOX_CACHE_KEY, type InboxPayload } from '@/lib/inbox-ui'
 import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
+import { loadQueryCache } from '@/lib/query-cache'
 
 const WIDTH = {
   '3xl': 'max-w-3xl',
@@ -88,19 +90,26 @@ export function OperatorConsoleLayout({
       router.prefetch(item.href)
     }
 
-    void fetch('/api/inbox', { headers: { Accept: 'application/json' } })
-      .then(async (res) => {
-        if (!res.ok) return null
-        const body = (await res.json()) as {
-          leads?: unknown[]
-          total?: number
-          badgeTotal?: number
-        }
-        if (typeof body.badgeTotal === 'number') return body.badgeTotal
-        return typeof body.total === 'number' ? body.total : body.leads?.length ?? null
-      })
-      .then((count) => {
-        if (!cancelled && typeof count === 'number') setInboxCount(count)
+    // Warm the shared inbox cache so opening Inbox (and tab switches) stay snappy.
+    void loadQueryCache<InboxPayload>(
+      INBOX_CACHE_KEY,
+      async () => {
+        const res = await fetch(INBOX_CACHE_KEY, { headers: { Accept: 'application/json' } })
+        if (!res.ok) throw new Error(`Failed to load (${res.status})`)
+        return (await res.json()) as InboxPayload
+      },
+      { force: false }
+    )
+      .then((entry) => {
+        if (cancelled || !entry.data) return
+        const body = entry.data
+        const count =
+          typeof body.badgeTotal === 'number'
+            ? body.badgeTotal
+            : typeof body.total === 'number'
+              ? body.total
+              : body.leads?.length ?? null
+        if (typeof count === 'number') setInboxCount(count)
       })
       .catch(() => {})
 
