@@ -21,6 +21,11 @@ export function zoomOut(zoom: TimelineZoom): TimelineZoom {
   return ZOOM_LEVELS[Math.max(0, index - 1)] ?? zoom
 }
 
+/** Step toward a more micro (+1) or macro (-1) timeline scale. */
+export function stepTimelineZoom(current: TimelineZoom, direction: 1 | -1): TimelineZoom {
+  return direction > 0 ? zoomIn(current) : zoomOut(current)
+}
+
 /** Pixels per day at each zoom. */
 export function pxPerDay(zoom: TimelineZoom): number {
   switch (zoom) {

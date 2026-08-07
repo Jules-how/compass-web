@@ -87,6 +87,16 @@ test('campaign planner files and migration are wired', () => {
   assert.match(timeline, /weekends/)
   assert.match(timeline, /isoWeekNumber/)
   assert.match(timeline, /formatHoverDate/)
+  assert.match(timeline, /zoomIn/)
+  assert.match(timeline, /zoomOut/)
+  assert.match(timeline, /stepTimelineZoom/)
+
+  const wheelZoom = read('src/hooks/useTimelineWheelZoom.ts')
+  assert.match(wheelZoom, /ctrlKey/)
+  assert.match(wheelZoom, /stepTimelineZoom/)
+  assert.match(wheelZoom, /passive: false/)
+
+  assert.match(planner, /useTimelineWheelZoom/)
 
   const store = read('src/lib/campaign-local-store.ts')
   assert.match(store, /localStorage/)
@@ -94,4 +104,35 @@ test('campaign planner files and migration are wired', () => {
   const labels = read('src/lib/campaigns.ts')
   assert.match(labels, /campaignPriorityLabel/)
   assert.match(labels, /campaignHealthLabel/)
+})
+
+test('timeline zoom helpers move between macro and micro scales', () => {
+  const timeline = read('src/lib/campaign-timeline.ts')
+  assert.match(timeline, /export function zoomIn/)
+  assert.match(timeline, /export function zoomOut/)
+  assert.match(timeline, /export function stepTimelineZoom/)
+
+  const ZOOM_LEVELS = ['year', 'quarter', 'month', 'week']
+  function zoomIn(zoom) {
+    const index = ZOOM_LEVELS.indexOf(zoom)
+    return ZOOM_LEVELS[Math.min(ZOOM_LEVELS.length - 1, index + 1)] ?? zoom
+  }
+  function zoomOut(zoom) {
+    const index = ZOOM_LEVELS.indexOf(zoom)
+    return ZOOM_LEVELS[Math.max(0, index - 1)] ?? zoom
+  }
+  function stepTimelineZoom(current, direction) {
+    return direction > 0 ? zoomIn(current) : zoomOut(current)
+  }
+
+  assert.equal(stepTimelineZoom('year', 1), 'quarter')
+  assert.equal(stepTimelineZoom('quarter', 1), 'month')
+  assert.equal(stepTimelineZoom('month', 1), 'week')
+  assert.equal(stepTimelineZoom('week', 1), 'week')
+  assert.equal(stepTimelineZoom('week', -1), 'month')
+  assert.equal(stepTimelineZoom('month', -1), 'quarter')
+  assert.equal(stepTimelineZoom('quarter', -1), 'year')
+  assert.equal(stepTimelineZoom('year', -1), 'year')
+  assert.equal(zoomIn('year'), 'quarter')
+  assert.equal(zoomOut('week'), 'month')
 })
