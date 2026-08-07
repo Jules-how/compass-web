@@ -6,6 +6,7 @@ export default function ProjectsPage() {
     <OperatorShell
       title="Projects"
       subtitle="List, board, and timeline · health, filters, milestones"
+      width="full"
     >
       <ProjectsPanel />
     </OperatorShell>

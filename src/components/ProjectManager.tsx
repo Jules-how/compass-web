@@ -15,6 +15,8 @@ import {
   projectStatusLabel,
   type ProjectBoardStatus
 } from '@/lib/project-pm'
+import type { TimelineZoom } from '@/lib/campaign-timeline'
+import { ProjectTimeline } from '@/components/ProjectTimeline'
 
 type ViewMode = 'list' | 'board' | 'timeline'
 type GroupBy = 'none' | 'status' | 'function' | 'health'
@@ -76,6 +78,7 @@ export function ProjectManager({
   const [orderBy, setOrderBy] = useState<OrderBy>('name')
   const [insightsTab, setInsightsTab] = useState<InsightsTab>('health')
   const [insightsOpen, setInsightsOpen] = useState(true)
+  const [timelineZoom, setTimelineZoom] = useState<TimelineZoom>('year')
 
   const [name, setName] = useState('')
   const [summary, setSummary] = useState('')
@@ -267,32 +270,6 @@ export function ProjectManager({
       setSaving(false)
     }
   }
-
-  const timelineBounds = useMemo(() => {
-    const today = new Date()
-    const start = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-    const end = new Date(today.getFullYear() + 1, today.getMonth() + 2, 1)
-    for (const project of visibleProjects) {
-      for (const value of [project.start_date, project.target_date]) {
-        if (!value) continue
-        const date = new Date(`${value}T00:00:00`)
-        if (date < start) start.setTime(date.getTime())
-        if (date > end) end.setTime(date.getTime())
-      }
-    }
-    return { start, end, today }
-  }, [visibleProjects])
-
-  function dateToPercent(value: string | null | undefined): number | null {
-    if (!value) return null
-    const date = new Date(`${value}T00:00:00`).getTime()
-    const start = timelineBounds.start.getTime()
-    const end = timelineBounds.end.getTime()
-    if (end <= start) return 0
-    return Math.min(100, Math.max(0, ((date - start) / (end - start)) * 100))
-  }
-
-  const todayPercent = dateToPercent(timelineBounds.today.toISOString().slice(0, 10)) ?? 0
 
   return (
     <div className="space-y-4">
@@ -595,7 +572,15 @@ export function ProjectManager({
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <div className={`grid gap-4 ${insightsOpen ? 'xl:grid-cols-[minmax(0,1fr)_260px]' : ''}`}>
+      <div
+        className={`grid gap-4 ${
+          insightsOpen
+            ? view === 'timeline'
+              ? 'xl:grid-cols-[minmax(0,1fr)_240px]'
+              : 'xl:grid-cols-[minmax(0,1fr)_260px]'
+            : ''
+        }`}
+      >
         <div className="min-w-0 space-y-4">
           {view === 'list'
             ? grouped.map((group) => (
@@ -764,72 +749,27 @@ export function ProjectManager({
           ) : null}
 
           {view === 'timeline' ? (
-            <div className="compass-panel overflow-x-auto p-4">
-              <div className="mb-3 flex items-center justify-between text-xs text-neutral-500">
-                <span>
-                  {formatProjectDate(timelineBounds.start.toISOString().slice(0, 10))} →{' '}
-                  {formatProjectDate(timelineBounds.end.toISOString().slice(0, 10))}
-                </span>
-                <span>Today</span>
-              </div>
-              <div className="relative min-w-[720px] space-y-3">
-                <div
-                  className="pointer-events-none absolute bottom-0 top-0 w-px bg-sky-500"
-                  style={{ left: `${todayPercent}%` }}
-                />
-                {visibleProjects.length === 0 ? (
-                  <p className="py-10 text-center text-sm text-neutral-500">No projects on the timeline.</p>
-                ) : (
-                  visibleProjects.map((project) => {
-                    const startPct = dateToPercent(project.start_date) ?? todayPercent
-                    const endPct = dateToPercent(project.target_date) ?? startPct + 4
-                    const left = Math.min(startPct, endPct)
-                    const width = Math.max(3, Math.abs(endPct - startPct))
-                    return (
-                      <div key={project.id} className="grid grid-cols-[180px_minmax(0,1fr)] items-center gap-3">
-                        <div className="min-w-0">
-                          <Link
-                            href={`/projects/${project.id}`}
-                            className="block truncate text-sm font-medium text-neutral-800 hover:text-sf-orange-dark"
-                          >
-                            {project.name}
-                          </Link>
-                          {(project.client_name ||
-                            (project.client_id ? clientById[project.client_id]?.name : null)) && (
-                            <div className="truncate text-[11px] text-neutral-500">
-                              {project.client_name || clientById[project.client_id!]?.name}
-                            </div>
-                          )}
-                        </div>
-                        <div className="relative h-8 rounded-md bg-stone-100">
-                          <Link
-                            href={`/projects/${project.id}`}
-                            className="absolute top-1/2 h-5 -translate-y-1/2 rounded-full bg-sf-orange/80 px-2 text-[10px] font-medium leading-5 text-white"
-                            style={{ left: `${left}%`, width: `${width}%` }}
-                            title={`${formatProjectDate(project.start_date)} – ${formatProjectDate(project.target_date)}`}
-                          >
-                            <span className="truncate">{project.name}</span>
-                          </Link>
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-            </div>
+            <ProjectTimeline
+              projects={visibleProjects}
+              clientById={clientById}
+              zoom={timelineZoom}
+              onZoomChange={setTimelineZoom}
+            />
           ) : null}
         </div>
 
         {insightsOpen ? (
-          <aside className="compass-panel h-fit p-4">
-            <div className="mb-3 flex rounded-lg border border-stone-200 p-0.5 text-xs">
+          <aside className="h-fit overflow-hidden rounded-xl border border-neutral-200/80 bg-white shadow-sm">
+            <div className="flex gap-1 border-b border-neutral-100 p-2">
               {(['health', 'leads'] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => setInsightsTab(tab)}
-                  className={`flex-1 rounded-md px-2 py-1.5 font-medium capitalize ${
-                    insightsTab === tab ? 'bg-neutral-900 text-white' : 'text-neutral-500'
+                  className={`rounded-md px-2.5 py-1.5 text-xs font-medium capitalize transition ${
+                    insightsTab === tab
+                      ? 'bg-neutral-100 text-neutral-900'
+                      : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800'
                   }`}
                 >
                   {tab}
@@ -837,22 +777,21 @@ export function ProjectManager({
               ))}
             </div>
             {insightsTab === 'health' ? (
-              <ul className="space-y-2 text-sm">
+              <ul className="divide-y divide-neutral-100 px-1 py-1 text-sm">
                 {PROJECT_HEALTHS.map((health) => (
-                  <li key={health} className="flex items-center justify-between gap-3">
-                    <span
-                      className={`rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${healthTone(
-                        health
-                      )}`}
-                    >
-                      {projectHealthLabel(health)}
+                  <li key={health} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                    <span className="flex items-center gap-2 text-[13px] text-neutral-700">
+                      <InsightsHealthIcon health={health} />
+                      {health === 'no_updates' ? 'Update missing' : projectHealthLabel(health)}
                     </span>
-                    <span className="tabular-nums text-neutral-600">{healthCounts[health] ?? 0}</span>
+                    <span className="tabular-nums text-[13px] text-neutral-500">
+                      {healthCounts[health] ?? 0}
+                    </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="space-y-2 text-sm text-neutral-600">
+              <div className="space-y-2 px-4 py-3 text-sm text-neutral-600">
                 <p>
                   <span className="font-medium text-neutral-900">{noLeadCount}</span> project
                   {noLeadCount === 1 ? '' : 's'} with no dedicated lead field yet.
@@ -866,5 +805,46 @@ export function ProjectManager({
         ) : null}
       </div>
     </div>
+  )
+}
+
+function InsightsHealthIcon({ health }: { health: string }) {
+  if (health === 'on_track') {
+    return (
+      <span className="flex h-5 w-5 items-center justify-center text-emerald-500" aria-hidden>
+        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.6">
+          <path d="M3 10.5 6.5 7l2.5 2.5L13 5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+    )
+  }
+  if (health === 'at_risk') {
+    return (
+      <span className="flex h-5 w-5 items-center justify-center text-amber-500" aria-hidden>
+        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.6">
+          <circle cx="8" cy="8" r="5.2" />
+          <path d="M8 5.2v3.4" strokeLinecap="round" />
+          <circle cx="8" cy="11" r="0.7" fill="currentColor" stroke="none" />
+        </svg>
+      </span>
+    )
+  }
+  if (health === 'off_track') {
+    return (
+      <span className="flex h-5 w-5 items-center justify-center text-red-500" aria-hidden>
+        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.6">
+          <circle cx="8" cy="8" r="5.2" />
+          <path d="M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4" strokeLinecap="round" />
+        </svg>
+      </span>
+    )
+  }
+  return (
+    <span className="flex h-5 w-5 items-center justify-center text-amber-400" aria-hidden>
+      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <circle cx="8" cy="8" r="5.2" strokeDasharray="2.2 2" />
+        <path d="M8 5v3.2l2 1.2" strokeLinecap="round" />
+      </svg>
+    </span>
   )
 }
