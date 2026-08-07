@@ -17,8 +17,11 @@ import {
   updateLocalCampaign
 } from '@/lib/campaign-local-store'
 import {
+  CAMPAIGN_STATUSES,
   campaignStatusLabel,
   formatCampaignDate,
+  normalizeCampaignStatus,
+  type CampaignStatus,
   type CompassCampaign
 } from '@/lib/campaigns'
 import {
@@ -48,6 +51,8 @@ type DragState = {
   start: string
   end: string
 }
+
+type ViewMode = 'list' | 'board' | 'timeline'
 
 type DisplayProps = {
   showStatus: boolean
@@ -80,6 +85,7 @@ export function CampaignPlanner() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [displayOpen, setDisplayOpen] = useState(false)
   const [menuId, setMenuId] = useState<string | null>(null)
+  const [view, setView] = useState<ViewMode>('timeline')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [query, setQuery] = useState('')
@@ -145,10 +151,10 @@ export function CampaignPlanner() {
   )
 
   useEffect(() => {
-    if (!ready || didCenterToday.current) return
+    if (!ready || view !== 'timeline' || didCenterToday.current) return
     scrollToToday('auto')
     didCenterToday.current = true
-  }, [ready, scrollToToday])
+  }, [ready, view, scrollToToday])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -170,7 +176,7 @@ export function CampaignPlanner() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  function createCampaign() {
+  function createCampaign(nextStatus?: CampaignStatus) {
     const today = toDateOnly(range.today)
     const end = toDateOnly(
       new Date(range.today.getFullYear(), range.today.getMonth() + 1, range.today.getDate())
@@ -180,9 +186,23 @@ export function CampaignPlanner() {
       start_date: today,
       end_date: end
     })
+    if (nextStatus && nextStatus !== campaign.status) {
+      updateLocalCampaign(campaign.id, { status: nextStatus })
+    }
     refresh()
     setSelectedId(campaign.id)
     setSidecarOpen(true)
+  }
+
+  function openCampaign(id: string) {
+    setSelectedId(id)
+    setSidecarOpen(true)
+    setMenuId(null)
+  }
+
+  function moveCampaignStatus(id: string, status: CampaignStatus) {
+    updateLocalCampaign(id, { status })
+    refresh()
   }
 
   function persistDates(id: string, start: string, end: string) {
@@ -300,36 +320,40 @@ export function CampaignPlanner() {
             <PanelIcon />
           </ToolbarIconButton>
 
+          {view === 'timeline' ? (
+            <>
+              <button
+                type="button"
+                onClick={() => scrollToToday('smooth')}
+                className="ml-1 h-7 rounded-md border border-neutral-200 bg-white px-2.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                Today
+              </button>
+              <label className="relative">
+                <select
+                  value={zoom}
+                  onChange={(e) => {
+                    didCenterToday.current = false
+                    setZoom(e.target.value as TimelineZoom)
+                  }}
+                  className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
+                >
+                  {ZOOM_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400">
+                  ▾
+                </span>
+              </label>
+            </>
+          ) : null}
           <button
             type="button"
-            onClick={() => scrollToToday('smooth')}
-            className="ml-1 h-7 rounded-md border border-neutral-200 bg-white px-2.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
-          >
-            Today
-          </button>
-          <label className="relative">
-            <select
-              value={zoom}
-              onChange={(e) => {
-                didCenterToday.current = false
-                setZoom(e.target.value as TimelineZoom)
-              }}
-              className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
-            >
-              {ZOOM_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400">
-              ▾
-            </span>
-          </label>
-          <button
-            type="button"
-            onClick={createCampaign}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-neutral-600 hover:bg-neutral-100"
+            onClick={() => createCampaign()}
+            className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-neutral-600 hover:bg-neutral-100"
             aria-label="New campaign"
             title="New campaign"
           >
@@ -399,48 +423,288 @@ export function CampaignPlanner() {
               Display
             </div>
             <div className="mb-3 flex rounded-lg border border-neutral-200 p-0.5 text-xs">
-              {(['List', 'Board', 'Timeline'] as const).map((mode) => (
-                <span
+              {(
+                [
+                  ['list', 'List'],
+                  ['board', 'Board'],
+                  ['timeline', 'Timeline']
+                ] as const
+              ).map(([mode, label]) => (
+                <button
                   key={mode}
+                  type="button"
+                  onClick={() => {
+                    setView(mode)
+                    if (mode === 'timeline') didCenterToday.current = false
+                  }}
                   className={`flex-1 rounded-md px-2 py-1.5 text-center font-medium ${
-                    mode === 'Timeline' ? 'bg-neutral-900 text-white' : 'text-neutral-400'
+                    view === mode
+                      ? 'bg-neutral-900 text-white'
+                      : 'text-neutral-500 hover:text-neutral-800'
                   }`}
                 >
-                  {mode}
-                </span>
+                  {label}
+                </button>
               ))}
             </div>
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-              Timeline options
-            </div>
-            {(
-              [
-                ['showList', 'Show campaign list'],
-                ['showWeekNumbers', 'Show week numbers'],
-                ['showStatus', 'Status'],
-                ['showPriority', 'Priority'],
-                ['showHealth', 'Health'],
-                ['showLead', 'Lead']
-              ] as const
-            ).map(([key, label]) => (
-              <label
-                key={key}
-                className="flex cursor-pointer items-center justify-between gap-3 py-1.5 text-sm text-neutral-700"
-              >
-                <span>{label}</span>
-                <input
-                  type="checkbox"
-                  checked={display[key]}
-                  onChange={(e) => setDisplay((prev) => ({ ...prev, [key]: e.target.checked }))}
-                />
-              </label>
-            ))}
+            {view === 'timeline' ? (
+              <>
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+                  Timeline options
+                </div>
+                {(
+                  [
+                    ['showList', 'Show campaign list'],
+                    ['showWeekNumbers', 'Show week numbers'],
+                    ['showStatus', 'Status'],
+                    ['showPriority', 'Priority'],
+                    ['showHealth', 'Health'],
+                    ['showLead', 'Lead']
+                  ] as const
+                ).map(([key, label]) => (
+                  <label
+                    key={key}
+                    className="flex cursor-pointer items-center justify-between gap-3 py-1.5 text-sm text-neutral-700"
+                  >
+                    <span>{label}</span>
+                    <input
+                      type="checkbox"
+                      checked={display[key]}
+                      onChange={(e) => setDisplay((prev) => ({ ...prev, [key]: e.target.checked }))}
+                    />
+                  </label>
+                ))}
+              </>
+            ) : (
+              <p className="text-xs leading-relaxed text-neutral-500">
+                {view === 'list'
+                  ? 'List shows every campaign in a sortable table. Open a row to edit details.'
+                  : 'Board groups campaigns by status. Use the card menu to move between columns.'}
+              </p>
+            )}
           </Popover>
         ) : null}
       </header>
 
       <div className="flex min-h-0 flex-1">
         <div className="relative flex min-w-0 flex-1 flex-col">
+          {view === 'list' ? (
+            <div className="min-h-0 flex-1 overflow-auto p-4">
+              <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+                <div className="hidden gap-3 border-b border-neutral-200 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-neutral-400 lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.6fr)]">
+                  <div>Name</div>
+                  <div>Status</div>
+                  <div>Priority</div>
+                  <div>Health</div>
+                  <div>Start</div>
+                  <div>End</div>
+                  <div>Lead</div>
+                </div>
+                {ready && ordered.length === 0 ? (
+                  <div className="px-4 py-12 text-center">
+                    <p className="text-sm font-medium text-neutral-800">No campaigns yet</p>
+                    <p className="mt-1 text-xs text-neutral-500">Create a campaign to start planning.</p>
+                    <button
+                      type="button"
+                      onClick={() => createCampaign()}
+                      className="mt-3 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
+                    >
+                      New campaign
+                    </button>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-neutral-100">
+                    {ordered.map((campaign) => (
+                      <li key={campaign.id}>
+                        <button
+                          type="button"
+                          onClick={() => openCampaign(campaign.id)}
+                          className={`grid w-full gap-3 px-4 py-3 text-left transition hover:bg-neutral-50 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.6fr)] lg:items-center ${
+                            selectedId === campaign.id ? 'bg-neutral-50' : ''
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span
+                              className="h-3.5 w-3.5 shrink-0 rounded-full"
+                              style={{ background: campaign.color || '#94a3b8' }}
+                            />
+                            <span className="truncate text-sm font-medium text-neutral-900">
+                              {campaign.name}
+                            </span>
+                          </div>
+                          <div className="text-sm text-neutral-600">
+                            {campaignStatusLabel(campaign.status)}
+                          </div>
+                          <div className="text-sm text-neutral-600">
+                            {priorityLabel(campaign.priority)}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-sm text-neutral-600">
+                            <HealthGlyph health={campaign.health} />
+                            {healthLabel(campaign.health)}
+                          </div>
+                          <div className="text-sm text-neutral-600">
+                            {formatCampaignDate(campaign.start_date)}
+                          </div>
+                          <div className="text-sm text-neutral-600">
+                            {formatCampaignDate(campaign.end_date)}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-sm text-neutral-600">
+                            <LeadGlyph label={campaign.owner_label} />
+                            <span className="truncate">{campaign.owner_label || '—'}</span>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          {view === 'board' ? (
+            <div className="min-h-0 flex-1 overflow-auto p-4">
+              <div className="flex min-w-max gap-3 pb-2">
+                {CAMPAIGN_STATUSES.map((column) => {
+                  const items = ordered.filter(
+                    (campaign) => normalizeCampaignStatus(campaign.status) === column
+                  )
+                  return (
+                    <section
+                      key={column}
+                      className="flex w-[260px] shrink-0 flex-col rounded-xl bg-[#f4f5f7]/80"
+                    >
+                      <header className="flex items-center gap-1.5 px-2.5 pb-1.5 pt-2.5">
+                        <StatusGlyph status={column} />
+                        <h3 className="text-[13px] font-medium text-neutral-700">
+                          {campaignStatusLabel(column)}
+                        </h3>
+                        <span className="text-[12px] tabular-nums text-neutral-400">{items.length}</span>
+                        <button
+                          type="button"
+                          onClick={() => createCampaign(column)}
+                          className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-neutral-400 hover:bg-white hover:text-neutral-700"
+                          aria-label={`New campaign in ${campaignStatusLabel(column)}`}
+                          title="New campaign"
+                        >
+                          +
+                        </button>
+                      </header>
+                      <ul className="flex flex-1 flex-col gap-1.5 px-2 pb-2">
+                        {items.length === 0 ? (
+                          <li className="rounded-lg border border-dashed border-neutral-200/80 px-3 py-6 text-center text-[12px] text-neutral-400">
+                            No campaigns
+                          </li>
+                        ) : (
+                          items.map((campaign) => {
+                            const menuOpen = menuId === campaign.id
+                            return (
+                              <li
+                                key={campaign.id}
+                                className={`group relative rounded-[8px] border bg-white p-2.5 shadow-[0_1px_1px_rgba(16,24,40,0.04)] transition hover:border-neutral-300 ${
+                                  selectedId === campaign.id
+                                    ? 'border-[#5e6ad2]'
+                                    : 'border-neutral-200/90'
+                                }`}
+                              >
+                                <div className="mb-1.5 flex items-center gap-1.5">
+                                  <span
+                                    className="h-3.5 w-3.5 rounded-full"
+                                    style={{ background: campaign.color || '#94a3b8' }}
+                                  />
+                                  <div className="ml-auto flex items-center gap-1">
+                                    <HealthGlyph health={campaign.health} />
+                                    <LeadGlyph label={campaign.owner_label} />
+                                    <button
+                                      type="button"
+                                      className={`flex h-5 w-5 items-center justify-center rounded text-[11px] text-neutral-400 opacity-0 transition hover:bg-neutral-100 hover:text-neutral-700 group-hover:opacity-100 ${
+                                        menuOpen ? 'opacity-100' : ''
+                                      }`}
+                                      aria-label="Campaign actions"
+                                      onClick={() =>
+                                        setMenuId((id) => (id === campaign.id ? null : campaign.id))
+                                      }
+                                    >
+                                      ···
+                                    </button>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => openCampaign(campaign.id)}
+                                  className="block w-full text-left text-[13px] font-medium leading-snug text-neutral-900 hover:text-neutral-700"
+                                >
+                                  {campaign.name}
+                                </button>
+                                {campaign.summary ? (
+                                  <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-500">
+                                    {campaign.summary}
+                                  </p>
+                                ) : null}
+                                <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-neutral-500">
+                                  {campaign.start_date || campaign.end_date ? (
+                                    <span>
+                                      {formatCampaignDate(campaign.start_date)} →{' '}
+                                      {formatCampaignDate(campaign.end_date)}
+                                    </span>
+                                  ) : null}
+                                  <span>{priorityLabel(campaign.priority)}</span>
+                                </div>
+                                {menuOpen ? (
+                                  <div className="absolute right-2 top-8 z-30 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 text-[13px] shadow-lg">
+                                    <button
+                                      type="button"
+                                      className="block w-full px-3 py-1.5 text-left text-neutral-700 hover:bg-neutral-50"
+                                      onClick={() => openCampaign(campaign.id)}
+                                    >
+                                      Open campaign
+                                    </button>
+                                    <div className="my-1 border-t border-neutral-100" />
+                                    <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+                                      Move to
+                                    </div>
+                                    {CAMPAIGN_STATUSES.map((value) => (
+                                      <button
+                                        key={value}
+                                        type="button"
+                                        disabled={normalizeCampaignStatus(campaign.status) === value}
+                                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
+                                        onClick={() => {
+                                          setMenuId(null)
+                                          moveCampaignStatus(campaign.id, value)
+                                        }}
+                                      >
+                                        <StatusGlyph status={value} />
+                                        {campaignStatusLabel(value)}
+                                      </button>
+                                    ))}
+                                    <div className="my-1 border-t border-neutral-100" />
+                                    <button
+                                      type="button"
+                                      className="block w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-50"
+                                      onClick={() => {
+                                        deleteLocalCampaign(campaign.id)
+                                        if (selectedId === campaign.id) setSelectedId(null)
+                                        refresh()
+                                        setMenuId(null)
+                                      }}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                ) : null}
+                              </li>
+                            )
+                          })
+                        )}
+                      </ul>
+                    </section>
+                  )
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {view === 'timeline' ? (
           <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
             <div
               className="relative"
@@ -756,7 +1020,7 @@ export function CampaignPlanner() {
                       </p>
                       <button
                         type="button"
-                        onClick={createCampaign}
+                        onClick={() => createCampaign()}
                         className="mt-3 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
                       >
                         New campaign
@@ -767,6 +1031,7 @@ export function CampaignPlanner() {
               </div>
             </div>
           </div>
+          ) : null}
         </div>
 
         {selected ? (
@@ -856,6 +1121,34 @@ function MenuItem({
       {children}
     </button>
   )
+}
+
+function healthLabel(health: string): string {
+  switch (health) {
+    case 'on_track':
+      return 'On track'
+    case 'at_risk':
+      return 'At risk'
+    case 'off_track':
+      return 'Off track'
+    default:
+      return 'No updates'
+  }
+}
+
+function priorityLabel(priority: number): string {
+  switch (priority) {
+    case 1:
+      return 'Urgent'
+    case 2:
+      return 'High'
+    case 3:
+      return 'Medium'
+    case 4:
+      return 'Low'
+    default:
+      return 'No priority'
+  }
 }
 
 function StatusGlyph({ status }: { status: string }) {

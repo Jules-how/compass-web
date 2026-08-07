@@ -61,6 +61,13 @@ test('campaign planner files and migration are wired', () => {
   assert.match(planner, /buildHeaderModel/)
   assert.match(planner, /StatusGlyph/)
   assert.match(planner, /onContextMenu/)
+  assert.match(planner, /type ViewMode = 'list' \| 'board' \| 'timeline'/)
+  assert.match(planner, /setView\(mode\)/)
+  assert.match(planner, /view === 'list'/)
+  assert.match(planner, /view === 'board'/)
+  assert.match(planner, /view === 'timeline'/)
+  assert.match(planner, /CAMPAIGN_STATUSES\.map/)
+  assert.match(planner, /moveCampaignStatus/)
 
   const timeline = read('src/lib/campaign-timeline.ts')
   assert.match(timeline, /buildHeaderModel/)
