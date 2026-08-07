@@ -1,5 +1,11 @@
 'use client'
 
+/**
+ * Compass card primitive — LOCKED visual language.
+ * Keep rounded-2xl, soft borders, shadow-soft, and airy padding (p-5).
+ * Do not flatten elevation or tighten radii/spacing unless explicitly asked.
+ * See .cursor/rules/compass-ui-lock.mdc
+ */
 import * as React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'

@@ -1,5 +1,13 @@
 'use client'
 
+/**
+ * Compass sidebar (sidecar) — LOCKED UI + animations.
+ * Desktop: hover expand 72 ↔ 248px (0.22s, ease [0.22, 1, 0.36, 1]).
+ * Links: label/badge fade (~0.15s); active = white pill + shadow-soft + orange rail.
+ * Mobile: full-screen slide-in (~0.28s easeInOut).
+ * Do not rewrite motion, widths, or active chrome unless explicitly asked.
+ * See .cursor/rules/compass-ui-lock.mdc
+ */
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import React, { createContext, useContext, useState } from 'react'
