@@ -77,9 +77,10 @@ test('operator shell is sidebar-first with Compass brand and sectioned surfaces'
   assert.match(shell, /compass/)
   assert.match(sidebar, /compass-sidebar/)
   assert.match(shell, /orientation="vertical"/)
-  for (const href of ['/home', '/inbox', '/tasks', '/projects', '/functions', '/sales/pipeline']) {
+  for (const href of ['/home', '/inbox', '/tasks', '/projects', '/functions', '/sales/pipeline', '/leads']) {
     assert.match(nav, new RegExp(`href: '${href}'`))
   }
   assert.match(nav, /My Tasks/)
+  assert.match(nav, /label: 'CRM'/)
   assert.doesNotMatch(nav, /href: '\/delivery'/)
 })

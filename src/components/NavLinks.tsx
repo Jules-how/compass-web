@@ -4,6 +4,7 @@ import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
 import type { ComponentType, SVGProps } from 'react'
 import {
   ClientsIcon,
+  CrmIcon,
   FinancesIcon,
   FunctionsIcon,
   HomeIcon,
@@ -83,6 +84,13 @@ const OPERATOR_SECTIONS: NavSection[] = [
         key: 'pipeline',
         icon: PipelineIcon,
         api: '/api/campaigns'
+      },
+      {
+        href: '/leads',
+        label: 'CRM',
+        key: 'leads',
+        icon: CrmIcon,
+        api: '/api/leads/list'
       }
     ]
   },
