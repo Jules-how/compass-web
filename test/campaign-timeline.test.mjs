@@ -65,6 +65,13 @@ test('campaign planner files and migration are wired', () => {
   assert.match(planner, /GlyphButton/)
   assert.match(planner, /Open campaign page/)
   assert.match(planner, /sales\/pipeline\/\$\{/)
+  assert.match(planner, /type ViewMode = 'list' \| 'board' \| 'timeline'/)
+  assert.match(planner, /setView\(mode\)/)
+  assert.match(planner, /view === 'list'/)
+  assert.match(planner, /view === 'board'/)
+  assert.match(planner, /view === 'timeline'/)
+  assert.match(planner, /CAMPAIGN_STATUSES\.map/)
+  assert.match(planner, /moveCampaignStatus/)
 
   const detailPage = read('src/app/(console)/sales/pipeline/[id]/page.tsx')
   assert.match(detailPage, /CampaignDetail/)

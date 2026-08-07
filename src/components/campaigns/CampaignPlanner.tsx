@@ -24,6 +24,8 @@ import {
   campaignPriorityLabel,
   campaignStatusLabel,
   formatCampaignDate,
+  normalizeCampaignStatus,
+  type CampaignStatus,
   type CompassCampaign
 } from '@/lib/campaigns'
 import {
@@ -53,6 +55,8 @@ type DragState = {
   start: string
   end: string
 }
+
+type ViewMode = 'list' | 'board' | 'timeline'
 
 type DisplayProps = {
   showStatus: boolean
@@ -96,6 +100,7 @@ export function CampaignPlanner() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [displayOpen, setDisplayOpen] = useState(false)
   const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null)
+  const [view, setView] = useState<ViewMode>('timeline')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [query, setQuery] = useState('')
@@ -161,10 +166,10 @@ export function CampaignPlanner() {
   )
 
   useEffect(() => {
-    if (!ready || didCenterToday.current) return
+    if (!ready || view !== 'timeline' || didCenterToday.current) return
     scrollToToday('auto')
     didCenterToday.current = true
-  }, [ready, scrollToToday])
+  }, [ready, view, scrollToToday])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -194,7 +199,7 @@ export function CampaignPlanner() {
     }
     el.addEventListener('scroll', closeMenus, { passive: true })
     return () => el.removeEventListener('scroll', closeMenus)
-  }, [ready])
+  }, [ready, view])
 
   function openRowMenu(campaignId: string, kind: RowMenuKind, anchor: HTMLElement) {
     const rect = anchor.getBoundingClientRect()
@@ -217,7 +222,7 @@ export function CampaignPlanner() {
     router.push(`/sales/pipeline/${id}`)
   }
 
-  function createCampaign() {
+  function createCampaign(nextStatus?: CampaignStatus) {
     const today = toDateOnly(range.today)
     const end = toDateOnly(
       new Date(range.today.getFullYear(), range.today.getMonth() + 1, range.today.getDate())
@@ -227,9 +232,23 @@ export function CampaignPlanner() {
       start_date: today,
       end_date: end
     })
+    if (nextStatus && nextStatus !== campaign.status) {
+      updateLocalCampaign(campaign.id, { status: nextStatus })
+    }
     refresh()
     setSelectedId(campaign.id)
     setSidecarOpen(true)
+  }
+
+  function openCampaign(id: string) {
+    setSelectedId(id)
+    setSidecarOpen(true)
+    setRowMenu(null)
+  }
+
+  function moveCampaignStatus(id: string, status: CampaignStatus) {
+    updateLocalCampaign(id, { status })
+    refresh()
   }
 
   function persistDates(id: string, start: string, end: string) {
@@ -351,36 +370,40 @@ export function CampaignPlanner() {
             <PanelIcon />
           </ToolbarIconButton>
 
+          {view === 'timeline' ? (
+            <>
+              <button
+                type="button"
+                onClick={() => scrollToToday('smooth')}
+                className="ml-1 h-7 rounded-md border border-neutral-200 bg-white px-2.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                Today
+              </button>
+              <label className="relative">
+                <select
+                  value={zoom}
+                  onChange={(e) => {
+                    didCenterToday.current = false
+                    setZoom(e.target.value as TimelineZoom)
+                  }}
+                  className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
+                >
+                  {ZOOM_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400">
+                  ▾
+                </span>
+              </label>
+            </>
+          ) : null}
           <button
             type="button"
-            onClick={() => scrollToToday('smooth')}
-            className="ml-1 h-7 rounded-md border border-neutral-200 bg-white px-2.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
-          >
-            Today
-          </button>
-          <label className="relative">
-            <select
-              value={zoom}
-              onChange={(e) => {
-                didCenterToday.current = false
-                setZoom(e.target.value as TimelineZoom)
-              }}
-              className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
-            >
-              {ZOOM_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400">
-              ▾
-            </span>
-          </label>
-          <button
-            type="button"
-            onClick={createCampaign}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-neutral-600 hover:bg-neutral-100"
+            onClick={() => createCampaign()}
+            className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-neutral-600 hover:bg-neutral-100"
             aria-label="New campaign"
             title="New campaign"
           >
@@ -450,360 +473,571 @@ export function CampaignPlanner() {
               Display
             </div>
             <div className="mb-3 flex rounded-lg border border-neutral-200 p-0.5 text-xs">
-              {(['List', 'Board', 'Timeline'] as const).map((mode) => (
-                <span
+              {(
+                [
+                  ['list', 'List'],
+                  ['board', 'Board'],
+                  ['timeline', 'Timeline']
+                ] as const
+              ).map(([mode, label]) => (
+                <button
                   key={mode}
+                  type="button"
+                  onClick={() => {
+                    setView(mode)
+                    setRowMenu(null)
+                    if (mode === 'timeline') didCenterToday.current = false
+                  }}
                   className={`flex-1 rounded-md px-2 py-1.5 text-center font-medium ${
-                    mode === 'Timeline' ? 'bg-neutral-900 text-white' : 'text-neutral-400'
+                    view === mode
+                      ? 'bg-neutral-900 text-white'
+                      : 'text-neutral-500 hover:text-neutral-800'
                   }`}
                 >
-                  {mode}
-                </span>
+                  {label}
+                </button>
               ))}
             </div>
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-              Timeline options
-            </div>
-            {(
-              [
-                ['showList', 'Show campaign list'],
-                ['showWeekNumbers', 'Show week numbers'],
-                ['showStatus', 'Status'],
-                ['showPriority', 'Priority'],
-                ['showHealth', 'Health'],
-                ['showLead', 'Lead']
-              ] as const
-            ).map(([key, label]) => (
-              <label
-                key={key}
-                className="flex cursor-pointer items-center justify-between gap-3 py-1.5 text-sm text-neutral-700"
-              >
-                <span>{label}</span>
-                <input
-                  type="checkbox"
-                  checked={display[key]}
-                  onChange={(e) => setDisplay((prev) => ({ ...prev, [key]: e.target.checked }))}
-                />
-              </label>
-            ))}
+            {view === 'timeline' ? (
+              <>
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+                  Timeline options
+                </div>
+                {(
+                  [
+                    ['showList', 'Show campaign list'],
+                    ['showWeekNumbers', 'Show week numbers'],
+                    ['showStatus', 'Status'],
+                    ['showPriority', 'Priority'],
+                    ['showHealth', 'Health'],
+                    ['showLead', 'Lead']
+                  ] as const
+                ).map(([key, label]) => (
+                  <label
+                    key={key}
+                    className="flex cursor-pointer items-center justify-between gap-3 py-1.5 text-sm text-neutral-700"
+                  >
+                    <span>{label}</span>
+                    <input
+                      type="checkbox"
+                      checked={display[key]}
+                      onChange={(e) => setDisplay((prev) => ({ ...prev, [key]: e.target.checked }))}
+                    />
+                  </label>
+                ))}
+              </>
+            ) : (
+              <p className="text-xs leading-relaxed text-neutral-500">
+                {view === 'list'
+                  ? 'List shows every campaign in a sortable table. Open a row to edit details.'
+                  : 'Board groups campaigns by status. Use the card menu to move between columns.'}
+              </p>
+            )}
           </Popover>
         ) : null}
       </header>
 
       <div className="flex min-h-0 flex-1">
         <div className="relative flex min-w-0 flex-1 flex-col">
-          <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
-            <div
-              className="relative"
-              style={{ minWidth: listWidth + range.widthPx, minHeight: '100%' }}
-              onMouseMove={onTimelineMouseMove}
-              onMouseLeave={() => {
-                setHoverDate(null)
-                setHoverX(null)
-              }}
-            >
+          {view === 'list' ? (
+            <div className="min-h-0 flex-1 overflow-auto p-4">
+              <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+                <div className="hidden gap-3 border-b border-neutral-200 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-neutral-400 lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.6fr)]">
+                  <div>Name</div>
+                  <div>Status</div>
+                  <div>Priority</div>
+                  <div>Health</div>
+                  <div>Start</div>
+                  <div>End</div>
+                  <div>Lead</div>
+                </div>
+                {ready && ordered.length === 0 ? (
+                  <div className="px-4 py-12 text-center">
+                    <p className="text-sm font-medium text-neutral-800">No campaigns yet</p>
+                    <p className="mt-1 text-xs text-neutral-500">Create a campaign to start planning.</p>
+                    <button
+                      type="button"
+                      onClick={() => createCampaign()}
+                      className="mt-3 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
+                    >
+                      New campaign
+                    </button>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-neutral-100">
+                    {ordered.map((campaign) => (
+                      <li key={campaign.id}>
+                        <button
+                          type="button"
+                          onClick={() => openCampaign(campaign.id)}
+                          onDoubleClick={() => openCampaignPage(campaign.id)}
+                          title={`${campaign.name} — double-click to open page`}
+                          className={`grid w-full gap-3 px-4 py-3 text-left transition hover:bg-neutral-50 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.6fr)] lg:items-center ${
+                            selectedId === campaign.id ? 'bg-neutral-50' : ''
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span
+                              className="h-3.5 w-3.5 shrink-0 rounded-full"
+                              style={{ background: campaign.color || '#94a3b8' }}
+                            />
+                            <span className="truncate text-sm font-medium text-neutral-900 hover:underline hover:decoration-neutral-300">
+                              {campaign.name}
+                            </span>
+                          </div>
+                          <div className="text-sm text-neutral-600">
+                            {campaignStatusLabel(campaign.status)}
+                          </div>
+                          <div className="text-sm text-neutral-600">
+                            {campaignPriorityLabel(campaign.priority)}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-sm text-neutral-600">
+                            <HealthGlyph health={campaign.health} />
+                            {campaignHealthLabel(campaign.health)}
+                          </div>
+                          <div className="text-sm text-neutral-600">
+                            {formatCampaignDate(campaign.start_date)}
+                          </div>
+                          <div className="text-sm text-neutral-600">
+                            {formatCampaignDate(campaign.end_date)}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-sm text-neutral-600">
+                            <LeadGlyph label={campaign.owner_label} />
+                            <span className="truncate">{campaign.owner_label || '—'}</span>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          {view === 'board' ? (
+            <div className="min-h-0 flex-1 overflow-auto p-4">
+              <div className="flex min-w-max gap-3 pb-2">
+                {CAMPAIGN_STATUSES.map((column) => {
+                  const items = ordered.filter(
+                    (campaign) => normalizeCampaignStatus(campaign.status) === column
+                  )
+                  return (
+                    <section
+                      key={column}
+                      className="flex w-[260px] shrink-0 flex-col rounded-xl bg-[#f4f5f7]/80"
+                    >
+                      <header className="flex items-center gap-1.5 px-2.5 pb-1.5 pt-2.5">
+                        <StatusGlyph status={column} />
+                        <h3 className="text-[13px] font-medium text-neutral-700">
+                          {campaignStatusLabel(column)}
+                        </h3>
+                        <span className="text-[12px] tabular-nums text-neutral-400">{items.length}</span>
+                        <button
+                          type="button"
+                          onClick={() => createCampaign(column)}
+                          className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-neutral-400 hover:bg-white hover:text-neutral-700"
+                          aria-label={`New campaign in ${campaignStatusLabel(column)}`}
+                          title="New campaign"
+                        >
+                          +
+                        </button>
+                      </header>
+                      <ul className="flex flex-1 flex-col gap-1.5 px-2 pb-2">
+                        {items.length === 0 ? (
+                          <li className="rounded-lg border border-dashed border-neutral-200/80 px-3 py-6 text-center text-[12px] text-neutral-400">
+                            No campaigns
+                          </li>
+                        ) : (
+                          items.map((campaign) => {
+                            const menuOpen =
+                              rowMenu?.campaignId === campaign.id && rowMenu.kind === 'actions'
+                            return (
+                              <li
+                                key={campaign.id}
+                                className={`group relative rounded-[8px] border bg-white p-2.5 shadow-[0_1px_1px_rgba(16,24,40,0.04)] transition hover:border-neutral-300 ${
+                                  selectedId === campaign.id
+                                    ? 'border-[#5e6ad2]'
+                                    : 'border-neutral-200/90'
+                                }`}
+                              >
+                                <div className="mb-1.5 flex items-center gap-1.5">
+                                  <span
+                                    className="h-3.5 w-3.5 rounded-full"
+                                    style={{ background: campaign.color || '#94a3b8' }}
+                                  />
+                                  <div className="ml-auto flex items-center gap-1">
+                                    <HealthGlyph health={campaign.health} />
+                                    <LeadGlyph label={campaign.owner_label} />
+                                    <button
+                                      type="button"
+                                      className={`flex h-5 w-5 items-center justify-center rounded text-[11px] text-neutral-400 opacity-0 transition hover:bg-neutral-100 hover:text-neutral-700 group-hover:opacity-100 ${
+                                        menuOpen ? 'opacity-100 bg-neutral-100' : ''
+                                      }`}
+                                      aria-label="Campaign actions"
+                                      onClick={(e) =>
+                                        openRowMenu(campaign.id, 'actions', e.currentTarget)
+                                      }
+                                    >
+                                      ···
+                                    </button>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => openCampaign(campaign.id)}
+                                  onDoubleClick={() => openCampaignPage(campaign.id)}
+                                  className="block w-full text-left text-[13px] font-medium leading-snug text-neutral-900 hover:text-neutral-700 hover:underline hover:decoration-neutral-300"
+                                >
+                                  {campaign.name}
+                                </button>
+                                {campaign.summary ? (
+                                  <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-500">
+                                    {campaign.summary}
+                                  </p>
+                                ) : null}
+                                <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-neutral-500">
+                                  {campaign.start_date || campaign.end_date ? (
+                                    <span>
+                                      {formatCampaignDate(campaign.start_date)} →{' '}
+                                      {formatCampaignDate(campaign.end_date)}
+                                    </span>
+                                  ) : null}
+                                  <span>{campaignPriorityLabel(campaign.priority)}</span>
+                                </div>
+                              </li>
+                            )
+                          })
+                        )}
+                      </ul>
+                    </section>
+                  )
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {view === 'timeline' ? (
+            <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
               <div
-                className="sticky top-0 z-30 flex border-b border-neutral-200/80 bg-[#f7f8f9]"
-                style={{ height: HEADER_HEIGHT }}
+                className="relative"
+                style={{ minWidth: listWidth + range.widthPx, minHeight: '100%' }}
+                onMouseMove={onTimelineMouseMove}
+                onMouseLeave={() => {
+                  setHoverDate(null)
+                  setHoverX(null)
+                }}
               >
-                {display.showList ? (
-                  <div
-                    className="sticky left-0 z-40 flex items-end border-r border-neutral-200/80 bg-[#f7f8f9] px-3 pb-2 text-[12px] font-medium text-neutral-500"
-                    style={{ width: LABEL_WIDTH }}
-                  >
-                    All campaigns
-                    <span className="ml-2 tabular-nums text-neutral-400">{ordered.length}</span>
-                  </div>
-                ) : null}
-                <div className="relative" style={{ width: range.widthPx, height: HEADER_HEIGHT }}>
-                  {header.weekends.map((band) => (
+                <div
+                  className="sticky top-0 z-30 flex border-b border-neutral-200/80 bg-[#f7f8f9]"
+                  style={{ height: HEADER_HEIGHT }}
+                >
+                  {display.showList ? (
                     <div
-                      key={band.key}
-                      className="absolute bottom-0 top-0 bg-neutral-200/40"
-                      style={{ left: band.x, width: band.width }}
-                    />
-                  ))}
-                  {header.primary.map((tick) => (
-                    <div
-                      key={tick.key}
-                      className="absolute top-0 border-l border-neutral-200/80"
-                      style={{ left: tick.x, width: Math.max(tick.width, 1), height: 24 }}
+                      className="sticky left-0 z-40 flex items-end border-r border-neutral-200/80 bg-[#f7f8f9] px-3 pb-2 text-[12px] font-medium text-neutral-500"
+                      style={{ width: LABEL_WIDTH }}
                     >
-                      <div className="truncate px-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.04em] text-neutral-500">
-                        {tick.label}
-                      </div>
+                      All campaigns
+                      <span className="ml-2 tabular-nums text-neutral-400">{ordered.length}</span>
                     </div>
-                  ))}
-                  {header.secondary.map((tick) => (
-                    <div
-                      key={tick.key}
-                      className="absolute bottom-0 border-l border-neutral-200/50"
-                      style={{ left: tick.x, width: Math.max(tick.width, 1), height: 26 }}
-                    >
-                      <div className="px-1 text-[10px] tabular-nums text-neutral-400">
-                        {tick.label}
+                  ) : null}
+                  <div className="relative" style={{ width: range.widthPx, height: HEADER_HEIGHT }}>
+                    {header.weekends.map((band) => (
+                      <div
+                        key={band.key}
+                        className="absolute bottom-0 top-0 bg-neutral-200/40"
+                        style={{ left: band.x, width: band.width }}
+                      />
+                    ))}
+                    {header.primary.map((tick) => (
+                      <div
+                        key={tick.key}
+                        className="absolute top-0 border-l border-neutral-200/80"
+                        style={{ left: tick.x, width: Math.max(tick.width, 1), height: 24 }}
+                      >
+                        <div className="truncate px-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.04em] text-neutral-500">
+                          {tick.label}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  <div
-                    className="pointer-events-none absolute bottom-0 top-0 z-10 bg-[#5e6ad2]/15"
-                    style={{ left: todayX, width: Math.max(pxPerDay(zoom), 2) }}
-                  >
-                    <div className="absolute inset-y-0 left-0 w-px bg-[#5e6ad2]" />
-                    <span className="absolute left-1/2 top-1 z-20 -translate-x-1/2 whitespace-nowrap rounded-[4px] bg-[#5e6ad2] px-1.5 py-[2px] text-[10px] font-semibold text-white">
-                      {range.today
-                        .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                        .toUpperCase()}
-                    </span>
-                  </div>
-                  {hoverDate && hoverX !== null && !drag ? (
+                    ))}
+                    {header.secondary.map((tick) => (
+                      <div
+                        key={tick.key}
+                        className="absolute bottom-0 border-l border-neutral-200/50"
+                        style={{ left: tick.x, width: Math.max(tick.width, 1), height: 26 }}
+                      >
+                        <div className="px-1 text-[10px] tabular-nums text-neutral-400">
+                          {tick.label}
+                        </div>
+                      </div>
+                    ))}
                     <div
-                      className="pointer-events-none absolute bottom-0 top-0 z-20"
-                      style={{ left: hoverX }}
+                      className="pointer-events-none absolute bottom-0 top-0 z-10 bg-[#5e6ad2]/15"
+                      style={{ left: todayX, width: Math.max(pxPerDay(zoom), 2) }}
                     >
-                      <div className="absolute inset-y-0 w-px bg-neutral-400/50" />
-                      <span className="absolute left-1/2 top-1 z-30 -translate-x-1/2 whitespace-nowrap rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-white">
-                        {formatHoverDate(hoverDate)}
+                      <div className="absolute inset-y-0 left-0 w-px bg-[#5e6ad2]" />
+                      <span className="absolute left-1/2 top-1 z-20 -translate-x-1/2 whitespace-nowrap rounded-[4px] bg-[#5e6ad2] px-1.5 py-[2px] text-[10px] font-semibold text-white">
+                        {range.today
+                          .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                          .toUpperCase()}
                       </span>
+                    </div>
+                    {hoverDate && hoverX !== null && !drag ? (
+                      <div
+                        className="pointer-events-none absolute bottom-0 top-0 z-20"
+                        style={{ left: hoverX }}
+                      >
+                        <div className="absolute inset-y-0 w-px bg-neutral-400/50" />
+                        <span className="absolute left-1/2 top-1 z-30 -translate-x-1/2 whitespace-nowrap rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-white">
+                          {formatHoverDate(hoverDate)}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div
+                  className="relative"
+                  style={{ minHeight: gridHeight }}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerCancel={onPointerUp}
+                >
+                  <div
+                    className="pointer-events-none absolute bottom-0 top-0"
+                    style={{ left: listWidth, width: range.widthPx }}
+                  >
+                    {header.weekends.map((band) => (
+                      <div
+                        key={`body-we-${band.key}`}
+                        className="absolute bottom-0 top-0 bg-neutral-200/25"
+                        style={{ left: band.x, width: band.width }}
+                      />
+                    ))}
+                    {header.primary.map((tick) => (
+                      <div
+                        key={`body-${tick.key}`}
+                        className="absolute bottom-0 top-0 border-l border-neutral-200/60"
+                        style={{ left: tick.x }}
+                      />
+                    ))}
+                    <div
+                      className="absolute bottom-0 top-0 bg-[#5e6ad2]/10"
+                      style={{ left: todayX, width: Math.max(pxPerDay(zoom), 2) }}
+                    >
+                      <div className="absolute inset-y-0 left-0 w-px bg-[#5e6ad2]/50" />
+                    </div>
+                  </div>
+
+                  {ordered.map((campaign) => {
+                    const startStr = draftDates[campaign.id]?.start ?? campaign.start_date
+                    const endStr = draftDates[campaign.id]?.end ?? campaign.end_date
+                    const start = parseDateOnly(startStr)
+                    const end = parseDateOnly(endStr)
+                    const isSelected = selectedId === campaign.id
+                    let left = 0
+                    let width = 40
+                    if (start && end) {
+                      left = dateToX(start, range, zoom)
+                      width = Math.max(28, dateToX(end, range, zoom) + pxPerDay(zoom) - left)
+                    }
+
+                    return (
+                      <div
+                        key={campaign.id}
+                        className={`group relative flex border-b border-neutral-100 ${
+                          isSelected ? 'bg-white' : 'hover:bg-white/90'
+                        }`}
+                        style={{ height: ROW_HEIGHT }}
+                        onContextMenu={(e) => {
+                          e.preventDefault()
+                          setSelectedId(campaign.id)
+                          setRowMenu({
+                            campaignId: campaign.id,
+                            kind: 'actions',
+                            x: Math.min(e.clientX, window.innerWidth - 220),
+                            y: e.clientY
+                          })
+                        }}
+                      >
+                        {display.showList ? (
+                          <div
+                            className="sticky left-0 z-20 flex items-center gap-2 overflow-visible border-r border-neutral-200/80 bg-inherit px-3"
+                            style={{ width: LABEL_WIDTH }}
+                          >
+                            <button
+                              type="button"
+                              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                              onClick={() => {
+                                setSelectedId(campaign.id)
+                                setSidecarOpen(true)
+                                setRowMenu(null)
+                              }}
+                              onDoubleClick={() => openCampaignPage(campaign.id)}
+                              title={`${campaign.name} — double-click to open page`}
+                            >
+                              <span
+                                className="h-4 w-4 shrink-0 rounded-full"
+                                style={{ background: campaign.color || '#94a3b8' }}
+                              />
+                              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-neutral-800 group-hover:underline group-hover:decoration-neutral-300">
+                                {campaign.name}
+                              </span>
+                            </button>
+
+                            <div className="flex shrink-0 items-center gap-0.5 pr-0.5 text-neutral-400">
+                              {display.showStatus ? (
+                                <GlyphButton
+                                  label={`Status: ${campaignStatusLabel(campaign.status)}`}
+                                  active={
+                                    rowMenu?.campaignId === campaign.id && rowMenu.kind === 'status'
+                                  }
+                                  onClick={(el) => openRowMenu(campaign.id, 'status', el)}
+                                >
+                                  <StatusGlyph status={campaign.status} />
+                                </GlyphButton>
+                              ) : null}
+                              {display.showPriority ? (
+                                <GlyphButton
+                                  label={`Priority: ${campaignPriorityLabel(campaign.priority)}`}
+                                  active={
+                                    rowMenu?.campaignId === campaign.id &&
+                                    rowMenu.kind === 'priority'
+                                  }
+                                  onClick={(el) => openRowMenu(campaign.id, 'priority', el)}
+                                >
+                                  <PriorityGlyph priority={campaign.priority} />
+                                </GlyphButton>
+                              ) : null}
+                              {display.showHealth ? (
+                                <GlyphButton
+                                  label={`Health: ${campaignHealthLabel(campaign.health)}`}
+                                  active={
+                                    rowMenu?.campaignId === campaign.id && rowMenu.kind === 'health'
+                                  }
+                                  onClick={(el) => openRowMenu(campaign.id, 'health', el)}
+                                >
+                                  <HealthGlyph health={campaign.health} />
+                                </GlyphButton>
+                              ) : null}
+                              {display.showLead ? (
+                                <LeadGlyph label={campaign.owner_label} />
+                              ) : null}
+                              <button
+                                type="button"
+                                className={`rounded p-0.5 opacity-0 hover:bg-neutral-100 group-hover:opacity-100 ${
+                                  pinned[campaign.id] ? 'opacity-100 text-amber-500' : ''
+                                }`}
+                                title={pinned[campaign.id] ? 'Unpin' : 'Pin'}
+                                onClick={() =>
+                                  setPinned((prev) => ({
+                                    ...prev,
+                                    [campaign.id]: !prev[campaign.id]
+                                  }))
+                                }
+                              >
+                                ★
+                              </button>
+                              <button
+                                type="button"
+                                className={`rounded p-0.5 opacity-0 hover:bg-neutral-100 group-hover:opacity-100 ${
+                                  rowMenu?.campaignId === campaign.id && rowMenu.kind === 'actions'
+                                    ? 'opacity-100 bg-neutral-100'
+                                    : ''
+                                }`}
+                                title="More actions"
+                                aria-label="More actions"
+                                onClick={(e) => openRowMenu(campaign.id, 'actions', e.currentTarget)}
+                              >
+                                ···
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div
+                          className="relative"
+                          style={{ width: range.widthPx }}
+                          onClick={() => {
+                            setSelectedId(campaign.id)
+                            setSidecarOpen(true)
+                            setRowMenu(null)
+                          }}
+                        >
+                          {start && end ? (
+                            <div
+                              className={`absolute top-1/2 flex h-7 -translate-y-1/2 items-center rounded-md border bg-white ${
+                                isSelected
+                                  ? 'border-[#5e6ad2] shadow-[0_0_0_1px_rgba(94,106,210,0.28)]'
+                                  : 'border-neutral-200 shadow-sm'
+                              }`}
+                              style={{ left, width }}
+                              title={`${formatCampaignDate(startStr)} → ${formatCampaignDate(endStr)}`}
+                              onPointerDown={(e) => onPointerDownBar(e, campaign, 'move')}
+                            >
+                              <div
+                                className="absolute inset-y-0 left-0 z-10 w-2 cursor-ew-resize"
+                                onPointerDown={(e) => onPointerDownBar(e, campaign, 'resize-start')}
+                              />
+                              <div
+                                className="h-full w-1.5 shrink-0 rounded-l-[5px]"
+                                style={{ background: campaign.color || '#94a3b8' }}
+                              />
+                              <div className="min-w-0 flex-1 cursor-grab px-2 text-[11px] font-medium text-neutral-700 active:cursor-grabbing">
+                                <span className="block truncate">{campaign.name}</span>
+                              </div>
+                              <div
+                                className="absolute inset-y-0 right-0 z-10 w-2 cursor-ew-resize"
+                                onPointerDown={(e) => onPointerDownBar(e, campaign, 'resize-end')}
+                              />
+                            </div>
+                          ) : (
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] text-neutral-400">
+                              No dates
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {Array.from({ length: Math.max(0, EMPTY_ROWS - ordered.length) }).map((_, i) => (
+                    <div
+                      key={`empty-${i}`}
+                      className="flex border-b border-neutral-100/70"
+                      style={{ height: ROW_HEIGHT }}
+                    >
+                      {display.showList ? (
+                        <div
+                          className="sticky left-0 z-20 border-r border-neutral-200/80 bg-[#f7f8f9]"
+                          style={{ width: LABEL_WIDTH }}
+                        />
+                      ) : null}
+                      <div style={{ width: range.widthPx }} />
+                    </div>
+                  ))}
+
+                  {ready && ordered.length === 0 ? (
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <div className="pointer-events-auto rounded-xl border border-neutral-200 bg-white/95 px-5 py-4 text-center shadow-sm backdrop-blur">
+                        <p className="text-sm font-medium text-neutral-800">No campaigns yet</p>
+                        <p className="mt-1 max-w-xs text-xs text-neutral-500">
+                          Create a campaign to place it on the timeline. Drag to move, pull the edges
+                          to change duration.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => createCampaign()}
+                          className="mt-3 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
+                        >
+                          New campaign
+                        </button>
+                      </div>
                     </div>
                   ) : null}
                 </div>
               </div>
-
-              <div
-                className="relative"
-                style={{ minHeight: gridHeight }}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerUp}
-              >
-                <div
-                  className="pointer-events-none absolute bottom-0 top-0"
-                  style={{ left: listWidth, width: range.widthPx }}
-                >
-                  {header.weekends.map((band) => (
-                    <div
-                      key={`body-we-${band.key}`}
-                      className="absolute bottom-0 top-0 bg-neutral-200/25"
-                      style={{ left: band.x, width: band.width }}
-                    />
-                  ))}
-                  {header.primary.map((tick) => (
-                    <div
-                      key={`body-${tick.key}`}
-                      className="absolute bottom-0 top-0 border-l border-neutral-200/60"
-                      style={{ left: tick.x }}
-                    />
-                  ))}
-                  <div
-                    className="absolute bottom-0 top-0 bg-[#5e6ad2]/10"
-                    style={{ left: todayX, width: Math.max(pxPerDay(zoom), 2) }}
-                  >
-                    <div className="absolute inset-y-0 left-0 w-px bg-[#5e6ad2]/50" />
-                  </div>
-                </div>
-
-                {ordered.map((campaign) => {
-                  const startStr = draftDates[campaign.id]?.start ?? campaign.start_date
-                  const endStr = draftDates[campaign.id]?.end ?? campaign.end_date
-                  const start = parseDateOnly(startStr)
-                  const end = parseDateOnly(endStr)
-                  const isSelected = selectedId === campaign.id
-                  let left = 0
-                  let width = 40
-                  if (start && end) {
-                    left = dateToX(start, range, zoom)
-                    width = Math.max(28, dateToX(end, range, zoom) + pxPerDay(zoom) - left)
-                  }
-
-                  return (
-                    <div
-                      key={campaign.id}
-                      className={`group relative flex border-b border-neutral-100 ${
-                        isSelected ? 'bg-white' : 'hover:bg-white/90'
-                      }`}
-                      style={{ height: ROW_HEIGHT }}
-                      onContextMenu={(e) => {
-                        e.preventDefault()
-                        setSelectedId(campaign.id)
-                        setRowMenu({
-                          campaignId: campaign.id,
-                          kind: 'actions',
-                          x: Math.min(e.clientX, window.innerWidth - 220),
-                          y: e.clientY
-                        })
-                      }}
-                    >
-                      {display.showList ? (
-                        <div
-                          className="sticky left-0 z-20 flex items-center gap-2 overflow-visible border-r border-neutral-200/80 bg-inherit px-3"
-                          style={{ width: LABEL_WIDTH }}
-                        >
-                          <button
-                            type="button"
-                            className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                            onClick={() => {
-                              setSelectedId(campaign.id)
-                              setSidecarOpen(true)
-                              setRowMenu(null)
-                            }}
-                            onDoubleClick={() => openCampaignPage(campaign.id)}
-                            title={`${campaign.name} — double-click to open page`}
-                          >
-                            <span
-                              className="h-4 w-4 shrink-0 rounded-full"
-                              style={{ background: campaign.color || '#94a3b8' }}
-                            />
-                            <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-neutral-800 group-hover:underline group-hover:decoration-neutral-300">
-                              {campaign.name}
-                            </span>
-                          </button>
-
-                          <div className="flex shrink-0 items-center gap-0.5 pr-0.5 text-neutral-400">
-                            {display.showStatus ? (
-                              <GlyphButton
-                                label={`Status: ${campaignStatusLabel(campaign.status)}`}
-                                active={rowMenu?.campaignId === campaign.id && rowMenu.kind === 'status'}
-                                onClick={(el) => openRowMenu(campaign.id, 'status', el)}
-                              >
-                                <StatusGlyph status={campaign.status} />
-                              </GlyphButton>
-                            ) : null}
-                            {display.showPriority ? (
-                              <GlyphButton
-                                label={`Priority: ${campaignPriorityLabel(campaign.priority)}`}
-                                active={
-                                  rowMenu?.campaignId === campaign.id && rowMenu.kind === 'priority'
-                                }
-                                onClick={(el) => openRowMenu(campaign.id, 'priority', el)}
-                              >
-                                <PriorityGlyph priority={campaign.priority} />
-                              </GlyphButton>
-                            ) : null}
-                            {display.showHealth ? (
-                              <GlyphButton
-                                label={`Health: ${campaignHealthLabel(campaign.health)}`}
-                                active={rowMenu?.campaignId === campaign.id && rowMenu.kind === 'health'}
-                                onClick={(el) => openRowMenu(campaign.id, 'health', el)}
-                              >
-                                <HealthGlyph health={campaign.health} />
-                              </GlyphButton>
-                            ) : null}
-                            {display.showLead ? (
-                              <LeadGlyph label={campaign.owner_label} />
-                            ) : null}
-                            <button
-                              type="button"
-                              className={`rounded p-0.5 opacity-0 hover:bg-neutral-100 group-hover:opacity-100 ${
-                                pinned[campaign.id] ? 'opacity-100 text-amber-500' : ''
-                              }`}
-                              title={pinned[campaign.id] ? 'Unpin' : 'Pin'}
-                              onClick={() =>
-                                setPinned((prev) => ({ ...prev, [campaign.id]: !prev[campaign.id] }))
-                              }
-                            >
-                              ★
-                            </button>
-                            <button
-                              type="button"
-                              className={`rounded p-0.5 opacity-0 hover:bg-neutral-100 group-hover:opacity-100 ${
-                                rowMenu?.campaignId === campaign.id && rowMenu.kind === 'actions'
-                                  ? 'opacity-100 bg-neutral-100'
-                                  : ''
-                              }`}
-                              title="More actions"
-                              aria-label="More actions"
-                              onClick={(e) => openRowMenu(campaign.id, 'actions', e.currentTarget)}
-                            >
-                              ···
-                            </button>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      <div
-                        className="relative"
-                        style={{ width: range.widthPx }}
-                        onClick={() => {
-                          setSelectedId(campaign.id)
-                          setSidecarOpen(true)
-                          setRowMenu(null)
-                        }}
-                      >
-                        {start && end ? (
-                          <div
-                            className={`absolute top-1/2 flex h-7 -translate-y-1/2 items-center rounded-md border bg-white ${
-                              isSelected
-                                ? 'border-[#5e6ad2] shadow-[0_0_0_1px_rgba(94,106,210,0.28)]'
-                                : 'border-neutral-200 shadow-sm'
-                            }`}
-                            style={{ left, width }}
-                            title={`${formatCampaignDate(startStr)} → ${formatCampaignDate(endStr)}`}
-                            onPointerDown={(e) => onPointerDownBar(e, campaign, 'move')}
-                          >
-                            <div
-                              className="absolute inset-y-0 left-0 z-10 w-2 cursor-ew-resize"
-                              onPointerDown={(e) => onPointerDownBar(e, campaign, 'resize-start')}
-                            />
-                            <div
-                              className="h-full w-1.5 shrink-0 rounded-l-[5px]"
-                              style={{ background: campaign.color || '#94a3b8' }}
-                            />
-                            <div className="min-w-0 flex-1 cursor-grab px-2 text-[11px] font-medium text-neutral-700 active:cursor-grabbing">
-                              <span className="block truncate">{campaign.name}</span>
-                            </div>
-                            <div
-                              className="absolute inset-y-0 right-0 z-10 w-2 cursor-ew-resize"
-                              onPointerDown={(e) => onPointerDownBar(e, campaign, 'resize-end')}
-                            />
-                          </div>
-                        ) : (
-                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] text-neutral-400">
-                            No dates
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-
-                {Array.from({ length: Math.max(0, EMPTY_ROWS - ordered.length) }).map((_, i) => (
-                  <div
-                    key={`empty-${i}`}
-                    className="flex border-b border-neutral-100/70"
-                    style={{ height: ROW_HEIGHT }}
-                  >
-                    {display.showList ? (
-                      <div
-                        className="sticky left-0 z-20 border-r border-neutral-200/80 bg-[#f7f8f9]"
-                        style={{ width: LABEL_WIDTH }}
-                      />
-                    ) : null}
-                    <div style={{ width: range.widthPx }} />
-                  </div>
-                ))}
-
-                {ready && ordered.length === 0 ? (
-                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <div className="pointer-events-auto rounded-xl border border-neutral-200 bg-white/95 px-5 py-4 text-center shadow-sm backdrop-blur">
-                      <p className="text-sm font-medium text-neutral-800">No campaigns yet</p>
-                      <p className="mt-1 max-w-xs text-xs text-neutral-500">
-                        Create a campaign to place it on the timeline. Drag to move, pull the edges
-                        to change duration.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={createCampaign}
-                        className="mt-3 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
-                      >
-                        New campaign
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
         {selected ? (
@@ -829,63 +1063,115 @@ export function CampaignPlanner() {
           onClose={() => setRowMenu(null)}
         >
           {rowMenu.kind === 'actions' ? (
-            <>
-              <MenuItem
-                onClick={() => {
-                  openCampaignPage(menuCampaign.id)
-                }}
-              >
-                Open campaign page
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  setSelectedId(menuCampaign.id)
-                  setSidecarOpen(true)
-                  setRowMenu(null)
-                }}
-              >
-                Open details panel
-              </MenuItem>
-              <div className="my-1 border-t border-neutral-100" />
-              <MenuItem
-                onClick={() => {
-                  updateLocalCampaign(menuCampaign.id, { status: 'active' })
-                  refresh()
-                  setRowMenu(null)
-                }}
-              >
-                Set status · Active
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  updateLocalCampaign(menuCampaign.id, { priority: 2 })
-                  refresh()
-                  setRowMenu(null)
-                }}
-              >
-                Set priority · High
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  void navigator.clipboard?.writeText(menuCampaign.name)
-                  setRowMenu(null)
-                }}
-              >
-                Copy name
-              </MenuItem>
-              <div className="my-1 border-t border-neutral-100" />
-              <MenuItem
-                danger
-                onClick={() => {
-                  deleteLocalCampaign(menuCampaign.id)
-                  if (selectedId === menuCampaign.id) setSelectedId(null)
-                  refresh()
-                  setRowMenu(null)
-                }}
-              >
-                Delete
-              </MenuItem>
-            </>
+            view === 'board' ? (
+              <>
+                <MenuItem
+                  onClick={() => {
+                    openCampaignPage(menuCampaign.id)
+                  }}
+                >
+                  Open campaign page
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    openCampaign(menuCampaign.id)
+                  }}
+                >
+                  Open details panel
+                </MenuItem>
+                <div className="my-1 border-t border-neutral-100" />
+                <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+                  Move to
+                </div>
+                {CAMPAIGN_STATUSES.map((value) => (
+                  <MenuItem
+                    key={value}
+                    onClick={() => {
+                      setRowMenu(null)
+                      moveCampaignStatus(menuCampaign.id, value)
+                    }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <StatusGlyph status={value} />
+                      {campaignStatusLabel(value)}
+                      {normalizeCampaignStatus(menuCampaign.status) === value ? (
+                        <span className="ml-auto text-neutral-400">✓</span>
+                      ) : null}
+                    </span>
+                  </MenuItem>
+                ))}
+                <div className="my-1 border-t border-neutral-100" />
+                <MenuItem
+                  danger
+                  onClick={() => {
+                    deleteLocalCampaign(menuCampaign.id)
+                    if (selectedId === menuCampaign.id) setSelectedId(null)
+                    refresh()
+                    setRowMenu(null)
+                  }}
+                >
+                  Delete
+                </MenuItem>
+              </>
+            ) : (
+              <>
+                <MenuItem
+                  onClick={() => {
+                    openCampaignPage(menuCampaign.id)
+                  }}
+                >
+                  Open campaign page
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    setSelectedId(menuCampaign.id)
+                    setSidecarOpen(true)
+                    setRowMenu(null)
+                  }}
+                >
+                  Open details panel
+                </MenuItem>
+                <div className="my-1 border-t border-neutral-100" />
+                <MenuItem
+                  onClick={() => {
+                    updateLocalCampaign(menuCampaign.id, { status: 'active' })
+                    refresh()
+                    setRowMenu(null)
+                  }}
+                >
+                  Set status · Active
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    updateLocalCampaign(menuCampaign.id, { priority: 2 })
+                    refresh()
+                    setRowMenu(null)
+                  }}
+                >
+                  Set priority · High
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(menuCampaign.name)
+                    setRowMenu(null)
+                  }}
+                >
+                  Copy name
+                </MenuItem>
+                <div className="my-1 border-t border-neutral-100" />
+                <MenuItem
+                  danger
+                  onClick={() => {
+                    deleteLocalCampaign(menuCampaign.id)
+                    if (selectedId === menuCampaign.id) setSelectedId(null)
+                    refresh()
+                    setRowMenu(null)
+                  }}
+                >
+                  Delete
+                </MenuItem>
+              </>
+            )
           ) : null}
 
           {rowMenu.kind === 'status' ? (
@@ -1127,13 +1413,13 @@ function StatusGlyph({ status }: { status: string }) {
           : status === 'cancelled'
             ? 'bg-red-400'
             : 'bg-neutral-300'
-  return <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
+  return <span className={`h-2.5 w-2.5 rounded-full ${color}`} title={campaignStatusLabel(status)} />
 }
 
 function PriorityGlyph({ priority }: { priority: number }) {
   const filled = priority === 0 ? 0 : priority === 1 ? 3 : priority === 2 ? 3 : priority === 3 ? 2 : 1
   return (
-    <span className="inline-flex h-3.5 w-3.5 items-end gap-[1px]">
+    <span className="inline-flex h-3.5 w-3.5 items-end gap-[1px]" title={campaignPriorityLabel(priority)}>
       {[1, 2, 3].map((level) => (
         <span
           key={level}
@@ -1154,7 +1440,9 @@ function HealthGlyph({ health }: { health: string }) {
         : health === 'off_track'
           ? 'border-red-500'
           : 'border-neutral-300'
-  return <span className={`h-2.5 w-2.5 rounded-full border-2 ${color}`} />
+  return (
+    <span className={`h-2.5 w-2.5 rounded-full border-2 ${color}`} title={campaignHealthLabel(health)} />
+  )
 }
 
 function LeadGlyph({ label }: { label: string | null }) {
