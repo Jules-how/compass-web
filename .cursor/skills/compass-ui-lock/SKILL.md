@@ -11,7 +11,7 @@ Before changing any operator UI chrome or sidebar motion, read `.cursor/rules/co
 
 - [ ] Using `Card` / `compass-panel` (or equivalent `rounded-2xl` + `shadow-soft` + soft border)?
 - [ ] Keeping generous gaps between sections (not densifying)?
-- [ ] Leaving `--compass-*` tokens, `shadow-soft`/`lift`, and Fraunces display titles alone?
+- [ ] Leaving `--compass-*` tokens, `shadow-soft`/`lift`, and Geist Sans typography alone?
 - [ ] Accent orange only for emphasis/CTAs/active nav?
 - [ ] Sidebar still uses hover expand 72→248, soft active pill + orange rail, and existing framer-motion timings?
 - [ ] Nav changes reuse `SidebarLink` / `SidebarLabel` rather than a new pattern?

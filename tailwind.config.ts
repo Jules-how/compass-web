@@ -5,8 +5,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-dm-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['var(--font-fraunces)', 'ui-serif', 'Georgia', 'serif']
+        sans: ['var(--font-geist-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['var(--font-geist-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif']
       },
       // LOCKED depth tokens — prefer shadow-soft on cards; do not retune unless asked.
       boxShadow: {

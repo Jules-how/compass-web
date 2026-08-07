@@ -13,7 +13,7 @@ The operator console visual language is **intentional and locked**. Preserve it 
 2. **Rounded corners** — Primary surfaces use `rounded-2xl` (cards, panels). Controls and nav rows use `rounded-xl`. Do not square off the UI or mix in sharp/minimal radii for main containers.
 3. **Separation** — Generous gaps between cards and padding inside them (card content `p-5`, airy page grids). Do not tighten into dense dashboards or collapse whitespace for “efficiency.”
 4. **Surface stack** — Warm wash background (`--compass-wash` + subtle radial gradients) → white cards (`bg-white`, light stone borders) → nested inner surfaces when needed. Keep the card-based hierarchy.
-5. **Typography** — Page titles: Fraunces via `.font-display` / `.compass-page-title`. Body/UI: DM Sans. Keep serif for display titles and sans for data/labels.
+5. **Typography** — Geist Sans for body/UI and page titles (`.font-display` / `.compass-page-title`). Do not reintroduce a serif display face or swap to Inter/DM Sans unless explicitly asked.
 6. **Accent** — Muted orange `--compass-accent` / `sf-orange` sparingly for CTAs, active states, badges, and emphasis — not as a purple/indigo redesign or dark-mode flip.
 7. **Sidebar (sidecar) UI + animations** — Keep the current nav chrome and motion from `src/components/ui/sidebar.tsx` / `OperatorShell` / `NavLinks`:
    - Desktop hover expand/collapse: **72px → 248px** with framer-motion (`duration: 0.22`, ease `[0.22, 1, 0.36, 1]`).

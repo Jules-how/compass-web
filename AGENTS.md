@@ -9,4 +9,4 @@ The operator UI depth effect, rounded corners, card separation, and **sidebar (s
 - Primitives: `src/components/ui/card.tsx`
 - Sidebar motion & chrome: `src/components/ui/sidebar.tsx` (72↔248 hover expand, active pill + orange rail, mobile slide-in)
 
-Do **not** restyle shadows, radii, spacing, wash background, display typography, accent treatment, or sidebar expand/collapse motion unless the user explicitly requests a visual change. New UI should match Sales / Home / current shell patterns.
+Do **not** restyle shadows, radii, spacing, wash background, Geist Sans typography, accent treatment, or sidebar expand/collapse motion unless the user explicitly requests a visual change. New UI should match Sales / Home / current shell patterns.
