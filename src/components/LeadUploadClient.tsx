@@ -4,8 +4,10 @@ import { useCallback, useRef, useState } from 'react'
 import Papa from 'papaparse'
 import Link from 'next/link'
 import type { LeadSourceService, LeadVertical, LeadUploadResult } from '@/lib/types'
+import { humanizeVertical } from '@/lib/leads-meta'
 
 const VERTICALS: LeadVertical[] = [
+  'mortgage-brokers',
   'hvac',
   'electrician',
   'broker',
@@ -192,7 +194,7 @@ export default function LeadUploadClient() {
             >
               {VERTICALS.map((v) => (
                 <option key={v} value={v}>
-                  {v}
+                  {humanizeVertical(v)}
                 </option>
               ))}
             </select>
