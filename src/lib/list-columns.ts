@@ -47,6 +47,6 @@ export const FUNCTION_LIST_COLUMNS = 'id,name,slug,sort_order,updated_at,created
 export const LEAD_LIST_COLUMNS =
   'id,name,email,phone,company,role,vertical,source,tags,city,state,linkedin,list_ids,import_batch_id,outbound_status,interest_label,lead_status_source,instantly_campaign,instantly_campaign_id,instantly_campaign_ids,instantly_campaign_name,instantly_lead_id,instantly_uploaded_at,instantly_synced_at,recontact_ok,suppression_reason,last_outbound_at,lead_context_status,lead_context_updated_at,created_at,updated_at,mirrored_at'
 
-export const TOP_TASK_LIMIT = 50
-export const SUBTASK_LIMIT = 200
+export const TOP_TASK_LIMIT = 100
+export const SUBTASK_LIMIT = 300
 export const LEAD_PAGE_SIZE = 50

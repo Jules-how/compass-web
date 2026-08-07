@@ -36,7 +36,10 @@ export async function GET() {
         .limit(SUBTASK_LIMIT),
       supabase.from('compass_projects').select(PROJECT_LIST_COLUMNS).order('name'),
       supabase.from('compass_business_functions').select(FUNCTION_LIST_COLUMNS).order('sort_order'),
-      supabase.from('compass_clients').select('id,name').is('archived_at', null)
+      supabase
+        .from('compass_clients')
+        .select('id,name,priority,health')
+        .is('archived_at', null)
     ])
 
     if (
@@ -49,10 +52,22 @@ export async function GET() {
       return portalJson({ error: 'fetch_failed' }, { status: 500 })
     }
 
-    const clientNameById = Object.fromEntries(
-      ((clientsRes.data ?? []) as Array<{ id: string; name: string }>).map((client) => [
+    const clients = (clientsRes.data ?? []) as Array<{
+      id: string
+      name: string
+      priority: number
+      health: string
+    }>
+    const clientNameById = Object.fromEntries(clients.map((client) => [client.id, client.name]))
+    const clientsById = Object.fromEntries(
+      clients.map((client) => [
         client.id,
-        client.name
+        {
+          id: client.id,
+          name: client.name,
+          priority: typeof client.priority === 'number' ? client.priority : 0,
+          health: client.health || 'no_updates'
+        }
       ])
     )
 
@@ -70,7 +85,8 @@ export async function GET() {
       topTasks,
       subtasks,
       projects,
-      businessFunctions: bfsRes.data ?? []
+      businessFunctions: bfsRes.data ?? [],
+      clientsById
     })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })
