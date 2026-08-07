@@ -32,8 +32,9 @@ import {
 import { formatPercentComplete } from '@/lib/project-stats'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { ClientChannelPanel } from '@/components/clients/ClientChannelPanel'
+import { ClientCommsPanel } from '@/components/clients/ClientCommsPanel'
 
-type TabKey = 'overview' | 'activity' | 'issues' | 'meta' | 'google' | 'projects'
+type TabKey = 'overview' | 'activity' | 'comms' | 'issues' | 'meta' | 'google' | 'projects'
 
 interface ClientDetailPayload {
   client: CompassClientCard
@@ -374,6 +375,7 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
   const tabs: Array<[TabKey, string]> = [
     ['overview', 'Overview'],
     ['activity', `Activity (${activity.length})`],
+    ['comms', 'Comms'],
     ['issues', `Issues (${data.issues.length})`],
     ['meta', 'Meta'],
     ['google', 'Google'],
@@ -654,6 +656,31 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
             <div className="space-y-2 border-t border-stone-100 pt-4">
               <div className="flex items-center justify-between">
                 <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                  Recent comms
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTab('comms')}
+                  className="text-xs text-sf-orange-dark"
+                >
+                  Open
+                </button>
+              </div>
+              <p className="text-xs leading-relaxed text-neutral-600">
+                {client.comms_summary?.trim() ||
+                  'Link email or SMS threads on the Comms tab to gather context automatically.'}
+              </p>
+              {client.comms_summary_at ? (
+                <p className="text-[11px] text-neutral-400">
+                  Updated {formatRelativeTouch(client.comms_summary_at)}
+                  {client.comms_summary_source ? ` · ${client.comms_summary_source}` : ''}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2 border-t border-stone-100 pt-4">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
                   Activity
                 </div>
                 <button
@@ -722,6 +749,18 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
             )}
           </div>
         </section>
+      ) : null}
+
+      {tab === 'comms' ? (
+        <ClientCommsPanel
+          clientId={clientId}
+          initialSummary={client.comms_summary}
+          initialSummaryAt={client.comms_summary_at}
+          saving={saving}
+          onBusy={setSaving}
+          onError={setError}
+          onClientRefresh={load}
+        />
       ) : null}
 
       {tab === 'issues' ? (

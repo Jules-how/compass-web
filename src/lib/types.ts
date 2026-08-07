@@ -60,6 +60,11 @@ export interface CompassProject {
 // Clients CRM (supabase/migrations/0029_compass_clients.sql).
 // ---------------------------------------------------------------------------
 
+export type CommChannel = 'email' | 'sms' | 'call' | 'other'
+export type CommDirection = 'inbound' | 'outbound'
+export type CommThreadStatus = 'active' | 'archived'
+export type CommSummarySource = 'ai' | 'heuristic' | 'manual'
+
 export interface CompassClient {
   id: string
   name: string
@@ -79,6 +84,10 @@ export interface CompassClient {
   vault_dossier_id: string | null
   portal_client_slug: string | null
   last_touch_at: string | null
+  /** Rolling summary of linked email/SMS/call threads. */
+  comms_summary: string | null
+  comms_summary_at: string | null
+  comms_summary_source: CommSummarySource | null
   created_at: string
   updated_at: string
   mirrored_at: string
@@ -154,6 +163,39 @@ export interface CompassClientChannelNote {
   channel: string
   body: string
   created_at: string
+}
+
+export interface CompassClientCommThread {
+  id: string
+  client_id: string
+  channel: CommChannel | string
+  subject: string
+  participants: string[]
+  external_id: string | null
+  status: CommThreadStatus | string
+  notes: string | null
+  summary: string | null
+  summary_at: string | null
+  last_message_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CompassClientCommMessage {
+  id: string
+  thread_id: string
+  client_id: string
+  direction: CommDirection | string
+  sender: string | null
+  body: string
+  occurred_at: string
+  external_id: string | null
+  created_at: string
+}
+
+export type CompassClientCommThreadWithMessages = CompassClientCommThread & {
+  messages: CompassClientCommMessage[]
+  message_count: number
 }
 
 export interface ProjectStats {

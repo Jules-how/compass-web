@@ -28,6 +28,7 @@ test('customer and legacy operator data routes never import a service-role clien
     .map((file) => relative(appRoot.pathname, file))
     .sort()
   assert.deepEqual(serviceRoleRoutes, [
+    'api/ingest/comms/route.ts',
     'api/ingest/leads/route.ts',
     'api/operator/invitations/route.ts'
   ])

@@ -5,7 +5,13 @@ export const PROJECT_LIST_COLUMNS =
   'id,name,business_function_id,client_id,status,priority,health,start_date,target_date,labels,summary,updated_at,created_at,mirrored_at,source,notes,external_id'
 
 export const CLIENT_LIST_COLUMNS =
-  'id,name,industry,website,main_contact_name,main_contact_role,engagement_type,retainer_status,status,priority,health,summary,tags,notes,archived_at,vault_dossier_id,portal_client_slug,last_touch_at,created_at,updated_at,mirrored_at'
+  'id,name,industry,website,main_contact_name,main_contact_role,engagement_type,retainer_status,status,priority,health,summary,tags,notes,archived_at,vault_dossier_id,portal_client_slug,last_touch_at,comms_summary,comms_summary_at,comms_summary_source,created_at,updated_at,mirrored_at'
+
+export const CLIENT_COMM_THREAD_COLUMNS =
+  'id,client_id,channel,subject,participants,external_id,status,notes,summary,summary_at,last_message_at,created_at,updated_at'
+
+export const CLIENT_COMM_MESSAGE_COLUMNS =
+  'id,thread_id,client_id,direction,sender,body,occurred_at,external_id,created_at'
 
 export const CLIENT_UPDATE_COLUMNS = 'id,client_id,health,body,created_at,mirrored_at'
 
