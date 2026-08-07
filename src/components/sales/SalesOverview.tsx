@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmailVolumeChart } from '@/components/sales/EmailVolumeChart'
+import { TargetingSuccessMap } from '@/components/sales/TargetingSuccessMap'
 import { SALES_OVERVIEW_DEMO, type SalesCampaignRef, type SalesDeal } from '@/lib/sales-demo-data'
 import { cn } from '@/lib/utils'
 
@@ -152,6 +153,8 @@ export function SalesOverview() {
       </div>
 
       <EmailVolumeChart model={model} />
+
+      <TargetingSuccessMap />
 
       <div className="grid gap-5 xl:grid-cols-2">
         <Card>
