@@ -62,6 +62,11 @@ export interface CompassProject {
 // Clients CRM (supabase/migrations/0029_compass_clients.sql).
 // ---------------------------------------------------------------------------
 
+export type CommChannel = 'email' | 'sms' | 'call' | 'other'
+export type CommDirection = 'inbound' | 'outbound'
+export type CommThreadStatus = 'active' | 'archived'
+export type CommSummarySource = 'ai' | 'heuristic' | 'manual'
+
 export interface CompassClient {
   id: string
   name: string
@@ -81,6 +86,10 @@ export interface CompassClient {
   vault_dossier_id: string | null
   portal_client_slug: string | null
   last_touch_at: string | null
+  /** Rolling summary of linked email/SMS/call threads. */
+  comms_summary: string | null
+  comms_summary_at: string | null
+  comms_summary_source: CommSummarySource | null
   created_at: string
   updated_at: string
   mirrored_at: string
@@ -156,6 +165,107 @@ export interface CompassClientChannelNote {
   channel: string
   body: string
   created_at: string
+}
+
+export interface CompassClientCommThread {
+  id: string
+  client_id: string
+  channel: CommChannel | string
+  subject: string
+  participants: string[]
+  external_id: string | null
+  status: CommThreadStatus | string
+  notes: string | null
+  summary: string | null
+  summary_at: string | null
+  last_message_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CompassClientCommMessage {
+  id: string
+  thread_id: string
+  client_id: string
+  direction: CommDirection | string
+  sender: string | null
+  body: string
+  occurred_at: string
+  external_id: string | null
+  created_at: string
+}
+
+export type CompassClientCommThreadWithMessages = CompassClientCommThread & {
+  messages: CompassClientCommMessage[]
+  message_count: number
+}
+
+// ---------------------------------------------------------------------------
+// Meta Ads Manager planning (supabase/migrations/0032_compass_meta_ads.sql).
+// ---------------------------------------------------------------------------
+
+export interface CompassMetaCampaign {
+  id: string
+  client_id: string
+  name: string
+  objective: string
+  status: string
+  buying_type: string
+  special_ad_categories: string[]
+  budget_type: string
+  daily_budget: number | null
+  lifetime_budget: number | null
+  currency: string
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CompassMetaAdSet {
+  id: string
+  client_id: string
+  campaign_id: string
+  name: string
+  status: string
+  optimization_goal: string
+  billing_event: string
+  bid_strategy: string
+  budget_type: string
+  daily_budget: number | null
+  lifetime_budget: number | null
+  currency: string
+  start_date: string | null
+  end_date: string | null
+  age_min: number
+  age_max: number
+  genders: string
+  locations: string | null
+  detailed_targeting: string | null
+  placements: string
+  placement_notes: string | null
+  destination_type: string
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CompassMetaAd {
+  id: string
+  client_id: string
+  ad_set_id: string
+  name: string
+  status: string
+  format: string
+  primary_text: string | null
+  headline: string | null
+  description: string | null
+  call_to_action: string
+  destination_url: string | null
+  display_link: string | null
+  media_notes: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface ProjectStats {

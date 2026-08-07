@@ -28,15 +28,31 @@ export function normalizeClientRow<
     health?: string | null
     industry?: string | null
     vertical?: string | null
+    comms_summary?: string | null
+    comms_summary_at?: string | null
+    comms_summary_source?: string | null
   }
->(row: T): T & { tags: string[]; priority: number; health: string; industry: string | null } {
+>(
+  row: T
+): T & {
+  tags: string[]
+  priority: number
+  health: string
+  industry: string | null
+  comms_summary: string | null
+  comms_summary_at: string | null
+  comms_summary_source: string | null
+} {
   return {
     ...row,
     tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
     priority: typeof row.priority === 'number' ? row.priority : 0,
     health: row.health || 'no_updates',
     // Legacy desktop rows store vertical instead of industry.
-    industry: row.industry?.trim() || row.vertical?.trim() || null
+    industry: row.industry?.trim() || row.vertical?.trim() || null,
+    comms_summary: row.comms_summary?.trim() || null,
+    comms_summary_at: row.comms_summary_at || null,
+    comms_summary_source: row.comms_summary_source || null
   }
 }
 

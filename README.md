@@ -49,8 +49,19 @@ Ad account connections (Home live metrics) use:
 0030_compass_ad_accounts.sql
 ```
 
+Client communications (linked email/SMS threads + auto summaries) use:
+
+```text
+0031_compass_client_comms.sql
+```
+
 Connect Meta / Google / LinkedIn under **Settings → Ad accounts**, then Sync.
 Until accounts are connected and synced, Home keeps the demo glance.
+
+On a client, open the **Comms** tab to manually link email/SMS/call threads
+(with an optional provider `external_id`). Push new messages to
+`POST /api/ingest/comms` with `x-ingest-secret` so summaries update within
+minutes of arrival. Paste messages in-app when you are not using automation.
 
 ## Environment
 
