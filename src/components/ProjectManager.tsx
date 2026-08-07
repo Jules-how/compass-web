@@ -24,6 +24,30 @@ type GroupBy = 'none' | 'status' | 'function' | 'health'
 type OrderBy = 'name' | 'priority' | 'target_date' | 'updated_at'
 type InsightsTab = 'health' | 'leads'
 
+const PROJECTS_VIEW_STORAGE_KEY = 'compass.projects.view'
+
+function isViewMode(value: string | null): value is ViewMode {
+  return value === 'list' || value === 'board' || value === 'timeline'
+}
+
+function readStoredProjectsView(): ViewMode {
+  if (typeof window === 'undefined') return 'board'
+  try {
+    const raw = window.localStorage.getItem(PROJECTS_VIEW_STORAGE_KEY)
+    return isViewMode(raw) ? raw : 'board'
+  } catch {
+    return 'board'
+  }
+}
+
+function writeStoredProjectsView(view: ViewMode) {
+  try {
+    window.localStorage.setItem(PROJECTS_VIEW_STORAGE_KEY, view)
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
 const PROJECT_ICON_COLORS = [
   '#5E6AD2',
   '#26B5CE',
@@ -271,7 +295,7 @@ export function ProjectManager({
   clients?: Array<{ id: string; name: string }>
   onRefresh?: () => void | Promise<void>
 }) {
-  const [view, setView] = useState<ViewMode>('board')
+  const [view, setView] = useState<ViewMode>(readStoredProjectsView)
   const [creating, setCreating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -377,6 +401,10 @@ export function ProjectManager({
   }, [projects])
 
   const noLeadCount = projects.length
+
+  useEffect(() => {
+    writeStoredProjectsView(view)
+  }, [view])
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {
