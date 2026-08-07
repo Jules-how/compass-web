@@ -108,7 +108,13 @@ export function CampaignPlanner() {
   const [display, setDisplay] = useState<DisplayProps>(DEFAULT_DISPLAY)
   const [pinned, setPinned] = useState<Record<string, boolean>>({})
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [scrollNode, setScrollNode] = useState<HTMLDivElement | null>(null)
   const didCenterToday = useRef(false)
+
+  const setTimelineScrollRef = useCallback((node: HTMLDivElement | null) => {
+    scrollRef.current = node
+    setScrollNode(node)
+  }, [])
 
   const refresh = useCallback(() => {
     setCampaigns(listLocalCampaigns())
@@ -177,6 +183,8 @@ export function CampaignPlanner() {
     zoom,
     range,
     labelWidth: listWidth,
+    // Re-bind when the timeline scroller mounts (view switches) or first paints.
+    enabled: view === 'timeline' && scrollNode !== null,
     onZoomChange: setZoom,
     onBeforeZoom: () => {
       // Keep the date under the cursor; skip the "center on today" path.
@@ -730,7 +738,7 @@ export function CampaignPlanner() {
           ) : null}
 
           {view === 'timeline' ? (
-            <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
+            <div ref={setTimelineScrollRef} className="min-h-0 flex-1 overflow-auto overscroll-contain">
               <div
                 className="relative flex min-h-full flex-col"
                 style={{ minWidth: listWidth + range.widthPx }}
