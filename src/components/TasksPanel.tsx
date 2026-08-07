@@ -8,12 +8,14 @@ import type {
 import TaskList from '@/components/TaskList'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { useCachedJson } from '@/lib/use-cached-json'
+import type { TaskClientMeta } from '@/lib/task-organisation'
 
 interface TasksPayload {
   topTasks: CompassTask[]
   subtasks: CompassTask[]
   projects: CompassProject[]
   businessFunctions: CompassBusinessFunction[]
+  clientsById?: Record<string, TaskClientMeta>
 }
 
 export function TasksPanel() {
@@ -39,6 +41,7 @@ export function TasksPanel() {
   }, {})
   const projectsById = Object.fromEntries(data.projects.map((p) => [p.id, p]))
   const businessFunctionsById = Object.fromEntries(data.businessFunctions.map((b) => [b.id, b]))
+  const clientsById = data.clientsById ?? {}
 
   return (
     <TaskList
@@ -46,6 +49,7 @@ export function TasksPanel() {
       subtasksByParent={subtasksByParent}
       projectsById={projectsById}
       businessFunctionsById={businessFunctionsById}
+      clientsById={clientsById}
       onRefresh={async () => {
         await reload(true)
       }}

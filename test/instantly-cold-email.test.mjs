@@ -174,8 +174,10 @@ test('Instantly cold-email route is operator-gated and Home fetches it', () => {
 
   assert.match(route, /requirePortalAccess\(\{\s*operator:\s*true\s*\}\)/)
   assert.match(route, /loadColdEmailGlanceFromInstantly/)
+  assert.match(route, /portalJsonCached\([\s\S]*60\)/)
   assert.match(home, /\/api\/instantly\/cold-email/)
   assert.match(client, /api\.instantly\.ai\/api\/v2/)
   assert.match(client, /emails\/unread\/count/)
   assert.match(client, /campaigns\/analytics\/overview/)
+  assert.match(client, /COLD_EMAIL_CACHE_TTL_MS/)
 })

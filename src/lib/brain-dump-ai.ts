@@ -21,7 +21,7 @@ const suggestionSchema = z.object({
   kind: z.enum(['task', 'project', 'priority', 'note']),
   title: z.string().min(1).max(160),
   rationale: z.string().min(1).max(220),
-  suggestedPriority: z.number().int().min(1).max(10),
+  suggestedPriority: z.number().int().min(1).max(4),
   sourceLine: z.string().min(1).max(240)
 })
 
@@ -38,7 +38,7 @@ Rules:
 - kind=note for parking-lot ideas (also put those in leftoverNotes).
 - Skip duplicates of existingTitles (case-insensitive).
 - Merge near-duplicates; rewrite titles to be short and clear.
-- suggestedPriority 1-10 (10 = do first). Urgency and leverage win.
+- suggestedPriority uses Linear-style 1-4: 1=urgent, 2=high, 3=medium, 4=low. Urgency and leverage win.
 - Keep rationale one short sentence.
 - Return at most ${MAX_SUGGESTIONS} suggestions.
 - Be decisive and lean — no fluff.`
@@ -96,12 +96,12 @@ function normalizeAiPlan(
       kind,
       title: title.length > 120 ? `${title.slice(0, 117)}…` : title,
       rationale: item.rationale.trim() || 'Suggested from your brain dump.',
-      suggestedPriority: Math.min(10, Math.max(1, Math.round(item.suggestedPriority))),
+      suggestedPriority: Math.min(4, Math.max(1, Math.round(item.suggestedPriority))),
       sourceLine: item.sourceLine.trim() || title
     })
   })
 
-  suggestions.sort((a, b) => b.suggestedPriority - a.suggestedPriority)
+  suggestions.sort((a, b) => a.suggestedPriority - b.suggestedPriority)
 
   return {
     summary: plan.summary.trim() || `Proposed ${suggestions.length} item(s).`,

@@ -14,6 +14,8 @@ import {
   type HomeAdGlance
 } from '@/lib/home-demo-data'
 import type { CompassProject, CompassTask } from '@/lib/types'
+import { compareTasksByFocus, isOpenTask, type TaskFocusContext } from '@/lib/task-organisation'
+import { taskPriorityLabel } from '@/lib/task-priority'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +24,7 @@ const BRAIN_DUMP_KEY = 'compass.home.brainDump'
 type TasksPayload = {
   topTasks: CompassTask[]
   projects: CompassProject[]
+  clientsById?: Record<string, { id: string; name: string; priority: number; health: string }>
 }
 
 type InboxPayload = {
@@ -49,19 +52,6 @@ function formatMoney(value: number) {
     currency: 'USD',
     maximumFractionDigits: 0
   }).format(value)
-}
-
-function isOpenTask(task: CompassTask) {
-  return task.status !== 'completed' && task.status !== 'cancelled'
-}
-
-function priorityRank(task: CompassTask) {
-  const urgency =
-    task.due && !Number.isNaN(Date.parse(task.due))
-      ? Math.max(0, 14 - (Date.parse(task.due) - Date.now()) / 86_400_000)
-      : 0
-  const statusBoost = task.status === 'in-progress' ? 3 : task.status === 'blocked' ? 5 : 0
-  return task.priority * 10 + statusBoost + urgency
 }
 
 function creativeStatusBadge(status: AdCreativeMetric['status']) {
@@ -205,14 +195,29 @@ export function HomeDashboard() {
 
   const openTasks = useMemo(() => {
     const list = (tasks.data?.topTasks ?? []).filter(isOpenTask)
-    return [...list].sort((a, b) => priorityRank(b) - priorityRank(a))
+    const projectsByIdLocal = Object.fromEntries(
+      (tasks.data?.projects ?? []).map((p) => [p.id, p])
+    )
+    const clientsById = tasks.data?.clientsById ?? {}
+    const ctxOf = (task: CompassTask): TaskFocusContext => {
+      const project = task.project_id ? projectsByIdLocal[task.project_id] : null
+      const client = project?.client_id ? clientsById[project.client_id] : null
+      return { project, client }
+    }
+    return [...list].sort((a, b) => compareTasksByFocus(a, b, ctxOf))
   }, [tasks.data])
 
   const activeProjects = useMemo(() => {
     const list = (tasks.data?.projects ?? []).filter(
       (p) => !['done', 'completed', 'cancelled', 'archived'].includes(p.status.toLowerCase())
     )
-    return [...list].sort((a, b) => b.priority - a.priority).slice(0, 4)
+    // Lower non-zero priority number = more urgent (1 before 4); 0 sorts last.
+    return [...list]
+      .sort((a, b) => {
+        const rank = (p: number) => (p === 0 ? 99 : p)
+        return rank(a.priority) - rank(b.priority) || a.name.localeCompare(b.name)
+      })
+      .slice(0, 4)
   }, [tasks.data])
 
   const priorities = openTasks.slice(0, 6)
@@ -436,7 +441,7 @@ export function HomeDashboard() {
                       <span className="capitalize">{task.status.replace('-', ' ')}</span>
                       {project ? <span>· {project.name}</span> : null}
                       {task.due ? <span>· due {task.due.slice(0, 10)}</span> : null}
-                      {task.priority > 0 ? <span>· P{task.priority}</span> : null}
+                      {task.priority > 0 ? <span>· {taskPriorityLabel(task.priority)}</span> : null}
                     </div>
                   </div>
                 </Link>
@@ -763,7 +768,9 @@ function SuggestionRow({
           <Badge variant="secondary" appearance="light" size="sm">
             {item.kind}
           </Badge>
-          <span className="text-[11px] tabular-nums text-neutral-400">P{item.suggestedPriority}</span>
+          <span className="text-[11px] tabular-nums text-neutral-400">
+            {taskPriorityLabel(item.suggestedPriority)}
+          </span>
         </div>
         <p className="mt-0.5 text-xs text-neutral-500">{item.rationale}</p>
       </div>

@@ -34,13 +34,20 @@ function classify(line: string): BrainDumpKind {
   return 'task'
 }
 
+/**
+ * Suggest Linear-style task priority: 1 urgent … 4 low (never 0).
+ * Index still biases earlier lines upward without inventing a 1–10 scale.
+ */
 function priorityFor(kind: BrainDumpKind, line: string, index: number): number {
-  let score = Math.max(1, 10 - index)
-  if (/\b(urgent|asap|today|blocker|blocked)\b/i.test(line)) score += 4
-  if (kind === 'priority') score += 2
-  if (kind === 'project') score += 1
-  if (kind === 'note') score = Math.min(score, 3)
-  return Math.min(10, score)
+  let score = 3 // medium default
+  if (index === 0) score -= 1
+  if (index >= 4) score += 1
+  if (/\b(urgent|asap|today|blocker|blocked)\b/i.test(line)) score = 1
+  else if (/\b(high|important|must)\b/i.test(line)) score = Math.min(score, 2)
+  else if (/\b(later|someday|low)\b/i.test(line)) score = 4
+  if (kind === 'priority') score = Math.min(score, 2)
+  if (kind === 'note') score = Math.max(score, 4)
+  return Math.min(4, Math.max(1, score))
 }
 
 function rationaleFor(kind: BrainDumpKind, line: string): string {
@@ -98,7 +105,8 @@ export function reorganizeBrainDump(
     })
   })
 
-  suggestions.sort((a, b) => b.suggestedPriority - a.suggestedPriority)
+  // Lower number = more urgent (1 before 4).
+  suggestions.sort((a, b) => a.suggestedPriority - b.suggestedPriority)
 
   const taskCount = suggestions.filter((s) => s.kind === 'task' || s.kind === 'priority').length
   const projectCount = suggestions.filter((s) => s.kind === 'project').length

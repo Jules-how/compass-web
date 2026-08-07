@@ -26,8 +26,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let subscription: { unsubscribe: () => void } | null = null
     try {
       const supabase = getSupabaseBrowserClient()
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        setUser(user)
+      // getSession reads local cookies — avoids an Auth network round-trip on every load.
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setUser(session?.user ?? null)
         setLoading(false)
       })
       const { data } = supabase.auth.onAuthStateChange((_event, session) => {

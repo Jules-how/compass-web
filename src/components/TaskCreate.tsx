@@ -8,6 +8,7 @@ import type {
   TaskType
 } from '@/lib/types'
 import { TASK_STATUSES, TASK_TYPES } from '@/lib/types'
+import { TASK_PRIORITIES } from '@/lib/task-priority'
 
 interface TaskCreateProps {
   projectsById: Record<string, CompassProject>
@@ -173,11 +174,11 @@ export default function TaskCreate({
             className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
             disabled={saving}
           >
-            <option value={0}>None</option>
-            <option value={1}>Urgent</option>
-            <option value={2}>High</option>
-            <option value={3}>Medium</option>
-            <option value={4}>Low</option>
+            {TASK_PRIORITIES.map((row) => (
+              <option key={row.value} value={row.value}>
+                {row.label}
+              </option>
+            ))}
           </select>
         </label>
         <label className="block">

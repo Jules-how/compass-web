@@ -4,6 +4,7 @@ import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
 import type { ComponentType, SVGProps } from 'react'
 import {
   ClientsIcon,
+  CrmIcon,
   FinancesIcon,
   FunctionsIcon,
   HomeIcon,
@@ -51,7 +52,8 @@ type NavSection = {
 }
 
 const OPERATOR_TOP: NavItem[] = [
-  { href: '/home', label: 'Home', key: 'home', icon: HomeIcon, api: '/api/instantly/cold-email' },
+  // Home loads several APIs itself; do not hover-prefetch Instantly (4 upstream calls).
+  { href: '/home', label: 'Home', key: 'home', icon: HomeIcon },
   { href: '/inbox', label: 'Inbox', key: 'inbox', icon: InboxIcon, api: '/api/inbox', badge: 'inbox' }
 ]
 
@@ -83,6 +85,13 @@ const OPERATOR_SECTIONS: NavSection[] = [
         key: 'pipeline',
         icon: PipelineIcon,
         api: '/api/campaigns'
+      },
+      {
+        href: '/leads',
+        label: 'CRM',
+        key: 'leads',
+        icon: CrmIcon,
+        api: '/api/leads/list'
       }
     ]
   },

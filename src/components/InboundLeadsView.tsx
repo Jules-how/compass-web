@@ -18,7 +18,7 @@ export async function loadInboundLeads(
   let query = access.supabase
     .from('portal_inbound_leads')
     .select(
-      'id,tenant_id,external_id,source,channel,name,email,phone,submitted_at,summary,created_at',
+      'id,tenant_id,external_id,source,channel,name,email,phone,submitted_at,summary,created_at,lifecycle_status,lifecycle_updated_at',
       { count: 'exact' }
     )
     .order('submitted_at', { ascending: false })

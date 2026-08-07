@@ -72,7 +72,9 @@ export async function POST(request: Request) {
   const { data, error } = await admin
     .from('portal_inbound_leads')
     .upsert(row, { onConflict: 'tenant_id,external_id' })
-    .select('id,tenant_id,external_id,source,channel,name,email,phone,submitted_at,summary,created_at')
+    .select(
+      'id,tenant_id,external_id,source,channel,name,email,phone,submitted_at,summary,created_at,lifecycle_status,lifecycle_updated_at'
+    )
     .single()
 
   if (error || !data) {

@@ -37,11 +37,9 @@ export async function middleware(request: NextRequest) {
   if (!user) {
     const credentials = openOperatorCredentials()
     if (credentials) {
-      const { error } = await supabase.auth.signInWithPassword(credentials)
-      if (!error) {
-        ;({
-          data: { user }
-        } = await supabase.auth.getUser())
+      const { data, error } = await supabase.auth.signInWithPassword(credentials)
+      if (!error && data.user) {
+        user = data.user
       }
     }
   }
@@ -58,7 +56,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Skip API + static assets. API routes already call requirePortalAccess /
+  // their own auth — middleware getUser() on every /api/* call was doubling
+  // Supabase Auth round-trips and made the console feel stuck.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'
+    '/((?!_next/static|_next/image|favicon.ico|api(?:/|$)|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'
   ]
 }
