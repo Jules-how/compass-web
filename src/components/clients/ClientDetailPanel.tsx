@@ -10,7 +10,8 @@ import type {
   CompassClientIssue,
   CompassClientOffer,
   CompassClientUpdate,
-  CompassProjectWithStats
+  CompassProjectWithStats,
+  CompassTask
 } from '@/lib/types'
 import {
   CLIENT_ISSUE_STATUSES,
@@ -26,12 +27,12 @@ import {
   PROJECT_HEALTHS,
   projectHealthLabel,
   projectPriorityLabel,
-  projectStatusLabel,
   type ProjectHealth
 } from '@/lib/project-pm'
 import { formatPercentComplete } from '@/lib/project-stats'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { ClientChannelPanel } from '@/components/clients/ClientChannelPanel'
+import { ClientWorkPlanner } from '@/components/clients/ClientWorkPlanner'
 
 type TabKey = 'overview' | 'activity' | 'issues' | 'meta' | 'google' | 'projects'
 
@@ -44,6 +45,7 @@ interface ClientDetailPayload {
   adSpend: CompassClientAdSpend[]
   channelNotes: CompassClientChannelNote[]
   projects: CompassProjectWithStats[]
+  tasks: CompassTask[]
 }
 
 const ISSUE_GROUPS: ClientIssueStatus[] = [
@@ -117,7 +119,6 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
 
   const [issueTitle, setIssueTitle] = useState('')
   const [issuePriority, setIssuePriority] = useState(0)
-  const [projectName, setProjectName] = useState('')
 
   const load = useCallback(async () => {
     setError(null)
@@ -321,34 +322,6 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
-      await load()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function createProject(event: React.FormEvent) {
-    event.preventDefault()
-    if (!projectName.trim()) return
-    setSaving(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: projectName.trim(),
-          client_id: clientId,
-          status: 'planned'
-        })
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? `Request failed (${res.status})`)
-      }
-      setProjectName('')
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -680,6 +653,15 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
         </div>
       ) : null}
 
+      {tab === 'overview' ? (
+        <ClientWorkPlanner
+          clientId={clientId}
+          projects={data.projects}
+          tasks={data.tasks ?? []}
+          onRefresh={load}
+        />
+      ) : null}
+
       {tab === 'activity' ? (
         <section className="compass-panel space-y-4 p-5">
           <h2 className="font-display text-lg font-semibold">Activity</h2>
@@ -854,58 +836,13 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
       ) : null}
 
       {tab === 'projects' ? (
-        <section className="space-y-4">
-          <form onSubmit={createProject} className="compass-panel flex flex-wrap items-end gap-2 p-4">
-            <label className="min-w-[240px] flex-1 text-sm">
-              <span className="mb-1 block text-xs text-neutral-500">Kick off a project</span>
-              <input
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                placeholder="Project name"
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2"
-                disabled={saving}
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={saving || !projectName.trim()}
-              className="rounded-lg bg-sf-orange px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-            >
-              Create project
-            </button>
-          </form>
-
-          <div className="compass-panel overflow-hidden">
-            {data.projects.length === 0 ? (
-              <p className="p-5 text-sm text-neutral-500">
-                No projects yet. Create one to track milestones and tasks for this account.
-              </p>
-            ) : (
-              <ul className="divide-y divide-stone-100">
-                {data.projects.map((project) => (
-                  <li key={project.id}>
-                    <Link
-                      href={`/projects/${project.id}`}
-                      className="flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-stone-50"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium text-neutral-900">{project.name}</div>
-                        <div className="text-xs text-neutral-500">
-                          {projectStatusLabel(project.status)} · {projectPriorityLabel(project.priority)} ·{' '}
-                          {projectHealthLabel(project.health)}
-                        </div>
-                      </div>
-                      <div className="text-xs tabular-nums text-neutral-500">
-                        {formatPercentComplete(project.stats.percentComplete)} ·{' '}
-                        {project.stats.completedCount}/{project.stats.issueCount}
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
+        <ClientWorkPlanner
+          clientId={clientId}
+          projects={data.projects}
+          tasks={data.tasks ?? []}
+          onRefresh={load}
+          compact
+        />
       ) : null}
     </div>
   )

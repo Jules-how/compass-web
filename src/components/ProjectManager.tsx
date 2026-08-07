@@ -58,10 +58,12 @@ interface MilestoneDraft {
 export function ProjectManager({
   projects,
   functions,
+  clients = [],
   onRefresh
 }: {
   projects: CompassProjectWithStats[]
   functions: CompassBusinessFunction[]
+  clients?: Array<{ id: string; name: string }>
   onRefresh?: () => void | Promise<void>
 }) {
   const [view, setView] = useState<ViewMode>('list')
@@ -69,6 +71,7 @@ export function ProjectManager({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<'all' | ProjectBoardStatus>('all')
+  const [clientFilter, setClientFilter] = useState<'all' | 'unassigned' | string>('all')
   const [groupBy, setGroupBy] = useState<GroupBy>('none')
   const [orderBy, setOrderBy] = useState<OrderBy>('name')
   const [insightsTab, setInsightsTab] = useState<InsightsTab>('health')
@@ -80,6 +83,7 @@ export function ProjectManager({
   const [status, setStatus] = useState<ProjectBoardStatus>('backlog')
   const [priority, setPriority] = useState(0)
   const [businessFunctionId, setBusinessFunctionId] = useState('')
+  const [clientId, setClientId] = useState('')
   const [startDate, setStartDate] = useState('')
   const [targetDate, setTargetDate] = useState('')
   const [labels, setLabels] = useState('')
@@ -91,16 +95,30 @@ export function ProjectManager({
     [functions]
   )
 
+  const clientById = useMemo(
+    () => Object.fromEntries(clients.map((row) => [row.id, row])),
+    [clients]
+  )
+
   const sortedFunctions = useMemo(
     () => [...functions].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)),
     [functions]
   )
 
+  const sortedClients = useMemo(
+    () => [...clients].sort((a, b) => a.name.localeCompare(b.name)),
+    [clients]
+  )
+
   const visibleProjects = useMemo(() => {
-    const filtered =
-      statusFilter === 'all'
-        ? projects
-        : projects.filter((project) => normalizeProjectStatus(project.status) === statusFilter)
+    const filtered = projects.filter((project) => {
+      if (statusFilter !== 'all' && normalizeProjectStatus(project.status) !== statusFilter) {
+        return false
+      }
+      if (clientFilter === 'unassigned') return !project.client_id
+      if (clientFilter !== 'all') return project.client_id === clientFilter
+      return true
+    })
 
     const sorted = [...filtered].sort((a, b) => {
       if (orderBy === 'priority') return (a.priority ?? 0) - (b.priority ?? 0) || a.name.localeCompare(b.name)
@@ -111,7 +129,7 @@ export function ProjectManager({
       return a.name.localeCompare(b.name)
     })
     return sorted
-  }, [projects, statusFilter, orderBy])
+  }, [projects, statusFilter, clientFilter, orderBy])
 
   const grouped = useMemo(() => {
     if (groupBy === 'none') return [{ key: 'all', label: 'All projects', items: visibleProjects }]
@@ -156,6 +174,7 @@ export function ProjectManager({
     setStatus('backlog')
     setPriority(0)
     setBusinessFunctionId('')
+    setClientId('')
     setStartDate('')
     setTargetDate('')
     setLabels('')
@@ -179,6 +198,7 @@ export function ProjectManager({
           status,
           priority,
           business_function_id: businessFunctionId || null,
+          client_id: clientId || null,
           start_date: startDate || null,
           target_date: targetDate || null,
           labels: labels
@@ -304,6 +324,21 @@ export function ProjectManager({
               </option>
             ))}
           </select>
+          {sortedClients.length > 0 ? (
+            <select
+              value={clientFilter}
+              onChange={(e) => setClientFilter(e.target.value)}
+              className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"
+            >
+              <option value="all">All clients</option>
+              <option value="unassigned">No client</option>
+              {sortedClients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <select
             value={groupBy}
             onChange={(e) => setGroupBy(e.target.value as GroupBy)}
@@ -403,6 +438,21 @@ export function ProjectManager({
                 </option>
               ))}
             </select>
+            {sortedClients.length > 0 ? (
+              <select
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs"
+                disabled={saving}
+              >
+                <option value="">Client (optional)</option>
+                {sortedClients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <label className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs">
               Start
               <input
@@ -581,6 +631,13 @@ export function ProjectManager({
                               {project.name}
                             </Link>
                             <p className="mt-0.5 truncate text-xs text-neutral-500">
+                              {(project.client_name ||
+                                (project.client_id ? clientById[project.client_id]?.name : null)) && (
+                                <span className="mr-1.5 font-medium text-neutral-700">
+                                  {project.client_name || clientById[project.client_id!]?.name}
+                                  {' · '}
+                                </span>
+                              )}
                               {project.summary || project.notes || projectStatusLabel(project.status)}
                             </p>
                           </div>
@@ -660,6 +717,12 @@ export function ProjectManager({
                           >
                             {project.name}
                           </Link>
+                          {(project.client_name ||
+                            (project.client_id ? clientById[project.client_id]?.name : null)) && (
+                            <div className="mt-1 text-[11px] font-medium text-neutral-600">
+                              {project.client_name || clientById[project.client_id!]?.name}
+                            </div>
+                          )}
                           {project.summary ? (
                             <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{project.summary}</p>
                           ) : null}
@@ -724,12 +787,20 @@ export function ProjectManager({
                     const width = Math.max(3, Math.abs(endPct - startPct))
                     return (
                       <div key={project.id} className="grid grid-cols-[180px_minmax(0,1fr)] items-center gap-3">
-                        <Link
-                          href={`/projects/${project.id}`}
-                          className="truncate text-sm font-medium text-neutral-800 hover:text-sf-orange-dark"
-                        >
-                          {project.name}
-                        </Link>
+                        <div className="min-w-0">
+                          <Link
+                            href={`/projects/${project.id}`}
+                            className="block truncate text-sm font-medium text-neutral-800 hover:text-sf-orange-dark"
+                          >
+                            {project.name}
+                          </Link>
+                          {(project.client_name ||
+                            (project.client_id ? clientById[project.client_id]?.name : null)) && (
+                            <div className="truncate text-[11px] text-neutral-500">
+                              {project.client_name || clientById[project.client_id!]?.name}
+                            </div>
+                          )}
+                        </div>
                         <div className="relative h-8 rounded-md bg-stone-100">
                           <Link
                             href={`/projects/${project.id}`}
