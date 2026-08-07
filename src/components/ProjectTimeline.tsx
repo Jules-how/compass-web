@@ -385,11 +385,8 @@ export function ProjectTimeline({
                           {project.name}
                         </span>
                         <span
-                          className="relative block h-[20px] overflow-hidden rounded-[6px] border border-neutral-300/90 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition group-hover:border-neutral-400"
-                          style={{
-                            width,
-                            background: `linear-gradient(90deg, ${accent}22 0%, #ffffff 28%)`
-                          }}
+                          className="relative block h-[20px] overflow-hidden rounded-[6px] border border-neutral-300 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition group-hover:border-neutral-400"
+                          style={{ width }}
                         >
                           <span
                             className="absolute inset-y-0 left-0 w-[3px] rounded-l-[5px]"
@@ -397,7 +394,7 @@ export function ProjectTimeline({
                           />
                           {project.stats?.percentComplete > 0 ? (
                             <span
-                              className="absolute inset-y-0 left-0 opacity-30"
+                              className="absolute inset-y-0 left-[3px] opacity-20"
                               style={{
                                 width: `${Math.min(100, project.stats.percentComplete)}%`,
                                 background: accent
