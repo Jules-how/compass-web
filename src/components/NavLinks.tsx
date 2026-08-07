@@ -52,7 +52,8 @@ type NavSection = {
 }
 
 const OPERATOR_TOP: NavItem[] = [
-  { href: '/home', label: 'Home', key: 'home', icon: HomeIcon, api: '/api/instantly/cold-email' },
+  // Home loads several APIs itself; do not hover-prefetch Instantly (4 upstream calls).
+  { href: '/home', label: 'Home', key: 'home', icon: HomeIcon },
   { href: '/inbox', label: 'Inbox', key: 'inbox', icon: InboxIcon, api: '/api/inbox', badge: 'inbox' }
 ]
 

@@ -8,7 +8,6 @@ import { CompassMark } from '@/components/nav-icons'
 import { NavLinks, navKeyFromPathname, type NavKey, OPERATOR_PREFETCH } from '@/components/NavLinks'
 import SignOutButton from '@/components/SignOutButton'
 import { Sidebar, SidebarBody } from '@/components/ui/sidebar'
-import { prefetchJson } from '@/lib/use-cached-json'
 import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
 
 const WIDTH = {
@@ -77,9 +76,11 @@ export function OperatorConsoleLayout({
     if (!operator) return
     let cancelled = false
 
+    // Prefetch RSC routes only. Eager API prefetch of Instantly / clients /
+    // projects / campaigns on every console mount was a thundering herd —
+    // hover/focus on NavLinks still warms individual APIs on demand.
     for (const item of OPERATOR_PREFETCH) {
       router.prefetch(item.href)
-      if (item.api) prefetchJson(item.api, item.api)
     }
 
     void fetch('/api/inbox', { headers: { Accept: 'application/json' } })

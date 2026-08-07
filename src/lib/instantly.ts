@@ -226,6 +226,22 @@ export async function fetchInstantlyUnreadCount(apiKey: string): Promise<number>
   return Math.max(0, Math.round(Number(body.count) || 0))
 }
 
+const COLD_EMAIL_CACHE_TTL_MS = 60_000
+
+type ColdEmailCacheEntry = {
+  key: string
+  value: ColdEmailGlance
+  updatedAt: number
+  promise?: Promise<ColdEmailGlance>
+}
+
+let coldEmailCache: ColdEmailCacheEntry | null = null
+
+/** Clear the process-local Instantly glance cache (tests / forced refresh). */
+export function clearColdEmailGlanceCache() {
+  coldEmailCache = null
+}
+
 export async function loadColdEmailGlanceFromInstantly(
   apiKey = getInstantlyApiKey()
 ): Promise<ColdEmailGlance> {
@@ -236,18 +252,59 @@ export async function loadColdEmailGlanceFromInstantly(
   const timeZone = getInstantlyTimezone()
   const today = calendarDateInTimezone(new Date(), timeZone)
   const window30 = rollingWindowDates(30, timeZone)
+  // Key omits the full secret — date window is enough within one process.
+  const cacheKey = `${today}:${window30.start}:${window30.end}`
 
-  const [todayOverview, rolling30d, unread, campaigns] = await Promise.all([
-    fetchInstantlyAnalyticsOverview(apiKey, today, today),
-    fetchInstantlyAnalyticsOverview(apiKey, window30.start, window30.end),
-    fetchInstantlyUnreadCount(apiKey),
-    fetchInstantlyCampaignAnalytics(apiKey)
-  ])
+  const cached = coldEmailCache
+  if (
+    cached &&
+    cached.key === cacheKey &&
+    Date.now() - cached.updatedAt < COLD_EMAIL_CACHE_TTL_MS &&
+    !cached.promise
+  ) {
+    return cached.value
+  }
+  if (cached?.promise && cached.key === cacheKey) {
+    return cached.promise
+  }
 
-  return buildColdEmailGlance({
-    today: todayOverview,
-    rolling30d,
-    repliesWaiting: unread,
-    campaigns
-  })
+  const promise = (async () => {
+    const [todayOverview, rolling30d, unread, campaigns] = await Promise.all([
+      fetchInstantlyAnalyticsOverview(apiKey, today, today),
+      fetchInstantlyAnalyticsOverview(apiKey, window30.start, window30.end),
+      fetchInstantlyUnreadCount(apiKey),
+      fetchInstantlyCampaignAnalytics(apiKey)
+    ])
+
+    return buildColdEmailGlance({
+      today: todayOverview,
+      rolling30d,
+      repliesWaiting: unread,
+      campaigns
+    })
+  })()
+
+  coldEmailCache = {
+    key: cacheKey,
+    value: cached?.value ?? {
+      emailsSentToday: 0,
+      repliesWaiting: 0,
+      meetingsBooked: 0,
+      replyRate: 0,
+      campaigns: []
+    },
+    updatedAt: cached?.updatedAt ?? 0,
+    promise
+  }
+
+  try {
+    const value = await promise
+    coldEmailCache = { key: cacheKey, value, updatedAt: Date.now() }
+    return value
+  } catch (err) {
+    if (coldEmailCache?.promise === promise) {
+      delete coldEmailCache.promise
+    }
+    throw err
+  }
 }
