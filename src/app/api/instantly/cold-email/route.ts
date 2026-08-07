@@ -28,7 +28,8 @@ export async function GET() {
     }
 
     const glance = await loadColdEmailGlanceFromInstantly(apiKey)
-    return portalJsonCached({ ...glance, source: 'instantly' as const })
+    // Align browser cache with the process-local Instantly TTL (60s).
+    return portalJsonCached({ ...glance, source: 'instantly' as const }, {}, 60)
   } catch (err) {
     const access = portalAccessResponse(err)
     if (access) return access
