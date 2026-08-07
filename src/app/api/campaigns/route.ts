@@ -9,9 +9,11 @@ import {
 } from '@/lib/portal-http'
 import {
   CAMPAIGN_LIST_COLUMNS,
+  emptyCampaignCopyFields,
   normalizeCampaignHealth,
   normalizeCampaignStatus,
   normalizeLabels,
+  projectCampaignCopy,
   type CompassCampaign
 } from '@/lib/campaigns'
 
@@ -22,13 +24,14 @@ function nowIso(): string {
 }
 
 function projectCampaign(row: CompassCampaign): CompassCampaign {
-  return {
+  return projectCampaignCopy({
+    ...emptyCampaignCopyFields(),
     ...row,
     labels: Array.isArray(row.labels) ? row.labels : [],
     priority: typeof row.priority === 'number' ? row.priority : 0,
     health: row.health || 'no_updates',
     color: row.color || '#94a3b8'
-  }
+  })
 }
 
 export async function GET() {
@@ -94,6 +97,7 @@ export async function POST(request: NextRequest) {
     summary: body.summary?.trim() || null,
     labels: normalizeLabels(body.labels),
     owner_label: body.owner_label?.trim() || null,
+    ...emptyCampaignCopyFields(),
     created_at: stamp,
     updated_at: stamp
   }

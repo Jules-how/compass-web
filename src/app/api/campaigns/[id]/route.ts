@@ -11,13 +11,22 @@ import {
   CAMPAIGN_ACTIVITY_COLUMNS,
   CAMPAIGN_LIST_COLUMNS,
   CAMPAIGN_MILESTONE_COLUMNS,
+  emptyCampaignCopyFields,
   normalizeCampaignHealth,
   normalizeCampaignStatus,
   normalizeLabels,
+  normalizeOutboundTagList,
+  projectCampaignCopy,
   type CompassCampaign,
   type CompassCampaignActivity,
   type CompassCampaignMilestone
 } from '@/lib/campaigns'
+import {
+  coldExpressionFromSequence,
+  isValidSequence,
+  normalizeCopyStatus,
+  type OutboundSequence
+} from '@/lib/outbound-copy'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,13 +39,14 @@ function nowIso(): string {
 }
 
 function projectCampaign(row: CompassCampaign): CompassCampaign {
-  return {
+  return projectCampaignCopy({
+    ...emptyCampaignCopyFields(),
     ...row,
     labels: Array.isArray(row.labels) ? row.labels : [],
     priority: typeof row.priority === 'number' ? row.priority : 0,
     health: row.health || 'no_updates',
     color: row.color || '#94a3b8'
-  }
+  })
 }
 
 export async function GET(_request: NextRequest, context: RouteContext) {
@@ -90,6 +100,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     summary?: string | null
     labels?: string[]
     owner_label?: string | null
+    instantly_campaign_id?: string | null
+    offer_key?: string | null
+    structure_id?: string | null
+    opener_mode?: string | null
+    vertical_tags?: string[]
+    location_tags?: string[]
+    cold_expression?: string | null
+    sequence_draft?: OutboundSequence | null
+    copy_status?: string
   }
   try {
     body = (await readBoundedJson(request)) as typeof body
@@ -171,6 +190,42 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
     if (body.owner_label !== undefined) {
       patch.owner_label = body.owner_label?.trim() || null
+    }
+    if (body.instantly_campaign_id !== undefined) {
+      patch.instantly_campaign_id = body.instantly_campaign_id?.trim() || null
+    }
+    if (body.offer_key !== undefined) patch.offer_key = body.offer_key?.trim() || null
+    if (body.structure_id !== undefined) patch.structure_id = body.structure_id?.trim() || null
+    if (body.opener_mode !== undefined) {
+      patch.opener_mode = body.opener_mode?.trim() || 'nick-tier'
+    }
+    if (body.vertical_tags !== undefined) {
+      patch.vertical_tags = normalizeOutboundTagList(body.vertical_tags)
+    }
+    if (body.location_tags !== undefined) {
+      patch.location_tags = normalizeOutboundTagList(body.location_tags)
+    }
+    if (body.cold_expression !== undefined) {
+      patch.cold_expression = body.cold_expression?.trim() || null
+    }
+    if (body.sequence_draft !== undefined) {
+      if (body.sequence_draft === null) {
+        patch.sequence_draft = null
+      } else if (!isValidSequence(body.sequence_draft)) {
+        return portalJson({ error: 'invalid_sequence' }, { status: 400 })
+      } else {
+        patch.sequence_draft = body.sequence_draft
+        patch.structure_id = body.sequence_draft.structure_id
+        if (body.sequence_draft.offer_key) patch.offer_key = body.sequence_draft.offer_key
+        const locked = coldExpressionFromSequence(body.sequence_draft)
+        if (locked) patch.cold_expression = locked
+      }
+      activity.push({ action: 'copy', body: 'Updated sequence draft' })
+    }
+    if (body.copy_status !== undefined) {
+      patch.copy_status = normalizeCopyStatus(body.copy_status)
+    } else if (body.sequence_draft !== undefined && (existing.copy_status ?? 'none') === 'none') {
+      patch.copy_status = 'draft'
     }
 
     // Keep end >= start when both present after patch.

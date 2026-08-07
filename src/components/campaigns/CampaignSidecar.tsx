@@ -20,6 +20,8 @@ import {
   type CompassCampaignActivity,
   type CompassCampaignMilestone
 } from '@/lib/campaigns'
+import { copyStatusLabel, ctaFromSequence, previewExpression } from '@/lib/outbound-copy'
+import { forkTemplateIntoSequence, listLocalTemplates } from '@/lib/outbound-local-store'
 
 export function CampaignSidecar({
   campaignId,
@@ -44,6 +46,7 @@ export function CampaignSidecar({
   const [showAllActivity, setShowAllActivity] = useState(false)
   const [openSections, setOpenSections] = useState({
     properties: true,
+    copy: true,
     milestones: true,
     progress: true,
     activity: true
@@ -447,6 +450,132 @@ export function CampaignSidecar({
                   />
                 </Field>
               </dl>
+            </Section>
+
+            <Section
+              title="Copy"
+              open={openSections.copy}
+              onToggle={() => setOpenSections((prev) => ({ ...prev, copy: !prev.copy }))}
+            >
+              {(campaign.copy_status && campaign.copy_status !== 'none') ||
+              campaign.offer_key ||
+              campaign.cold_expression ||
+              campaign.sequence_draft ? (
+                <div className="space-y-2.5 text-sm">
+                  <div className="flex flex-wrap gap-1.5">
+                    {campaign.offer_key ? (
+                      <span className="rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-[#c2410c]">
+                        {campaign.offer_key}
+                      </span>
+                    ) : null}
+                    {campaign.structure_id ? (
+                      <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">
+                        {campaign.structure_id}
+                      </span>
+                    ) : null}
+                    {(campaign.vertical_tags ?? []).map((tag) => (
+                      <span
+                        key={`v-${tag}`}
+                        className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                    {(campaign.location_tags ?? []).map((tag) => (
+                      <span
+                        key={`l-${tag}`}
+                        className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                    <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">
+                      {copyStatusLabel(campaign.copy_status || 'none')}
+                    </span>
+                  </div>
+                  <p className="text-xs leading-relaxed text-neutral-600">
+                    {previewExpression(campaign.cold_expression, 200) ||
+                      'No locked cold expression yet.'}
+                  </p>
+                  {ctaFromSequence(campaign.sequence_draft) ? (
+                    <p className="text-[11px] text-neutral-500">
+                      Email 1 CTA: {ctaFromSequence(campaign.sequence_draft)}
+                    </p>
+                  ) : null}
+                  {campaign.instantly_campaign_id ? (
+                    <p className="text-[11px] text-neutral-500">
+                      Instantly: {campaign.instantly_campaign_id}
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Link
+                      href={`/sales/outbound/editor/${campaignId}`}
+                      className="rounded-md bg-[#e85d2a] px-2.5 py-1.5 text-[12px] font-semibold text-white"
+                    >
+                      Open editor
+                    </Link>
+                    <button
+                      type="button"
+                      className="rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700"
+                      onClick={() => {
+                        const templates = listLocalTemplates()
+                        const pick = window.prompt(
+                          `Attach template id:\n${templates.map((t) => `${t.id} — ${t.name}`).join('\n')}`,
+                          templates[0]?.id ?? ''
+                        )
+                        if (!pick) return
+                        const forked = forkTemplateIntoSequence(pick)
+                        if (!forked) {
+                          window.alert('Template not found')
+                          return
+                        }
+                        saveCampaign({
+                          sequence_draft: forked,
+                          structure_id: forked.structure_id,
+                          offer_key: forked.offer_key ?? campaign.offer_key ?? null,
+                          copy_status: 'draft'
+                        })
+                      }}
+                    >
+                      Attach template
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 text-xs text-neutral-500">
+                  <p>No copy attached yet. Compose a sequence or attach a template.</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/sales/outbound/editor/${campaignId}`}
+                      className="rounded-md bg-[#e85d2a] px-2.5 py-1.5 text-[12px] font-semibold text-white"
+                    >
+                      Add copy
+                    </Link>
+                    <button
+                      type="button"
+                      className="rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700"
+                      onClick={() => {
+                        const templates = listLocalTemplates()
+                        const pick = window.prompt(
+                          `Attach template id:\n${templates.map((t) => `${t.id} — ${t.name}`).join('\n')}`,
+                          templates[0]?.id ?? ''
+                        )
+                        if (!pick) return
+                        const forked = forkTemplateIntoSequence(pick)
+                        if (!forked) return
+                        saveCampaign({
+                          sequence_draft: forked,
+                          structure_id: forked.structure_id,
+                          offer_key: forked.offer_key ?? null,
+                          copy_status: 'draft'
+                        })
+                      }}
+                    >
+                      Attach template
+                    </button>
+                  </div>
+                </div>
+              )}
             </Section>
 
             <Section
