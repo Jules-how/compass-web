@@ -15,6 +15,9 @@ import {
   CLIENT_LIST_COLUMNS,
   CLIENT_OFFER_COLUMNS,
   CLIENT_UPDATE_COLUMNS,
+  META_AD_COLUMNS,
+  META_AD_SET_COLUMNS,
+  META_CAMPAIGN_COLUMNS,
   PROJECT_LIST_COLUMNS
 } from '@/lib/list-columns'
 import {
@@ -34,6 +37,9 @@ import type {
   CompassClientIssue,
   CompassClientOffer,
   CompassClientUpdate,
+  CompassMetaAd,
+  CompassMetaAdSet,
+  CompassMetaCampaign,
   CompassProject
 } from '@/lib/types'
 
@@ -56,6 +62,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       offersRes,
       spendRes,
       notesRes,
+      metaCampaignsRes,
+      metaAdSetsRes,
+      metaAdsRes,
       projectsRes,
       taskStatsRes
     ] = await Promise.all([
@@ -92,6 +101,21 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         .eq('client_id', id)
         .order('created_at', { ascending: false }),
       supabase
+        .from('compass_meta_campaigns')
+        .select(META_CAMPAIGN_COLUMNS)
+        .eq('client_id', id)
+        .order('updated_at', { ascending: false }),
+      supabase
+        .from('compass_meta_ad_sets')
+        .select(META_AD_SET_COLUMNS)
+        .eq('client_id', id)
+        .order('updated_at', { ascending: false }),
+      supabase
+        .from('compass_meta_ads')
+        .select(META_AD_COLUMNS)
+        .eq('client_id', id)
+        .order('updated_at', { ascending: false }),
+      supabase
         .from('compass_projects')
         .select(PROJECT_LIST_COLUMNS)
         .eq('client_id', id)
@@ -113,6 +137,20 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       return portalJson({ error: 'fetch_failed' }, { status: 500 })
     }
     if (!clientRes.data) return portalJson({ error: 'not_found' }, { status: 404 })
+
+    // Meta Ads Manager tables land in 0031; treat missing relation as empty until migrated.
+    const metaCampaigns = metaCampaignsRes.error
+      ? []
+      : ((metaCampaignsRes.data ?? []) as CompassMetaCampaign[]).map((row) => ({
+          ...row,
+          special_ad_categories: Array.isArray(row.special_ad_categories)
+            ? row.special_ad_categories
+            : []
+        }))
+    const metaAdSets = metaAdSetsRes.error
+      ? []
+      : ((metaAdSetsRes.data ?? []) as CompassMetaAdSet[])
+    const metaAds = metaAdsRes.error ? [] : ((metaAdsRes.data ?? []) as CompassMetaAd[])
 
     const issues = (issuesRes.data ?? []) as CompassClientIssue[]
     const projects = ((projectsRes.data ?? []) as CompassProject[]).map((project) => {
@@ -142,6 +180,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       offers: (offersRes.data ?? []) as CompassClientOffer[],
       adSpend: (spendRes.data ?? []) as CompassClientAdSpend[],
       channelNotes: (notesRes.data ?? []) as CompassClientChannelNote[],
+      metaCampaigns,
+      metaAdSets,
+      metaAds,
       projects
     })
   } catch (err) {
