@@ -61,6 +61,10 @@ test('campaign planner files and migration are wired', () => {
   assert.match(planner, /buildHeaderModel/)
   assert.match(planner, /StatusGlyph/)
   assert.match(planner, /onContextMenu/)
+  assert.match(planner, /FixedMenu/)
+  assert.match(planner, /GlyphButton/)
+  assert.match(planner, /Open campaign page/)
+  assert.match(planner, /sales\/pipeline\/\$\{/)
   assert.match(planner, /type ViewMode = 'list' \| 'board' \| 'timeline'/)
   assert.match(planner, /setView\(mode\)/)
   assert.match(planner, /view === 'list'/)
@@ -68,6 +72,15 @@ test('campaign planner files and migration are wired', () => {
   assert.match(planner, /view === 'timeline'/)
   assert.match(planner, /CAMPAIGN_STATUSES\.map/)
   assert.match(planner, /moveCampaignStatus/)
+
+  const detailPage = read('src/app/(console)/sales/pipeline/[id]/page.tsx')
+  assert.match(detailPage, /CampaignDetail/)
+  assert.match(detailPage, /campaignId/)
+
+  const sidecar = read('src/components/campaigns/CampaignSidecar.tsx')
+  assert.match(sidecar, /Open campaign page/)
+  assert.match(sidecar, /variant/)
+  assert.match(sidecar, /Close details/)
 
   const timeline = read('src/lib/campaign-timeline.ts')
   assert.match(timeline, /buildHeaderModel/)
@@ -77,4 +90,8 @@ test('campaign planner files and migration are wired', () => {
 
   const store = read('src/lib/campaign-local-store.ts')
   assert.match(store, /localStorage/)
+
+  const labels = read('src/lib/campaigns.ts')
+  assert.match(labels, /campaignPriorityLabel/)
+  assert.match(labels, /campaignHealthLabel/)
 })
