@@ -47,6 +47,7 @@ test('operator pages still gate access and login supports open-operator fallback
     'src/app/(console)/projects/page.tsx',
     'src/app/(console)/projects/[id]/page.tsx',
     'src/app/(console)/functions/page.tsx',
+    'src/app/(console)/functions/[id]/page.tsx',
     'src/app/(console)/inbox/page.tsx',
     'src/app/leads/page.tsx'
   ]) {
@@ -61,7 +62,7 @@ test('operator pages still gate access and login supports open-operator fallback
     } else if (page.includes('(console)') && !page.includes('leads')) {
       assert.match(
         read(page),
-        /OperatorShell|TasksPanel|ProjectsPanel|FunctionsPanel|InboxPanel|ProjectDetailPanel|HomeDashboard/
+        /OperatorShell|TasksPanel|ProjectsPanel|FunctionsPanel|FunctionDetailPanel|InboxPanel|ProjectDetailPanel|HomeDashboard/
       )
     } else {
       assert.match(read(page), /requireOperatorPageAccess/)
