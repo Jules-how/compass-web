@@ -1,5 +1,6 @@
 import type { LeadListFilters } from '@/lib/types'
 import { verticalFilterValues, type CompletenessFilter } from '@/lib/leads-meta'
+import { recontactCutoffIso } from '@/lib/recontact-eligibility'
 
 /** Loose PostgREST query builder — matches supabase-js filter chain. */
 export type LeadFilterQuery = {
@@ -10,12 +11,15 @@ export type LeadFilterQuery = {
   is: (column: string, value: null) => LeadFilterQuery
   not: (column: string, operator: string, value: unknown) => LeadFilterQuery
   neq: (column: string, value: unknown) => LeadFilterQuery
+  lt: (column: string, value: unknown) => LeadFilterQuery
+  gte: (column: string, value: unknown) => LeadFilterQuery
 }
 
 export function parseLeadListFilters(searchParams: URLSearchParams): LeadListFilters {
   const completeness = searchParams.get('completeness') ?? undefined
   const recontact = searchParams.get('recontact_ok')
   const suppressed = searchParams.get('suppressed')
+  const recontactReady = searchParams.get('recontact_ready')
   return {
     vertical: emptyToUndef(searchParams.get('vertical')),
     source: emptyToUndef(searchParams.get('source')),
@@ -25,7 +29,9 @@ export function parseLeadListFilters(searchParams: URLSearchParams): LeadListFil
     city: emptyToUndef(searchParams.get('city')),
     q: emptyToUndef(searchParams.get('q')),
     recontact_ok: recontact === '1' || recontact === '0' ? recontact : undefined,
-    suppressed: suppressed === '1' || suppressed === '0' ? suppressed : undefined
+    suppressed: suppressed === '1' || suppressed === '0' ? suppressed : undefined,
+    recontact_ready:
+      recontactReady === '1' || recontactReady === '0' ? recontactReady : undefined
   }
 }
 
@@ -43,6 +49,29 @@ function isCompleteness(value: string | undefined): value is CompletenessFilter 
     value === 'has_email' ||
     value === 'no_email'
   )
+}
+
+/** Shared PostgREST filters for the 90-day recontact-ready queue. */
+export function applyRecontactReadyFilters<T extends LeadFilterQuery>(
+  query: T,
+  now = new Date()
+): T {
+  let q = query
+  const cutoff = recontactCutoffIso(now)
+  // Not suppressed / not explicitly blocked.
+  q = q.neq('outbound_status', 'suppressed') as T
+  q = q.is('suppression_reason', null) as T
+  q = q.or('recontact_ok.eq.1,recontact_ok.is.null') as T
+  // Must have been contacted, and last touch older than cooldown.
+  q = q.not('last_outbound_at', 'is', null) as T
+  q = q.lt('last_outbound_at', cutoff) as T
+  // Exclude hot pipeline stages — those need personal follow-up, not cold re-launch.
+  q = q.not(
+    'outbound_status',
+    'in',
+    '(replied,interested,booked,meeting_booked,converted)'
+  ) as T
+  return q
 }
 
 export function applyLeadFilters<T extends LeadFilterQuery>(query: T, filters: LeadListFilters): T {
@@ -90,6 +119,17 @@ export function applyLeadFilters<T extends LeadFilterQuery>(query: T, filters: L
     q = q.eq('recontact_ok', 1) as T
   } else if (filters.recontact_ok === '0') {
     q = q.or('recontact_ok.eq.0,recontact_ok.is.null') as T
+  }
+
+  if (filters.recontact_ready === '1') {
+    q = applyRecontactReadyFilters(q) as T
+  } else if (filters.recontact_ready === '0') {
+    // Inverse is intentionally broad: never contacted, still cooling, blocked, or hot.
+    // Prefer the positive filter for operator workflows.
+    const cutoff = recontactCutoffIso()
+    q = q.or(
+      `last_outbound_at.is.null,last_outbound_at.gte.${cutoff},outbound_status.eq.suppressed,suppression_reason.not.is.null,recontact_ok.eq.0,outbound_status.in.(replied,interested,booked,meeting_booked,converted)`
+    ) as T
   }
 
   return q
@@ -153,6 +193,7 @@ export function leadFiltersToSearchParams(filters: LeadListFilters, page?: numbe
   if (filters.q) params.set('q', filters.q)
   if (filters.recontact_ok) params.set('recontact_ok', filters.recontact_ok)
   if (filters.suppressed) params.set('suppressed', filters.suppressed)
+  if (filters.recontact_ready) params.set('recontact_ready', filters.recontact_ready)
   if (page && page > 1) params.set('page', String(page))
   return params
 }

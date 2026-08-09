@@ -5,6 +5,7 @@ import {
   getInstantlyApiKey,
   type InstantlyCampaignAnalytics
 } from '@/lib/instantly'
+import { lookupCopyForInstantlyCampaign, recordOutreachTouch } from '@/lib/lead-outreach'
 
 const INSTANTLY_API_BASE = 'https://api.instantly.ai/api/v2'
 const PAGE_LIMIT = 100
@@ -276,6 +277,11 @@ export async function syncInstantlyLeadsIntoCompass(
     const name = buildLeadDisplayName(lead)
 
     const match = pickExisting(byInstantlyId, byEmail, lead.id, email)
+    const suppressed = outbound === 'suppressed'
+    const suppressionReason = suppressed
+      ? interestSuppressionReason(lead.lt_interest_status, lead.status)
+      : null
+    const lastContactAt = str(lead.timestamp_last_contact) || stamp
     const patch: Record<string, unknown> = {
       email: email,
       phone,
@@ -290,13 +296,12 @@ export async function syncInstantlyLeadsIntoCompass(
       instantly_campaign: campaignName,
       instantly_campaign_name: campaignName,
       instantly_synced_at: stamp,
-      last_outbound_at: str(lead.timestamp_last_contact) || stamp,
+      last_outbound_at: lastContactAt,
       updated_at: stamp,
       mirrored_at: stamp,
-      suppression_reason:
-        outbound === 'suppressed'
-          ? interestSuppressionReason(lead.lt_interest_status, lead.status)
-          : null
+      suppression_reason: suppressionReason,
+      // Negative Instantly outcomes block recontact; otherwise keep/allow.
+      recontact_ok: suppressed ? 0 : 1
     }
 
     // Avoid wiping an existing display name with null.
@@ -305,15 +310,22 @@ export async function syncInstantlyLeadsIntoCompass(
     if (!company) delete patch.company
     if (!role) delete patch.role
 
+    let contactId: string
     if (match) {
       // Don't demote a stronger local status unless Instantly is more advanced.
       if (!shouldOverwriteOutbound(match.outbound_status, outbound)) {
         delete patch.outbound_status
         delete patch.interest_label
       }
+      // Don't clear an existing suppress block if Instantly didn't re-suppress.
+      if (!suppressed && match.suppression_reason) {
+        delete patch.suppression_reason
+        delete patch.recontact_ok
+      }
       const { error } = await supabase.from('lead_contacts').update(patch).eq('id', match.id)
       if (error) throw new Error(error.message)
       updated += 1
+      contactId = match.id
       byInstantlyId.set(lead.id, { ...match, instantly_lead_id: lead.id, email })
       if (email) byEmail.set(email, { ...match, instantly_lead_id: lead.id, email })
     } else {
@@ -326,15 +338,33 @@ export async function syncInstantlyLeadsIntoCompass(
       const { error } = await supabase.from('lead_contacts').insert(row)
       if (error) throw new Error(error.message)
       inserted += 1
+      contactId = row.id
       const created: ExistingLead = {
         id: row.id,
         email,
         instantly_lead_id: lead.id,
         outbound_status: outbound,
-        suppression_reason: (patch.suppression_reason as string | null) ?? null
+        suppression_reason: suppressionReason
       }
       byInstantlyId.set(lead.id, created)
       if (email) byEmail.set(email, created)
+    }
+
+    // Log outreach for 90-day cooldown history (best-effort; never fail sync).
+    try {
+      const linked = await lookupCopyForInstantlyCampaign(supabase, campaignId)
+      await recordOutreachTouch(supabase, {
+        contactId,
+        contactedAt: lastContactAt,
+        channel: 'email',
+        campaignId: linked.campaignId,
+        campaignName: linked.campaignName || campaignName,
+        instantlyCampaignId: campaignId,
+        copySnapshot: linked.copy,
+        source: 'instantly_sync'
+      })
+    } catch {
+      // ignore touch-log failures
     }
   }
 

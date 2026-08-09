@@ -22,6 +22,9 @@ import {
   type CompletenessFilter,
   type SavedLeadSegment
 } from '@/lib/leads-meta'
+import { computeRecontactEligibility } from '@/lib/recontact-eligibility'
+import { RecontactProgressRing } from '@/components/RecontactProgressRing'
+import { LeadRecontactPanel } from '@/components/LeadRecontactPanel'
 
 interface LeadTableProps {
   leads: LeadContact[]
@@ -201,25 +204,32 @@ export default function LeadTable({
         rows = data.leads
       }
 
-      const csvRows = rows.map((l) => ({
-        id: l.id,
-        name: l.name ?? '',
-        email: l.email ?? '',
-        phone: l.phone ?? '',
-        company: l.company ?? '',
-        role: l.role ?? '',
-        vertical: l.vertical ?? '',
-        source: l.source ?? '',
-        city: l.city ?? '',
-        state: l.state ?? '',
-        linkedin: l.linkedin ?? '',
-        outbound_status: l.outbound_status ?? '',
-        interest_label: l.interest_label ?? '',
-        last_outbound_at: l.last_outbound_at ?? '',
-        instantly_campaign: l.instantly_campaign_name || l.instantly_campaign || '',
-        created_at: l.created_at ?? '',
-        mirrored_at: l.mirrored_at ?? ''
-      }))
+      const csvRows = rows.map((l) => {
+        const rc = computeRecontactEligibility(l)
+        return {
+          id: l.id,
+          name: l.name ?? '',
+          email: l.email ?? '',
+          phone: l.phone ?? '',
+          company: l.company ?? '',
+          role: l.role ?? '',
+          vertical: l.vertical ?? '',
+          source: l.source ?? '',
+          city: l.city ?? '',
+          state: l.state ?? '',
+          linkedin: l.linkedin ?? '',
+          outbound_status: l.outbound_status ?? '',
+          interest_label: l.interest_label ?? '',
+          last_outbound_at: l.last_outbound_at ?? '',
+          recontact_lane: rc.lane,
+          recontact_progress_pct: rc.progressPercent ?? '',
+          recontact_days_remaining: rc.daysRemaining ?? '',
+          recontact_ready: rc.recommendNewCampaign ? '1' : '0',
+          instantly_campaign: l.instantly_campaign_name || l.instantly_campaign || '',
+          created_at: l.created_at ?? '',
+          mirrored_at: l.mirrored_at ?? ''
+        }
+      })
       const stamp = new Date().toISOString().slice(0, 10)
       const prefix = selectedOnly ? 'leads-selected' : 'leads'
       exportToCsv(csvRows, `${prefix}-${stamp}.csv`)
@@ -337,6 +347,12 @@ export default function LeadTable({
           label: 'Needs review',
           count: summary.needs_review,
           filters: { sync_state: 'needs_review' }
+        },
+        {
+          key: 'recontact_ready',
+          label: 'Recontact ready',
+          count: summary.recontact_ready ?? 0,
+          filters: { recontact_ready: '1' }
         }
       ]
     : []
@@ -351,7 +367,8 @@ export default function LeadTable({
       'city',
       'q',
       'recontact_ok',
-      'suppressed'
+      'suppressed',
+      'recontact_ready'
     ]
     const chipSet = keys.filter((k) => chipFilters[k])
     if (chipSet.length === 0) {
@@ -548,6 +565,22 @@ export default function LeadTable({
             ]}
             className="w-auto min-w-[160px]"
           />
+          <FilterSelect
+            label=""
+            hideLabel
+            value={draftFilters.recontact_ready ?? ''}
+            onChange={(v) =>
+              setDraftFilters((f) => ({
+                ...f,
+                recontact_ready: v === '1' || v === '0' ? v : undefined
+              }))
+            }
+            options={[
+              { value: '1', label: 'Ready (90d+)' },
+              { value: '0', label: 'Not ready yet' }
+            ]}
+            className="w-auto min-w-[160px]"
+          />
           <button
             type="button"
             onClick={applyFilters}
@@ -672,6 +705,7 @@ export default function LeadTable({
               <th className="px-4 py-3 font-medium">Location</th>
               <th className="min-w-[200px] px-4 py-3 font-medium">Campaign</th>
               <th className="px-4 py-3 font-medium">Stage</th>
+              <th className="px-4 py-3 font-medium">Cooldown</th>
               <th className="px-4 py-3 font-medium">Last touch</th>
             </tr>
           </thead>
@@ -679,7 +713,7 @@ export default function LeadTable({
             {leads.length === 0 && (
               <tr>
                 <td
-                  colSpan={phoneSparse ? 8 : 9}
+                  colSpan={phoneSparse ? 9 : 10}
                   className="px-4 py-10 text-center text-neutral-500"
                 >
                   No leads match these filters.
@@ -691,12 +725,13 @@ export default function LeadTable({
               const sync = inferSyncState(lead)
               const campaign =
                 lead.instantly_campaign_name || lead.instantly_campaign || null
+              const recontact = computeRecontactEligibility(lead)
               return (
                 <Fragment key={lead.id}>
                   <tr
                     className={`transition hover:bg-stone-50/70 ${
                       selected.has(lead.id) ? 'bg-orange-50/40' : ''
-                    }`}
+                    } ${recontact.lane === 'ready' ? 'bg-emerald-50/40' : ''}`}
                   >
                     <td className="px-4 py-3">
                       <input
@@ -761,13 +796,40 @@ export default function LeadTable({
                         )}
                       </div>
                     </td>
+                    <td
+                      className="cursor-pointer px-4 py-3"
+                      onClick={() => setExpandedId(expanded ? null : lead.id)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <RecontactProgressRing eligibility={recontact} />
+                        <span
+                          className={`text-[11px] leading-tight ${
+                            recontact.lane === 'ready'
+                              ? 'font-medium text-emerald-700'
+                              : 'text-neutral-500'
+                          }`}
+                        >
+                          {recontact.lane === 'ready'
+                            ? 'Ready'
+                            : recontact.lane === 'cooling' && recontact.daysRemaining != null
+                              ? `${recontact.daysRemaining}d`
+                              : recontact.lane === 'blocked'
+                                ? 'Blocked'
+                                : recontact.lane === 'never_contacted'
+                                  ? 'New'
+                                  : recontact.progressPercent != null
+                                    ? `${recontact.progressPercent}%`
+                                    : '—'}
+                        </span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-neutral-500">
                       {formatDate(lead.last_outbound_at)}
                     </td>
                   </tr>
                   {expanded && (
                     <tr key={`${lead.id}-detail`} className="bg-stone-50/60">
-                      <td colSpan={phoneSparse ? 8 : 9} className="px-5 py-5">
+                      <td colSpan={phoneSparse ? 9 : 10} className="px-5 py-5">
                         <LeadDetail
                           lead={lead}
                           sync={sync}
@@ -868,7 +930,8 @@ function LeadDetail({
   const nextAction = suggestNextAction(lead, sync)
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr]">
+    <div className="space-y-5">
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr]">
       <section>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
           Identity
@@ -949,6 +1012,14 @@ function LeadDetail({
           <DetailRow label="Updated" value={formatDate(lead.updated_at)} />
         </dl>
       </section>
+      </div>
+
+      <section className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+          Recontact cooldown
+        </h3>
+        <LeadRecontactPanel lead={lead} />
+      </section>
     </div>
   )
 }
@@ -957,15 +1028,25 @@ function suggestNextAction(
   lead: LeadContact,
   sync: ReturnType<typeof inferSyncState>
 ): string {
-  if (lead.outbound_status === 'suppressed' || lead.suppression_reason) {
+  const recontact = computeRecontactEligibility(lead)
+
+  if (recontact.lane === 'blocked') {
     return 'Keep suppressed unless recontact is explicitly allowed.'
   }
   if (lead.outbound_status === 'interested' || lead.outbound_status === 'replied') {
     return 'Follow up personally — book a call or move to pipeline.'
   }
-  if (lead.outbound_status === 'booked') return 'Confirm the meeting and prep the brief.'
+  if (lead.outbound_status === 'booked' || lead.outbound_status === 'meeting_booked') {
+    return 'Confirm the meeting and prep the brief.'
+  }
   if (lead.outbound_status === 'converted') return 'Hand off to delivery / CRM win path.'
   if (!lead.email) return 'Enrich email before any outbound.'
+  if (recontact.recommendNewCampaign) {
+    return 'Ready to recontact — export and pull into a new Instantly campaign.'
+  }
+  if (recontact.lane === 'cooling' && recontact.daysRemaining != null) {
+    return `In ${recontact.daysRemaining}-day cooldown (${recontact.progressPercent ?? 0}% of 90 days). Wait before cold re-outreach.`
+  }
   if (sync === 'not_uploaded') {
     return lead.phone
       ? 'Export CSV for Instantly, or start a call/SMS sequence.'
