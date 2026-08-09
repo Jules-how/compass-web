@@ -7,7 +7,7 @@ import type {
 } from '@/lib/types'
 import { normalizeTaskPriority, prioritySortKey } from '@/lib/task-priority'
 
-export type FocusWindow = 'today' | 'week' | 'all'
+export type FocusWindow = 'today' | 'week' | 'focus' | 'backlog' | 'done'
 export type TaskGroupBy = 'none' | 'function' | 'client' | 'project' | 'type' | 'status'
 
 export type TaskClientMeta = {
@@ -57,6 +57,10 @@ export function daysUntilDue(due: string | null | undefined, now = new Date()): 
 
 export function isOpenTask(task: Pick<CompassTask, 'status'>): boolean {
   return task.status !== 'completed' && task.status !== 'cancelled'
+}
+
+export function isDoneTask(task: Pick<CompassTask, 'status'>): boolean {
+  return task.status === 'completed' || task.status === 'cancelled'
 }
 
 function priorityPoints(priority: number | null | undefined): number {
@@ -133,7 +137,7 @@ function healthPoints(health: string | null | undefined): number {
 
 /**
  * Deterministic focus score — higher = do sooner.
- * Transparent, cheap, and stable across reloads (no AI).
+ * Kept for Home / legacy callers; My Tasks sorts manually instead.
  */
 export function taskFocusScore(
   task: Pick<CompassTask, 'priority' | 'due' | 'status' | 'task_type'>,
@@ -161,6 +165,11 @@ export function compareTasksByFocus(
   const scoreDiff =
     taskFocusScore(b, ctxFor(b), now).total - taskFocusScore(a, ctxFor(a), now).total
   if (scoreDiff !== 0) return scoreDiff
+  return compareTasksByManual(a, b, now)
+}
+
+/** Operator sort: priority you set → due date → newest created. */
+export function compareTasksByManual(a: CompassTask, b: CompassTask, now = new Date()): number {
   const priDiff = prioritySortKey(a.priority) - prioritySortKey(b.priority)
   if (priDiff !== 0) return priDiff
   const aDue = daysUntilDue(a.due, now)
@@ -168,39 +177,59 @@ export function compareTasksByFocus(
   if (aDue !== null && bDue !== null && aDue !== bDue) return aDue - bDue
   if (aDue !== null && bDue === null) return -1
   if (aDue === null && bDue !== null) return 1
+  const createdDiff = (b.created_at ?? '').localeCompare(a.created_at ?? '')
+  if (createdDiff !== 0) return createdDiff
   return b.updated_at.localeCompare(a.updated_at)
 }
 
+export function isActiveTask(task: Pick<CompassTask, 'status'>): boolean {
+  return task.status === 'in-progress' || task.status === 'blocked'
+}
+
+export function isFocusTask(
+  task: CompassTask,
+  now = new Date()
+): boolean {
+  if (!isOpenTask(task)) return false
+  const days = daysUntilDue(task.due, now)
+  const priority = normalizeTaskPriority(task.priority)
+  const highManual = priority === 1 || priority === 2
+  const dueSoon = days !== null && days <= 2
+  return isActiveTask(task) || highManual || dueSoon
+}
+
 /**
- * Today: open work that is due today/overdue, active (in progress/blocked),
- * or high-urgency (priority 1–2) even without a due date.
- * Week: today set ∪ due within 7 days ∪ open high-score work (top half of open).
- * All: every task (caller may still hide completed).
+ * Today: due today/overdue or actively working.
+ * Week: due within 7 days or actively working.
+ * Focus: P1–P2, active, or due within 2 days.
+ * Backlog: open work that is not Focus.
+ * Done: completed or cancelled.
  */
 export function matchesFocusWindow(
   task: CompassTask,
   window: FocusWindow,
-  ctx: TaskFocusContext = {},
+  _ctx: TaskFocusContext = {},
   now = new Date()
 ): boolean {
-  if (window === 'all') return true
+  if (window === 'done') return isDoneTask(task)
   if (!isOpenTask(task)) return false
 
   const days = daysUntilDue(task.due, now)
-  const priority = normalizeTaskPriority(task.priority)
-  const active = task.status === 'in-progress' || task.status === 'blocked'
-  const dueSoonOrOverdue = days !== null && days <= 0
+  const active = isActiveTask(task)
+  const dueTodayOrOverdue = days !== null && days <= 0
   const dueThisWeek = days !== null && days <= 7
-  const highManual = priority === 1 || priority === 2
 
   if (window === 'today') {
-    return active || dueSoonOrOverdue || (highManual && (days === null || days <= 2))
+    return active || dueTodayOrOverdue
   }
-
-  // week
-  if (active || dueThisWeek || highManual) return true
-  const score = taskFocusScore(task, ctx, now).total
-  return score >= 35
+  if (window === 'week') {
+    return active || dueThisWeek
+  }
+  if (window === 'focus') {
+    return isFocusTask(task, now)
+  }
+  // backlog
+  return !isFocusTask(task, now)
 }
 
 export type TaskOrganisationFilters = {
@@ -235,14 +264,16 @@ export function filterTasksForOrganisation(
   now = new Date()
 ): CompassTask[] {
   return tasks.filter((task) => {
-    if (filters.hideCompleted && (task.status === 'completed' || task.status === 'cancelled')) {
-      if (filters.window !== 'all' || filters.status === 'open') return false
+    if (filters.window === 'done') {
+      if (!isDoneTask(task)) return false
+    } else {
+      if (filters.hideCompleted && isDoneTask(task)) return false
+      if (filters.status === 'open' && !isOpenTask(task)) return false
+      if (filters.status !== 'open' && filters.status !== 'all' && task.status !== filters.status) {
+        return false
+      }
+      if (!matchesFocusWindow(task, filters.window, resolve.ctxOf(task), now)) return false
     }
-    if (filters.status === 'open' && !isOpenTask(task)) return false
-    if (filters.status !== 'open' && filters.status !== 'all' && task.status !== filters.status) {
-      return false
-    }
-    if (!matchesFocusWindow(task, filters.window, resolve.ctxOf(task), now)) return false
 
     const project = resolve.projectOf(task)
     const functionId = task.business_function_id ?? project?.business_function_id ?? null
@@ -308,4 +339,11 @@ export function groupTasks(
   }
 
   return [...buckets.values()].sort((a, b) => a.label.localeCompare(b.label))
+}
+
+export function formatCreatedAt(value: string | null | undefined): string | null {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }

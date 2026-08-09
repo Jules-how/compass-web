@@ -1,19 +1,16 @@
 'use client'
 
-import { useState } from 'react'
 import type {
   CompassBusinessFunction,
   CompassProject,
-  CompassTask,
-  TaskStatus
+  CompassTask
 } from '@/lib/types'
-import { TASK_STATUSES } from '@/lib/types'
-import NotesEditor from './NotesEditor'
-import { executionObjective, executionReadiness } from '@/lib/execution-contract'
-import type { TaskClientMeta } from '@/lib/task-organisation'
-import { daysUntilDue, taskFocusScore } from '@/lib/task-organisation'
 import {
-  TASK_PRIORITIES,
+  daysUntilDue,
+  formatCreatedAt,
+  type TaskClientMeta
+} from '@/lib/task-organisation'
+import {
   normalizeTaskPriority,
   taskPriorityLabel,
   taskPriorityShort
@@ -27,23 +24,9 @@ interface TaskItemProps {
   clientsById?: Record<string, TaskClientMeta>
   dense?: boolean
   depth: number
-  onChanged: () => void | Promise<void>
-}
-
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  'not-started': 'Not started',
-  'in-progress': 'In progress',
-  completed: 'Completed',
-  blocked: 'Blocked',
-  cancelled: 'Cancelled'
-}
-
-const STATUS_DOT: Record<TaskStatus, string> = {
-  'not-started': 'bg-neutral-300',
-  'in-progress': 'bg-blue-500',
-  completed: 'bg-green-500',
-  blocked: 'bg-red-500',
-  cancelled: 'bg-neutral-400'
+  lingeringComplete?: boolean
+  onOpen: (task: CompassTask) => void
+  onToggleDone: (task: CompassTask) => void | Promise<void>
 }
 
 function priorityTone(priority: number): string {
@@ -67,7 +50,7 @@ function dueTone(due: string | null): string {
   if (days < 0) return 'font-medium text-red-600'
   if (days === 0) return 'font-medium text-orange-700'
   if (days <= 2) return 'text-amber-700'
-  return 'text-neutral-400'
+  return 'text-neutral-500'
 }
 
 function formatDue(due: string | null): string | null {
@@ -75,10 +58,10 @@ function formatDue(due: string | null): string | null {
   const days = daysUntilDue(due)
   const label = due.slice(0, 10)
   if (days === null) return label
-  if (days < 0) return `${label} · ${Math.abs(days)}d late`
-  if (days === 0) return `${label} · today`
-  if (days === 1) return `${label} · tomorrow`
-  if (days <= 7) return `${label} · ${days}d`
+  if (days < 0) return `${Math.abs(days)}d late`
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Tomorrow'
+  if (days <= 7) return `${days}d`
   return label
 }
 
@@ -88,15 +71,12 @@ export default function TaskItem({
   projectsById,
   businessFunctionsById,
   clientsById = {},
-  dense = false,
+  dense = true,
   depth,
-  onChanged
+  lingeringComplete = false,
+  onOpen,
+  onToggleDone
 }: TaskItemProps) {
-  const [expanded, setExpanded] = useState(false)
-  const [showNotes, setShowNotes] = useState(false)
-  const [updating, setUpdating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
   const project = task.project_id ? projectsById[task.project_id] : null
   const bfId = task.business_function_id ?? project?.business_function_id ?? null
   const bf = bfId ? businessFunctionsById[bfId] : null
@@ -104,205 +84,134 @@ export default function TaskItem({
     project?.client_id && clientsById[project.client_id]
       ? clientsById[project.client_id]
       : project?.client_name
-        ? { id: project.client_id ?? '', name: project.client_name, priority: 0, health: 'no_updates' }
+        ? {
+            id: project.client_id ?? '',
+            name: project.client_name,
+            priority: 0,
+            health: 'no_updates'
+          }
         : null
   const hasSubtasks = subtasks.length > 0
-  const contractReadiness = executionReadiness(task)
-  const contractObjective = executionObjective(task.execution_contract)
-  const score = taskFocusScore(task, { project, client }).total
   const dueLabel = formatDue(task.due)
-  const isCompleted = task.status === 'completed'
-
-  async function patchTask(payload: Partial<CompassTask>) {
-    setUpdating(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/tasks/${task.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? `Request failed (${res.status})`)
-      }
-      await onChanged()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setUpdating(false)
-    }
-  }
-
-  async function handleStatusChange(value: TaskStatus) {
-    await patchTask({ status: value })
-  }
-
-  async function handlePriorityChange(value: number) {
-    await patchTask({ priority: value })
-  }
-
-  async function handleDelete() {
-    if (!confirm(`Delete “${task.title}”? This cannot be undone.`)) return
-    setUpdating(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/tasks/${task.id}`, { method: 'DELETE' })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? `Request failed (${res.status})`)
-      }
-      await onChanged()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setUpdating(false)
-    }
-  }
-
-  const rowPad = dense ? 'px-3 py-2' : 'p-3.5'
-  const shellClass = dense
-    ? `border-b border-stone-100 last:border-b-0 hover:bg-stone-50/80 ${rowPad}`
-    : `rounded-xl border border-stone-200/70 bg-white shadow-soft transition hover:border-stone-300 hover:shadow-lift ${rowPad}`
+  const createdLabel = formatCreatedAt(task.created_at)
+  const isCompleted = task.status === 'completed' || lingeringComplete
+  const isCancelled = task.status === 'cancelled'
 
   return (
     <li>
-      <div className={shellClass} style={dense ? undefined : { marginLeft: depth * 16 }}>
-        <div className="flex items-center gap-2.5">
-          <span
-            className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[task.status]}`}
-            title={STATUS_LABELS[task.status]}
-          />
+      <div
+        className={`grid grid-cols-[auto_minmax(0,1fr)_minmax(5.5rem,7.5rem)_minmax(4.5rem,6rem)_minmax(3.5rem,5rem)_auto] items-center gap-x-3 border-b border-stone-100 px-3 py-2.5 last:border-b-0 hover:bg-stone-50/80 ${
+          isCompleted || isCancelled ? 'bg-stone-50/40' : ''
+        } ${dense ? '' : ''}`}
+        style={depth > 0 ? { paddingLeft: 12 + depth * 16 } : undefined}
+      >
+        <button
+          type="button"
+          onClick={() => void onToggleDone(task)}
+          disabled={isCancelled}
+          aria-label={isCompleted ? 'Mark as not done' : 'Mark as done'}
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+            isCompleted
+              ? 'border-emerald-500 bg-emerald-500 text-white'
+              : 'border-stone-300 bg-white text-transparent hover:border-sf-orange'
+          } ${isCancelled ? 'cursor-not-allowed opacity-40' : ''}`}
+        >
+          <svg viewBox="0 0 16 16" className="h-3 w-3" aria-hidden>
+            <path
+              d="M3.5 8.2 6.4 11l6.1-6.4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
 
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <button
+          type="button"
+          onClick={() => onOpen(task)}
+          className="min-w-0 text-left"
+        >
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span
+              className={`truncate text-sm ${
+                isCompleted || isCancelled
+                  ? 'text-neutral-400 line-through'
+                  : 'font-medium text-neutral-900'
+              }`}
+            >
+              {task.title}
+            </span>
+            {task.priority > 0 ? (
               <span
-                className={`text-sm ${
-                  isCompleted ? 'text-neutral-400 line-through' : 'font-medium text-neutral-900'
-                }`}
+                className={`inline-flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-[10px] font-semibold ring-1 ${priorityTone(task.priority)}`}
+                title={taskPriorityLabel(task.priority)}
               >
-                {task.title}
+                {taskPriorityShort(task.priority)}
               </span>
-              {task.priority > 0 ? (
-                <span
-                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-[10px] font-semibold ring-1 ${priorityTone(task.priority)}`}
-                  title={taskPriorityLabel(task.priority)}
-                >
-                  {taskPriorityShort(task.priority)}
-                </span>
-              ) : null}
-              {task.task_type ? (
-                <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
-                  {task.task_type}
-                </span>
-              ) : null}
-              {client ? (
-                <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-[11px] text-sky-800">
-                  {client.name}
-                </span>
-              ) : null}
-              {project ? (
-                <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[11px] text-neutral-600">
-                  {project.name}
-                </span>
-              ) : null}
-              {bf ? (
-                <span className="rounded-md bg-sf-orange-light/50 px-1.5 py-0.5 text-[11px] text-sf-orange-dark">
-                  {bf.name}
-                </span>
-              ) : null}
-              {dueLabel ? <span className={`text-[11px] ${dueTone(task.due)}`}>{dueLabel}</span> : null}
-            </div>
+            ) : null}
+            {task.task_type ? (
+              <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
+                {task.task_type}
+              </span>
+            ) : null}
+            {task.status === 'blocked' ? (
+              <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
+                Blocked
+              </span>
+            ) : null}
+            {task.status === 'in-progress' && !isCompleted ? (
+              <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-700">
+                In progress
+              </span>
+            ) : null}
+            {lingeringComplete ? (
+              <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                Done
+              </span>
+            ) : null}
           </div>
-
-          <div className="flex shrink-0 items-center gap-1.5">
-            {!dense ? (
-              <span className="hidden text-[10px] tabular-nums text-neutral-300 sm:inline" title="Focus score">
-                {Math.round(score)}
-              </span>
-            ) : (
-              <span
-                className="hidden w-7 text-right text-[10px] tabular-nums text-neutral-300 sm:inline"
-                title={`Focus score ${Math.round(score)}`}
-              >
-                {Math.round(score)}
-              </span>
-            )}
-
-            <select
-              value={normalizeTaskPriority(task.priority)}
-              onChange={(e) => handlePriorityChange(Number(e.target.value))}
-              disabled={updating}
-              className="max-w-[5.5rem] rounded-md border border-neutral-200 bg-white px-1.5 py-1 text-[11px] focus:border-sf-orange focus:outline-none"
-              aria-label="Task priority"
-            >
-              {TASK_PRIORITIES.map((row) => (
-                <option key={row.value} value={row.value}>
-                  {row.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={task.status}
-              onChange={(e) => handleStatusChange(e.target.value as TaskStatus)}
-              disabled={updating}
-              className="max-w-[7.5rem] rounded-md border border-neutral-200 bg-white px-1.5 py-1 text-[11px] focus:border-sf-orange focus:outline-none"
-              aria-label="Task status"
-            >
-              {TASK_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABELS[s]}
-                </option>
-              ))}
-            </select>
-
-            {hasSubtasks && (
-              <button
-                type="button"
-                onClick={() => setExpanded((v) => !v)}
-                className="rounded-md border border-neutral-200 px-1.5 py-1 text-[11px] text-neutral-600 transition hover:bg-neutral-100"
-              >
-                {expanded ? `Hide ${subtasks.length}` : `${subtasks.length}`}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setShowNotes((v) => !v)}
-              className="rounded-md border border-neutral-200 px-1.5 py-1 text-[11px] text-neutral-600 transition hover:bg-neutral-100"
-            >
-              {showNotes ? 'Hide' : 'Notes'}
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={updating}
-              className="rounded-md border border-neutral-200 px-1.5 py-1 text-[11px] text-red-600 transition hover:bg-red-50"
-            >
-              Del
-            </button>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-neutral-400 sm:hidden">
+            {project ? <span>{project.name}</span> : null}
+            {client ? <span>{client.name}</span> : null}
+            {createdLabel ? <span>Created {createdLabel}</span> : null}
           </div>
+        </button>
+
+        <div className="hidden min-w-0 sm:block">
+          <p className="truncate text-xs text-neutral-700">{project?.name ?? '—'}</p>
+          <p className="truncate text-[11px] text-neutral-400">
+            {client?.name ?? bf?.name ?? 'No client'}
+          </p>
         </div>
 
-        {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
-        {expanded && (
-          <div className="mt-2 border-t border-neutral-100 pt-2 text-xs text-neutral-500">
-            <span className="font-medium">
-              L{task.execution_level} · {task.execution_mode ?? 'Unspecified'} · {contractReadiness}
-            </span>
-            {contractObjective && <p className="mt-1">{contractObjective}</p>}
-          </div>
-        )}
+        <div className="hidden text-xs text-neutral-500 sm:block">
+          {createdLabel ?? '—'}
+        </div>
 
-        {showNotes && (
-          <div className="mt-2 border-t border-neutral-100 pt-2">
-            <NotesEditor task={task} />
-          </div>
-        )}
+        <div className={`hidden text-xs sm:block ${dueTone(task.due)}`}>
+          {dueLabel ?? '—'}
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end gap-1.5">
+          {hasSubtasks ? (
+            <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[10px] tabular-nums text-neutral-500">
+              {subtasks.length}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => onOpen(task)}
+            className="rounded-xl border border-stone-200 px-2 py-1 text-[11px] text-neutral-600 transition hover:bg-white"
+          >
+            Open
+          </button>
+        </div>
       </div>
 
-      {expanded && hasSubtasks && (
-        <ul className={dense ? 'border-l border-stone-100 bg-stone-50/40' : 'mt-2 space-y-2'}>
+      {hasSubtasks ? (
+        <ul className="border-l border-stone-100 bg-stone-50/40">
           {subtasks.map((sub) => (
             <TaskItem
               key={sub.id}
@@ -313,11 +222,13 @@ export default function TaskItem({
               clientsById={clientsById}
               dense={dense}
               depth={depth + 1}
-              onChanged={onChanged}
+              lingeringComplete={false}
+              onOpen={onOpen}
+              onToggleDone={onToggleDone}
             />
           ))}
         </ul>
-      )}
+      ) : null}
     </li>
   )
 }

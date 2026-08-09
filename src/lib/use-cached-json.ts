@@ -27,7 +27,10 @@ export function useCachedJson<T>(
       await loadQueryCache<T>(
         key,
         async () => {
-          const res = await fetch(url, { headers: { Accept: 'application/json' } })
+          const res = await fetch(url, {
+            headers: { Accept: 'application/json' },
+            cache: force ? 'no-store' : 'default'
+          })
           if (!res.ok) throw new Error(`Failed to load (${res.status})`)
           return (await res.json()) as T
         },

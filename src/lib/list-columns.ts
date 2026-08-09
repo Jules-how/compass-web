@@ -1,5 +1,5 @@
 export const TASK_LIST_COLUMNS =
-  'id,title,status,priority,due,project_id,parent_task_id,business_function_id,task_type,execution_level,updated_at'
+  'id,title,status,priority,due,project_id,parent_task_id,business_function_id,task_type,notes,execution_level,created_at,updated_at'
 
 export const PROJECT_LIST_COLUMNS =
   'id,name,business_function_id,client_id,status,priority,health,start_date,target_date,labels,summary,updated_at,created_at,mirrored_at,source,notes,external_id'

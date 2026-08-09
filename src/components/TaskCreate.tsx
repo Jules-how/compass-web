@@ -106,7 +106,7 @@ export default function TaskCreate({
       <input
         autoFocus
         type="text"
-        placeholder="Issue title"
+        placeholder="Task title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="compass-input"
@@ -230,7 +230,7 @@ export default function TaskCreate({
           disabled={saving || !title.trim()}
           className="compass-btn-primary"
         >
-          {saving ? 'Creating…' : 'Create issue'}
+          {saving ? 'Creating…' : 'Create task'}
         </button>
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>

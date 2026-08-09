@@ -1,21 +1,22 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type {
   CompassBusinessFunction,
   CompassProject,
   CompassTask,
-  TaskStatus,
   TaskType
 } from '@/lib/types'
-import { TASK_STATUSES, TASK_TYPES } from '@/lib/types'
+import { TASK_TYPES } from '@/lib/types'
 import TaskItem from './TaskItem'
 import TaskCreate from './TaskCreate'
+import TaskDetailPanel from './TaskDetailPanel'
 import {
-  compareTasksByFocus,
+  compareTasksByManual,
   defaultTaskOrganisationFilters,
   filterTasksForOrganisation,
   groupTasks,
+  isDoneTask,
   isOpenTask,
   type FocusWindow,
   type TaskClientMeta,
@@ -36,16 +37,13 @@ interface TaskListProps {
 const WINDOW_LABELS: Record<FocusWindow, string> = {
   today: 'Today',
   week: 'This week',
-  all: 'All'
+  focus: 'Focus',
+  backlog: 'Backlog',
+  done: 'Done'
 }
 
-const STATUS_FILTER_LABELS: Record<TaskStatus, string> = {
-  'not-started': 'Not started',
-  'in-progress': 'In progress',
-  completed: 'Completed',
-  blocked: 'Blocked',
-  cancelled: 'Cancelled'
-}
+const WINDOW_ORDER: FocusWindow[] = ['today', 'week', 'focus', 'backlog', 'done']
+const LINGER_MS = 2200
 
 export default function TaskList({
   topTasks,
@@ -57,7 +55,20 @@ export default function TaskList({
 }: TaskListProps) {
   const [creating, setCreating] = useState(false)
   const [filters, setFilters] = useState<TaskOrganisationFilters>(defaultTaskOrganisationFilters)
-  const [groupBy, setGroupBy] = useState<TaskGroupBy>('function')
+  const [groupBy, setGroupBy] = useState<TaskGroupBy>('none')
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [completedOpen, setCompletedOpen] = useState(false)
+  const [lingeringIds, setLingeringIds] = useState<Record<string, true>>({})
+  const [togglingIds, setTogglingIds] = useState<Record<string, true>>({})
+  const lingerTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  useEffect(() => {
+    const timers = lingerTimers.current
+    return () => {
+      for (const timer of timers.values()) clearTimeout(timer)
+      timers.clear()
+    }
+  }, [])
 
   async function refresh() {
     await onRefresh?.()
@@ -79,30 +90,59 @@ export default function TaskList({
   }
 
   const openCount = useMemo(() => topTasks.filter(isOpenTask).length, [topTasks])
+  const doneCount = useMemo(() => topTasks.filter(isDoneTask).length, [topTasks])
 
   const windowCounts = useMemo(() => {
-    const base = { ...filters, status: 'open' as const, hideCompleted: true }
-    return {
-      today: filterTasksForOrganisation(
-        topTasks,
-        { ...base, window: 'today' },
-        { projectOf, ctxOf }
-      ).length,
-      week: filterTasksForOrganisation(
-        topTasks,
-        { ...base, window: 'week' },
-        { projectOf, ctxOf }
-      ).length,
-      all: openCount
+    const counts = {} as Record<FocusWindow, number>
+    for (const window of WINDOW_ORDER) {
+      const base: TaskOrganisationFilters = {
+        ...filters,
+        window,
+        status: window === 'done' ? 'all' : 'open',
+        hideCompleted: window !== 'done'
+      }
+      counts[window] = filterTasksForOrganisation(topTasks, base, { projectOf, ctxOf }).length
     }
+    return counts
     // eslint-disable-next-line react-hooks/exhaustive-deps -- resolve fns are stable over props
-  }, [topTasks, projectsById, clientsById, openCount, filters.status, filters.hideCompleted])
+  }, [topTasks, projectsById, clientsById, filters.functionId, filters.clientId, filters.projectId, filters.taskType])
 
   const visibleTasks = useMemo(() => {
     const filtered = filterTasksForOrganisation(topTasks, filters, { projectOf, ctxOf })
-    return [...filtered].sort((a, b) => compareTasksByFocus(a, b, ctxOf))
+    const withLinger =
+      filters.window === 'done'
+        ? filtered
+        : [
+            ...filtered,
+            ...topTasks.filter(
+              (task) => lingeringIds[task.id] && isDoneTask(task) && !filtered.some((row) => row.id === task.id)
+            )
+          ]
+    return [...withLinger].sort((a, b) => {
+      const aLinger = lingeringIds[a.id] ? 1 : 0
+      const bLinger = lingeringIds[b.id] ? 1 : 0
+      if (aLinger !== bLinger) return bLinger - aLinger
+      return compareTasksByManual(a, b)
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topTasks, filters, projectsById, clientsById])
+  }, [topTasks, filters, projectsById, clientsById, lingeringIds])
+
+  const completedTasks = useMemo(() => {
+    if (filters.window === 'done') return []
+    return topTasks
+      .filter((task) => isDoneTask(task) && !lingeringIds[task.id])
+      .filter((task) => {
+        const project = projectOf(task)
+        const functionId = task.business_function_id ?? project?.business_function_id ?? null
+        if (filters.functionId !== 'all' && functionId !== filters.functionId) return false
+        if (filters.projectId !== 'all' && task.project_id !== filters.projectId) return false
+        if (filters.clientId !== 'all' && (project?.client_id ?? null) !== filters.clientId) return false
+        if (filters.taskType !== 'all' && task.task_type !== filters.taskType) return false
+        return true
+      })
+      .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topTasks, filters, projectsById, clientsById, lingeringIds])
 
   const groups = useMemo(
     () => groupTasks(visibleTasks, groupBy, { projectOf, functionOf }),
@@ -122,35 +162,107 @@ export default function TaskList({
     return Object.values(businessFunctionsById).sort((a, b) => a.sort_order - b.sort_order)
   }, [businessFunctionsById])
 
+  const selectedTask = useMemo(() => {
+    if (!selectedTaskId) return null
+    return (
+      topTasks.find((task) => task.id === selectedTaskId) ??
+      Object.values(subtasksByParent)
+        .flat()
+        .find((task) => task.id === selectedTaskId) ??
+      null
+    )
+  }, [selectedTaskId, topTasks, subtasksByParent])
+
   function patchFilters(patch: Partial<TaskOrganisationFilters>) {
-    setFilters((prev) => ({ ...prev, ...patch }))
+    setFilters((prev) => {
+      const next = { ...prev, ...patch }
+      if (patch.window === 'done') {
+        next.status = 'all'
+        next.hideCompleted = false
+      } else if (patch.window) {
+        next.status = 'open'
+        next.hideCompleted = true
+      }
+      return next
+    })
+  }
+
+  function clearLinger(taskId: string) {
+    const existing = lingerTimers.current.get(taskId)
+    if (existing) {
+      clearTimeout(existing)
+      lingerTimers.current.delete(taskId)
+    }
+    setLingeringIds((prev) => {
+      if (!prev[taskId]) return prev
+      const next = { ...prev }
+      delete next[taskId]
+      return next
+    })
+  }
+
+  async function handleToggleDone(task: CompassTask) {
+    if (togglingIds[task.id] || task.status === 'cancelled') return
+    const nextStatus = task.status === 'completed' ? 'not-started' : 'completed'
+    setTogglingIds((prev) => ({ ...prev, [task.id]: true }))
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus })
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error ?? `Request failed (${res.status})`)
+      }
+      if (nextStatus === 'completed' && filters.window !== 'done') {
+        setLingeringIds((prev) => ({ ...prev, [task.id]: true }))
+        clearTimeout(lingerTimers.current.get(task.id))
+        lingerTimers.current.set(
+          task.id,
+          setTimeout(() => {
+            clearLinger(task.id)
+            setCompletedOpen(true)
+          }, LINGER_MS)
+        )
+      } else {
+        clearLinger(task.id)
+      }
+      await refresh()
+    } catch {
+      clearLinger(task.id)
+    } finally {
+      setTogglingIds((prev) => {
+        const next = { ...prev }
+        delete next[task.id]
+        return next
+      })
+    }
   }
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex rounded-lg border border-stone-200 bg-white p-0.5 text-xs">
-            {(Object.keys(WINDOW_LABELS) as FocusWindow[]).map((window) => (
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap rounded-xl border border-stone-200 bg-white p-0.5 text-xs">
+            {WINDOW_ORDER.map((window) => (
               <button
                 key={window}
                 type="button"
                 onClick={() => patchFilters({ window })}
-                className={`rounded-md px-2.5 py-1.5 font-medium transition ${
+                className={`rounded-lg px-2.5 py-1.5 font-medium transition ${
                   filters.window === window
                     ? 'bg-neutral-900 text-white'
                     : 'text-neutral-500 hover:text-neutral-800'
                 }`}
               >
                 {WINDOW_LABELS[window]}
-                <span className="ml-1.5 tabular-nums opacity-70">
-                  {windowCounts[window]}
-                </span>
+                <span className="ml-1.5 tabular-nums opacity-70">{windowCounts[window]}</span>
               </button>
             ))}
           </div>
           <p className="text-xs text-neutral-500">
-            {visibleTasks.length} shown · {openCount} open · {topTasks.length} total
+            {visibleTasks.length} shown · {openCount} open · {doneCount} done
           </p>
         </div>
         <button
@@ -164,29 +276,9 @@ export default function TaskList({
 
       <div className="flex flex-wrap items-center gap-2">
         <select
-          value={filters.status}
-          onChange={(e) =>
-            patchFilters({
-              status: e.target.value as TaskOrganisationFilters['status'],
-              hideCompleted: e.target.value === 'open'
-            })
-          }
-          className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"
-          aria-label="Filter by status"
-        >
-          <option value="open">Open only</option>
-          <option value="all">All statuses</option>
-          {TASK_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {STATUS_FILTER_LABELS[status]}
-            </option>
-          ))}
-        </select>
-
-        <select
           value={filters.functionId}
           onChange={(e) => patchFilters({ functionId: e.target.value })}
-          className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"
+          className="rounded-xl border border-stone-200 bg-white px-2 py-1.5 text-xs"
           aria-label="Filter by function"
         >
           <option value="all">All functions</option>
@@ -200,7 +292,7 @@ export default function TaskList({
         <select
           value={filters.clientId}
           onChange={(e) => patchFilters({ clientId: e.target.value })}
-          className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"
+          className="rounded-xl border border-stone-200 bg-white px-2 py-1.5 text-xs"
           aria-label="Filter by client"
         >
           <option value="all">All clients</option>
@@ -214,7 +306,7 @@ export default function TaskList({
         <select
           value={filters.projectId}
           onChange={(e) => patchFilters({ projectId: e.target.value })}
-          className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"
+          className="rounded-xl border border-stone-200 bg-white px-2 py-1.5 text-xs"
           aria-label="Filter by project"
         >
           <option value="all">All projects</option>
@@ -227,10 +319,8 @@ export default function TaskList({
 
         <select
           value={filters.taskType}
-          onChange={(e) =>
-            patchFilters({ taskType: e.target.value as TaskType | 'all' })
-          }
-          className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"
+          onChange={(e) => patchFilters({ taskType: e.target.value as TaskType | 'all' })}
+          className="rounded-xl border border-stone-200 bg-white px-2 py-1.5 text-xs"
           aria-label="Filter by type"
         >
           <option value="all">All types</option>
@@ -244,13 +334,13 @@ export default function TaskList({
         <select
           value={groupBy}
           onChange={(e) => setGroupBy(e.target.value as TaskGroupBy)}
-          className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"
+          className="rounded-xl border border-stone-200 bg-white px-2 py-1.5 text-xs"
           aria-label="Group tasks"
         >
           <option value="none">No grouping</option>
-          <option value="function">Group by function</option>
-          <option value="client">Group by client</option>
           <option value="project">Group by project</option>
+          <option value="client">Group by client</option>
+          <option value="function">Group by function</option>
           <option value="type">Group by type</option>
           <option value="status">Group by status</option>
         </select>
@@ -271,10 +361,20 @@ export default function TaskList({
         <div className="rounded-2xl border border-dashed border-stone-300/80 bg-stone-50/40 px-4 py-12 text-center text-sm text-neutral-500">
           {topTasks.length === 0
             ? 'No tasks yet. Create one to get started.'
-            : 'Nothing in this focus window. Try This week or All, or clear a filter.'}
+            : filters.window === 'done'
+              ? 'No completed tasks yet.'
+              : 'Nothing in this view. Try another tab or clear a filter.'}
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-stone-200/70 bg-white shadow-soft">
+          <div className="hidden grid-cols-[auto_minmax(0,1fr)_minmax(5.5rem,7.5rem)_minmax(4.5rem,6rem)_minmax(3.5rem,5rem)_auto] gap-x-3 border-b border-stone-100 bg-stone-50/80 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 sm:grid">
+            <span className="w-5" />
+            <span>Task</span>
+            <span>Project</span>
+            <span>Created</span>
+            <span>Due</span>
+            <span className="text-right"> </span>
+          </div>
           {groups.map((group) => (
             <section key={group.key} className="border-b border-stone-100 last:border-b-0">
               {groupBy !== 'none' ? (
@@ -298,7 +398,9 @@ export default function TaskList({
                     clientsById={clientsById}
                     dense
                     depth={0}
-                    onChanged={refresh}
+                    lingeringComplete={Boolean(lingeringIds[task.id])}
+                    onOpen={(row) => setSelectedTaskId(row.id)}
+                    onToggleDone={handleToggleDone}
                   />
                 ))}
               </ul>
@@ -306,6 +408,55 @@ export default function TaskList({
           ))}
         </div>
       )}
+
+      {filters.window !== 'done' && completedTasks.length > 0 ? (
+        <div className="overflow-hidden rounded-2xl border border-stone-200/70 bg-white shadow-soft">
+          <button
+            type="button"
+            onClick={() => setCompletedOpen((v) => !v)}
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-stone-50/80"
+          >
+            <div>
+              <p className="text-sm font-medium text-neutral-800">Completed</p>
+              <p className="text-xs text-neutral-500">
+                Finished tasks park here · uncheck to reopen
+              </p>
+            </div>
+            <span className="rounded-lg bg-stone-100 px-2 py-1 text-xs tabular-nums text-neutral-600">
+              {completedTasks.length}
+              <span className="ml-2 text-neutral-400">{completedOpen ? 'Hide' : 'Show'}</span>
+            </span>
+          </button>
+          {completedOpen ? (
+            <ul className="border-t border-stone-100">
+              {completedTasks.slice(0, 40).map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  subtasks={[]}
+                  projectsById={projectsById}
+                  businessFunctionsById={businessFunctionsById}
+                  clientsById={clientsById}
+                  dense
+                  depth={0}
+                  onOpen={(row) => setSelectedTaskId(row.id)}
+                  onToggleDone={handleToggleDone}
+                />
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
+      {selectedTask ? (
+        <TaskDetailPanel
+          task={selectedTask}
+          projectsById={projectsById}
+          businessFunctionsById={businessFunctionsById}
+          onClose={() => setSelectedTaskId(null)}
+          onChanged={refresh}
+        />
+      ) : null}
     </div>
   )
 }
