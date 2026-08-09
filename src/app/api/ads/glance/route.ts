@@ -14,7 +14,8 @@ export async function GET() {
         ...result.glance,
         source: result.source,
         syncedAt: result.syncedAt,
-        connectedAccounts: result.connectedAccounts
+        connectedAccounts: result.connectedAccounts,
+        accountsNeedingToken: result.accountsNeedingToken
       })
     } catch (err) {
       // Migration not applied yet — fall back to demo payload.

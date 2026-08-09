@@ -67,6 +67,11 @@ export function AdAccountsSettings({
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(initialBanner ?? null)
 
+  const [instantlyConfigured, setInstantlyConfigured] = useState<boolean | null>(null)
+  const [instantlySource, setInstantlySource] = useState<'env' | 'settings' | 'none'>('none')
+  const [instantlyKey, setInstantlyKey] = useState('')
+  const [instantlyNotice, setInstantlyNotice] = useState<string | null>(null)
+
   const [platform, setPlatform] = useState<AdPlatform>('meta')
   const [accessToken, setAccessToken] = useState('')
   const [externalAccountId, setExternalAccountId] = useState('')
@@ -80,6 +85,22 @@ export function AdAccountsSettings({
     () => PLATFORMS.find((p) => p.id === platform) ?? PLATFORMS[0],
     [platform]
   )
+
+  const refreshInstantly = useCallback(async () => {
+    try {
+      const res = await fetch('/api/instantly/settings', { cache: 'no-store' })
+      if (!res.ok) throw new Error(`Failed to load Instantly (${res.status})`)
+      const body = (await res.json()) as {
+        configured?: boolean
+        source?: 'env' | 'settings' | 'none'
+      }
+      setInstantlyConfigured(Boolean(body.configured))
+      setInstantlySource(body.source ?? 'none')
+    } catch {
+      setInstantlyConfigured(false)
+      setInstantlySource('none')
+    }
+  }, [])
 
   const refresh = useCallback(async () => {
     setLoadError(null)
@@ -102,7 +123,59 @@ export function AdAccountsSettings({
 
   useEffect(() => {
     void refresh()
-  }, [refresh])
+    void refreshInstantly()
+  }, [refresh, refreshInstantly])
+
+  async function saveInstantlyKey() {
+    setBusy('instantly')
+    setInstantlyNotice(null)
+    try {
+      const res = await fetch('/api/instantly/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: instantlyKey.trim() })
+      })
+      const body = (await res.json()) as {
+        error?: string
+        detail?: string
+        configured?: boolean
+        source?: 'env' | 'settings' | 'none'
+      }
+      if (!res.ok) throw new Error(body.detail || body.error || 'Save failed')
+      setInstantlyKey('')
+      setInstantlyConfigured(Boolean(body.configured))
+      setInstantlySource(body.source ?? 'none')
+      setInstantlyNotice(
+        instantlyKey.trim()
+          ? 'Instantly connected — Home cold email will use live campaigns.'
+          : 'Stored Instantly key cleared.'
+      )
+    } catch (err) {
+      setInstantlyNotice(err instanceof Error ? err.message : 'Save failed')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function clearInstantlyKey() {
+    setBusy('instantly')
+    setInstantlyNotice(null)
+    try {
+      const res = await fetch('/api/instantly/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: '' })
+      })
+      if (!res.ok) throw new Error('Clear failed')
+      setInstantlyConfigured(false)
+      setInstantlySource('none')
+      setInstantlyNotice('Stored Instantly key cleared.')
+    } catch (err) {
+      setInstantlyNotice(err instanceof Error ? err.message : 'Clear failed')
+    } finally {
+      setBusy(null)
+    }
+  }
 
   async function discover() {
     if (!accessToken.trim()) {
@@ -221,6 +294,77 @@ export function AdAccountsSettings({
       <Card>
         <CardHeader>
           <div>
+            <CardTitle>Instantly (cold email)</CardTitle>
+            <CardDescription>
+              Home cold-email metrics pull live from Instantly when an API key is set
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-600">
+            <span>Status:</span>
+            {instantlyConfigured == null ? (
+              <span className="text-neutral-400">Checking…</span>
+            ) : instantlyConfigured ? (
+              <Badge variant="success" appearance="light" size="sm">
+                Live · {instantlySource === 'env' ? 'env' : 'settings'}
+              </Badge>
+            ) : (
+              <Badge variant="secondary" appearance="light" size="sm">
+                Demo until connected
+              </Badge>
+            )}
+          </div>
+          {instantlyNotice ? (
+            <div className="rounded-xl border border-stone-200 bg-stone-50/80 px-3.5 py-3 text-sm text-neutral-700">
+              {instantlyNotice}
+            </div>
+          ) : null}
+          {instantlySource === 'env' ? (
+            <p className="text-sm text-neutral-500">
+              Instantly is configured via <code className="text-xs">INSTANTLY_API_KEY</code> on the
+              server. You can still store a backup key below.
+            </p>
+          ) : null}
+          <div className="space-y-2">
+            <label className="block text-xs font-medium uppercase tracking-[0.08em] text-neutral-400">
+              Instantly API key
+            </label>
+            <input
+              type="password"
+              autoComplete="off"
+              value={instantlyKey}
+              onChange={(e) => setInstantlyKey(e.target.value)}
+              placeholder="Paste from Instantly → Settings → Integrations → API"
+              className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 outline-none ring-[#e85d2a]/30 focus:ring-2"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy === 'instantly' || !instantlyKey.trim()}
+              onClick={() => void saveInstantlyKey()}
+              className="rounded-xl bg-[#e85d2a] px-4 py-2 text-sm font-medium text-white shadow-soft transition hover:bg-[#d14e1f] disabled:opacity-50"
+            >
+              {busy === 'instantly' ? 'Saving…' : 'Save & verify'}
+            </button>
+            {instantlySource === 'settings' ? (
+              <button
+                type="button"
+                disabled={busy === 'instantly'}
+                onClick={() => void clearInstantlyKey()}
+                className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:border-stone-300 disabled:opacity-50"
+              >
+                Clear stored key
+              </button>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div>
             <CardTitle>Ad accounts</CardTitle>
             <CardDescription>
               Connect Meta, Google, and LinkedIn so Home shows live spend health — not demo numbers
@@ -241,9 +385,7 @@ export function AdAccountsSettings({
             </div>
           ) : null}
 
-          {loadError ? (
-            <div className="text-sm text-red-600">{loadError}</div>
-          ) : null}
+          {loadError ? <div className="text-sm text-red-600">{loadError}</div> : null}
 
           <div className="flex flex-wrap gap-2">
             {PLATFORMS.map((p) => (
@@ -253,12 +395,11 @@ export function AdAccountsSettings({
                 onClick={() => {
                   setPlatform(p.id)
                   setDiscovered([])
-                  setNotice(null)
                 }}
                 className={cn(
-                  'rounded-lg border px-3 py-1.5 text-sm font-medium transition',
+                  'rounded-xl border px-3.5 py-2 text-sm font-medium transition',
                   platform === p.id
-                    ? 'border-[#e85d2a]/40 bg-orange-50 text-[#c2410c]'
+                    ? 'border-[#e85d2a]/40 bg-orange-50 text-[#c2410c] shadow-soft'
                     : 'border-stone-200 bg-white text-neutral-600 hover:border-stone-300'
                 )}
               >
@@ -272,105 +413,105 @@ export function AdAccountsSettings({
           {platform === 'meta' && oauthMeta ? (
             <a
               href="/api/ads/oauth/meta"
-              className="inline-flex items-center rounded-lg bg-[#1877F2] px-3.5 py-2 text-sm font-medium text-white hover:opacity-90"
+              className="inline-flex rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-neutral-800 shadow-soft transition hover:border-stone-300"
             >
               Connect with Facebook
             </a>
           ) : null}
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="block text-sm md:col-span-2">
-              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <label className="block text-xs font-medium uppercase tracking-[0.08em] text-neutral-400">
                 Access token
-              </span>
-              <textarea
+              </label>
+              <input
+                type="password"
+                autoComplete="off"
                 value={accessToken}
                 onChange={(e) => setAccessToken(e.target.value)}
-                rows={3}
                 placeholder={activePlatform.tokenHint}
-                className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 font-mono text-xs text-neutral-800 outline-none focus:border-stone-400"
+                className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 outline-none ring-[#e85d2a]/30 focus:ring-2"
               />
-            </label>
-
-            {activePlatform.needsDeveloperToken ? (
-              <>
-                <label className="block text-sm">
-                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                    Developer token
-                  </span>
-                  <input
-                    value={developerToken}
-                    onChange={(e) => setDeveloperToken(e.target.value)}
-                    className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-stone-400"
-                    placeholder="Google Ads API developer token"
-                  />
-                </label>
-                <label className="block text-sm">
-                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                    Login customer ID (MCC, optional)
-                  </span>
-                  <input
-                    value={loginCustomerId}
-                    onChange={(e) => setLoginCustomerId(e.target.value)}
-                    className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-stone-400"
-                    placeholder="Manager account id"
-                  />
-                </label>
-              </>
-            ) : null}
-
-            <label className="block text-sm">
-              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+            </div>
+            <div className="space-y-2">
+              <label className="block text-xs font-medium uppercase tracking-[0.08em] text-neutral-400">
                 Account id
-              </span>
+              </label>
               <input
                 value={externalAccountId}
                 onChange={(e) => setExternalAccountId(e.target.value)}
-                className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-stone-400"
                 placeholder={activePlatform.accountHint}
+                className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 outline-none ring-[#e85d2a]/30 focus:ring-2"
               />
-            </label>
-
-            <label className="block text-sm">
-              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+            </div>
+            <div className="space-y-2">
+              <label className="block text-xs font-medium uppercase tracking-[0.08em] text-neutral-400">
                 Display name
-              </span>
+              </label>
               <input
                 value={accountName}
                 onChange={(e) => setAccountName(e.target.value)}
-                className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-stone-400"
                 placeholder="Optional label"
+                className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 outline-none ring-[#e85d2a]/30 focus:ring-2"
               />
-            </label>
-
-            <label className="block text-sm">
-              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                Lead value (for ROAS proxy)
-              </span>
+            </div>
+            {activePlatform.needsDeveloperToken ? (
+              <>
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium uppercase tracking-[0.08em] text-neutral-400">
+                    Developer token
+                  </label>
+                  <input
+                    type="password"
+                    autoComplete="off"
+                    value={developerToken}
+                    onChange={(e) => setDeveloperToken(e.target.value)}
+                    placeholder="Google Ads developer token"
+                    className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 outline-none ring-[#e85d2a]/30 focus:ring-2"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium uppercase tracking-[0.08em] text-neutral-400">
+                    Login customer id
+                  </label>
+                  <input
+                    value={loginCustomerId}
+                    onChange={(e) => setLoginCustomerId(e.target.value)}
+                    placeholder="MCC id if required"
+                    className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 outline-none ring-[#e85d2a]/30 focus:ring-2"
+                  />
+                </div>
+              </>
+            ) : null}
+            <div className="space-y-2">
+              <label className="block text-xs font-medium uppercase tracking-[0.08em] text-neutral-400">
+                Lead value ($)
+              </label>
               <input
                 value={leadValue}
                 onChange={(e) => setLeadValue(e.target.value)}
-                type="number"
-                min={1}
-                className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-stone-400"
+                inputMode="decimal"
+                className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 outline-none ring-[#e85d2a]/30 focus:ring-2"
               />
-            </label>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy === 'discover'}
-              onClick={() => void discover()}
-              className="rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-sm font-medium text-neutral-700 hover:border-stone-300 disabled:opacity-50"
-            >
-              {busy === 'discover' ? 'Discovering…' : 'Discover accounts'}
-            </button>
+            {(platform === 'meta' || platform === 'linkedin') && (
+              <button
+                type="button"
+                disabled={busy === 'discover'}
+                onClick={() => void discover()}
+                className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 shadow-soft transition hover:border-stone-300 disabled:opacity-50"
+              >
+                {busy === 'discover' ? 'Discovering…' : 'Discover accounts'}
+              </button>
+            )}
             <button
               type="button"
               disabled={busy === 'connect'}
               onClick={() => void connect()}
-              className="rounded-lg bg-neutral-900 px-3.5 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+              className="rounded-xl bg-[#e85d2a] px-4 py-2 text-sm font-medium text-white shadow-soft transition hover:bg-[#d14e1f] disabled:opacity-50"
             >
               {busy === 'connect' ? 'Connecting…' : 'Connect account'}
             </button>
@@ -378,7 +519,7 @@ export function AdAccountsSettings({
 
           {discovered.length > 0 ? (
             <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+              <div className="text-xs font-medium uppercase tracking-[0.08em] text-neutral-400">
                 Discovered
               </div>
               {discovered.map((account) => (
@@ -386,16 +527,15 @@ export function AdAccountsSettings({
                   key={account.id || account.accountId}
                   type="button"
                   onClick={() => pickDiscovered(account)}
-                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-stone-200/70 px-3.5 py-3 text-left hover:border-stone-300 hover:bg-stone-50/60"
+                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-stone-200/70 bg-white px-3.5 py-2.5 text-left text-sm transition hover:border-[#e85d2a]/40"
                 >
-                  <div>
-                    <div className="font-medium text-neutral-900">{account.name}</div>
-                    <div className="mt-0.5 text-xs text-neutral-500">
-                      {account.id || account.accountId}
-                      {account.currency ? ` · ${account.currency}` : ''}
-                    </div>
-                  </div>
-                  <span className="text-xs font-medium text-[#c2410c]">Use</span>
+                  <span className="min-w-0 truncate font-medium text-neutral-900">
+                    {account.name}
+                  </span>
+                  <span className="shrink-0 text-xs tabular-nums text-neutral-500">
+                    {account.id || account.accountId}
+                    {account.currency ? ` · ${account.currency}` : ''}
+                  </span>
                 </button>
               ))}
             </div>
@@ -439,18 +579,26 @@ export function AdAccountsSettings({
                     >
                       {account.platform} · {account.status}
                     </Badge>
+                    {!account.hasToken ? (
+                      <Badge variant="destructive" appearance="light" size="sm">
+                        Token needed
+                      </Badge>
+                    ) : null}
                   </div>
                   <div className="mt-0.5 text-xs text-neutral-500">
                     {account.externalAccountId}
                     {account.currency ? ` · ${account.currency}` : ''} ·{' '}
                     {formatSynced(account.lastSyncedAt)}
                     {account.lastError ? ` · ${account.lastError}` : ''}
+                    {!account.hasToken
+                      ? ' · Re-connect with a token to enable Sync refreshes'
+                      : ''}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    disabled={busy === `sync:${account.id}`}
+                    disabled={busy === `sync:${account.id}` || !account.hasToken}
                     onClick={() => void syncAccount(account.id)}
                     className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:border-stone-300 disabled:opacity-50"
                   >

@@ -28,7 +28,7 @@ export default async function SettingsPage({
   const count = typeof params.count === 'string' ? params.count : undefined
 
   return (
-    <OperatorShell title="Settings" subtitle="Workspace preferences and integrations">
+    <OperatorShell title="Settings" subtitle="Instantly, ad accounts, and workspace preferences">
       <AdAccountsSettings initialBanner={bannerFromSearch(ads, count)} />
     </OperatorShell>
   )
