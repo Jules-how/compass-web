@@ -11,7 +11,7 @@ import {
   useState,
   type MouseEvent
 } from 'react'
-import type { CompassProjectWithStats } from '@/lib/types'
+import type { CompassBusinessFunction, CompassProjectWithStats } from '@/lib/types'
 import {
   ZOOM_OPTIONS,
   buildHeaderModel,
@@ -28,8 +28,10 @@ import {
   type TimelineZoom
 } from '@/lib/campaign-timeline'
 import {
+  DEFAULT_PROJECT_ICON_COLOR,
   formatProjectDate,
   normalizeProjectStatus,
+  projectColorForFunction,
   projectHealthLabel,
   projectPriorityLabel,
   projectStatusLabel
@@ -43,19 +45,6 @@ const TODAY_PURPLE = '#5e6ad2'
 const BAR_TOP = 22
 const BAR_HEIGHT = 22
 
-const PROJECT_ICON_COLORS = [
-  '#5e6ad2',
-  '#26b5ce',
-  '#4cb782',
-  '#f2c94c',
-  '#f2994a',
-  '#eb5757',
-  '#bb87fc',
-  '#95a2b3',
-  '#e67e22',
-  '#3498db'
-]
-
 type DraftDates = Record<string, { start: string; end: string }>
 
 type CreateDrag = {
@@ -63,12 +52,6 @@ type CreateDrag = {
   originDate: string
   start: string
   end: string
-}
-
-function projectAccent(id: string): string {
-  let hash = 0
-  for (let i = 0; i < id.length; i += 1) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
-  return PROJECT_ICON_COLORS[hash % PROJECT_ICON_COLORS.length]
 }
 
 function statusDotClass(status: string): string {
@@ -116,6 +99,7 @@ export const ProjectTimeline = forwardRef<
   {
     projects: CompassProjectWithStats[]
     clientById: Record<string, { id: string; name: string }>
+    functionById?: Record<string, CompassBusinessFunction>
     zoom: TimelineZoom
     onZoomChange: (zoom: TimelineZoom) => void
     onDatesChange?: (projectId: string, start: string, end: string) => Promise<void> | void
@@ -125,6 +109,7 @@ export const ProjectTimeline = forwardRef<
   {
     projects,
     clientById,
+    functionById = {},
     zoom,
     onZoomChange,
     onDatesChange,
@@ -468,7 +453,9 @@ export const ProjectTimeline = forwardRef<
               const draft = draftDates[project.id]
               const start = parseDateOnly(draft?.start ?? project.start_date)
               const end = parseDateOnly(draft?.end ?? project.target_date)
-              const accent = projectAccent(project.id)
+              const accent = projectColorForFunction(
+                project.business_function_id ? functionById[project.business_function_id] : null
+              ) || DEFAULT_PROJECT_ICON_COLOR
               const health = healthIcon(project.health || 'no_updates')
               const clientName =
                 project.client_name ||

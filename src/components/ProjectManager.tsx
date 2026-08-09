@@ -10,11 +10,13 @@ import {
   upsertCachedProject
 } from '@/lib/projects-cache'
 import {
+  DEFAULT_PROJECT_ICON_COLOR,
   PROJECT_BOARD_STATUSES,
   PROJECT_HEALTHS,
   PROJECT_PRIORITIES,
   formatProjectDate,
   normalizeProjectStatus,
+  projectColorForFunction,
   projectHealthLabel,
   projectPriorityLabel,
   projectStatusLabel,
@@ -76,17 +78,6 @@ function writeStoredProjectsView(view: ViewMode) {
   }
 }
 
-const PROJECT_ICON_COLORS = [
-  '#5E6AD2',
-  '#26B5CE',
-  '#4CB782',
-  '#F2C94C',
-  '#F2994A',
-  '#EB5757',
-  '#BB87FC',
-  '#95A2B3'
-] as const
-
 function healthTone(health: string): string {
   switch (health) {
     case 'on_track':
@@ -98,12 +89,6 @@ function healthTone(health: string): string {
     default:
       return 'bg-neutral-100 text-neutral-500 ring-neutral-200'
   }
-}
-
-function projectIconColor(seed: string): string {
-  let hash = 0
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
-  return PROJECT_ICON_COLORS[hash % PROJECT_ICON_COLORS.length]
 }
 
 function initialsFromLabel(label: string | null | undefined): string {
@@ -192,15 +177,14 @@ function HealthGlyph({ health, className }: { health: string; className?: string
   )
 }
 
-function ProjectGlyph({ seed, className }: { seed: string; className?: string }) {
-  const color = projectIconColor(seed)
+function ProjectGlyph({ color, className }: { color: string; className?: string }) {
   return (
     <span
       className={cn(
         'inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] text-[9px] font-bold text-white',
         className
       )}
-      style={{ background: color }}
+      style={{ background: color || DEFAULT_PROJECT_ICON_COLOR }}
       aria-hidden
     >
       <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="currentColor">
@@ -368,6 +352,11 @@ export function ProjectManager({
   const sortedFunctions = useMemo(
     () => [...functions].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)),
     [functions]
+  )
+
+  const createIconColor = useMemo(
+    () => projectColorForFunction(businessFunctionId ? functionById[businessFunctionId] : null),
+    [businessFunctionId, functionById]
   )
 
   const sortedClients = useMemo(
@@ -871,7 +860,7 @@ export function ProjectManager({
           >
             <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5">
               <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-neutral-500">
-                <ProjectGlyph seed="new-project" />
+                <ProjectGlyph color={createIconColor} />
                 <span className="truncate font-medium text-neutral-700">Switchflow</span>
                 <span className="text-neutral-300">›</span>
                 <span className="font-medium text-neutral-800">New project</span>
@@ -890,7 +879,7 @@ export function ProjectManager({
 
             <div className="space-y-4 px-5 py-5">
               <div className="flex items-start gap-3">
-                <ProjectGlyph seed={name || 'new-project'} className="mt-1.5 h-6 w-6 rounded-md text-[11px]" />
+                <ProjectGlyph color={createIconColor} className="mt-1.5 h-6 w-6 rounded-md text-[11px]" />
                 <div className="min-w-0 flex-1">
                   <input
                     ref={createTitleRef}
@@ -1290,7 +1279,13 @@ export function ProjectManager({
                                 className="group relative rounded-[8px] border border-neutral-200/90 bg-white p-2.5 shadow-[0_1px_1px_rgba(16,24,40,0.04)] transition hover:border-neutral-300"
                               >
                                 <div className="mb-1.5 flex items-center gap-1.5">
-                                  <ProjectGlyph seed={project.id || project.name} />
+                                  <ProjectGlyph
+                                    color={projectColorForFunction(
+                                      project.business_function_id
+                                        ? functionById[project.business_function_id]
+                                        : null
+                                    )}
+                                  />
                                   <div className="ml-auto flex items-center gap-1">
                                     <span title={projectHealthLabel(project.health)}>
                                       <HealthGlyph health={project.health || 'no_updates'} />
@@ -1409,6 +1404,7 @@ export function ProjectManager({
               ref={timelineRef}
               projects={visibleProjects}
               clientById={clientById}
+              functionById={functionById}
               zoom={timelineZoom}
               onZoomChange={setTimelineZoom}
               onDatesChange={patchProjectDates}
