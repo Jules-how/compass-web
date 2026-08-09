@@ -34,8 +34,41 @@ interface AccessRow {
   landing_path: string
 }
 
+/** Process-local membership cache — skips portal_access_context RPC on rapid RSC nav. */
+const MEMBERSHIP_CACHE_TTL_MS = 30_000
+
+type MembershipCacheEntry = {
+  memberships: PortalMembership[]
+  updatedAt: number
+}
+
+const membershipCache = new Map<string, MembershipCacheEntry>()
+
+/** Clear process-local portal membership cache (tests / forced refresh). */
+export function clearPortalMembershipCache() {
+  membershipCache.clear()
+}
+
 export function isDeliveryPortalEnabled(): boolean {
   return process.env.COMPASS_PORTAL_V1 === '1'
+}
+
+function mapMemberships(data: unknown): PortalMembership[] {
+  return ((data ?? []) as AccessRow[])
+    .filter(
+      (row) =>
+        typeof row.tenant_id === 'string' &&
+        typeof row.tenant_name === 'string' &&
+        (row.member_role === 'owner' ||
+          row.member_role === 'operator' ||
+          row.member_role === 'customer')
+    )
+    .map((row) => ({
+      tenantId: row.tenant_id,
+      tenantName: row.tenant_name,
+      role: row.member_role,
+      landingPath: row.landing_path
+    }))
 }
 
 export async function requirePortalAccess(
@@ -51,23 +84,16 @@ export async function requirePortalAccess(
 
   if (authError || !user) throw new PortalAccessError('unauthorized')
 
-  const { data, error } = await supabase.rpc('portal_access_context')
-  if (error) throw new PortalAccessError('not_found')
-  const memberships = ((data ?? []) as AccessRow[])
-    .filter(
-      (row) =>
-        typeof row.tenant_id === 'string' &&
-        typeof row.tenant_name === 'string' &&
-        (row.member_role === 'owner' ||
-          row.member_role === 'operator' ||
-          row.member_role === 'customer')
-    )
-    .map((row) => ({
-      tenantId: row.tenant_id,
-      tenantName: row.tenant_name,
-      role: row.member_role,
-      landingPath: row.landing_path
-    }))
+  const cached = membershipCache.get(user.id)
+  let memberships: PortalMembership[]
+  if (cached && Date.now() - cached.updatedAt < MEMBERSHIP_CACHE_TTL_MS) {
+    memberships = cached.memberships
+  } else {
+    const { data, error } = await supabase.rpc('portal_access_context')
+    if (error) throw new PortalAccessError('not_found')
+    memberships = mapMemberships(data)
+    membershipCache.set(user.id, { memberships, updatedAt: Date.now() })
+  }
 
   const primary = memberships[0]
   if (!primary) throw new PortalAccessError('not_found')
