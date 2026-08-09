@@ -132,9 +132,14 @@ test('sequence editor fork-copy and subject ban helpers exist', () => {
   assert.match(editor, /forkTemplateIntoSequence/)
   assert.match(editor, /variant === 'overlay'|variant = 'overlay'|variant\?: 'page' \| 'overlay'/)
   assert.match(editor, /Subject line/)
+  assert.match(editor, /w-\[400px\]/)
+  assert.match(editor, /aria-label="Remove step"/)
+  assert.match(lib, /remintStepIds/)
   assert.match(read('src/components/outbound/EditorComponentsAccordion.tsx'), /application\/x-outbound-library/)
+  assert.match(read('src/components/outbound/EditorComponentsAccordion.tsx'), /text-\[14px\] font-semibold/)
   assert.match(read('src/components/ui/accordion.tsx'), /@radix-ui\/react-accordion/)
   assert.match(read('src/components/outbound/LibraryPane.tsx'), /application\/x-outbound-library/)
+  assert.match(read('src/components/outbound/LibraryPane.tsx'), /text\/plain/)
 })
 
 test('scoped seed inventory counts and strings', async () => {
@@ -179,15 +184,19 @@ test('scoped seed inventory counts and strings', async () => {
   }
 })
 
-test('fork-copy semantics: template mutation isolation (logic contract)', () => {
-  // Pure JS recreation of forkSequence intent
-  function forkSequence(sequence) {
+test('fork-copy semantics: preserve ids for edits, remint for template isolation', () => {
+  function newId() {
+    return `step-new-${Math.random()}`
+  }
+  function forkSequence(sequence, extras = {}) {
+    const { remintStepIds = false, ...rest } = extras
     const cloned = JSON.parse(JSON.stringify(sequence))
     return {
       ...cloned,
+      ...rest,
       steps: cloned.steps.map((step) => ({
         ...step,
-        id: `step-new-${Math.random()}`,
+        id: remintStepIds ? newId() : step.id,
         slots: step.slots.map((slot) => ({ ...slot }))
       }))
     }
@@ -195,12 +204,15 @@ test('fork-copy semantics: template mutation isolation (logic contract)', () => 
   function copyTextIntoSlot(sequence, stepId, slotKey, body) {
     const next = forkSequence(sequence)
     for (const step of next.steps) {
-      if (step.id !== stepId && !stepId.startsWith('step-')) continue
-      // match by original position via label after fork is hard; use first step
+      if (step.id !== stepId) continue
+      const slot = step.slots.find((s) => s.key === slotKey)
+      if (slot) slot.body = body
     }
-    const step = next.steps[0]
-    const slot = step.slots.find((s) => s.key === slotKey)
-    if (slot) slot.body = body
+    return next
+  }
+  function removeStep(sequence, stepId) {
+    const next = forkSequence(sequence)
+    next.steps = next.steps.filter((s) => s.id !== stepId)
     return next
   }
 
@@ -217,18 +229,45 @@ test('fork-copy semantics: template mutation isolation (logic contract)', () => 
           { key: 'cold_expression', label: 'Cold expression', body: 'TEMPLATE_BODY' },
           { key: 'cta', label: 'CTA', body: 'Mind if I send over {{asset}}?' }
         ]
+      },
+      {
+        id: 'step-fu',
+        kind: 'followup',
+        label: 'Follow-up 1',
+        subject: '',
+        delay_days: 3,
+        slots: [
+          { key: 'opener', label: 'Bump', body: '' },
+          { key: 'cta', label: 'CTA', body: '' }
+        ]
       }
     ]
   }
-  const forked = forkSequence(template)
+
+  // Template fork remints ids and isolates mutations
+  const forked = forkSequence(template, { remintStepIds: true, template_origin_id: 'tmpl-1' })
   forked.steps[0].slots[1].body = 'CAMPAIGN_EDIT'
   assert.equal(template.steps[0].slots[1].body, 'TEMPLATE_BODY')
   assert.equal(forked.steps[0].slots[1].body, 'CAMPAIGN_EDIT')
   assert.notEqual(forked.steps[0].id, template.steps[0].id)
+  assert.equal(forked.template_origin_id, 'tmpl-1')
 
-  const afterDrag = copyTextIntoSlot(forked, forked.steps[0].id, 'cta', 'Would you be open to 15 minutes?')
-  assert.equal(afterDrag.steps[0].slots.find((s) => s.key === 'cta').body, 'Would you be open to 15 minutes?')
-  assert.equal(forked.steps[0].slots.find((s) => s.key === 'cta').body, 'Mind if I send over {{asset}}?')
+  // In-editor clone preserves ids so slot inserts and deletes resolve
+  const draft = forkSequence(template)
+  assert.equal(draft.steps[0].id, 'step-orig')
+  assert.equal(draft.steps[1].id, 'step-fu')
+
+  const afterDrag = copyTextIntoSlot(draft, 'step-orig', 'cta', 'Would you be open to 15 minutes?')
+  assert.equal(
+    afterDrag.steps[0].slots.find((s) => s.key === 'cta').body,
+    'Would you be open to 15 minutes?'
+  )
+  assert.equal(draft.steps[0].slots.find((s) => s.key === 'cta').body, 'Mind if I send over {{asset}}?')
+  assert.equal(afterDrag.steps[0].id, 'step-orig')
+
+  const afterDelete = removeStep(afterDrag, 'step-fu')
+  assert.equal(afterDelete.steps.length, 1)
+  assert.equal(afterDelete.steps[0].id, 'step-orig')
 })
 
 test('subject ban helper rejects quick stems', () => {
