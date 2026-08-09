@@ -457,6 +457,11 @@ export interface LeadListFilters {
   q?: string
   recontact_ok?: '1' | '0'
   suppressed?: '1' | '0'
+  /**
+   * When `1`, only leads past the 90-day cooldown that are safe to pull into
+   * a new cold campaign (not suppressed / not hot pipeline stages).
+   */
+  recontact_ready?: '1' | '0'
 }
 
 export interface LeadSummaryCounts {
@@ -470,6 +475,8 @@ export interface LeadSummaryCounts {
   no_phone: number
   no_email: number
   needs_review: number
+  /** Past 90-day cooldown + recontact allowed (cold re-outreach queue). */
+  recontact_ready: number
 }
 
 export interface LeadUploadResult {

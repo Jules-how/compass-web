@@ -1,7 +1,7 @@
 import type { LeadSummaryCounts } from '@/lib/types'
 import { requirePortalAccess } from '@/lib/portal-access'
 import { portalAccessResponse, portalJson, portalJsonCached } from '@/lib/portal-http'
-import type { LeadFilterQuery } from '@/lib/leads-query'
+import { applyRecontactReadyFilters, type LeadFilterQuery } from '@/lib/leads-query'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,7 +39,8 @@ export async function GET() {
       suppressed,
       noPhone,
       noEmail,
-      needsReview
+      needsReview,
+      recontactReady
     ] = await Promise.all([
       countRows(supabase),
       countRows(supabase, (q) => q.eq('outbound_status', 'uncontacted')),
@@ -57,7 +58,8 @@ export async function GET() {
       countRows(supabase, (q) => q.or('email.is.null,email.eq.')),
       countRows(supabase, (q) =>
         q.or('outbound_status.eq.needs_review,outbound_status.eq.needs-review')
-      )
+      ),
+      countRows(supabase, (q) => applyRecontactReadyFilters(q))
     ])
 
     const summary: LeadSummaryCounts = {
@@ -70,7 +72,8 @@ export async function GET() {
       suppressed,
       no_phone: noPhone,
       no_email: noEmail,
-      needs_review: needsReview
+      needs_review: needsReview,
+      recontact_ready: recontactReady
     }
 
     // Chips are global — longer browser cache so revisits stay snappy.

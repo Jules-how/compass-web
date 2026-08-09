@@ -234,6 +234,7 @@ export interface LeadSegmentFilters {
   q?: string
   recontact_ok?: '1' | '0'
   suppressed?: '1' | '0'
+  recontact_ready?: '1' | '0'
 }
 
 export interface SavedLeadSegment {
@@ -269,6 +270,10 @@ export const PRESET_SEGMENTS: Array<{ name: string; filters: LeadSegmentFilters 
   {
     name: 'Ready to upload',
     filters: { sync_state: 'not_uploaded', completeness: 'has_email' }
+  },
+  {
+    name: 'Ready to recontact (90d+)',
+    filters: { recontact_ready: '1' }
   }
 ]
 
@@ -283,4 +288,5 @@ export interface LeadSummaryCounts {
   no_phone: number
   no_email: number
   needs_review: number
+  recontact_ready: number
 }
