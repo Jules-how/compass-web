@@ -103,6 +103,7 @@ export const ProjectTimeline = forwardRef<
     zoom: TimelineZoom
     onZoomChange: (zoom: TimelineZoom) => void
     onDatesChange?: (projectId: string, start: string, end: string) => Promise<void> | void
+    onOpenProject?: (projectId: string) => void
     showToolbar?: boolean
   }
 >(function ProjectTimeline(
@@ -113,6 +114,7 @@ export const ProjectTimeline = forwardRef<
     zoom,
     onZoomChange,
     onDatesChange,
+    onOpenProject,
     showToolbar = false
   },
   ref
@@ -498,16 +500,30 @@ export const ProjectTimeline = forwardRef<
                     className="sticky left-0 z-20 flex items-center gap-2 border-r border-neutral-200/80 bg-inherit px-3"
                     style={{ width: LABEL_WIDTH }}
                   >
-                    <Link
-                      href={`/projects/${project.id}`}
-                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                      title={project.name}
-                    >
-                      <ProjectIcon color={accent} />
-                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-neutral-800">
-                        {project.name}
-                      </span>
-                    </Link>
+                    {onOpenProject ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenProject(project.id)}
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        title={project.name}
+                      >
+                        <ProjectIcon color={accent} />
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-neutral-800">
+                          {project.name}
+                        </span>
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/projects/${project.id}`}
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        title={project.name}
+                      >
+                        <ProjectIcon color={accent} />
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-neutral-800">
+                          {project.name}
+                        </span>
+                      </Link>
+                    )}
                     <div className="flex shrink-0 items-center gap-1.5 text-neutral-400">
                       <span
                         className={`h-3 w-3 rounded-full border-2 ${statusDotClass(project.status)}`}
@@ -574,6 +590,28 @@ export const ProjectTimeline = forwardRef<
                               style={{ background: accent }}
                             />
                           </span>
+                        ) : onOpenProject ? (
+                          <button
+                            type="button"
+                            onClick={() => onOpenProject(project.id)}
+                            className="relative block overflow-hidden rounded-[6px] border border-neutral-300 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition group-hover:border-neutral-400"
+                            style={{ width, height: BAR_HEIGHT }}
+                            title={`${formatProjectDate(project.start_date)} → ${formatProjectDate(project.target_date)}`}
+                          >
+                            <span
+                              className="absolute inset-y-0 left-0 w-[3px] rounded-l-[5px]"
+                              style={{ background: accent }}
+                            />
+                            {project.stats?.percentComplete > 0 ? (
+                              <span
+                                className="absolute inset-y-0 left-[3px] opacity-20"
+                                style={{
+                                  width: `${Math.min(100, project.stats.percentComplete)}%`,
+                                  background: accent
+                                }}
+                              />
+                            ) : null}
+                          </button>
                         ) : (
                           <Link
                             href={`/projects/${project.id}`}

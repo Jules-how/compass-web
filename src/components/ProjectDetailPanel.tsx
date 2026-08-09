@@ -63,7 +63,24 @@ interface MilestoneDraft {
   completed: boolean
 }
 
-export function ProjectDetailPanel({ projectId }: { projectId: string }) {
+export interface ProjectDetailPanelProps {
+  projectId: string
+  /** `modal` opens as a responsive overlay; `page` is the full-route layout. */
+  variant?: 'page' | 'modal'
+  onClose?: () => void
+  onChanged?: () => void | Promise<void>
+  /** When provided, skips a second `/api/projects` fetch for the dependency picker. */
+  projects?: CompassProjectWithStats[]
+}
+
+export function ProjectDetailPanel({
+  projectId,
+  variant = 'page',
+  onClose,
+  onChanged,
+  projects: projectsProp
+}: ProjectDetailPanelProps) {
+  const isModal = variant === 'modal'
   const [data, setData] = useState<ProjectDetailPayload | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<TabKey>('overview')
@@ -85,51 +102,93 @@ export function ProjectDetailPanel({ projectId }: { projectId: string }) {
   const [milestones, setMilestones] = useState<MilestoneDraft[]>([])
   const [updateBody, setUpdateBody] = useState('')
   const [updateHealth, setUpdateHealth] = useState<ProjectHealth>('on_track')
-  const [allProjects, setAllProjects] = useState<CompassProjectWithStats[]>([])
+  const [allProjects, setAllProjects] = useState<CompassProjectWithStats[]>(projectsProp ?? [])
+
+  const applyDetail = useCallback((body: ProjectDetailPayload) => {
+    setData(body)
+    setEditName(body.project.name)
+    setEditSummary(body.project.summary ?? '')
+    setEditNotes(body.project.notes ?? '')
+    setEditStatus(normalizeProjectStatus(body.project.status))
+    setEditPriority(body.project.priority ?? 0)
+    setEditHealth((body.project.health as ProjectHealth) || 'no_updates')
+    setEditFunctionId(body.project.business_function_id ?? '')
+    setEditStartDate(body.project.start_date ?? '')
+    setEditTargetDate(body.project.target_date ?? '')
+    setEditLabels((body.project.labels ?? []).join(', '))
+    setEditDependsOn(body.dependencies.map((dep) => dep.depends_on_project_id))
+    setMilestones(
+      body.milestones.map((milestone) => ({
+        id: milestone.id,
+        title: milestone.title,
+        description: milestone.description ?? '',
+        target_date: milestone.target_date ?? '',
+        completed: milestone.completed
+      }))
+    )
+  }, [])
 
   const load = useCallback(async () => {
     setError(null)
     try {
-      const [detailRes, listRes] = await Promise.all([
-        fetch(`/api/projects/${projectId}`, { headers: { Accept: 'application/json' } }),
-        fetch('/api/projects', { headers: { Accept: 'application/json' } })
-      ])
+      const detailPromise = fetch(`/api/projects/${projectId}`, {
+        headers: { Accept: 'application/json' }
+      })
+      const listPromise = projectsProp
+        ? null
+        : fetch('/api/projects', { headers: { Accept: 'application/json' } })
+
+      const detailRes = await detailPromise
       if (detailRes.status === 404) throw new Error('Project not found')
       if (!detailRes.ok) throw new Error(`Failed to load project (${detailRes.status})`)
       const body = (await detailRes.json()) as ProjectDetailPayload
-      setData(body)
-      setEditName(body.project.name)
-      setEditSummary(body.project.summary ?? '')
-      setEditNotes(body.project.notes ?? '')
-      setEditStatus(normalizeProjectStatus(body.project.status))
-      setEditPriority(body.project.priority ?? 0)
-      setEditHealth((body.project.health as ProjectHealth) || 'no_updates')
-      setEditFunctionId(body.project.business_function_id ?? '')
-      setEditStartDate(body.project.start_date ?? '')
-      setEditTargetDate(body.project.target_date ?? '')
-      setEditLabels((body.project.labels ?? []).join(', '))
-      setEditDependsOn(body.dependencies.map((dep) => dep.depends_on_project_id))
-      setMilestones(
-        body.milestones.map((milestone) => ({
-          id: milestone.id,
-          title: milestone.title,
-          description: milestone.description ?? '',
-          target_date: milestone.target_date ?? '',
-          completed: milestone.completed
-        }))
-      )
-      if (listRes.ok) {
-        const listBody = (await listRes.json()) as { projects: CompassProjectWithStats[] }
-        setAllProjects(listBody.projects ?? [])
+      applyDetail(body)
+
+      if (projectsProp) {
+        setAllProjects(projectsProp)
+      } else if (listPromise) {
+        const listRes = await listPromise
+        if (listRes.ok) {
+          const listBody = (await listRes.json()) as { projects: CompassProjectWithStats[] }
+          setAllProjects(listBody.projects ?? [])
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     }
-  }, [projectId])
+  }, [applyDetail, projectId, projectsProp])
 
   useEffect(() => {
+    setData(null)
+    setTab('overview')
+    setCreatingTask(false)
+    setSaveMessage(null)
+    setUpdateBody('')
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (projectsProp) setAllProjects(projectsProp)
+  }, [projectsProp])
+
+  useEffect(() => {
+    if (!isModal || !onClose) return
+    const close = onClose
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') close()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [isModal, onClose])
+
+  async function notifyChanged() {
+    await onChanged?.()
+  }
 
   const projectsById = useMemo(() => {
     if (!data) return {}
@@ -200,6 +259,7 @@ export function ProjectDetailPanel({ projectId }: { projectId: string }) {
       }
       setSaveMessage('Saved')
       await load()
+      await notifyChanged()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -228,6 +288,7 @@ export function ProjectDetailPanel({ projectId }: { projectId: string }) {
       setUpdateBody('')
       setTab('activity')
       await load()
+      await notifyChanged()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -235,58 +296,133 @@ export function ProjectDetailPanel({ projectId }: { projectId: string }) {
     }
   }
 
-  if (error && !data) {
+  function wrap(content: React.ReactNode) {
+    if (!isModal) return content
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-        {error}{' '}
-        <Link href="/projects" className="underline">
-          Back to projects
-        </Link>
+      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-950/40 px-3 py-6 sm:px-4 sm:py-10">
+        <button
+          type="button"
+          className="absolute inset-0 cursor-default"
+          aria-label="Close project"
+          onClick={onClose}
+        />
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="project-detail-title"
+          className="relative z-10 mb-10 w-full max-w-5xl rounded-2xl border border-stone-200/80 bg-white shadow-soft"
+        >
+          {content}
+        </div>
       </div>
     )
   }
 
-  if (!data) return <LoadingBlock label="Loading project…" />
+  if (error && !data) {
+    return wrap(
+      <div className="space-y-3 p-5">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+        <div className="flex justify-end gap-2">
+          {isModal && onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-stone-200 px-3 py-1.5 text-xs text-neutral-600 transition hover:bg-stone-50"
+            >
+              Close
+            </button>
+          ) : (
+            <Link href="/projects" className="text-sm text-sf-orange-dark underline">
+              Back to projects
+            </Link>
+          )}
+          <button type="button" onClick={() => void load()} className="text-sm underline">
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return wrap(
+      <div className="p-8">
+        <LoadingBlock label="Loading project…" />
+      </div>
+    )
+  }
 
   const { project, businessFunction, updates } = data
   const dependencyNames = editDependsOn
     .map((id) => allProjects.find((row) => row.id === id)?.name ?? id)
     .filter(Boolean)
 
-  return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-neutral-500">
-          <Link href="/projects" className="hover:text-neutral-800">
-            Projects
-          </Link>
-          <span>/</span>
-          <span className="font-medium text-neutral-800">{project.name}</span>
-        </div>
-        <div className="flex rounded-lg border border-stone-200 bg-white p-0.5 text-sm">
-          {(
-            [
-              ['overview', 'Overview'],
-              ['activity', `Activity (${updates.length})`],
-              ['issues', `Issues (${data.tasks.length})`]
-            ] as const
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setTab(key)}
-              className={`rounded-md px-3 py-1.5 font-medium transition ${
-                tab === key ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-800'
-              }`}
+  const tabs = (
+    <div className="flex rounded-lg border border-stone-200 bg-white p-0.5 text-sm">
+      {(
+        [
+          ['overview', 'Overview'],
+          ['activity', `Activity (${updates.length})`],
+          ['issues', `Issues (${data.tasks.length})`]
+        ] as const
+      ).map(([key, label]) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => setTab(key)}
+          className={`rounded-md px-3 py-1.5 font-medium transition ${
+            tab === key ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-800'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+
+  return wrap(
+    <div className={isModal ? 'max-h-[min(92vh,920px)] overflow-y-auto p-5' : 'space-y-5'}>
+      <div className={`flex flex-wrap items-center justify-between gap-3 ${isModal ? 'mb-5' : ''}`}>
+        {isModal ? (
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+              Project
+            </p>
+            <h2
+              id="project-detail-title"
+              className="truncate font-display text-lg font-semibold text-neutral-900"
             >
-              {label}
+              {project.name}
+            </h2>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-sm text-neutral-500">
+            <Link href="/projects" className="hover:text-neutral-800">
+              Projects
+            </Link>
+            <span>/</span>
+            <span className="font-medium text-neutral-800">{project.name}</span>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {tabs}
+          {isModal && onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-stone-200 px-2.5 py-1.5 text-xs text-neutral-600 transition hover:bg-stone-50"
+            >
+              Close
             </button>
-          ))}
+          ) : null}
         </div>
       </div>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
 
+      <div className="space-y-5">
       {tab === 'overview' ? (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           <section className="compass-panel space-y-5 p-5">
@@ -688,6 +824,7 @@ export function ProjectDetailPanel({ projectId }: { projectId: string }) {
               onCreated={async () => {
                 setCreatingTask(false)
                 await load()
+                await notifyChanged()
               }}
             />
           ) : null}
@@ -731,6 +868,7 @@ export function ProjectDetailPanel({ projectId }: { projectId: string }) {
           )}
         </section>
       ) : null}
+      </div>
     </div>
   )
 }
