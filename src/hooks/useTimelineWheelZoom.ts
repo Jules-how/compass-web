@@ -3,18 +3,10 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
 import {
   dateToX,
-  stepTimelineZoom,
+  scalePxPerDay,
   xToDate,
-  type TimelineRange,
-  type TimelineZoom
+  type TimelineRange
 } from '@/lib/campaign-timeline'
-
-/** Pinch deltas are tiny; accumulate a short gesture before stepping a level. */
-const WHEEL_ZOOM_THRESHOLD = 10
-/** Prevent one continuous pinch from skipping Year → Week in a single flick. */
-const ZOOM_COOLDOWN_MS = 120
-/** Drop leftover accumulation once the gesture pauses. */
-const ACCUM_IDLE_MS = 180
 
 type ZoomAnchor = {
   date: Date
@@ -29,43 +21,43 @@ type GestureEventLike = Event & {
 }
 
 /**
- * Trackpad pinch / ctrl|meta+wheel zooms the timeline through discrete Year→Week levels,
+ * Trackpad pinch / ctrl|meta+wheel zooms the timeline continuously (Year↔Week envelope),
  * keeping the date under the cursor anchored in place.
  */
 export function useTimelineWheelZoom({
   scrollRef,
-  zoom,
+  density,
   range,
   labelWidth,
-  onZoomChange,
+  onDensityChange,
   onBeforeZoom,
   enabled = true
 }: {
   scrollRef: RefObject<HTMLDivElement | null>
-  zoom: TimelineZoom
+  /** Continuous pixels-per-day. */
+  density: number
   range: TimelineRange
   labelWidth: number
-  onZoomChange: (zoom: TimelineZoom) => void
+  onDensityChange: (pxPerDay: number) => void
   /** Called before a wheel-driven zoom so callers can skip "center on today" resets. */
   onBeforeZoom?: () => void
   /** When false, listeners detach (e.g. list/board view). */
   enabled?: boolean
 }) {
-  const zoomRef = useRef(zoom)
+  const densityRef = useRef(density)
   const rangeRef = useRef(range)
   const labelWidthRef = useRef(labelWidth)
-  const onZoomChangeRef = useRef(onZoomChange)
+  const onDensityChangeRef = useRef(onDensityChange)
   const onBeforeZoomRef = useRef(onBeforeZoom)
-  const accumRef = useRef(0)
-  const cooldownUntilRef = useRef(0)
-  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const anchorRef = useRef<ZoomAnchor | null>(null)
   const gestureScaleRef = useRef(1)
+  const rafRef = useRef(0)
+  const pendingDensityRef = useRef<number | null>(null)
 
-  zoomRef.current = zoom
+  densityRef.current = density
   rangeRef.current = range
   labelWidthRef.current = labelWidth
-  onZoomChangeRef.current = onZoomChange
+  onDensityChangeRef.current = onDensityChange
   onBeforeZoomRef.current = onBeforeZoom
 
   useEffect(() => {
@@ -73,44 +65,32 @@ export function useTimelineWheelZoom({
     const el = scrollRef.current
     if (!el) return
 
-    function clearIdleTimer() {
-      if (idleTimerRef.current) {
-        clearTimeout(idleTimerRef.current)
-        idleTimerRef.current = null
-      }
+    function flushDensity() {
+      rafRef.current = 0
+      const next = pendingDensityRef.current
+      pendingDensityRef.current = null
+      if (next == null) return
+      if (Math.abs(next - densityRef.current) < 0.0005) return
+      onBeforeZoomRef.current?.()
+      onDensityChangeRef.current(next)
     }
 
-    function scheduleIdleReset() {
-      clearIdleTimer()
-      idleTimerRef.current = setTimeout(() => {
-        accumRef.current = 0
-        idleTimerRef.current = null
-      }, ACCUM_IDLE_MS)
-    }
-
-    function applyZoomStep(direction: 1 | -1, clientX: number) {
+    function scheduleDensity(next: number, clientX: number) {
       const container = scrollRef.current
       if (!container) return
-
-      const now = performance.now()
-      if (now < cooldownUntilRef.current) return
-
-      const current = zoomRef.current
-      const next = stepTimelineZoom(current, direction)
-      if (next === current) return
 
       const rect = container.getBoundingClientRect()
       const viewportX = clientX - rect.left
       const timelineX = container.scrollLeft + viewportX - labelWidthRef.current
       const anchorX = Math.max(0, timelineX)
       anchorRef.current = {
-        date: xToDate(anchorX, rangeRef.current, current),
+        date: xToDate(anchorX, rangeRef.current),
         viewportX
       }
-      cooldownUntilRef.current = now + ZOOM_COOLDOWN_MS
-      accumRef.current = 0
-      onBeforeZoomRef.current?.()
-      onZoomChangeRef.current(next)
+      pendingDensityRef.current = next
+      if (!rafRef.current) {
+        rafRef.current = requestAnimationFrame(flushDensity)
+      }
     }
 
     function onWheel(e: WheelEvent) {
@@ -118,12 +98,10 @@ export function useTimelineWheelZoom({
       if (!e.ctrlKey && !e.metaKey) return
       e.preventDefault()
 
-      accumRef.current += e.deltaY
-      scheduleIdleReset()
-      if (Math.abs(accumRef.current) < WHEEL_ZOOM_THRESHOLD) return
-
-      const direction: 1 | -1 = accumRef.current < 0 ? 1 : -1
-      applyZoomStep(direction, e.clientX)
+      const base = pendingDensityRef.current ?? densityRef.current
+      const next = scalePxPerDay(base, e.deltaY)
+      if (next === base) return
+      scheduleDensity(next, e.clientX)
     }
 
     function onGestureStart(e: Event) {
@@ -137,17 +115,27 @@ export function useTimelineWheelZoom({
       e.preventDefault()
       const prev = gestureScaleRef.current || 1
       const scale = gesture.scale || 1
+      if (prev <= 0) {
+        gestureScaleRef.current = scale
+        return
+      }
       // Safari pinch: scale > 1 zooms in (more detail), < 1 zooms out.
-      const delta = scale - prev
-      if (Math.abs(delta) < 0.08) return
+      // Convert scale ratio into a wheel-equivalent delta for scalePxPerDay.
+      const ratio = scale / prev
       gestureScaleRef.current = scale
-      const direction: 1 | -1 = delta > 0 ? 1 : -1
+      if (Math.abs(ratio - 1) < 0.002) return
+      const deltaY = -Math.log(ratio) / 0.0018
       const rect = scrollRef.current?.getBoundingClientRect()
       const clientX =
         typeof gesture.clientX === 'number'
           ? gesture.clientX
-          : (rect ? rect.left + rect.width / 2 : 0)
-      applyZoomStep(direction, clientX)
+          : rect
+            ? rect.left + rect.width / 2
+            : 0
+      const base = pendingDensityRef.current ?? densityRef.current
+      const next = scalePxPerDay(base, deltaY)
+      if (next === base) return
+      scheduleDensity(next, clientX)
     }
 
     el.addEventListener('wheel', onWheel, { passive: false })
@@ -160,7 +148,9 @@ export function useTimelineWheelZoom({
     } as AddEventListenerOptions)
 
     return () => {
-      clearIdleTimer()
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      rafRef.current = 0
+      pendingDensityRef.current = null
       el.removeEventListener('wheel', onWheel)
       el.removeEventListener('gesturestart', onGestureStart as EventListener)
       el.removeEventListener('gesturechange', onGestureChange as EventListener)
@@ -172,7 +162,7 @@ export function useTimelineWheelZoom({
     const el = scrollRef.current
     if (!anchor || !el) return
     anchorRef.current = null
-    const x = dateToX(anchor.date, range, zoom)
+    const x = dateToX(anchor.date, range)
     el.scrollLeft = Math.max(0, x - (anchor.viewportX - labelWidth))
-  }, [zoom, range, labelWidth, scrollRef])
+  }, [density, range, labelWidth, scrollRef])
 }

@@ -47,6 +47,7 @@ test('operator pages still gate access and login supports open-operator fallback
     'src/app/(console)/projects/page.tsx',
     'src/app/(console)/projects/[id]/page.tsx',
     'src/app/(console)/functions/page.tsx',
+    'src/app/(console)/functions/[id]/page.tsx',
     'src/app/(console)/inbox/page.tsx',
     'src/app/leads/page.tsx'
   ]) {
@@ -61,7 +62,7 @@ test('operator pages still gate access and login supports open-operator fallback
     } else if (page.includes('(console)') && !page.includes('leads')) {
       assert.match(
         read(page),
-        /OperatorShell|TasksPanel|ProjectsPanel|FunctionsPanel|InboxPanel|ProjectDetailPanel|HomeDashboard/
+        /OperatorShell|TasksPanel|ProjectsPanel|FunctionsPanel|FunctionDetailPanel|InboxPanel|ProjectDetailPanel|HomeDashboard/
       )
     } else {
       assert.match(read(page), /requireOperatorPageAccess/)
@@ -151,6 +152,11 @@ test('operator console uses persistent layout with animated sidebar and sales ov
   assert.match(shell, /ConsoleNavProvider/)
   assert.match(shell, /md:h-\[100dvh\]/)
   assert.match(shell, /md:overflow-y-auto/)
+  assert.match(shell, /scrollbar-gutter-stable/)
+  assert.match(shell, /mx-auto w-full/)
+  assert.match(read('src/components/TaskList.tsx'), /role="tablist"/)
+  assert.match(read('src/components/TaskList.tsx'), /tabular-nums/)
+  assert.match(read('src/components/TaskList.tsx'), /min-w-\[11\.5rem\]/)
   assert.match(read('src/components/ConsoleNav.tsx'), /isHomeOrInboxPath/)
   assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /seenHome|seenInbox/)
   assert.match(read('next.config.ts'), /staleTimes/)

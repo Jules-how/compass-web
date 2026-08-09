@@ -4,8 +4,9 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 let adminClient: SupabaseClient | null = null
 
-// Restricted to invitation administration and secret-authenticated ingest.
-// Cookie-authenticated customer routes must use the RLS client instead.
+// Restricted to invitation administration, secret-authenticated ingest,
+// and the Cursor agent / cron bridge. Cookie-authenticated customer routes
+// must use the RLS client instead.
 export function getPortalAdminClient(): SupabaseClient {
   if (adminClient) return adminClient
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL

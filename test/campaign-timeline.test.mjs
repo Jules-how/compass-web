@@ -93,17 +93,21 @@ test('campaign planner files and migration are wired', () => {
 
   const wheelZoom = read('src/hooks/useTimelineWheelZoom.ts')
   assert.match(wheelZoom, /ctrlKey/)
-  assert.match(wheelZoom, /stepTimelineZoom/)
+  assert.match(wheelZoom, /scalePxPerDay/)
   assert.match(wheelZoom, /passive: false/)
   assert.match(wheelZoom, /enabled/)
-  assert.match(wheelZoom, /WHEEL_ZOOM_THRESHOLD/)
+  assert.match(wheelZoom, /onDensityChange/)
   assert.match(wheelZoom, /gesturechange/)
-  assert.match(wheelZoom, /ZOOM_COOLDOWN_MS/)
+  assert.match(wheelZoom, /requestAnimationFrame/)
 
   assert.match(planner, /useTimelineWheelZoom/)
   assert.match(planner, /setTimelineScrollRef/)
   assert.match(planner, /enabled: view === 'timeline' && scrollNode !== null/)
   assert.match(planner, /overscroll-contain/)
+  assert.match(planner, /placement === 'left'/)
+  assert.match(planner, /Side pop-out/)
+  assert.match(planner, /zoomFromPxPerDay/)
+  assert.match(planner, /density/)
 
   const store = read('src/lib/campaign-local-store.ts')
   assert.match(store, /localStorage/)
@@ -118,6 +122,10 @@ test('timeline zoom helpers move between macro and micro scales', () => {
   assert.match(timeline, /export function zoomIn/)
   assert.match(timeline, /export function zoomOut/)
   assert.match(timeline, /export function stepTimelineZoom/)
+  assert.match(timeline, /export function scalePxPerDay/)
+  assert.match(timeline, /export function zoomFromPxPerDay/)
+  assert.match(timeline, /export function clampPxPerDay/)
+  assert.match(timeline, /pxPerDay:/)
 
   const ZOOM_LEVELS = ['year', 'quarter', 'month', 'week']
   function zoomIn(zoom) {
@@ -142,4 +150,40 @@ test('timeline zoom helpers move between macro and micro scales', () => {
   assert.equal(stepTimelineZoom('year', -1), 'year')
   assert.equal(zoomIn('year'), 'quarter')
   assert.equal(zoomOut('week'), 'month')
+})
+
+test('continuous density helpers clamp and map named zooms', () => {
+  const PX_PER_DAY = { year: 2.4, quarter: 9, month: 22, week: 56 }
+  const MIN = PX_PER_DAY.year
+  const MAX = PX_PER_DAY.week
+  function clampPxPerDay(value) {
+    if (!Number.isFinite(value)) return MIN
+    return Math.min(MAX, Math.max(MIN, value))
+  }
+  function scalePxPerDay(current, deltaY) {
+    const factor = Math.exp(-deltaY * 0.0018)
+    return clampPxPerDay(current * factor)
+  }
+  function zoomFromPxPerDay(density) {
+    const px = clampPxPerDay(density)
+    const logPx = Math.log(px)
+    let best = 'year'
+    let bestDist = Infinity
+    for (const level of Object.keys(PX_PER_DAY)) {
+      const dist = Math.abs(logPx - Math.log(PX_PER_DAY[level]))
+      if (dist < bestDist) {
+        best = level
+        bestDist = dist
+      }
+    }
+    return best
+  }
+
+  assert.equal(clampPxPerDay(0), MIN)
+  assert.equal(clampPxPerDay(999), MAX)
+  assert.ok(scalePxPerDay(9, -100) > 9)
+  assert.ok(scalePxPerDay(9, 100) < 9)
+  assert.equal(zoomFromPxPerDay(2.4), 'year')
+  assert.equal(zoomFromPxPerDay(56), 'week')
+  assert.equal(zoomFromPxPerDay(22), 'month')
 })

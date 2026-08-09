@@ -4,16 +4,23 @@ import { useMemo, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  listActiveOutboundCampaigns,
-  type OutboundLiveCampaign
-} from '@/lib/outbound-live-demo'
+import type { OutboundBoardCampaign } from '@/lib/instantly'
+import { demoOutboundBoard } from '@/lib/outbound-live-demo'
+import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
 const VISIBLE = 3
 const DROPDOWN_WINDOW = 6
 
-function statusBadge(status: OutboundLiveCampaign['status']) {
+type OutboundBoardPayload = {
+  live: OutboundBoardCampaign[]
+  history: OutboundBoardCampaign[]
+  liveCount: number
+  source?: 'instantly' | 'demo' | 'error'
+  warning?: string
+}
+
+function statusBadge(status: OutboundBoardCampaign['status']) {
   if (status === 'live') {
     return (
       <Badge variant="success" appearance="light" size="sm">
@@ -35,7 +42,8 @@ function statusBadge(status: OutboundLiveCampaign['status']) {
   )
 }
 
-function LiveCampaignCard({ campaign }: { campaign: OutboundLiveCampaign }) {
+function LiveCampaignCard({ campaign }: { campaign: OutboundBoardCampaign }) {
+  const metaBits = [campaign.offer, campaign.vertical, campaign.location].filter(Boolean)
   return (
     <div className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -44,12 +52,23 @@ function LiveCampaignCard({ campaign }: { campaign: OutboundLiveCampaign }) {
             <h3 className="text-[15px] font-semibold text-neutral-900">{campaign.name}</h3>
             {statusBadge(campaign.status)}
           </div>
-          <p className="mt-1 text-[13px] text-neutral-600">
-            <span className="font-medium text-neutral-800">{campaign.offer}</span>
-            <span className="text-neutral-400"> · </span>
-            {campaign.vertical} · {campaign.location}
-          </p>
-          <p className="mt-2 text-[12px] leading-relaxed text-neutral-500">{campaign.copyNotes}</p>
+          {metaBits.length > 0 ? (
+            <p className="mt-1 text-[13px] text-neutral-600">
+              {metaBits.map((bit, i) => (
+                <span key={`${bit}-${i}`}>
+                  {i > 0 ? <span className="text-neutral-400"> · </span> : null}
+                  {i === 0 && campaign.offer ? (
+                    <span className="font-medium text-neutral-800">{bit}</span>
+                  ) : (
+                    bit
+                  )}
+                </span>
+              ))}
+            </p>
+          ) : null}
+          {campaign.copyNotes ? (
+            <p className="mt-2 text-[12px] leading-relaxed text-neutral-500">{campaign.copyNotes}</p>
+          ) : null}
         </div>
         <div className="text-right">
           <div className="text-[22px] font-semibold tabular-nums tracking-tight text-neutral-900">
@@ -66,14 +85,13 @@ function LiveCampaignCard({ campaign }: { campaign: OutboundLiveCampaign }) {
         />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Metric label="Leads" value={campaign.leadCount.toLocaleString()} />
         <Metric label="Sent" value={campaign.sendCount.toLocaleString()} />
         <Metric label="Left" value={campaign.remaining.toLocaleString()} />
-        <Metric
-          label="Performance"
-          value={`${campaign.replyRate}% · ${campaign.positiveReplies} +ve · ${campaign.meetings} mtgs`}
-        />
+        <Metric label="Replies" value={campaign.replyCount.toLocaleString()} />
+        <Metric label="Reply rate" value={`${campaign.replyRate}%`} />
+        <Metric label="Opportunities" value={campaign.opportunities.toLocaleString()} />
       </div>
     </div>
   )
@@ -92,7 +110,15 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 export function OutboundLiveSection() {
   const [open, setOpen] = useState(false)
-  const active = useMemo(() => listActiveOutboundCampaigns(), [])
+  const board = useCachedJson<OutboundBoardPayload>(
+    '/api/instantly/outbound-campaigns',
+    '/api/instantly/outbound-campaigns',
+    { staleMs: 60_000 }
+  )
+  const fallback = useMemo(() => demoOutboundBoard(), [])
+  const active = board.data?.live ?? fallback.live
+  const liveCount = board.data?.liveCount ?? fallback.liveCount
+  const fromInstantly = board.data?.source === 'instantly'
   const top = active.slice(0, VISIBLE)
   const rest = active.slice(VISIBLE)
 
@@ -102,19 +128,40 @@ export function OutboundLiveSection() {
         <div>
           <CardTitle>Live</CardTitle>
           <CardDescription>
-            Active outbound sequences — offer, copy notes, throughput, and completion
+            Active Instantly campaigns — leads contacted, send volume, replies, and opportunities
           </CardDescription>
         </div>
-        <span className="rounded-xl bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-          {active.filter((c) => c.status === 'live').length} live
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {board.loading && !board.data ? (
+            <span className="text-[11px] font-medium text-neutral-400">Loading…</span>
+          ) : (
+            <span
+              className={cn(
+                'rounded-xl px-2.5 py-1 text-[11px] font-semibold',
+                fromInstantly
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : 'bg-amber-50 text-amber-800'
+              )}
+            >
+              {fromInstantly ? `${liveCount} live · Instantly` : `${liveCount} live · demo`}
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {top.length === 0 ? (
+        {board.error && !board.data ? (
+          <p className="text-sm text-amber-800">
+            Instantly is unavailable right now — showing demo campaigns until it reconnects.
+          </p>
+        ) : null}
+
+        {top.length === 0 && !board.loading ? (
           <p className="text-sm text-neutral-500">No live campaigns yet.</p>
-        ) : (
-          top.map((c) => <LiveCampaignCard key={c.id} campaign={c} />)
-        )}
+        ) : null}
+
+        {top.map((c) => (
+          <LiveCampaignCard key={c.id} campaign={c} />
+        ))}
 
         {rest.length > 0 ? (
           <div className="rounded-2xl border border-stone-200/70 bg-stone-50/40">

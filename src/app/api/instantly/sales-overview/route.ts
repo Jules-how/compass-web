@@ -2,8 +2,8 @@ import type { NextRequest } from 'next/server'
 import { requirePortalAccess } from '@/lib/portal-access'
 import { portalAccessResponse, portalJson, portalJsonCached } from '@/lib/portal-http'
 import {
-  getInstantlyApiKey,
-  InstantlyApiError
+  InstantlyApiError,
+  resolveInstantlyApiKey
 } from '@/lib/instantly'
 import { SALES_OVERVIEW_DEMO } from '@/lib/sales-demo-data'
 import {
@@ -41,12 +41,12 @@ export async function GET(_request: NextRequest) {
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
 
-    const apiKey = getInstantlyApiKey()
+    const apiKey = await resolveInstantlyApiKey(supabase)
     if (!apiKey) {
       return portalJsonCached({
         ...SALES_OVERVIEW_DEMO,
         source: 'demo' as const,
-        warning: 'INSTANTLY_API_KEY is not configured'
+        warning: 'Instantly API key is not configured'
       })
     }
 

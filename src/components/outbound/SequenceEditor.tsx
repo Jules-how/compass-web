@@ -50,6 +50,7 @@ import {
   type LibraryDragPayload
 } from '@/components/outbound/EditorComponentsAccordion'
 import { CampaignCopyMeta } from '@/components/outbound/CampaignCopyMeta'
+import { SequenceAnalyticsPanel } from '@/components/outbound/SequenceAnalyticsPanel'
 import { cn } from '@/lib/utils'
 
 const UNBOUND_KEY = 'compass.outbound.unbound-draft.v1'
@@ -339,7 +340,7 @@ export function SequenceEditor({
       vertical_tags: campaign.vertical_tags ?? [],
       location_tags: campaign.location_tags ?? [],
       cold_expression: campaign.cold_expression ?? null,
-      sequence_draft: forkSequence(sequence),
+      sequence_draft: forkSequence(sequence, { remintStepIds: true }),
       copy_status: 'draft',
       instantly_campaign_id: campaign.instantly_campaign_id ?? null
     })
@@ -512,7 +513,10 @@ export function SequenceEditor({
                 'mx-auto w-full px-4 pb-28 pt-8',
                 previewDevice === 'mobile' ? 'max-w-md' : 'max-w-2xl'
               )}
-              onDragOver={(e) => e.preventDefault()}
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'copy'
+              }}
               onDrop={(e) => {
                 e.preventDefault()
                 const payload = parseLibraryDrag(e.dataTransfer)
@@ -557,9 +561,34 @@ export function SequenceEditor({
                       <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
                         {step.label}
                       </span>
-                      <span className="flex size-6 items-center justify-center rounded-lg bg-stone-100 text-[11px] font-semibold text-neutral-500">
-                        {index + 1}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="flex size-6 items-center justify-center rounded-lg bg-stone-100 text-[11px] font-semibold text-neutral-500">
+                          {index + 1}
+                        </span>
+                        {step.kind === 'followup' || sequence.steps.length > 1 ? (
+                          <button
+                            type="button"
+                            aria-label="Remove step"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (sequence.steps.length <= 1) return
+                              const next = forkSequence(sequence)
+                              next.steps = next.steps.filter((s) => s.id !== step.id)
+                              // Keep at least one email step if we removed the primary.
+                              if (!next.steps.some((s) => s.kind === 'email') && next.steps[0]) {
+                                next.steps[0] = { ...next.steps[0], kind: 'email', label: 'Email 1' }
+                              }
+                              updateSequence(next)
+                              setActiveStepId((prev) =>
+                                prev === step.id ? (next.steps[0]?.id ?? null) : prev
+                              )
+                            }}
+                            className="inline-flex size-6 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-red-50 hover:text-red-600"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
 
                     <div className="relative">
@@ -608,24 +637,6 @@ export function SequenceEditor({
                       placeholder="Write your email body…"
                       className="mt-3 w-full resize-none rounded-xl border border-stone-200 bg-white px-3.5 py-3 text-[14px] leading-relaxed text-neutral-800 outline-none focus:border-[#e85d2a]/45"
                     />
-
-                    <div className="mt-3 flex justify-end gap-2">
-                      {step.kind === 'followup' ? (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            const next = forkSequence(sequence)
-                            next.steps = next.steps.filter((s) => s.id !== step.id)
-                            updateSequence(next)
-                            setActiveStepId(next.steps[0]?.id ?? null)
-                          }}
-                          className="text-[11px] text-red-600 hover:underline"
-                        >
-                          Remove step
-                        </button>
-                      ) : null}
-                    </div>
                   </div>
                 </div>
               ))}
@@ -664,15 +675,18 @@ export function SequenceEditor({
             </div>
           ) : null}
 
-          {tab === 'analytics' || tab === 'leads' ? (
+          {tab === 'analytics' ? (
+            <SequenceAnalyticsPanel
+              instantlyCampaignId={campaign.instantly_campaign_id}
+              onOpenSettings={() => setTab('settings')}
+            />
+          ) : null}
+
+          {tab === 'leads' ? (
             <div className="mx-auto max-w-lg px-4 py-16 text-center">
-              <p className="text-[15px] font-semibold text-neutral-900">
-                {tab === 'analytics' ? 'Analytics' : 'Leads'}
-              </p>
+              <p className="text-[15px] font-semibold text-neutral-900">Leads</p>
               <p className="mt-2 text-sm text-neutral-500">
-                {tab === 'analytics'
-                  ? 'Live Instantly analytics for this sequence will land here once the campaign is attached and launched.'
-                  : 'Lead membership and suppression for this campaign will appear here after launch.'}
+                Lead membership and suppression for this campaign will appear here after launch.
               </p>
             </div>
           ) : null}
@@ -732,7 +746,7 @@ export function SequenceEditor({
 
         {/* Right accordion rail */}
         {tab === 'editor' ? (
-          <aside className="hidden w-[320px] shrink-0 border-l border-stone-200/80 bg-white lg:flex lg:flex-col">
+          <aside className="hidden w-[400px] shrink-0 border-l border-stone-200/80 bg-white lg:flex lg:flex-col">
             <EditorComponentsAccordion
               offerKeyFilter={campaign.offer_key}
               onInsert={(payload) => applyLibraryPayload(payload)}

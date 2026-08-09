@@ -209,13 +209,16 @@ export async function loadHomeGlance(supabase: SupabaseClient): Promise<{
   source: 'live' | 'demo'
   syncedAt: string | null
   connectedAccounts: number
+  accountsNeedingToken: number
 }> {
-  const { count } = await supabase
+  const { data: accountRows } = await supabase
     .from('compass_ad_accounts')
-    .select('id', { count: 'exact', head: true })
+    .select('id,access_token_enc,status')
     .neq('status', 'disconnected')
 
-  const connectedAccounts = count ?? 0
+  const accounts = accountRows ?? []
+  const connectedAccounts = accounts.length
+  const accountsNeedingToken = accounts.filter((row) => !row.access_token_enc).length
 
   const { data } = await supabase
     .from('compass_ad_glance')
@@ -228,7 +231,8 @@ export async function loadHomeGlance(supabase: SupabaseClient): Promise<{
       glance: data.payload as HomeAdGlance,
       source: 'live',
       syncedAt: data.synced_at ?? null,
-      connectedAccounts
+      connectedAccounts,
+      accountsNeedingToken
     }
   }
 
@@ -238,7 +242,8 @@ export async function loadHomeGlance(supabase: SupabaseClient): Promise<{
       glance: HOME_AD_DEMO,
       source: 'demo',
       syncedAt: data?.synced_at ?? null,
-      connectedAccounts
+      connectedAccounts,
+      accountsNeedingToken
     }
   }
 
@@ -246,6 +251,7 @@ export async function loadHomeGlance(supabase: SupabaseClient): Promise<{
     glance: HOME_AD_DEMO,
     source: 'demo',
     syncedAt: null,
-    connectedAccounts: 0
+    connectedAccounts: 0,
+    accountsNeedingToken: 0
   }
 }

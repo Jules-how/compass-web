@@ -8,7 +8,7 @@ import { OutboundLiveSection } from '@/components/outbound/OutboundLiveSection'
 
 export function OutboundHub(_props: { onOpenEditor?: () => void } = {}) {
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)]">
       <div className="min-w-0 space-y-6">
         <OutboundLiveSection />
         <OutboundHistorySection />

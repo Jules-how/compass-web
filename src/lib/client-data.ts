@@ -1,9 +1,34 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isOpenClientIssue } from '@/lib/client-pm'
+import { CLIENT_LIST_COLUMNS, CLIENT_LIST_COLUMNS_CORE } from '@/lib/list-columns'
 import type { CompassClientIssue } from '@/lib/types'
 
 export function nowIso(): string {
   return new Date().toISOString()
+}
+
+/** PostgREST/Postgres when a column or relation from a later migration is missing. */
+export function isMissingDbObjectError(message: string | null | undefined): boolean {
+  return Boolean(message && /does not exist|schema cache/i.test(message))
+}
+
+type ClientSelectResult = {
+  data: unknown
+  error: { message: string } | null
+}
+
+/**
+ * Select client rows with full CRM+comms columns, falling back to core CRM
+ * columns when migration 0031 (comms_summary*) has not been applied yet.
+ */
+export async function selectClientsWithCommsFallback(
+  run: (columns: string) => PromiseLike<ClientSelectResult>
+): Promise<ClientSelectResult> {
+  const full = await run(CLIENT_LIST_COLUMNS)
+  if (full.error && isMissingDbObjectError(full.error.message)) {
+    return run(CLIENT_LIST_COLUMNS_CORE)
+  }
+  return full
 }
 
 export function normalizeTags(value: unknown): string[] {

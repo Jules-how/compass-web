@@ -80,6 +80,8 @@ SUPABASE_SERVICE_ROLE_KEY=...
 PORTAL_RATE_LIMIT_SALT=...
 COMPASS_PORTAL_V1=1
 COMPASS_LEAD_INGEST_SECRET=...
+COMPASS_AGENT_SECRET=...
+INSTANTLY_API_KEY=...
 AD_TOKEN_ENCRYPTION_KEY=...
 AD_DEFAULT_LEAD_VALUE=200
 META_APP_ID=...
@@ -88,9 +90,19 @@ GOOGLE_ADS_DEVELOPER_TOKEN=...
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` is used by narrow server routes: invitation
-administration, magic-link eligibility checks, and secret-authenticated lead
-ingest (`POST /api/ingest/leads`). The eligibility RPC is not executable by `anon` or `authenticated` roles.
+administration, magic-link eligibility checks, secret-authenticated lead/comms
+ingest, and the Cursor **agent bridge** (`/api/agent/*`, `/api/cron/daily-sync`).
+The eligibility RPC is not executable by `anon` or `authenticated` roles.
 Customer delivery routes and legacy task/lead routes never use the service role.
+
+### Cursor agents + daily sync
+
+Set `COMPASS_AGENT_SECRET` (and optional `CRON_SECRET`) so local/cloud Cursor
+agents can call the lean agent API and Vercel Cron can refresh ads + Instantly
+into Compass once per day. See [docs/AGENT_BRIDGE.md](docs/AGENT_BRIDGE.md) and
+[`.cursor/skills/compass-agent/SKILL.md`](.cursor/skills/compass-agent/SKILL.md).
+
+Apply migration `0035_compass_agent_sync.sql` for sync snapshots.
 Leave `COMPASS_PORTAL_V1` unset to keep the customer delivery slice disabled
 while retaining the private operator console.
 

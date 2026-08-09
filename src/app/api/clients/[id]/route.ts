@@ -12,7 +12,6 @@ import {
   CLIENT_AD_SPEND_COLUMNS,
   CLIENT_CHANNEL_NOTE_COLUMNS,
   CLIENT_ISSUE_COLUMNS,
-  CLIENT_LIST_COLUMNS,
   CLIENT_OFFER_COLUMNS,
   CLIENT_UPDATE_COLUMNS,
   META_AD_COLUMNS,
@@ -26,7 +25,8 @@ import {
   normalizeTags,
   nowIso,
   pickNextAction,
-  recordClientActivity
+  recordClientActivity,
+  selectClientsWithCommsFallback
 } from '@/lib/client-data'
 import { normalizeClientStatus } from '@/lib/client-pm'
 import { computeProjectStats, emptyProjectStats } from '@/lib/project-stats'
@@ -70,7 +70,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       projectsRes,
       taskStatsRes
     ] = await Promise.all([
-      supabase.from('compass_clients').select(CLIENT_LIST_COLUMNS).eq('id', id).maybeSingle(),
+      selectClientsWithCommsFallback((columns) =>
+        supabase.from('compass_clients').select(columns).eq('id', id).maybeSingle()
+      ),
       supabase
         .from('compass_client_updates')
         .select(CLIENT_UPDATE_COLUMNS)

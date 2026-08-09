@@ -338,7 +338,7 @@ export function saveLocalTemplate(
     structure_id: input.structure_id,
     vertical_tags: normalizeTags(input.vertical_tags),
     location_tags: normalizeTags(input.location_tags),
-    sequence: forkSequence(input.sequence),
+    sequence: forkSequence(input.sequence, { remintStepIds: true }),
     archived: Boolean(input.archived),
     created_at: input.created_at || stamp,
     updated_at: stamp
@@ -368,7 +368,8 @@ export function forkTemplateIntoSequence(templateId: string): OutboundSequence |
   return forkSequence(template.sequence, {
     offer_key: template.offer_key,
     structure_id: template.structure_id,
-    template_origin_id: template.id
+    template_origin_id: template.id,
+    remintStepIds: true
   })
 }
 

@@ -159,3 +159,12 @@ test('client comms routes are operator-gated; ingest uses service role', () => {
   assert.match(detail, /\['comms', 'Comms'\]/)
   assert.match(detail, /ClientCommsPanel/)
 })
+
+test('comms list route soft-fails when migration 0031 is missing', () => {
+  const list = read('src/app/api/clients/[id]/comms/route.ts')
+  const detail = read('src/app/api/clients/[id]/route.ts')
+  assert.match(list, /isMissingDbObjectError/)
+  assert.match(list, /migrationRequired/)
+  assert.match(list, /migration_required/)
+  assert.match(detail, /selectClientsWithCommsFallback/)
+})

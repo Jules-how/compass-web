@@ -48,9 +48,11 @@ test('settings and home wire to ad account connect flow', () => {
   assert.match(settings, /AdAccountsSettings/)
   assert.match(panel, /\/api\/ads\/accounts/)
   assert.match(panel, /\/api\/ads\/discover/)
+  assert.match(panel, /\/api\/instantly\/settings/)
   assert.match(panel, /Sync/)
   assert.match(home, /\/api\/ads\/glance/)
-  assert.match(home, /Connect ad accounts/)
+  assert.match(home, /href=\"\/settings\"/)
+  assert.match(home, /Accounts|Connect/)
 })
 
 test('creative status heuristics prefer winning on strong CPA / ROAS', async () => {

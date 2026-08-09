@@ -1,15 +1,22 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { CompassBusinessFunction, CompassProjectWithStats } from '@/lib/types'
-import { formatPercentComplete } from '@/lib/project-stats'
+import { emptyProjectStats, formatPercentComplete } from '@/lib/project-stats'
 import {
+  replaceCachedProject,
+  removeCachedProject,
+  upsertCachedProject
+} from '@/lib/projects-cache'
+import {
+  DEFAULT_PROJECT_ICON_COLOR,
   PROJECT_BOARD_STATUSES,
   PROJECT_HEALTHS,
   PROJECT_PRIORITIES,
   formatProjectDate,
   normalizeProjectStatus,
+  projectColorForFunction,
   projectHealthLabel,
   projectPriorityLabel,
   projectStatusLabel,
@@ -25,6 +32,29 @@ type OrderBy = 'name' | 'priority' | 'target_date' | 'updated_at'
 type InsightsTab = 'health' | 'leads'
 
 const PROJECTS_VIEW_STORAGE_KEY = 'compass.projects.view'
+
+function isPendingProjectId(id: string) {
+  return id.startsWith('project-temp-')
+}
+
+function ProjectTitleLink({
+  projectId,
+  className,
+  children
+}: {
+  projectId: string
+  className?: string
+  children: ReactNode
+}) {
+  if (isPendingProjectId(projectId)) {
+    return <span className={className}>{children}</span>
+  }
+  return (
+    <Link href={`/projects/${projectId}`} className={className}>
+      {children}
+    </Link>
+  )
+}
 
 function isViewMode(value: string | null): value is ViewMode {
   return value === 'list' || value === 'board' || value === 'timeline'
@@ -48,17 +78,6 @@ function writeStoredProjectsView(view: ViewMode) {
   }
 }
 
-const PROJECT_ICON_COLORS = [
-  '#5E6AD2',
-  '#26B5CE',
-  '#4CB782',
-  '#F2C94C',
-  '#F2994A',
-  '#EB5757',
-  '#BB87FC',
-  '#95A2B3'
-] as const
-
 function healthTone(health: string): string {
   switch (health) {
     case 'on_track':
@@ -70,12 +89,6 @@ function healthTone(health: string): string {
     default:
       return 'bg-neutral-100 text-neutral-500 ring-neutral-200'
   }
-}
-
-function projectIconColor(seed: string): string {
-  let hash = 0
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
-  return PROJECT_ICON_COLORS[hash % PROJECT_ICON_COLORS.length]
 }
 
 function initialsFromLabel(label: string | null | undefined): string {
@@ -164,15 +177,14 @@ function HealthGlyph({ health, className }: { health: string; className?: string
   )
 }
 
-function ProjectGlyph({ seed, className }: { seed: string; className?: string }) {
-  const color = projectIconColor(seed)
+function ProjectGlyph({ color, className }: { color: string; className?: string }) {
   return (
     <span
       className={cn(
         'inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] text-[9px] font-bold text-white',
         className
       )}
-      style={{ background: color }}
+      style={{ background: color || DEFAULT_PROJECT_ICON_COLOR }}
       aria-hidden
     >
       <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="currentColor">
@@ -342,6 +354,11 @@ export function ProjectManager({
     [functions]
   )
 
+  const createIconColor = useMemo(
+    () => projectColorForFunction(businessFunctionId ? functionById[businessFunctionId] : null),
+    [businessFunctionId, functionById]
+  )
+
   const sortedClients = useMemo(
     () => [...clients].sort((a, b) => a.name.localeCompare(b.name)),
     [clients]
@@ -479,50 +496,103 @@ export function ProjectManager({
     if (!name.trim()) return
     setSaving(true)
     setError(null)
+
+    const stamp = new Date().toISOString()
+    const trimmedName = name.trim()
+    const trimmedSummary = summary.trim() || null
+    const trimmedNotes = notes.trim() || null
+    const resolvedClientId = clientId || null
+    const resolvedFunctionId = businessFunctionId || null
+    const resolvedLabels = labels
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+    const resolvedDependsOn = [...dependsOn]
+    const resolvedMilestones = milestones
+      .filter((milestone) => milestone.title.trim())
+      .map((milestone) => ({
+        title: milestone.title.trim(),
+        description: milestone.description.trim() || null,
+        target_date: milestone.target_date || null
+      }))
+    const resolvedStart = startDate || null
+    const resolvedTarget = targetDate || null
+    const resolvedStatus = normalizeProjectStatus(status)
+    const resolvedPriority = priority
+
+    const tempId = `project-temp-${crypto.randomUUID()}`
+    upsertCachedProject({
+      id: tempId,
+      name: trimmedName,
+      business_function_id: resolvedFunctionId,
+      client_id: resolvedClientId,
+      status: resolvedStatus,
+      priority: resolvedPriority,
+      health: 'no_updates',
+      start_date: resolvedStart,
+      target_date: resolvedTarget,
+      labels: resolvedLabels,
+      summary: trimmedSummary,
+      source: 'compass-web',
+      external_id: null,
+      notes: trimmedNotes,
+      created_at: stamp,
+      updated_at: stamp,
+      mirrored_at: stamp,
+      client_name: resolvedClientId ? (clientById[resolvedClientId]?.name ?? null) : null,
+      stats: emptyProjectStats()
+    })
+    resetCreateForm()
+    setCreating(false)
+    setSaving(false)
+
     try {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name.trim(),
-          summary: summary.trim() || null,
-          notes: notes.trim() || null,
-          status,
-          priority,
-          business_function_id: businessFunctionId || null,
-          client_id: clientId || null,
-          start_date: startDate || null,
-          target_date: targetDate || null,
-          labels: labels
-            .split(',')
-            .map((item) => item.trim())
-            .filter(Boolean),
-          depends_on_project_ids: dependsOn,
-          milestones: milestones
-            .filter((milestone) => milestone.title.trim())
-            .map((milestone) => ({
-              title: milestone.title.trim(),
-              description: milestone.description.trim() || null,
-              target_date: milestone.target_date || null
-            }))
+          name: trimmedName,
+          summary: trimmedSummary,
+          notes: trimmedNotes,
+          status: resolvedStatus,
+          priority: resolvedPriority,
+          business_function_id: resolvedFunctionId,
+          client_id: resolvedClientId,
+          start_date: resolvedStart,
+          target_date: resolvedTarget,
+          labels: resolvedLabels,
+          depends_on_project_ids: resolvedDependsOn,
+          milestones: resolvedMilestones
         })
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
-      resetCreateForm()
-      setCreating(false)
-      await onRefresh?.()
+      const created = (await res.json()) as CompassProjectWithStats
+      replaceCachedProject(tempId, {
+        ...created,
+        labels: Array.isArray(created.labels) ? created.labels : resolvedLabels,
+        priority: typeof created.priority === 'number' ? created.priority : resolvedPriority,
+        health: created.health || 'no_updates',
+        client_name:
+          created.client_name ??
+          (created.client_id ? (clientById[created.client_id]?.name ?? null) : null),
+        stats: created.stats ?? emptyProjectStats()
+      })
+      void onRefresh?.()
     } catch (err) {
+      removeCachedProject(tempId)
       setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
     }
   }
 
   async function patchProjectStatus(projectId: string, nextStatus: ProjectBoardStatus) {
-    setSaving(true)
+    if (isPendingProjectId(projectId)) return
+    const previous = projects.find((project) => project.id === projectId)
+    if (previous) {
+      upsertCachedProject({ ...previous, status: nextStatus, updated_at: new Date().toISOString() })
+    }
     setError(null)
     try {
       const res = await fetch(`/api/projects/${projectId}`, {
@@ -534,15 +604,24 @@ export function ProjectManager({
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
-      await onRefresh?.()
+      void onRefresh?.()
     } catch (err) {
+      if (previous) upsertCachedProject(previous)
       setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
     }
   }
 
   async function patchProjectDates(projectId: string, start: string, end: string) {
+    if (isPendingProjectId(projectId)) return
+    const previous = projects.find((project) => project.id === projectId)
+    if (previous) {
+      upsertCachedProject({
+        ...previous,
+        start_date: start,
+        target_date: end,
+        updated_at: new Date().toISOString()
+      })
+    }
     setError(null)
     const res = await fetch(`/api/projects/${projectId}`, {
       method: 'PATCH',
@@ -550,29 +629,33 @@ export function ProjectManager({
       body: JSON.stringify({ start_date: start, target_date: end })
     })
     if (!res.ok) {
+      if (previous) upsertCachedProject(previous)
       const body = await res.json().catch(() => ({}))
       const message = body.error ?? `Request failed (${res.status})`
       setError(message)
       throw new Error(message)
     }
-    await onRefresh?.()
+    void onRefresh?.()
   }
 
   async function removeProject(project: CompassProjectWithStats) {
+    if (isPendingProjectId(project.id)) {
+      removeCachedProject(project.id)
+      return
+    }
     if (!confirm(`Delete project “${project.name}”?`)) return
-    setSaving(true)
     setError(null)
+    removeCachedProject(project.id)
     try {
       const res = await fetch(`/api/projects/${project.id}`, { method: 'DELETE' })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
-      await onRefresh?.()
+      void onRefresh?.()
     } catch (err) {
+      upsertCachedProject(project)
       setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -777,7 +860,7 @@ export function ProjectManager({
           >
             <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5">
               <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-neutral-500">
-                <ProjectGlyph seed="new-project" />
+                <ProjectGlyph color={createIconColor} />
                 <span className="truncate font-medium text-neutral-700">Switchflow</span>
                 <span className="text-neutral-300">›</span>
                 <span className="font-medium text-neutral-800">New project</span>
@@ -796,7 +879,7 @@ export function ProjectManager({
 
             <div className="space-y-4 px-5 py-5">
               <div className="flex items-start gap-3">
-                <ProjectGlyph seed={name || 'new-project'} className="mt-1.5 h-6 w-6 rounded-md text-[11px]" />
+                <ProjectGlyph color={createIconColor} className="mt-1.5 h-6 w-6 rounded-md text-[11px]" />
                 <div className="min-w-0 flex-1">
                   <input
                     ref={createTitleRef}
@@ -1062,12 +1145,12 @@ export function ProjectManager({
                           className="flex flex-col gap-3 px-4 py-5 transition hover:bg-stone-50/80 lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.6fr)_minmax(0,0.5fr)_auto] lg:items-center"
                         >
                           <div className="min-w-0">
-                            <Link
-                              href={`/projects/${project.id}`}
+                            <ProjectTitleLink
+                              projectId={project.id}
                               className="block truncate text-sm font-medium text-neutral-900 hover:text-sf-orange-dark"
                             >
                               {project.name}
-                            </Link>
+                            </ProjectTitleLink>
                             <p className="mt-0.5 truncate text-xs text-neutral-500">
                               {(project.client_name ||
                                 (project.client_id ? clientById[project.client_id]?.name : null)) && (
@@ -1109,16 +1192,22 @@ export function ProjectManager({
                             </span>
                           </div>
                           <div className="flex justify-start gap-2 lg:justify-end">
-                            <Link
-                              href={`/projects/${project.id}`}
-                              className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600"
-                            >
-                              Open
-                            </Link>
+                            {isPendingProjectId(project.id) ? (
+                              <span className="rounded border border-neutral-200 px-2 py-0.5 text-xs text-neutral-400">
+                                Saving…
+                              </span>
+                            ) : (
+                              <Link
+                                href={`/projects/${project.id}`}
+                                className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600"
+                              >
+                                Open
+                              </Link>
+                            )}
                             <button
                               type="button"
                               onClick={() => removeProject(project)}
-                              disabled={saving}
+                              disabled={saving || isPendingProjectId(project.id)}
                               className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-red-600"
                             >
                               Delete
@@ -1190,7 +1279,13 @@ export function ProjectManager({
                                 className="group relative rounded-[8px] border border-neutral-200/90 bg-white p-2.5 shadow-[0_1px_1px_rgba(16,24,40,0.04)] transition hover:border-neutral-300"
                               >
                                 <div className="mb-1.5 flex items-center gap-1.5">
-                                  <ProjectGlyph seed={project.id || project.name} />
+                                  <ProjectGlyph
+                                    color={projectColorForFunction(
+                                      project.business_function_id
+                                        ? functionById[project.business_function_id]
+                                        : null
+                                    )}
+                                  />
                                   <div className="ml-auto flex items-center gap-1">
                                     <span title={projectHealthLabel(project.health)}>
                                       <HealthGlyph health={project.health || 'no_updates'} />
@@ -1212,12 +1307,12 @@ export function ProjectManager({
                                   </div>
                                 </div>
 
-                                <Link
-                                  href={`/projects/${project.id}`}
+                                <ProjectTitleLink
+                                  projectId={project.id}
                                   className="block text-[13px] font-medium leading-snug text-neutral-900 hover:text-neutral-700"
                                 >
                                   {project.name}
-                                </Link>
+                                </ProjectTitleLink>
 
                                 {(project.summary || clientLabel) && (
                                   <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-500">
@@ -1244,13 +1339,17 @@ export function ProjectManager({
 
                                 {menuOpen ? (
                                   <div className="absolute right-2 top-8 z-30 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 text-[13px] shadow-lg">
-                                    <Link
-                                      href={`/projects/${project.id}`}
-                                      className="block px-3 py-1.5 text-neutral-700 hover:bg-neutral-50"
-                                      onClick={() => setCardMenuId(null)}
-                                    >
-                                      Open project
-                                    </Link>
+                                    {isPendingProjectId(project.id) ? (
+                                      <span className="block px-3 py-1.5 text-neutral-400">Saving…</span>
+                                    ) : (
+                                      <Link
+                                        href={`/projects/${project.id}`}
+                                        className="block px-3 py-1.5 text-neutral-700 hover:bg-neutral-50"
+                                        onClick={() => setCardMenuId(null)}
+                                      >
+                                        Open project
+                                      </Link>
+                                    )}
                                     <div className="my-1 border-t border-neutral-100" />
                                     <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                                       Move to
@@ -1259,7 +1358,11 @@ export function ProjectManager({
                                       <button
                                         key={value}
                                         type="button"
-                                        disabled={saving || normalizeProjectStatus(project.status) === value}
+                                        disabled={
+                                          saving ||
+                                          isPendingProjectId(project.id) ||
+                                          normalizeProjectStatus(project.status) === value
+                                        }
                                         className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
                                         onClick={() => {
                                           setCardMenuId(null)
@@ -1301,6 +1404,7 @@ export function ProjectManager({
               ref={timelineRef}
               projects={visibleProjects}
               clientById={clientById}
+              functionById={functionById}
               zoom={timelineZoom}
               onZoomChange={setTimelineZoom}
               onDatesChange={patchProjectDates}

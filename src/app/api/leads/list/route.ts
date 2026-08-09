@@ -59,13 +59,17 @@ export async function GET(request: NextRequest) {
     if (error) {
       return portalJson({ error: 'fetch_failed', detail: error.message }, { status: 400 })
     }
-    return portalJsonCached({
-      leads: data ?? [],
-      total: count ?? 0,
-      page,
-      pageSize: exportLimit ?? pageSize,
-      filters
-    })
+    return portalJsonCached(
+      {
+        leads: data ?? [],
+        total: count ?? 0,
+        page,
+        pageSize: exportLimit ?? pageSize,
+        filters
+      },
+      {},
+      30
+    )
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })
   }

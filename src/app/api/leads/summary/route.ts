@@ -1,8 +1,7 @@
-import type { NextRequest } from 'next/server'
-import type { LeadListFilters, LeadSummaryCounts } from '@/lib/types'
+import type { LeadSummaryCounts } from '@/lib/types'
 import { requirePortalAccess } from '@/lib/portal-access'
 import { portalAccessResponse, portalJson, portalJsonCached } from '@/lib/portal-http'
-import { applyLeadFilters, parseLeadListFilters, type LeadFilterQuery } from '@/lib/leads-query'
+import type { LeadFilterQuery } from '@/lib/leads-query'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,16 +21,17 @@ async function countRows(
   return result?.count ?? 0
 }
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const filters: LeadListFilters = parseLeadListFilters(searchParams)
-
+/**
+ * Global lane counts for the CRM chip bar.
+ * Intentionally ignores request filters — filtered totals come from /api/leads/list
+ * so filter changes do not re-run eight head-count queries.
+ */
+export async function GET() {
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
 
     const [
       total,
-      filtered,
       uncontacted,
       inInstantly,
       replied,
@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
       needsReview
     ] = await Promise.all([
       countRows(supabase),
-      countRows(supabase, (q) => applyLeadFilters(q, filters)),
       countRows(supabase, (q) => q.eq('outbound_status', 'uncontacted')),
       countRows(supabase, (q) =>
         q.or(
@@ -63,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     const summary: LeadSummaryCounts = {
       total,
-      filtered,
+      filtered: total,
       uncontacted,
       in_instantly: inInstantly,
       replied,
@@ -74,7 +73,8 @@ export async function GET(request: NextRequest) {
       needs_review: needsReview
     }
 
-    return portalJsonCached({ summary })
+    // Chips are global — longer browser cache so revisits stay snappy.
+    return portalJsonCached({ summary }, {}, 60)
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'summary_failed' }, { status: 500 })
   }

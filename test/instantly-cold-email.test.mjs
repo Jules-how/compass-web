@@ -173,6 +173,7 @@ test('Instantly cold-email route is operator-gated and Home fetches it', () => {
   const client = read('src/lib/instantly.ts')
 
   assert.match(route, /requirePortalAccess\(\{\s*operator:\s*true\s*\}\)/)
+  assert.match(route, /resolveInstantlyApiKey/)
   assert.match(route, /loadColdEmailGlanceFromInstantly/)
   assert.match(route, /portalJsonCached\([\s\S]*60\)/)
   assert.match(home, /\/api\/instantly\/cold-email/)
@@ -180,4 +181,7 @@ test('Instantly cold-email route is operator-gated and Home fetches it', () => {
   assert.match(client, /emails\/unread\/count/)
   assert.match(client, /campaigns\/analytics\/overview/)
   assert.match(client, /COLD_EMAIL_CACHE_TTL_MS/)
+  assert.match(client, /buildSequenceCampaignAnalytics/)
+  assert.match(client, /resolveInstantlyApiKey/)
+  assert.match(client, /INSTANTLY_API_KEY_SETTING_ID/)
 })

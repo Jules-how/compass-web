@@ -1,8 +1,13 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
 import type { ColdEmailGlance } from '@/lib/home-demo-data'
 
 const INSTANTLY_API_BASE = 'https://api.instantly.ai/api/v2'
 const DEFAULT_TIMEZONE = 'Australia/Melbourne'
 const HOME_CAMPAIGN_LIMIT = 5
+
+/** Stored in `compass_settings` when `INSTANTLY_API_KEY` env is unset. */
+export const INSTANTLY_API_KEY_SETTING_ID = 'integrations.instantly.api_key'
 
 /** Instantly campaign status codes (API v2). */
 export const INSTANTLY_CAMPAIGN_STATUS = {
@@ -31,9 +36,43 @@ export type InstantlyCampaignAnalytics = {
   reply_count: number
   reply_count_unique: number
   bounced_count?: number
+  unsubscribed_count?: number
   completed_count: number
   total_opportunities: number
   total_opportunity_value?: number
+}
+
+/** Outbound hub campaign card — mapped from Instantly analytics (or demo fallback). */
+export type OutboundBoardCampaign = {
+  id: string
+  name: string
+  status: 'live' | 'launching' | 'paused' | 'completed'
+  offer: string
+  offerKey: string
+  copyNotes: string
+  vertical: string
+  location: string
+  leadCount: number
+  sendCount: number
+  remaining: number
+  progress: number
+  replyCount: number
+  replyRate: number
+  opportunities: number
+  bouncedCount: number
+  completedCount: number
+  /** @deprecated Prefer replyCount / opportunities — kept for older demo rows. */
+  positiveReplies: number
+  /** @deprecated Prefer opportunities — kept for older demo rows. */
+  meetings: number
+  startedAt: string
+  updatedAt: string
+}
+
+export type OutboundBoard = {
+  live: OutboundBoardCampaign[]
+  history: OutboundBoardCampaign[]
+  liveCount: number
 }
 
 export type InstantlyAnalyticsOverview = {
@@ -81,6 +120,29 @@ export function getInstantlyApiKey(): string | null {
   return key || null
 }
 
+/**
+ * Resolve Instantly API key: env wins, then operator `compass_settings` secret.
+ * Prefer this over `getInstantlyApiKey` on server routes that already have a
+ * Supabase client so Home works without a Vercel env var.
+ */
+export async function resolveInstantlyApiKey(
+  supabase?: SupabaseClient | null
+): Promise<string | null> {
+  const fromEnv = getInstantlyApiKey()
+  if (fromEnv) return fromEnv
+  if (!supabase) return null
+
+  const { data, error } = await supabase
+    .from('compass_settings')
+    .select('value')
+    .eq('id', INSTANTLY_API_KEY_SETTING_ID)
+    .maybeSingle()
+
+  if (error || !data?.value) return null
+  const value = String(data.value).trim()
+  return value || null
+}
+
 export function getInstantlyTimezone(): string {
   return process.env.INSTANTLY_TIMEZONE?.trim() || DEFAULT_TIMEZONE
 }
@@ -115,6 +177,158 @@ export function mapInstantlyCampaignStatus(status: number): InstantlyUiCampaignS
       return 'launching'
     default:
       return 'paused'
+  }
+}
+
+export function mapInstantlyOutboundStatus(
+  status: number
+): OutboundBoardCampaign['status'] {
+  if (status === INSTANTLY_CAMPAIGN_STATUS.completed) return 'completed'
+  return mapInstantlyCampaignStatus(status)
+}
+
+export function campaignReplyRate(row: InstantlyCampaignAnalytics): number {
+  const sent = Math.max(0, Number(row.emails_sent_count) || 0)
+  if (sent <= 0) return 0
+  const replies =
+    Math.max(0, Number(row.reply_count_unique) || 0) ||
+    Math.max(0, Number(row.reply_count) || 0)
+  return Math.round((1000 * replies) / sent) / 10
+}
+
+export function mapInstantlyRowToOutboundCampaign(
+  row: InstantlyCampaignAnalytics
+): OutboundBoardCampaign {
+  const leads = Math.max(0, Number(row.leads_count) || 0)
+  const newContacted = Math.max(0, Number(row.new_leads_contacted_count) || 0)
+  const contacted = Math.max(0, Number(row.contacted_count) || 0)
+  const touched = newContacted > 0 ? newContacted : Math.min(contacted, leads)
+  const sendCount = Math.max(0, Number(row.emails_sent_count) || 0)
+  const replyCount =
+    Math.max(0, Number(row.reply_count_unique) || 0) ||
+    Math.max(0, Number(row.reply_count) || 0)
+  const opportunities = Math.max(0, Number(row.total_opportunities) || 0)
+  const remaining = Math.max(0, leads - touched)
+
+  return {
+    id: row.campaign_id,
+    name: row.campaign_name || 'Untitled campaign',
+    status: mapInstantlyOutboundStatus(row.campaign_status),
+    offer: '',
+    offerKey: '',
+    copyNotes: '',
+    vertical: '',
+    location: '',
+    leadCount: leads,
+    sendCount,
+    remaining,
+    progress: campaignProgress(row),
+    replyCount,
+    replyRate: campaignReplyRate(row),
+    opportunities,
+    bouncedCount: Math.max(0, Number(row.bounced_count) || 0),
+    completedCount: Math.max(0, Number(row.completed_count) || 0),
+    positiveReplies: opportunities,
+    meetings: opportunities,
+    startedAt: '',
+    updatedAt: ''
+  }
+}
+
+function outboundStatusRank(status: OutboundBoardCampaign['status']): number {
+  switch (status) {
+    case 'live':
+      return 0
+    case 'launching':
+      return 1
+    case 'paused':
+      return 2
+    default:
+      return 3
+  }
+}
+
+export function buildOutboundBoard(rows: InstantlyCampaignAnalytics[]): OutboundBoard {
+  const mapped = rows.map(mapInstantlyRowToOutboundCampaign)
+  const live = mapped
+    .filter((c) => c.status === 'live' || c.status === 'launching' || c.status === 'paused')
+    .sort((a, b) => {
+      const byStatus = outboundStatusRank(a.status) - outboundStatusRank(b.status)
+      if (byStatus !== 0) return byStatus
+      return b.sendCount - a.sendCount
+    })
+  const history = mapped
+    .filter((c) => c.status === 'completed')
+    .sort((a, b) => b.sendCount - a.sendCount)
+
+  return {
+    live,
+    history,
+    liveCount: live.filter((c) => c.status === 'live').length
+  }
+}
+
+const OUTBOUND_BOARD_CACHE_TTL_MS = 60_000
+
+type OutboundBoardCacheEntry = {
+  key: string
+  value: OutboundBoard
+  updatedAt: number
+  promise?: Promise<OutboundBoard>
+}
+
+let outboundBoardCache: OutboundBoardCacheEntry | null = null
+
+/** Clear the process-local outbound board cache (tests / forced refresh). */
+export function clearOutboundBoardCache() {
+  outboundBoardCache = null
+}
+
+export async function loadOutboundBoardFromInstantly(
+  apiKey = getInstantlyApiKey()
+): Promise<OutboundBoard> {
+  if (!apiKey) {
+    throw new InstantlyApiError('INSTANTLY_API_KEY is not configured', 503)
+  }
+
+  const timeZone = getInstantlyTimezone()
+  const today = calendarDateInTimezone(new Date(), timeZone)
+  const cacheKey = `outbound:${today}`
+
+  const cached = outboundBoardCache
+  if (
+    cached &&
+    cached.key === cacheKey &&
+    Date.now() - cached.updatedAt < OUTBOUND_BOARD_CACHE_TTL_MS &&
+    !cached.promise
+  ) {
+    return cached.value
+  }
+  if (cached?.promise && cached.key === cacheKey) {
+    return cached.promise
+  }
+
+  const promise = (async () => {
+    const rows = await fetchInstantlyCampaignAnalytics(apiKey)
+    return buildOutboundBoard(rows)
+  })()
+
+  outboundBoardCache = {
+    key: cacheKey,
+    value: cached?.value ?? { live: [], history: [], liveCount: 0 },
+    updatedAt: cached?.updatedAt ?? 0,
+    promise
+  }
+
+  try {
+    const value = await promise
+    outboundBoardCache = { key: cacheKey, value, updatedAt: Date.now() }
+    return value
+  } catch (err) {
+    if (outboundBoardCache?.promise === promise) {
+      delete outboundBoardCache.promise
+    }
+    throw err
   }
 }
 
@@ -237,11 +451,18 @@ export async function fetchInstantlyAnalyticsOverview(
 
 export async function fetchInstantlyCampaignAnalytics(
   apiKey: string,
-  options?: { startDate?: string; endDate?: string }
+  campaignIdOrOptions?: string | { startDate?: string; endDate?: string; campaignId?: string }
 ): Promise<InstantlyCampaignAnalytics[]> {
   const qs = new URLSearchParams()
-  if (options?.startDate) qs.set('start_date', options.startDate)
-  if (options?.endDate) qs.set('end_date', options.endDate)
+  if (typeof campaignIdOrOptions === 'string') {
+    if (campaignIdOrOptions.trim()) qs.set('id', campaignIdOrOptions.trim())
+  } else if (campaignIdOrOptions) {
+    if (campaignIdOrOptions.startDate) qs.set('start_date', campaignIdOrOptions.startDate)
+    if (campaignIdOrOptions.endDate) qs.set('end_date', campaignIdOrOptions.endDate)
+    if (campaignIdOrOptions.campaignId?.trim()) {
+      qs.set('id', campaignIdOrOptions.campaignId.trim())
+    }
+  }
   const suffix = qs.size > 0 ? `?${qs}` : ''
   const rows = await instantlyFetch<InstantlyCampaignAnalytics[]>(
     `/campaigns/analytics${suffix}`,
@@ -263,6 +484,185 @@ export async function fetchInstantlyDailyCampaignAnalytics(
     apiKey
   )
   return Array.isArray(rows) ? rows : []
+}
+
+/** UI payload for the sequence editor Analytics tab. */
+export type SequenceCampaignAnalytics = {
+  campaignId: string
+  campaignName: string
+  status: InstantlyUiCampaignStatus
+  leads: number
+  contacted: number
+  sent: number
+  replies: number
+  opportunities: number
+  completed: number
+  remaining: number
+  progress: number
+  replyRate: number
+}
+
+export function buildSequenceCampaignAnalytics(
+  row: InstantlyCampaignAnalytics
+): SequenceCampaignAnalytics {
+  const leads = Math.max(0, Number(row.leads_count) || 0)
+  const contacted = Math.max(0, Number(row.contacted_count) || 0)
+  const sent = Math.max(0, Number(row.emails_sent_count) || 0)
+  const replies =
+    Math.max(0, Number(row.reply_count_unique) || 0) ||
+    Math.max(0, Number(row.reply_count) || 0)
+  const opportunities = Math.max(0, Number(row.total_opportunities) || 0)
+  const completed = Math.max(0, Number(row.completed_count) || 0)
+  const progress = campaignProgress(row)
+  const remaining = Math.max(0, leads - Math.min(contacted, leads))
+  const replyRate = sent > 0 ? Math.round((1000 * replies) / sent) / 10 : 0
+
+  return {
+    campaignId: row.campaign_id,
+    campaignName: row.campaign_name || 'Untitled campaign',
+    status: mapInstantlyCampaignStatus(row.campaign_status),
+    leads,
+    contacted,
+    sent,
+    replies,
+    opportunities,
+    completed,
+    remaining,
+    progress,
+    replyRate
+  }
+}
+
+export function findCampaignAnalytics(
+  rows: InstantlyCampaignAnalytics[],
+  campaignId: string
+): InstantlyCampaignAnalytics | null {
+  const id = campaignId.trim()
+  if (!id) return null
+  return rows.find((row) => row.campaign_id === id) ?? null
+}
+
+const SEQUENCE_ANALYTICS_CACHE_TTL_MS = 60_000
+
+type SequenceAnalyticsCacheEntry = {
+  key: string
+  value: SequenceCampaignAnalytics
+  updatedAt: number
+  promise?: Promise<SequenceCampaignAnalytics>
+}
+
+const sequenceAnalyticsCache = new Map<string, SequenceAnalyticsCacheEntry>()
+
+/** Clear process-local per-campaign analytics cache (tests / forced refresh). */
+export function clearSequenceCampaignAnalyticsCache() {
+  sequenceAnalyticsCache.clear()
+}
+
+/**
+ * Demo metrics when INSTANTLY_API_KEY is unset — keyed so the same Instantly id
+ * always returns a stable shape for the editor Analytics tab.
+ */
+export function buildDemoSequenceCampaignAnalytics(
+  campaignId: string
+): SequenceCampaignAnalytics {
+  const id = campaignId.trim() || 'demo-campaign'
+  // Deterministic-ish demo numbers from the id so the UI isn't empty in local/dev.
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+  const leads = 800 + (hash % 1600)
+  const progress = 35 + (hash % 50)
+  const contacted = Math.round((leads * progress) / 100)
+  const sent = Math.round(contacted * (1.4 + (hash % 40) / 100))
+  const replies = Math.max(1, Math.round(sent * (0.02 + (hash % 30) / 1000)))
+  const opportunities = Math.max(0, Math.round(replies * 0.25))
+  const completed = Math.round(leads * (progress / 100) * 0.4)
+  return {
+    campaignId: id,
+    campaignName: 'Demo Instantly campaign',
+    status: 'live',
+    leads,
+    contacted,
+    sent,
+    replies,
+    opportunities,
+    completed,
+    remaining: Math.max(0, leads - contacted),
+    progress,
+    replyRate: sent > 0 ? Math.round((1000 * replies) / sent) / 10 : 0
+  }
+}
+
+export async function loadSequenceCampaignAnalytics(
+  campaignId: string,
+  apiKey = getInstantlyApiKey()
+): Promise<SequenceCampaignAnalytics> {
+  const id = campaignId.trim()
+  if (!id) {
+    throw new InstantlyApiError('campaign id is required', 400)
+  }
+  if (!apiKey) {
+    throw new InstantlyApiError('INSTANTLY_API_KEY is not configured', 503)
+  }
+
+  const cached = sequenceAnalyticsCache.get(id)
+  if (
+    cached &&
+    Date.now() - cached.updatedAt < SEQUENCE_ANALYTICS_CACHE_TTL_MS &&
+    !cached.promise
+  ) {
+    return cached.value
+  }
+  if (cached?.promise) {
+    return cached.promise
+  }
+
+  const promise = (async () => {
+    let rows = await fetchInstantlyCampaignAnalytics(apiKey, id)
+    let row = findCampaignAnalytics(rows, id)
+    // Some Instantly workspaces ignore the `id` filter — fall back to full list.
+    if (!row) {
+      rows = await fetchInstantlyCampaignAnalytics(apiKey)
+      row = findCampaignAnalytics(rows, id)
+    }
+    if (!row) {
+      throw new InstantlyApiError(`Campaign ${id} not found in Instantly analytics`, 404)
+    }
+    return buildSequenceCampaignAnalytics(row)
+  })()
+
+  sequenceAnalyticsCache.set(id, {
+    key: id,
+    value:
+      cached?.value ??
+      ({
+        campaignId: id,
+        campaignName: '',
+        status: 'paused',
+        leads: 0,
+        contacted: 0,
+        sent: 0,
+        replies: 0,
+        opportunities: 0,
+        completed: 0,
+        remaining: 0,
+        progress: 0,
+        replyRate: 0
+      } satisfies SequenceCampaignAnalytics),
+    updatedAt: cached?.updatedAt ?? 0,
+    promise
+  })
+
+  try {
+    const value = await promise
+    sequenceAnalyticsCache.set(id, { key: id, value, updatedAt: Date.now() })
+    return value
+  } catch (err) {
+    const entry = sequenceAnalyticsCache.get(id)
+    if (entry?.promise === promise) {
+      delete entry.promise
+    }
+    throw err
+  }
 }
 
 export async function fetchInstantlyUnreadCount(apiKey: string): Promise<number> {
@@ -287,9 +687,10 @@ export function clearColdEmailGlanceCache() {
 }
 
 export async function loadColdEmailGlanceFromInstantly(
-  apiKey = getInstantlyApiKey()
+  apiKey?: string | null
 ): Promise<ColdEmailGlance> {
-  if (!apiKey) {
+  const resolved = (apiKey ?? getInstantlyApiKey())?.trim() || null
+  if (!resolved) {
     throw new InstantlyApiError('INSTANTLY_API_KEY is not configured', 503)
   }
 
@@ -314,10 +715,10 @@ export async function loadColdEmailGlanceFromInstantly(
 
   const promise = (async () => {
     const [todayOverview, rolling30d, unread, campaigns] = await Promise.all([
-      fetchInstantlyAnalyticsOverview(apiKey, today, today),
-      fetchInstantlyAnalyticsOverview(apiKey, window30.start, window30.end),
-      fetchInstantlyUnreadCount(apiKey),
-      fetchInstantlyCampaignAnalytics(apiKey)
+      fetchInstantlyAnalyticsOverview(resolved, today, today),
+      fetchInstantlyAnalyticsOverview(resolved, window30.start, window30.end),
+      fetchInstantlyUnreadCount(resolved),
+      fetchInstantlyCampaignAnalytics(resolved)
     ])
 
     return buildColdEmailGlance({

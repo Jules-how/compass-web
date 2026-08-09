@@ -3,15 +3,21 @@
 import { useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { listLocalCampaigns } from '@/lib/campaign-local-store'
+import type { OutboundBoardCampaign } from '@/lib/instantly'
 import { copyStatusLabel, LOCATION_TAG_HINTS, VERTICAL_TAG_HINTS } from '@/lib/outbound-copy'
-import {
-  listHistoryOutboundCampaigns,
-  type OutboundLiveCampaign
-} from '@/lib/outbound-live-demo'
+import { demoOutboundBoard } from '@/lib/outbound-live-demo'
 import { listLocalOffers } from '@/lib/outbound-local-store'
+import { useCachedJson } from '@/lib/use-cached-json'
 import Link from 'next/link'
 
 type SortKey = 'date' | 'name' | 'leads' | 'sent' | 'reply'
+
+type OutboundBoardPayload = {
+  live: OutboundBoardCampaign[]
+  history: OutboundBoardCampaign[]
+  liveCount: number
+  source?: 'instantly' | 'demo' | 'error'
+}
 
 function Select({
   value,
@@ -47,7 +53,14 @@ function Select({
 }
 
 export function OutboundHistorySection() {
-  const demoHistory = useMemo(() => listHistoryOutboundCampaigns(), [])
+  const board = useCachedJson<OutboundBoardPayload>(
+    '/api/instantly/outbound-campaigns',
+    '/api/instantly/outbound-campaigns',
+    { staleMs: 60_000 }
+  )
+  const fallback = useMemo(() => demoOutboundBoard(), [])
+  const instantlyHistory = board.data?.history ?? fallback.history
+  const fromInstantly = board.data?.source === 'instantly'
   const localCampaigns = listLocalCampaigns()
   const offers = listLocalOffers()
 
@@ -61,12 +74,12 @@ export function OutboundHistorySection() {
   const [sort, setSort] = useState<SortKey>('date')
 
   const rows = useMemo(() => {
-    let list: OutboundLiveCampaign[] = demoHistory.slice()
+    let list: OutboundBoardCampaign[] = instantlyHistory.slice()
 
     // Merge local completed / non-live pipeline campaigns as lightweight history rows
     for (const c of localCampaigns) {
       if (c.status === 'completed' || c.copy_status === 'none' || c.status === 'cancelled') {
-        if (list.some((r) => r.id === c.id)) continue
+        if (list.some((r) => r.id === c.id || r.id === c.instantly_campaign_id)) continue
         list.push({
           id: c.id,
           name: c.name,
@@ -80,7 +93,11 @@ export function OutboundHistorySection() {
           sendCount: 0,
           remaining: 0,
           progress: c.status === 'completed' ? 100 : 0,
+          replyCount: 0,
           replyRate: 0,
+          opportunities: 0,
+          bouncedCount: 0,
+          completedCount: 0,
           positiveReplies: 0,
           meetings: 0,
           startedAt: c.start_date || c.created_at.slice(0, 10),
@@ -94,8 +111,8 @@ export function OutboundHistorySection() {
       if (vertical !== 'all' && c.vertical !== vertical) return false
       if (location !== 'all' && c.location !== location) return false
       if (offer !== 'all' && c.offerKey !== offer && c.offer !== offer) return false
-      if (dateFrom && c.startedAt < dateFrom) return false
-      if (dateTo && c.startedAt > dateTo) return false
+      if (dateFrom && c.startedAt && c.startedAt < dateFrom) return false
+      if (dateTo && c.startedAt && c.startedAt > dateTo) return false
       if (leadVolume === 'low' && c.leadCount >= 1000) return false
       if (leadVolume === 'mid' && (c.leadCount < 1000 || c.leadCount >= 2500)) return false
       if (leadVolume === 'high' && c.leadCount < 2500) return false
@@ -114,13 +131,13 @@ export function OutboundHistorySection() {
           return b.replyRate - a.replyRate
         case 'date':
         default:
-          return b.updatedAt.localeCompare(a.updatedAt)
+          return (b.updatedAt || b.name).localeCompare(a.updatedAt || a.name)
       }
     })
 
     return list
   }, [
-    demoHistory,
+    instantlyHistory,
     localCampaigns,
     nameQ,
     vertical,
@@ -138,9 +155,18 @@ export function OutboundHistorySection() {
         <div>
           <CardTitle>History</CardTitle>
           <CardDescription>
-            Previous campaigns — filter by date, name, vertical, lead volume, and more
+            Completed Instantly campaigns — filter by name, volume, and reply rate
           </CardDescription>
         </div>
+        <span
+          className={
+            fromInstantly
+              ? 'rounded-xl bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700'
+              : 'rounded-xl bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800'
+          }
+        >
+          {fromInstantly ? 'Instantly' : 'Demo'}
+        </span>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-3">
@@ -236,16 +262,22 @@ export function OutboundHistorySection() {
             <thead className="border-b border-stone-100 bg-stone-50/60 text-[11px] uppercase tracking-wide text-neutral-500">
               <tr>
                 <th className="px-4 py-3 font-medium">Campaign</th>
-                <th className="px-3 py-3 font-medium">Offer / copy</th>
-                <th className="px-3 py-3 font-medium">Vertical</th>
                 <th className="px-3 py-3 font-medium">Leads</th>
                 <th className="px-3 py-3 font-medium">Sent</th>
-                <th className="px-3 py-3 font-medium">Reply</th>
+                <th className="px-3 py-3 font-medium">Replies</th>
+                <th className="px-3 py-3 font-medium">Reply %</th>
+                <th className="px-3 py-3 font-medium">Opps</th>
                 <th className="px-4 py-3 font-medium">Ended</th>
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 ? (
+              {board.loading && !board.data ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-neutral-500">
+                    Loading Instantly history…
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-neutral-500">
                     No history matches these filters.
@@ -256,15 +288,10 @@ export function OutboundHistorySection() {
                   <tr key={c.id} className="border-b border-stone-50 hover:bg-stone-50/60">
                     <td className="px-4 py-3">
                       <div className="font-medium text-neutral-900">{c.name}</div>
-                      <div className="text-[11px] text-neutral-400">{c.location || '—'}</div>
-                    </td>
-                    <td className="max-w-[16rem] px-3 py-3">
-                      <div className="text-neutral-700">{c.offer}</div>
-                      <div className="mt-0.5 line-clamp-2 text-[11px] text-neutral-500">
-                        {c.copyNotes}
+                      <div className="text-[11px] text-neutral-400">
+                        {c.offer || c.location || 'Instantly'}
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-neutral-600">{c.vertical || '—'}</td>
                     <td className="px-3 py-3 tabular-nums text-neutral-700">
                       {c.leadCount ? c.leadCount.toLocaleString() : '—'}
                     </td>
@@ -272,10 +299,16 @@ export function OutboundHistorySection() {
                       {c.sendCount ? c.sendCount.toLocaleString() : '—'}
                     </td>
                     <td className="px-3 py-3 tabular-nums text-neutral-700">
-                      {c.replyRate ? `${c.replyRate}%` : '—'}
+                      {c.replyCount ? c.replyCount.toLocaleString() : '0'}
+                    </td>
+                    <td className="px-3 py-3 tabular-nums text-neutral-700">
+                      {c.replyRate ? `${c.replyRate}%` : '0%'}
+                    </td>
+                    <td className="px-3 py-3 tabular-nums text-neutral-700">
+                      {c.opportunities.toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-neutral-500">
-                      {c.updatedAt.slice(0, 10)}
+                      {c.updatedAt ? c.updatedAt.slice(0, 10) : '—'}
                     </td>
                   </tr>
                 ))

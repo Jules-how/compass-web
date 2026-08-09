@@ -1,8 +1,45 @@
 'use client'
 
-import { useState } from 'react'
-import type { CompassBusinessFunction } from '@/lib/types'
-import { ShellTable } from '@/components/ShellTable'
+import Link from 'next/link'
+import { useMemo, useState } from 'react'
+import type { CompassBusinessFunctionWithStats } from '@/lib/types'
+import { emptyFunctionStats } from '@/lib/function-stats'
+import { cn } from '@/lib/utils'
+
+const FUNCTION_ICON_COLORS = [
+  '#F2994A',
+  '#5E6AD2',
+  '#26B5CE',
+  '#4CB782',
+  '#EB5757',
+  '#BB87FC',
+  '#F2C94C',
+  '#95A2B3'
+] as const
+
+function slugify(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function functionIconColor(seed: string): string {
+  let hash = 0
+  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
+  return FUNCTION_ICON_COLORS[hash % FUNCTION_ICON_COLORS.length]
+}
+
+function initialsFromLabel(label: string): string {
+  const parts = label.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  return parts
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+}
 
 function formatUpdated(value: string): string {
   try {
@@ -15,19 +52,11 @@ function formatUpdated(value: string): string {
   }
 }
 
-function slugify(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
 export function FunctionManager({
   functions,
   onRefresh
 }: {
-  functions: CompassBusinessFunction[]
+  functions: CompassBusinessFunctionWithStats[]
   onRefresh?: () => void | Promise<void>
 }) {
   const [creating, setCreating] = useState(false)
@@ -36,10 +65,30 @@ export function FunctionManager({
   const [sortOrder, setSortOrder] = useState('0')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editSlug, setEditSlug] = useState('')
-  const [editSortOrder, setEditSortOrder] = useState('0')
+  const [query, setQuery] = useState('')
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const sorted = [...functions].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
+    if (!q) return sorted
+    return sorted.filter((row) => {
+      const recent = (row.recentProjects ?? []).map((project) => project.name).join(' ')
+      const haystack = `${row.name} ${row.slug} ${recent}`.toLowerCase()
+      return haystack.includes(q)
+    })
+  }, [functions, query])
+
+  const totals = useMemo(() => {
+    return functions.reduce(
+      (acc, row) => {
+        const stats = row.stats ?? emptyFunctionStats()
+        acc.projects += stats.projectCount
+        acc.openTasks += stats.openTaskCount
+        return acc
+      },
+      { projects: 0, openTasks: 0 }
+    )
+  }, [functions])
 
   async function createFunction(event: React.FormEvent) {
     event.preventDefault()
@@ -72,146 +121,41 @@ export function FunctionManager({
     }
   }
 
-  async function saveEdit(functionId: string) {
-    if (!editName.trim() || !editSlug.trim()) return
-    setSaving(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/functions/${functionId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: editName.trim(),
-          slug: editSlug.trim(),
-          sort_order: Number(editSortOrder) || 0
-        })
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? `Request failed (${res.status})`)
-      }
-      setEditingId(null)
-      await onRefresh?.()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function removeFunction(row: CompassBusinessFunction) {
-    if (!confirm(`Delete function “${row.name}”?`)) return
-    setSaving(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/functions/${row.id}`, { method: 'DELETE' })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? `Request failed (${res.status})`)
-      }
-      await onRefresh?.()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const rows = functions.map((row) => {
-    if (editingId === row.id) {
-      return [
-        <input
-          key="name"
-          value={editName}
-          onChange={(e) => setEditName(e.target.value)}
-          className="w-full rounded border border-neutral-300 px-2 py-1 text-sm"
-          disabled={saving}
-        />,
-        <input
-          key="slug"
-          value={editSlug}
-          onChange={(e) => setEditSlug(e.target.value)}
-          className="w-full rounded border border-neutral-300 px-2 py-1 text-sm"
-          disabled={saving}
-        />,
-        <input
-          key="order"
-          type="number"
-          value={editSortOrder}
-          onChange={(e) => setEditSortOrder(e.target.value)}
-          className="w-24 rounded border border-neutral-300 px-2 py-1 text-sm"
-          disabled={saving}
-        />,
-        <div key="actions" className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => saveEdit(row.id)}
-            disabled={saving}
-            className="rounded bg-sf-orange px-2 py-1 text-xs font-medium text-white"
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditingId(null)}
-            disabled={saving}
-            className="rounded border border-neutral-300 px-2 py-1 text-xs"
-          >
-            Cancel
-          </button>
-        </div>
-      ]
-    }
-
-    return [
-      row.name,
-      row.slug,
-      String(row.sort_order),
-      <div key="actions" className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-neutral-400">{formatUpdated(row.updated_at)}</span>
-        <button
-          type="button"
-          onClick={() => {
-            setEditingId(row.id)
-            setEditName(row.name)
-            setEditSlug(row.slug)
-            setEditSortOrder(String(row.sort_order))
-          }}
-          className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600"
-        >
-          Edit
-        </button>
-        <button
-          type="button"
-          onClick={() => removeFunction(row)}
-          className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-red-600"
-        >
-          Delete
-        </button>
-      </div>
-    ]
-  })
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-500">
-          {functions.length} function{functions.length === 1 ? '' : 's'}
-        </p>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search functions…"
+            className="compass-input max-w-sm"
+          />
+          <p className="text-sm text-neutral-500">
+            <span className="tabular-nums text-neutral-700">{filtered.length}</span> modules
+            <span className="mx-1.5 text-neutral-300">·</span>
+            <span className="tabular-nums">{totals.projects}</span> projects
+            <span className="mx-1.5 text-neutral-300">·</span>
+            <span className="tabular-nums">{totals.openTasks}</span> open tasks
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => setCreating((value) => !value)}
-          className="compass-btn-primary"
+          className={creating ? 'compass-btn-secondary' : 'compass-btn-primary'}
         >
           {creating ? 'Cancel' : 'New function'}
         </button>
       </div>
 
       {creating ? (
-        <form
-          onSubmit={createFunction}
-          className="space-y-3 rounded-lg border border-sf-orange/40 bg-white p-4"
-        >
+        <form onSubmit={createFunction} className="compass-panel space-y-4 p-6">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-neutral-900">New function</h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              Create a module for a business area — then open it to manage projects and tasks.
+            </p>
+          </div>
           <input
             autoFocus
             type="text"
@@ -226,22 +170,22 @@ export function FunctionManager({
           />
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="mb-1 block text-xs text-neutral-500">Slug</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Slug</span>
               <input
                 type="text"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block text-xs text-neutral-500">Order</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Order</span>
               <input
                 type="number"
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                className="compass-input"
                 disabled={saving}
               />
             </label>
@@ -258,11 +202,115 @@ export function FunctionManager({
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <ShellTable
-        columns={['Name', 'Slug', 'Order', 'Updated']}
-        rows={rows}
-        emptyMessage="No business functions yet. Create one to get started."
-      />
+      {filtered.length === 0 ? (
+        <div className="compass-panel px-8 py-16 text-center">
+          <p className="font-display text-lg font-semibold text-neutral-900">
+            {functions.length === 0 ? 'No functions yet' : 'No matches'}
+          </p>
+          <p className="mt-2 text-sm text-neutral-500">
+            {functions.length === 0
+              ? 'Create your first business function to organize projects and tasks by module.'
+              : 'Try a different search.'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((row) => {
+            const stats = row.stats ?? emptyFunctionStats()
+            const color = functionIconColor(row.id || row.slug || row.name)
+            const recent = row.recentProjects ?? []
+            return (
+              <Link
+                key={row.id}
+                href={`/functions/${row.id}`}
+                className={cn(
+                  'compass-panel group relative block overflow-hidden transition',
+                  'hover:-translate-y-0.5 hover:shadow-lift'
+                )}
+              >
+                <div
+                  className="pointer-events-none absolute inset-y-0 left-0 w-1.5 opacity-90"
+                  style={{ backgroundColor: color }}
+                  aria-hidden
+                />
+                <div className="flex flex-col gap-4 p-5 pl-6 lg:flex-row lg:items-center lg:gap-6">
+                  <div className="flex min-w-0 flex-1 items-start gap-4">
+                    <div
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white shadow-soft"
+                      style={{ backgroundColor: color }}
+                      aria-hidden
+                    >
+                      {initialsFromLabel(row.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <h3 className="font-display text-xl font-semibold tracking-tight text-neutral-900">
+                          {row.name}
+                        </h3>
+                        <span className="text-sm text-neutral-400">/{row.slug}</span>
+                      </div>
+                      {recent.length > 0 ? (
+                        <p className="mt-2 truncate text-sm text-neutral-600">
+                          <span className="text-neutral-400">Projects · </span>
+                          {recent.map((project) => project.name).join(' · ')}
+                          {stats.projectCount > recent.length
+                            ? ` · +${stats.projectCount - recent.length} more`
+                            : ''}
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-sm text-neutral-400">
+                          No projects yet — open to add or assign work
+                        </p>
+                      )}
+                      <p className="mt-2 text-xs text-neutral-400">
+                        Updated {formatUpdated(row.updated_at)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 flex-wrap items-center gap-2 lg:gap-3">
+                    <div className="rounded-xl bg-stone-50 px-3.5 py-2.5 text-center ring-1 ring-inset ring-stone-200/70 min-w-[5.5rem]">
+                      <p className="font-display text-lg font-semibold tabular-nums text-neutral-900">
+                        {stats.projectCount}
+                      </p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                        Projects
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-stone-50 px-3.5 py-2.5 text-center ring-1 ring-inset ring-stone-200/70 min-w-[5.5rem]">
+                      <p className="font-display text-lg font-semibold tabular-nums text-neutral-900">
+                        {stats.openTaskCount}
+                      </p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                        Open
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-stone-50 px-3.5 py-2.5 text-center ring-1 ring-inset ring-stone-200/70 min-w-[5.5rem]">
+                      <p className="font-display text-lg font-semibold tabular-nums text-neutral-900">
+                        {stats.completedTaskCount}
+                      </p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                        Done
+                      </p>
+                    </div>
+                    <span className="ml-1 inline-flex h-9 w-9 items-center justify-center rounded-xl text-neutral-300 transition group-hover:bg-stone-50 group-hover:text-neutral-600">
+                      <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" aria-hidden>
+                        <path
+                          d="M6 3.5 10.5 8 6 12.5"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

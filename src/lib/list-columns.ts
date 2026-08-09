@@ -4,8 +4,15 @@ export const TASK_LIST_COLUMNS =
 export const PROJECT_LIST_COLUMNS =
   'id,name,business_function_id,client_id,status,priority,health,start_date,target_date,labels,summary,updated_at,created_at,mirrored_at,source,notes,external_id'
 
-export const CLIENT_LIST_COLUMNS =
-  'id,name,industry,website,main_contact_name,main_contact_role,engagement_type,retainer_status,status,priority,health,summary,tags,notes,archived_at,vault_dossier_id,portal_client_slug,last_touch_at,comms_summary,comms_summary_at,comms_summary_source,created_at,updated_at,mirrored_at'
+/** Core CRM columns from migration 0029 (always expected). */
+export const CLIENT_LIST_COLUMNS_CORE =
+  'id,name,industry,website,main_contact_name,main_contact_role,engagement_type,retainer_status,status,priority,health,summary,tags,notes,archived_at,vault_dossier_id,portal_client_slug,last_touch_at,created_at,updated_at,mirrored_at'
+
+/** Comms summary columns from migration 0031 (optional until migrated). */
+export const CLIENT_COMMS_SUMMARY_COLUMNS =
+  'comms_summary,comms_summary_at,comms_summary_source'
+
+export const CLIENT_LIST_COLUMNS = `${CLIENT_LIST_COLUMNS_CORE},${CLIENT_COMMS_SUMMARY_COLUMNS}`
 
 export const CLIENT_COMM_THREAD_COLUMNS =
   'id,client_id,channel,subject,participants,external_id,status,notes,summary,summary_at,last_message_at,created_at,updated_at'
