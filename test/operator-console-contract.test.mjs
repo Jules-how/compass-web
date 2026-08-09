@@ -112,7 +112,9 @@ test('client routes are operator-gated with same-origin writes', () => {
   assert.match(clients, /compass_clients/)
   assert.match(comms, /compass_client_comm_threads/)
   assert.match(page, /ClientsPanel/)
-  assert.match(detail, /ClientDetailPanel/)
+  assert.match(detail, /redirect\(`\/clients\?client=/)
+  assert.match(read('src/components/clients/ClientDirectory.tsx'), /ClientDetailModal/)
+  assert.match(read('src/components/clients/ClientDetailModal.tsx'), /ClientDetailPanel/)
 })
 
 test('operator nav covers the sectioned Compass surfaces', () => {
