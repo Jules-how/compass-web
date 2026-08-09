@@ -26,7 +26,7 @@ function humanizeStatus(raw) {
     suppressed: 'Suppressed',
     booked: 'Booked',
     converted: 'Converted',
-    in_instantly: 'In Instantly',
+    in_instantly: 'Synced',
     not_uploaded: 'Not uploaded',
     stale_sync: 'Stale sync',
     'stale-sync': 'Stale sync',
@@ -47,7 +47,7 @@ function verticalFilterValues(vertical) {
 }
 
 test('lead status labels are human-readable', () => {
-  assert.equal(humanizeStatus('in_instantly'), 'In Instantly')
+  assert.equal(humanizeStatus('in_instantly'), 'Synced')
   assert.equal(humanizeStatus('not_interested'), 'Not interested')
   assert.equal(humanizeStatus(null), 'Uncontacted')
 })
@@ -94,9 +94,20 @@ test('LeadTable surfaces search, segments, bulk actions, and hides UUID by defau
   assert.match(table, /Copy lead ID/)
   assert.match(table, /humanizeStatus/)
   assert.match(table, /summaryChips/)
+  assert.match(table, /onNavigate/)
   assert.doesNotMatch(table, /\{lead\.id\}<\/div>/)
   assert.match(panel, /\/api\/leads\/summary/)
   assert.match(panel, /onReload/)
+  assert.match(panel, /router\.push/)
+})
+
+test('leads summary is global and cacheable (filters come from list total)', () => {
+  const summary = read('src/app/api/leads/summary/route.ts')
+  const panel = read('src/components/LeadsPanel.tsx')
+  assert.doesNotMatch(summary, /parseLeadListFilters/)
+  assert.match(summary, /portalJsonCached\(\{ summary \}, \{\}, 60\)/)
+  assert.match(panel, /leads:summary:global/)
+  assert.match(panel, /staleMs:\s*5 \* 60_000/)
 })
 
 test('lead list columns include suppression and Instantly sync fields', () => {

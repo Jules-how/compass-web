@@ -15,6 +15,7 @@ export default async function LeadsPage() {
       role="owner"
       title="Leads"
       subtitle="Outbound lead list"
+      width="7xl"
     >
       <Suspense fallback={<LoadingBlock label="Loading leads…" />}>
         <LeadsPanel />

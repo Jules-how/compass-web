@@ -32,6 +32,7 @@ interface LeadTableProps {
   hasMore: boolean
   total: number
   summary: LeadSummaryCounts | null
+  onNavigate: (filters: LeadListFilters, page?: number) => void
   onReload: () => void
 }
 
@@ -107,6 +108,7 @@ export default function LeadTable({
   hasMore,
   total,
   summary,
+  onNavigate,
   onReload
 }: LeadTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -139,22 +141,17 @@ export default function LeadTable({
 
   const allSelected = leads.length > 0 && leads.every((l) => selected.has(l.id))
 
-  function navigate(nextFilters: LeadListFilters, nextPage = 1) {
-    const qs = leadFiltersToSearchParams(nextFilters, nextPage).toString()
-    window.location.href = qs ? `/leads?${qs}` : '/leads'
-  }
-
   function applyFilters() {
-    navigate(draftFilters, 1)
+    onNavigate(draftFilters, 1)
   }
 
   function resetFilters() {
-    window.location.href = '/leads'
+    onNavigate({}, 1)
   }
 
   function goToPage(next: number) {
     if (next < 1) return
-    navigate(filters, next)
+    onNavigate(filters, next)
   }
 
   function toggleSelect(id: string) {
@@ -307,7 +304,7 @@ export default function LeadTable({
         },
         {
           key: 'in_instantly',
-          label: 'In Instantly',
+          label: 'Synced',
           count: summary.in_instantly,
           filters: { sync_state: 'in_instantly' }
         },
@@ -365,7 +362,7 @@ export default function LeadTable({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Summary chips */}
       {summary && (
         <div className="flex flex-wrap gap-2">
@@ -375,19 +372,17 @@ export default function LeadTable({
               <button
                 key={chip.key}
                 type="button"
-                onClick={() => navigate(chip.filters, 1)}
-                className={`rounded-lg border px-3 py-1.5 text-left text-sm transition ${
+                onClick={() => onNavigate(chip.filters, 1)}
+                className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm transition ${
                   active
-                    ? 'border-sf-orange bg-orange-50 text-neutral-900'
-                    : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50'
+                    ? 'border-sf-orange/40 bg-orange-50 text-neutral-900 shadow-soft'
+                    : 'border-stone-200/70 bg-white text-neutral-600 shadow-soft hover:border-stone-300 hover:bg-stone-50'
                 }`}
               >
-                <span className="block text-[11px] uppercase tracking-wide text-neutral-400">
-                  {chip.label}
-                </span>
                 <span className="font-semibold tabular-nums text-neutral-900">
                   {chip.count.toLocaleString()}
                 </span>
+                <span className="text-xs font-medium text-neutral-500">{chip.label}</span>
               </button>
             )
           })}
@@ -395,17 +390,17 @@ export default function LeadTable({
       )}
 
       {/* Segments */}
-      <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">
+      <div className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
             Segments
           </span>
           {PRESET_SEGMENTS.map((preset) => (
             <button
               key={preset.name}
               type="button"
-              onClick={() => navigate(preset.filters, 1)}
-              className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-600 transition hover:bg-neutral-50"
+              onClick={() => onNavigate(preset.filters, 1)}
+              className="rounded-xl border border-stone-200/80 px-2.5 py-1 text-xs text-neutral-600 transition hover:bg-stone-50"
             >
               {preset.name}
             </button>
@@ -413,9 +408,9 @@ export default function LeadTable({
           {savedSegments.map((seg) => (
             <span
               key={seg.id}
-              className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-700"
+              className="inline-flex items-center gap-1 rounded-xl border border-stone-200/80 bg-stone-50 px-2.5 py-1 text-xs text-neutral-700"
             >
-              <button type="button" onClick={() => navigate(seg.filters, 1)} className="hover:underline">
+              <button type="button" onClick={() => onNavigate(seg.filters, 1)} className="hover:underline">
                 {seg.name}
               </button>
               <button
@@ -435,12 +430,12 @@ export default function LeadTable({
             placeholder="Save current filters as…"
             value={segmentName}
             onChange={(e) => setSegmentName(e.target.value)}
-            className="min-w-[180px] flex-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm focus:border-sf-orange focus:outline-none"
+            className="min-w-[200px] flex-1 rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
           />
           <button
             type="button"
             onClick={saveCurrentSegment}
-            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-100"
+            className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 transition hover:bg-stone-50"
           >
             Save segment
           </button>
@@ -448,10 +443,10 @@ export default function LeadTable({
       </div>
 
       {/* Filter bar */}
-      <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-        <div className="mb-3">
+      <div className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
+        <div className="mb-4">
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-neutral-500">Search</span>
+            <span className="mb-1.5 block text-xs font-medium text-neutral-500">Search</span>
             <input
               type="search"
               placeholder="Name, email, company, or phone"
@@ -462,7 +457,7 @@ export default function LeadTable({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') applyFilters()
               }}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+              className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm focus:border-sf-orange focus:outline-none"
             />
           </label>
         </div>
@@ -508,7 +503,7 @@ export default function LeadTable({
             }))}
           />
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-neutral-500">City</span>
+            <span className="mb-1.5 block text-xs font-medium text-neutral-500">City</span>
             <input
               type="text"
               placeholder="e.g. Sydney"
@@ -516,11 +511,11 @@ export default function LeadTable({
               onChange={(e) =>
                 setDraftFilters((f) => ({ ...f, city: e.target.value || undefined }))
               }
-              className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm focus:border-sf-orange focus:outline-none"
+              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
             />
           </label>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <FilterSelect
             label=""
             hideLabel
@@ -563,7 +558,7 @@ export default function LeadTable({
           <button
             type="button"
             onClick={resetFilters}
-            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-600 transition hover:bg-neutral-100"
+            className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-600 transition hover:bg-stone-50"
           >
             Reset
           </button>
@@ -573,7 +568,7 @@ export default function LeadTable({
               type="button"
               onClick={() => void handleExport(false)}
               disabled={exporting || total === 0}
-              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-60"
+              className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 transition hover:bg-stone-50 disabled:opacity-60"
             >
               {exporting ? 'Exporting…' : 'Export CSV'}
             </button>
@@ -583,13 +578,13 @@ export default function LeadTable({
 
       {/* Bulk actions */}
       {selected.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm shadow-soft">
           <span className="font-medium text-neutral-800">{selected.size} selected</span>
           <button
             type="button"
             disabled={bulkBusy}
             onClick={() => void runBulk('suppress')}
-            className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs hover:bg-neutral-50 disabled:opacity-60"
+            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
           >
             Suppress
           </button>
@@ -597,14 +592,14 @@ export default function LeadTable({
             type="button"
             disabled={bulkBusy}
             onClick={() => void runBulk('unsuppress')}
-            className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs hover:bg-neutral-50 disabled:opacity-60"
+            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
           >
             Unsuppress
           </button>
           <select
             value={bulkStatus}
             onChange={(e) => setBulkStatus(e.target.value)}
-            className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs"
+            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs"
           >
             {PIPELINE_STATUSES.map((s) => (
               <option key={s} value={s}>
@@ -616,7 +611,7 @@ export default function LeadTable({
             type="button"
             disabled={bulkBusy}
             onClick={() => void runBulk('set_status', { status: bulkStatus })}
-            className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs hover:bg-neutral-50 disabled:opacity-60"
+            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
           >
             Set stage
           </button>
@@ -625,13 +620,13 @@ export default function LeadTable({
             placeholder="Tag"
             value={bulkTag}
             onChange={(e) => setBulkTag(e.target.value)}
-            className="w-28 rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs"
+            className="w-28 rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs"
           />
           <button
             type="button"
             disabled={bulkBusy || !bulkTag.trim()}
             onClick={() => void runBulk('add_tag', { tag: bulkTag.trim() })}
-            className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs hover:bg-neutral-50 disabled:opacity-60"
+            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
           >
             Add tag
           </button>
@@ -639,7 +634,7 @@ export default function LeadTable({
             type="button"
             disabled={bulkBusy}
             onClick={() => void handleExport(true)}
-            className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs hover:bg-neutral-50 disabled:opacity-60"
+            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
           >
             Export for Instantly
           </button>
@@ -658,11 +653,11 @@ export default function LeadTable({
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-sm">
-        <table className="w-full min-w-[960px] text-left text-sm">
-          <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
+      <div className="overflow-x-auto rounded-2xl border border-stone-200/70 bg-white shadow-soft">
+        <table className="w-full min-w-[1100px] text-left text-sm">
+          <thead className="bg-stone-50/80 text-xs uppercase tracking-wide text-neutral-500">
             <tr>
-              <th className="w-10 px-3 py-2">
+              <th className="w-10 px-4 py-3">
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -670,22 +665,22 @@ export default function LeadTable({
                   aria-label="Select all on page"
                 />
               </th>
-              <th className="px-3 py-2 font-medium">Name</th>
-              <th className="px-3 py-2 font-medium">Email</th>
-              {!phoneSparse && <th className="px-3 py-2 font-medium">Phone</th>}
-              <th className="px-3 py-2 font-medium">Company</th>
-              <th className="px-3 py-2 font-medium">Location</th>
-              <th className="px-3 py-2 font-medium">Campaign</th>
-              <th className="px-3 py-2 font-medium">Stage</th>
-              <th className="px-3 py-2 font-medium">Last touch</th>
+              <th className="px-4 py-3 font-medium">Name</th>
+              <th className="px-4 py-3 font-medium">Email</th>
+              {!phoneSparse && <th className="px-4 py-3 font-medium">Phone</th>}
+              <th className="px-4 py-3 font-medium">Company</th>
+              <th className="px-4 py-3 font-medium">Location</th>
+              <th className="min-w-[200px] px-4 py-3 font-medium">Campaign</th>
+              <th className="px-4 py-3 font-medium">Stage</th>
+              <th className="px-4 py-3 font-medium">Last touch</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-stone-100">
             {leads.length === 0 && (
               <tr>
                 <td
                   colSpan={phoneSparse ? 8 : 9}
-                  className="px-3 py-8 text-center text-neutral-500"
+                  className="px-4 py-10 text-center text-neutral-500"
                 >
                   No leads match these filters.
                 </td>
@@ -699,11 +694,11 @@ export default function LeadTable({
               return (
                 <Fragment key={lead.id}>
                   <tr
-                    className={`transition hover:bg-neutral-50 ${
+                    className={`transition hover:bg-stone-50/70 ${
                       selected.has(lead.id) ? 'bg-orange-50/40' : ''
                     }`}
                   >
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3">
                       <input
                         type="checkbox"
                         checked={selected.has(lead.id)}
@@ -713,13 +708,13 @@ export default function LeadTable({
                       />
                     </td>
                     <td
-                      className="cursor-pointer px-3 py-2 font-medium text-neutral-900"
+                      className="cursor-pointer px-4 py-3 font-medium text-neutral-900"
                       onClick={() => setExpandedId(expanded ? null : lead.id)}
                     >
                       <div className="flex items-center gap-2">
                         <span>{lead.name || '—'}</span>
                         {lead.interest_label && (
-                          <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700">
+                          <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700">
                             {lead.interest_label}
                           </span>
                         )}
@@ -730,30 +725,30 @@ export default function LeadTable({
                       </div>
                     </td>
                     <td
-                      className="cursor-pointer px-3 py-2 text-neutral-700"
+                      className="cursor-pointer px-4 py-3 text-neutral-700"
                       onClick={() => setExpandedId(expanded ? null : lead.id)}
                     >
                       {lead.email || '—'}
                     </td>
                     {!phoneSparse && (
-                      <td className="px-3 py-2 text-neutral-700">{lead.phone || '—'}</td>
+                      <td className="px-4 py-3 text-neutral-700">{lead.phone || '—'}</td>
                     )}
                     <td
-                      className="cursor-pointer px-3 py-2 text-neutral-700"
+                      className="cursor-pointer px-4 py-3 text-neutral-700"
                       onClick={() => setExpandedId(expanded ? null : lead.id)}
                     >
                       {lead.company || '—'}
                     </td>
-                    <td className="px-3 py-2 text-neutral-600">
+                    <td className="px-4 py-3 text-neutral-600">
                       {formatLeadLocation(lead.city, lead.state)}
                     </td>
-                    <td className="max-w-[160px] truncate px-3 py-2 text-neutral-600" title={campaign ?? ''}>
+                    <td className="max-w-[280px] truncate px-4 py-3 text-neutral-600" title={campaign ?? ''}>
                       {campaign || '—'}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3">
                       <div className="flex flex-col items-start gap-1">
                         <span
-                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass(
+                          className={`inline-block rounded-lg px-2 py-0.5 text-xs font-medium ${badgeClass(
                             lead.outbound_status
                           )}`}
                         >
@@ -766,13 +761,13 @@ export default function LeadTable({
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-neutral-500">
+                    <td className="px-4 py-3 text-neutral-500">
                       {formatDate(lead.last_outbound_at)}
                     </td>
                   </tr>
                   {expanded && (
-                    <tr key={`${lead.id}-detail`} className="bg-neutral-50/80">
-                      <td colSpan={phoneSparse ? 8 : 9} className="px-4 py-4">
+                    <tr key={`${lead.id}-detail`} className="bg-stone-50/60">
+                      <td colSpan={phoneSparse ? 8 : 9} className="px-5 py-5">
                         <LeadDetail
                           lead={lead}
                           sync={sync}
@@ -803,7 +798,7 @@ export default function LeadTable({
             type="button"
             onClick={() => goToPage(page - 1)}
             disabled={page <= 1}
-            className="rounded-md border border-neutral-300 px-3 py-1.5 text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-50"
+            className="rounded-xl border border-stone-200 px-3 py-1.5 text-neutral-600 transition hover:bg-stone-50 disabled:opacity-50"
           >
             Previous
           </button>
@@ -812,7 +807,7 @@ export default function LeadTable({
             type="button"
             onClick={() => goToPage(page + 1)}
             disabled={!hasMore}
-            className="rounded-md border border-neutral-300 px-3 py-1.5 text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-50"
+            className="rounded-xl border border-stone-200 px-3 py-1.5 text-neutral-600 transition hover:bg-stone-50 disabled:opacity-50"
           >
             Next
           </button>
@@ -846,7 +841,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm focus:border-sf-orange focus:outline-none"
+        className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
       >
         <option value="">All</option>
         {options.map((o) => (
@@ -943,9 +938,9 @@ function LeadDetail({
           Sync & import
         </h3>
         <dl className="grid grid-cols-1 gap-2 text-sm">
-          <DetailRow label="Instantly lead" value={lead.instantly_lead_id} />
+          <DetailRow label="Sync ID" value={lead.instantly_lead_id} />
           <DetailRow label="Uploaded" value={formatDate(lead.instantly_uploaded_at)} />
-          <DetailRow label="Synced" value={formatDate(lead.instantly_synced_at)} />
+          <DetailRow label="Last synced" value={formatDate(lead.instantly_synced_at)} />
           <DetailRow label="Mirrored" value={formatDate(lead.mirrored_at)} />
           <DetailRow label="Context" value={lead.lead_context_status} />
           <DetailRow label="Context updated" value={formatDate(lead.lead_context_updated_at)} />
@@ -973,14 +968,14 @@ function suggestNextAction(
   if (!lead.email) return 'Enrich email before any outbound.'
   if (sync === 'not_uploaded') {
     return lead.phone
-      ? 'Export to Instantly or start a call/SMS sequence.'
-      : 'Upload to Instantly (email-only) or enrich phone first.'
+      ? 'Export CSV for Instantly, or start a call/SMS sequence.'
+      : 'Add a phone or export email-only for Instantly.'
   }
-  if (sync === 'stale_sync') return 'Refresh Instantly sync — status may be outdated.'
+  if (sync === 'stale_sync') return 'Refresh campaign sync — status may be outdated.'
   if (sync === 'missing_context') return 'Add lead context / category before scaling send.'
   if (sync === 'needs_review') return 'Review category fit, then approve or suppress.'
   if (lead.outbound_status === 'contacted' || sync === 'in_instantly') {
-    return 'Wait for reply or check Instantly campaign analytics.'
+    return 'Wait for a reply or check campaign analytics.'
   }
   return 'Apply a segment and push the next outbound batch.'
 }
