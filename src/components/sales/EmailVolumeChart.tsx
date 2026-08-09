@@ -145,10 +145,16 @@ export function EmailVolumeChart({ model }: { model: SalesOverviewModel }) {
             <span className="text-4xl font-bold tabular-nums tracking-tight text-neutral-900">
               {filtered.emailsSent.toLocaleString()}
             </span>
-            <div className="flex items-center gap-1 text-emerald-600">
+            <div
+              className={cn(
+                'flex items-center gap-1',
+                model.kpis.emailsSentDelta >= 0 ? 'text-emerald-600' : 'text-red-600'
+              )}
+            >
               <TrendingUp className="h-4 w-4" />
               <span className="font-medium">
-                {filtered.emailsSent > 0 ? `+${model.kpis.emailsSentDelta}%` : '0%'}
+                {model.kpis.emailsSentDelta >= 0 ? '+' : ''}
+                {model.kpis.emailsSentDelta}%
               </span>
               <span className="font-normal text-neutral-500">vs prior period</span>
             </div>
@@ -179,18 +185,22 @@ export function EmailVolumeChart({ model }: { model: SalesOverviewModel }) {
             selected={campaigns}
             onChange={setCampaigns}
           />
-          <MultiFilter
-            label="Offers"
-            options={model.offers.map((offer) => ({ id: offer, label: offer }))}
-            selected={offers}
-            onChange={setOffers}
-          />
-          <MultiFilter
-            label="Lists"
-            options={model.lists.map((list) => ({ id: list, label: list }))}
-            selected={lists}
-            onChange={setLists}
-          />
+          {model.offers.length > 0 ? (
+            <MultiFilter
+              label="Offers"
+              options={model.offers.map((offer) => ({ id: offer, label: offer }))}
+              selected={offers}
+              onChange={setOffers}
+            />
+          ) : null}
+          {model.lists.length > 0 ? (
+            <MultiFilter
+              label="Lists"
+              options={model.lists.map((list) => ({ id: list, label: list }))}
+              selected={lists}
+              onChange={setLists}
+            />
+          ) : null}
         </div>
 
         <div>

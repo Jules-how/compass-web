@@ -25,7 +25,8 @@ export type SalesDeal = {
   name: string
   company: string
   stage: 'qualified' | 'meeting' | 'proposal' | 'won'
-  value: number
+  /** Instantly opportunity value when known; null when CRM-only without $. */
+  value: number | null
   offer: string
   updatedAt: string
 }
@@ -49,6 +50,8 @@ export type SalesOverviewModel = {
   deals: SalesDeal[]
   offers: string[]
   lists: string[]
+  /** Where the overview metrics came from. */
+  source?: 'instantly' | 'demo' | 'mixed'
 }
 
 const OFFERS = ['Agency Growth Audit', 'Outbound Sprint', 'Retainer Pilot', 'Founder Intro']
@@ -75,6 +78,7 @@ function buildSeries(days: number): SalesSeriesPoint[] {
 }
 
 export const SALES_OVERVIEW_DEMO: SalesOverviewModel = {
+  source: 'demo',
   kpis: {
     emailsSent: 18420,
     emailsSentDelta: 12.7,
