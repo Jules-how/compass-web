@@ -158,7 +158,12 @@ test('manual sort prefers set priority then due date', () => {
 test('My Tasks UI wires windows, done checkbox, and detail panel', () => {
   assert.match(read('src/lib/task-organisation.ts'), /compareTasksByManual/)
   assert.match(read('src/lib/task-organisation.ts'), /FocusWindow = 'today' \| 'week' \| 'focus' \| 'backlog' \| 'done'/)
+  assert.match(read('src/lib/task-organisation.ts'), /selectHomePriorities/)
+  assert.match(read('src/lib/task-organisation.ts'), /bucketPriorityPlate/)
+  assert.match(read('src/lib/task-organisation.ts'), /tasksHref/)
   assert.match(read('src/components/TaskList.tsx'), /FocusWindow/)
+  assert.match(read('src/components/TaskList.tsx'), /taskOrganisationFiltersFromSearch/)
+  assert.match(read('src/components/TaskList.tsx'), /useSearchParams/)
   assert.match(read('src/components/TaskList.tsx'), /Completed/)
   assert.match(read('src/components/TaskList.tsx'), /LINGER_MS/)
   assert.match(read('src/components/TaskItem.tsx'), /Mark as done/)
@@ -169,6 +174,57 @@ test('My Tasks UI wires windows, done checkbox, and detail panel', () => {
   assert.match(read('src/app/(console)/tasks/page.tsx'), /My Tasks/)
   assert.match(read('src/lib/list-columns.ts'), /created_at/)
   assert.match(read('src/app/api/tasks/route.ts'), /clientsById/)
+})
+
+test('Home Priorities is Focus subset aligned with My Tasks', () => {
+  const now = new Date('2026-08-07T12:00:00')
+  const urgentNoDue = {
+    id: 'a',
+    priority: 1,
+    due: null,
+    status: 'not-started',
+    created_at: '2026-08-06T00:00:00Z',
+    updated_at: '2026-08-06T00:00:00Z'
+  }
+  const backlogLater = {
+    id: 'b',
+    priority: 4,
+    due: '2026-09-01',
+    status: 'not-started',
+    created_at: '2026-08-01T00:00:00Z',
+    updated_at: '2026-08-01T00:00:00Z'
+  }
+  const instantlyFollowUp = {
+    id: 'c',
+    priority: 2,
+    due: '2026-08-07',
+    status: 'not-started',
+    created_at: '2026-08-07T00:00:00Z',
+    updated_at: '2026-08-07T00:00:00Z'
+  }
+  const selected = [urgentNoDue, backlogLater, instantlyFollowUp]
+    .filter((task) => isFocusTask(task, now))
+    .sort((a, b) => compareTasksByManual(a, b, now))
+  assert.deepEqual(
+    selected.map((t) => t.id),
+    ['a', 'c']
+  )
+  assert.equal(matchesFocusWindow(instantlyFollowUp, 'today', now), true)
+  assert.equal(matchesFocusWindow(instantlyFollowUp, 'focus', now), true)
+  assert.equal(matchesFocusWindow(urgentNoDue, 'focus', now), true)
+  assert.equal(matchesFocusWindow(urgentNoDue, 'today', now), false)
+
+  const home = read('src/components/home/HomeDashboard.tsx')
+  assert.match(home, /selectHomePriorities/)
+  assert.match(home, /bucketPriorityPlate/)
+  assert.match(home, /tasksHref/)
+  assert.match(home, /window: 'focus'/)
+  assert.doesNotMatch(home, /compareTasksByFocus/)
+
+  const inbox = read('src/components/InboxPanel.tsx')
+  assert.match(inbox, /due: fromSales \? dueToday/)
+  assert.match(inbox, /task_type: fromSales \? 'SELL'/)
+  assert.match(inbox, /tasksHref/)
 })
 
 test('brain dump suggestedPriority is 1-4 Linear scale', () => {

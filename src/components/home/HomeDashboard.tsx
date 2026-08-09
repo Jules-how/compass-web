@@ -15,7 +15,12 @@ import {
   type HomeAdGlance
 } from '@/lib/home-demo-data'
 import type { CompassProject, CompassTask } from '@/lib/types'
-import { compareTasksByFocus, isOpenTask, type TaskFocusContext } from '@/lib/task-organisation'
+import {
+  bucketPriorityPlate,
+  isOpenTask,
+  selectHomePriorities,
+  tasksHref
+} from '@/lib/task-organisation'
 import { taskPriorityLabel } from '@/lib/task-priority'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
@@ -47,12 +52,6 @@ type AdsGlancePayload = HomeAdGlance & {
   migrationRequired?: boolean
 }
 
-type DayBucket = {
-  key: string
-  label: string
-  tasks: CompassTask[]
-}
-
 const easeOut = [0.22, 1, 0.36, 1] as const
 
 const staggerContainer = {
@@ -80,65 +79,12 @@ function formatMoney(value: number) {
   }).format(value)
 }
 
-function startOfDay(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
-}
-
-function addDays(d: Date, n: number) {
-  const next = new Date(d)
-  next.setDate(next.getDate() + n)
-  return next
-}
-
 function formatDayHeading(date: Date) {
   return date.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'short',
     day: 'numeric'
   })
-}
-
-function bucketTasksByPlate(tasks: CompassTask[]): DayBucket[] {
-  const today = startOfDay(new Date())
-  const tomorrow = addDays(today, 1)
-  const weekEnd = addDays(today, 7)
-
-  const buckets: Record<string, CompassTask[]> = {
-    overdue: [],
-    today: [],
-    tomorrow: [],
-    week: [],
-    later: []
-  }
-
-  for (const task of tasks) {
-    if (!task.due) {
-      buckets.later.push(task)
-      continue
-    }
-    const due = startOfDay(new Date(task.due))
-    if (Number.isNaN(due.getTime())) {
-      buckets.later.push(task)
-      continue
-    }
-    if (due < today) buckets.overdue.push(task)
-    else if (due.getTime() === today.getTime()) buckets.today.push(task)
-    else if (due.getTime() === tomorrow.getTime()) buckets.tomorrow.push(task)
-    else if (due < weekEnd) buckets.week.push(task)
-    else buckets.later.push(task)
-  }
-
-  const result: DayBucket[] = []
-  if (buckets.overdue.length) result.push({ key: 'overdue', label: 'Overdue', tasks: buckets.overdue })
-  result.push({ key: 'today', label: 'Today', tasks: buckets.today })
-  result.push({ key: 'tomorrow', label: 'Tomorrow', tasks: buckets.tomorrow })
-  if (buckets.week.length) {
-    result.push({ key: 'week', label: 'This week', tasks: buckets.week })
-  }
-  if (buckets.later.length) {
-    result.push({ key: 'later', label: 'Later / unscheduled', tasks: buckets.later })
-  }
-  return result
 }
 
 function creativeStatusBadge(status: AdCreativeMetric['status']) {
@@ -309,19 +255,13 @@ export function HomeDashboard() {
     return () => window.removeEventListener('keydown', onKey)
   }, [dumpOpen])
 
-  const openTasks = useMemo(() => {
-    const list = (tasks.data?.topTasks ?? []).filter(isOpenTask)
-    const projectsByIdLocal = Object.fromEntries(
-      (tasks.data?.projects ?? []).map((p) => [p.id, p])
-    )
-    const clientsById = tasks.data?.clientsById ?? {}
-    const ctxOf = (task: CompassTask): TaskFocusContext => {
-      const project = task.project_id ? projectsByIdLocal[task.project_id] : null
-      const client = project?.client_id ? clientsById[project.client_id] : null
-      return { project, client }
-    }
-    return [...list].sort((a, b) => compareTasksByFocus(a, b, ctxOf))
-  }, [tasks.data])
+  const openTasks = useMemo(
+    () => (tasks.data?.topTasks ?? []).filter(isOpenTask),
+    [tasks.data]
+  )
+
+  /** Curated Focus slice — same membership + sort as My Tasks Focus. */
+  const priorityTasks = useMemo(() => selectHomePriorities(openTasks), [openTasks])
 
   const activeProjects = useMemo(() => {
     const list = (tasks.data?.projects ?? []).filter(
@@ -335,8 +275,8 @@ export function HomeDashboard() {
       .slice(0, 8)
   }, [tasks.data])
 
-  const plateBuckets = useMemo(() => bucketTasksByPlate(openTasks), [openTasks])
-  const focus = openTasks[0] ?? null
+  const plateBuckets = useMemo(() => bucketPriorityPlate(priorityTasks), [priorityTasks])
+  const focus = priorityTasks[0] ?? null
   const blockedCount = openTasks.filter((t) => t.status === 'blocked').length
   const overdueCount = openTasks.filter(
     (t) => t.due && Date.parse(t.due) < Date.now() && t.status !== 'completed'
@@ -501,14 +441,14 @@ export function HomeDashboard() {
                     Priorities
                   </h2>
                   <span className="text-xs tabular-nums text-neutral-400">
-                    {openTasks.length}
+                    {priorityTasks.length}
                   </span>
                 </div>
                 <Link
-                  href="/tasks"
+                  href={tasksHref({ window: 'focus' })}
                   className="text-xs font-medium text-[#c2410c] transition hover:text-[#9a3412] hover:underline"
                 >
-                  All tasks
+                  Focus in tasks
                 </Link>
               </div>
 
@@ -529,9 +469,9 @@ export function HomeDashboard() {
                 <LoadingBlock label="Loading plate…" />
               ) : null}
 
-              {!tasks.loading && openTasks.length === 0 ? (
+              {!tasks.loading && priorityTasks.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-stone-300/80 bg-stone-50/40 px-4 py-8 text-center text-sm text-neutral-500">
-                  Clear plate.{' '}
+                  No focus priorities right now.{' '}
                   <button
                     type="button"
                     onClick={() => setDumpOpen(true)}
@@ -541,13 +481,13 @@ export function HomeDashboard() {
                   </button>{' '}
                   or{' '}
                   <Link href="/tasks" className="font-medium text-[#c2410c] hover:underline">
-                    add a task
+                    browse all tasks
                   </Link>
                   .
                 </div>
               ) : null}
 
-              {focus && openTasks.length > 0 ? (
+              {focus && priorityTasks.length > 0 ? (
                 <motion.div
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -558,7 +498,7 @@ export function HomeDashboard() {
                     Focus
                   </div>
                   <Link
-                    href="/tasks"
+                    href={tasksHref({ window: 'focus', taskId: focus.id })}
                     className="mt-1 block truncate text-base font-semibold tracking-tight text-neutral-900 hover:underline"
                   >
                     {focus.title}
@@ -577,7 +517,7 @@ export function HomeDashboard() {
                 {plateBuckets.map((bucket) => {
                   if (bucket.tasks.length === 0) return null
                   const visible =
-                    bucket.key === 'later' ? bucket.tasks.slice(0, 12) : bucket.tasks
+                    bucket.key === 'later' ? bucket.tasks.slice(0, 8) : bucket.tasks
                   const hidden = bucket.tasks.length - visible.length
                   return (
                     <div key={bucket.key}>
@@ -600,7 +540,7 @@ export function HomeDashboard() {
                           return (
                             <li key={task.id}>
                               <Link
-                                href="/tasks"
+                                href={tasksHref({ window: 'focus', taskId: task.id })}
                                 className="flex items-start gap-2.5 px-3 py-2 transition hover:bg-white"
                               >
                                 <span
@@ -635,10 +575,10 @@ export function HomeDashboard() {
                       </ul>
                       {hidden > 0 ? (
                         <Link
-                          href="/tasks"
+                          href={tasksHref({ window: 'focus' })}
                           className="mt-1.5 inline-block px-1 text-xs font-medium text-[#c2410c] hover:underline"
                         >
-                          +{hidden} more in tasks
+                          +{hidden} more in Focus
                         </Link>
                       ) : null}
                     </div>
