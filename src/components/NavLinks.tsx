@@ -81,7 +81,7 @@ const OPERATOR_SECTIONS: NavSection[] = [
     id: 'sales',
     label: 'Sales',
     items: [
-      { href: '/sales', label: 'Overview', key: 'sales-overview', icon: OverviewIcon },
+      { href: '/sales', label: 'Overview', key: 'sales-overview', icon: OverviewIcon, api: '/api/instantly/sales-overview' },
       {
         href: '/sales/pipeline',
         label: 'Pipeline',

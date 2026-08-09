@@ -31,12 +31,15 @@ export type InstantlyCampaignAnalytics = {
   contacted_count: number
   new_leads_contacted_count?: number
   emails_sent_count: number
+  open_count?: number
+  open_count_unique?: number
   reply_count: number
   reply_count_unique: number
-  completed_count: number
-  total_opportunities: number
   bounced_count?: number
   unsubscribed_count?: number
+  completed_count: number
+  total_opportunities: number
+  total_opportunity_value?: number
 }
 
 /** Outbound hub campaign card — mapped from Instantly analytics (or demo fallback). */
@@ -74,12 +77,32 @@ export type OutboundBoard = {
 
 export type InstantlyAnalyticsOverview = {
   emails_sent_count: number
+  open_count?: number
+  open_count_unique?: number
   reply_count: number
   reply_count_unique: number
+  bounced_count?: number
+  contacted_count?: number
+  new_leads_contacted_count?: number
   total_opportunities: number
+  total_opportunity_value?: number
   total_interested: number
   total_meeting_booked: number
   total_meeting_completed: number
+  total_closed?: number
+}
+
+export type InstantlyDailyAnalytics = {
+  date: string
+  sent: number
+  contacted?: number
+  new_leads_contacted?: number
+  opened?: number
+  unique_opened?: number
+  replies?: number
+  unique_replies?: number
+  opportunities?: number
+  unique_opportunities?: number
 }
 
 export class InstantlyApiError extends Error {
@@ -428,13 +451,36 @@ export async function fetchInstantlyAnalyticsOverview(
 
 export async function fetchInstantlyCampaignAnalytics(
   apiKey: string,
-  campaignId?: string
+  campaignIdOrOptions?: string | { startDate?: string; endDate?: string; campaignId?: string }
 ): Promise<InstantlyCampaignAnalytics[]> {
-  const qs = campaignId?.trim()
-    ? `?${new URLSearchParams({ id: campaignId.trim() })}`
-    : ''
+  const qs = new URLSearchParams()
+  if (typeof campaignIdOrOptions === 'string') {
+    if (campaignIdOrOptions.trim()) qs.set('id', campaignIdOrOptions.trim())
+  } else if (campaignIdOrOptions) {
+    if (campaignIdOrOptions.startDate) qs.set('start_date', campaignIdOrOptions.startDate)
+    if (campaignIdOrOptions.endDate) qs.set('end_date', campaignIdOrOptions.endDate)
+    if (campaignIdOrOptions.campaignId?.trim()) {
+      qs.set('id', campaignIdOrOptions.campaignId.trim())
+    }
+  }
+  const suffix = qs.size > 0 ? `?${qs}` : ''
   const rows = await instantlyFetch<InstantlyCampaignAnalytics[]>(
-    `/campaigns/analytics${qs}`,
+    `/campaigns/analytics${suffix}`,
+    apiKey
+  )
+  return Array.isArray(rows) ? rows : []
+}
+
+export async function fetchInstantlyDailyCampaignAnalytics(
+  apiKey: string,
+  startDate: string,
+  endDate: string,
+  campaignId?: string
+): Promise<InstantlyDailyAnalytics[]> {
+  const qs = new URLSearchParams({ start_date: startDate, end_date: endDate })
+  if (campaignId) qs.set('campaign_id', campaignId)
+  const rows = await instantlyFetch<InstantlyDailyAnalytics[]>(
+    `/campaigns/analytics/daily?${qs}`,
     apiKey
   )
   return Array.isArray(rows) ? rows : []

@@ -4,8 +4,13 @@ import Link from 'next/link'
 import { useMemo } from 'react'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import {
+  AUSTRALIA_MAP_VIEW,
+  AUSTRALIA_OUTLINE_PATHS,
+  isInAustraliaBounds,
+  projectAustraliaLatLng
+} from '@/lib/australia-outline'
+import {
   buildDemoTargetingMap,
-  projectLatLng,
   targetingHeatFill,
   type TargetingMapModel,
   type TargetingMapPoint
@@ -19,8 +24,8 @@ type TargetingMapPayload = TargetingMapModel & {
 }
 
 function markerRadius(point: TargetingMapPoint, maxTargeted: number): number {
-  const min = 7
-  const max = 26
+  const min = 8
+  const max = 28
   if (maxTargeted <= 0) return min
   const t = Math.sqrt(point.targeted / maxTargeted)
   return min + t * (max - min)
@@ -28,6 +33,28 @@ function markerRadius(point: TargetingMapPoint, maxTargeted: number): number {
 
 function formatPct(rate: number): string {
   return `${Math.round(rate * 1000) / 10}%`
+}
+
+function shortLabel(label: string): string {
+  const city = label.split(',')[0]?.trim() || label
+  return city.length > 16 ? `${city.slice(0, 14)}…` : city
+}
+
+/** Greedy label placement — keep the highest-volume AU pins readable. */
+function labeledKeys(points: TargetingMapPoint[], limit = 7): Set<string> {
+  const keys = new Set<string>()
+  const placed: Array<{ x: number; y: number }> = []
+  for (const point of points) {
+    if (keys.size >= limit) break
+    if (point.lat == null || point.lng == null) continue
+    if (!isInAustraliaBounds(point.lat, point.lng)) continue
+    const { x, y } = projectAustraliaLatLng(point.lat, point.lng)
+    const colliding = placed.some((p) => Math.hypot(p.x - x, p.y - y) < 48)
+    if (colliding) continue
+    placed.push({ x, y })
+    keys.add(point.key)
+  }
+  return keys
 }
 
 export function TargetingSuccessMap() {
@@ -38,12 +65,32 @@ export function TargetingSuccessMap() {
   )
 
   const model = useMemo(() => data ?? buildDemoTargetingMap(), [data])
-  const mapped = useMemo(() => model.points.filter((p) => p.lat != null && p.lng != null), [model.points])
-  const unmapped = useMemo(() => model.points.filter((p) => p.lat == null || p.lng == null), [model.points])
-  const maxTargeted = useMemo(
-    () => Math.max(1, ...model.points.map((p) => p.targeted)),
+  const mapped = useMemo(
+    () =>
+      model.points
+        .filter(
+          (p) => p.lat != null && p.lng != null && isInAustraliaBounds(p.lat, p.lng)
+        )
+        .sort((a, b) => b.targeted - a.targeted)
+        .slice(0, 18),
     [model.points]
   )
+  const outsideAustralia = useMemo(
+    () =>
+      model.points.filter(
+        (p) => p.lat != null && p.lng != null && !isInAustraliaBounds(p.lat, p.lng)
+      ),
+    [model.points]
+  )
+  const unmapped = useMemo(
+    () => model.points.filter((p) => p.lat == null || p.lng == null),
+    [model.points]
+  )
+  const maxTargeted = useMemo(
+    () => Math.max(1, ...mapped.map((p) => p.targeted), 1),
+    [mapped]
+  )
+  const labels = useMemo(() => labeledKeys(mapped), [mapped])
 
   if (loading && !data) {
     return <LoadingBlock label="Loading targeting map…" />
@@ -60,8 +107,9 @@ export function TargetingSuccessMap() {
             Where you target — and where it works
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-neutral-600">
-            Lead locations from your CRM. Marker size is how many people you&apos;ve targeted;
-            colour heat is where replies and wins (interested / booked / converted) concentrate.
+            Lead locations from your CRM across Australia. Marker size is how many people
+            you&apos;ve targeted; colour heat is where replies and wins (interested / booked /
+            converted) concentrate.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
@@ -89,36 +137,48 @@ export function TargetingSuccessMap() {
       ) : null}
 
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.9fr)]">
-        <div className="relative min-h-[320px] bg-[radial-gradient(ellipse_at_30%_20%,rgba(232,93,42,0.08),transparent_45%),radial-gradient(ellipse_at_80%_70%,rgba(15,23,42,0.06),transparent_50%),linear-gradient(180deg,#f8f7f4_0%,#efece7_100%)] p-3 sm:p-4">
+        <div className="relative min-h-[360px] bg-[radial-gradient(ellipse_at_30%_20%,rgba(232,93,42,0.07),transparent_45%),radial-gradient(ellipse_at_80%_70%,rgba(15,23,42,0.05),transparent_50%),linear-gradient(180deg,#f4f7fa_0%,#e8eef3_100%)] p-3 sm:p-4">
           <svg
-            viewBox="0 0 1000 520"
+            viewBox={`0 0 ${AUSTRALIA_MAP_VIEW.width} ${AUSTRALIA_MAP_VIEW.height}`}
             className="h-auto w-full"
             role="img"
-            aria-label="Map of targeted lead locations"
+            aria-label="Map of Australia with targeted lead locations"
           >
             <defs>
               <filter id="pin-soft" x="-40%" y="-40%" width="180%" height="180%">
                 <feDropShadow dx="0" dy="1" stdDeviation="1.4" floodOpacity="0.18" />
               </filter>
+              <linearGradient id="aus-land" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f5f0e8" />
+                <stop offset="100%" stopColor="#e7e0d4" />
+              </linearGradient>
             </defs>
 
-            {/* Soft landmass bands — equirectangular silhouette cues, not a full atlas. */}
-            <ellipse cx="180" cy="210" rx="70" ry="110" fill="#d6d3d1" opacity="0.35" />
-            <ellipse cx="250" cy="160" rx="90" ry="70" fill="#d6d3d1" opacity="0.28" />
-            <ellipse cx="470" cy="170" rx="55" ry="75" fill="#d6d3d1" opacity="0.3" />
-            <ellipse cx="520" cy="250" rx="40" ry="70" fill="#d6d3d1" opacity="0.25" />
-            <ellipse cx="780" cy="300" rx="55" ry="50" fill="#d6d3d1" opacity="0.32" />
-            <ellipse cx="860" cy="360" rx="70" ry="55" fill="#d6d3d1" opacity="0.4" />
-            <ellipse cx="820" cy="180" rx="35" ry="45" fill="#d6d3d1" opacity="0.22" />
+            {/* Soft ocean wash */}
+            <rect
+              x="0"
+              y="0"
+              width={AUSTRALIA_MAP_VIEW.width}
+              height={AUSTRALIA_MAP_VIEW.height}
+              fill="#dbe4ec"
+              opacity="0.35"
+            />
 
-            <g stroke="#a8a29e" strokeOpacity="0.25" strokeWidth="1" fill="none">
-              <path d="M0 260 H1000" />
-              <path d="M500 0 V520" />
-            </g>
+            {AUSTRALIA_OUTLINE_PATHS.map((d, index) => (
+              <path
+                key={`aus-${index}`}
+                d={d}
+                fill="url(#aus-land)"
+                stroke="#a8a29e"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+            ))}
 
             {mapped.map((point) => {
-              const { x, y } = projectLatLng(point.lat!, point.lng!)
+              const { x, y } = projectAustraliaLatLng(point.lat!, point.lng!)
               const r = markerRadius(point, maxTargeted)
+              const showLabel = labels.has(point.key)
               return (
                 <g key={point.key} filter="url(#pin-soft)" className="cursor-default">
                   <title>
@@ -127,7 +187,7 @@ export function TargetingSuccessMap() {
                   <circle
                     cx={x}
                     cy={y}
-                    r={r + 4}
+                    r={r + 5}
                     fill={targetingHeatFill(Math.max(0.2, point.heat * 0.45))}
                   />
                   <circle
@@ -136,17 +196,19 @@ export function TargetingSuccessMap() {
                     r={r}
                     fill={targetingHeatFill(point.heat)}
                     stroke="#fff"
-                    strokeWidth="1.5"
+                    strokeWidth="1.75"
                   />
-                  <text
-                    x={x}
-                    y={y + r + 14}
-                    textAnchor="middle"
-                    className="fill-neutral-700"
-                    style={{ fontSize: 11, fontWeight: 600 }}
-                  >
-                    {point.label.split(',')[0]}
-                  </text>
+                  {showLabel ? (
+                    <text
+                      x={x}
+                      y={y + r + 16}
+                      textAnchor="middle"
+                      className="fill-neutral-700"
+                      style={{ fontSize: 13, fontWeight: 600 }}
+                    >
+                      {shortLabel(point.label)}
+                    </text>
+                  ) : null}
                 </g>
               )
             })}
@@ -172,7 +234,7 @@ export function TargetingSuccessMap() {
               Open CRM
             </Link>
           </div>
-          <ol className="max-h-[420px] divide-y divide-stone-100 overflow-y-auto">
+          <ol className="max-h-[460px] divide-y divide-stone-100 overflow-y-auto">
             {model.points.slice(0, 12).map((point, index) => (
               <li key={point.key} className="flex items-start gap-3 px-4 py-3">
                 <span className="mt-0.5 w-5 shrink-0 text-xs font-semibold tabular-nums text-neutral-400">
@@ -215,6 +277,12 @@ export function TargetingSuccessMap() {
               </li>
             ))}
           </ol>
+          {outsideAustralia.length > 0 ? (
+            <div className="border-t border-stone-100 px-4 py-2.5 text-xs text-neutral-500">
+              {outsideAustralia.length} location{outsideAustralia.length === 1 ? '' : 's'} outside
+              Australia listed in the ranking only.
+            </div>
+          ) : null}
           {unmapped.length > 0 ? (
             <div className="border-t border-stone-100 px-4 py-2.5 text-xs text-neutral-500">
               {unmapped.length} location{unmapped.length === 1 ? '' : 's'} listed without map pins
