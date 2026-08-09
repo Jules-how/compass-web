@@ -11,7 +11,7 @@ import {
   CLIENT_COMM_MESSAGE_COLUMNS,
   CLIENT_COMM_THREAD_COLUMNS
 } from '@/lib/list-columns'
-import { nowIso, recordClientActivity } from '@/lib/client-data'
+import { nowIso, recordClientActivity, isMissingDbObjectError } from '@/lib/client-data'
 import {
   isCommChannel,
   normalizeParticipants,
@@ -44,11 +44,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
     const [clientRes, threadsRes, messagesRes] = await Promise.all([
-      supabase
-        .from('compass_clients')
-        .select('id,name,comms_summary,comms_summary_at,comms_summary_source')
-        .eq('id', id)
-        .maybeSingle(),
+      supabase.from('compass_clients').select('id,name').eq('id', id).maybeSingle(),
       supabase
         .from('compass_client_comm_threads')
         .select(CLIENT_COMM_THREAD_COLUMNS)
@@ -62,10 +58,42 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         .limit(200)
     ])
 
-    if (clientRes.error || threadsRes.error || messagesRes.error) {
+    if (clientRes.error) {
       return portalJson({ error: 'fetch_failed' }, { status: 500 })
     }
     if (!clientRes.data) return portalJson({ error: 'not_found' }, { status: 404 })
+
+    // Migration 0031 may not be applied yet — return empty comms instead of 500.
+    if (
+      (threadsRes.error && isMissingDbObjectError(threadsRes.error.message)) ||
+      (messagesRes.error && isMissingDbObjectError(messagesRes.error.message))
+    ) {
+      return portalJsonCached({
+        clientId: id,
+        clientName: clientRes.data.name,
+        summary: null,
+        summaryAt: null,
+        summarySource: null,
+        threads: [],
+        migrationRequired: true
+      })
+    }
+
+    if (threadsRes.error || messagesRes.error) {
+      return portalJson({ error: 'fetch_failed' }, { status: 500 })
+    }
+
+    const summaryRes = await supabase
+      .from('compass_clients')
+      .select('comms_summary,comms_summary_at,comms_summary_source')
+      .eq('id', id)
+      .maybeSingle()
+    const summaryRow =
+      summaryRes.error && isMissingDbObjectError(summaryRes.error.message)
+        ? null
+        : summaryRes.error
+          ? null
+          : summaryRes.data
 
     const threads = ((threadsRes.data ?? []) as CompassClientCommThread[]).map(normalizeThread)
     const messages = (messagesRes.data ?? []) as CompassClientCommMessage[]
@@ -88,9 +116,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return portalJsonCached({
       clientId: id,
       clientName: clientRes.data.name,
-      summary: clientRes.data.comms_summary ?? null,
-      summaryAt: clientRes.data.comms_summary_at ?? null,
-      summarySource: clientRes.data.comms_summary_source ?? null,
+      summary: summaryRow?.comms_summary ?? null,
+      summaryAt: summaryRow?.comms_summary_at ?? null,
+      summarySource: summaryRow?.comms_summary_source ?? null,
       threads: threadsWithMessages
     })
   } catch (err) {
@@ -179,6 +207,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .single()
 
     if (error || !data) {
+      if (error && isMissingDbObjectError(error.message)) {
+        return portalJson(
+          { error: 'migration_required', detail: 'Apply supabase/migrations/0031_compass_client_comms.sql' },
+          { status: 503 }
+        )
+      }
       return portalJson({ error: 'create_failed', detail: error?.message }, { status: 400 })
     }
 
