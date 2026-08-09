@@ -81,7 +81,7 @@ const PIPELINE_LABELS: Record<string, string> = {
   suppressed: 'Suppressed',
   booked: 'Booked',
   converted: 'Converted',
-  in_instantly: 'In Instantly',
+  in_instantly: 'Synced',
   not_uploaded: 'Not uploaded',
   stale_sync: 'Stale sync',
   'stale-sync': 'Stale sync',
@@ -104,7 +104,7 @@ const VERTICAL_LABELS: Record<string, string> = {
 }
 
 const SYNC_LABELS: Record<SyncState, string> = {
-  in_instantly: 'In Instantly',
+  in_instantly: 'Synced',
   not_uploaded: 'Not uploaded',
   stale_sync: 'Stale sync',
   needs_review: 'Needs review',
@@ -251,7 +251,7 @@ export const PRESET_SEGMENTS: Array<{ name: string; filters: LeadSegmentFilters 
     filters: { outbound_status: 'uncontacted' }
   },
   {
-    name: 'In Instantly',
+    name: 'Synced',
     filters: { sync_state: 'in_instantly' }
   },
   {

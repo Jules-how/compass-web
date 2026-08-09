@@ -1,96 +1,144 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import type { LeadContact, LeadListFilters, LeadSummaryCounts } from '@/lib/types'
 import LeadTable from '@/components/LeadTable'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { LEAD_PAGE_SIZE } from '@/lib/list-columns'
 import { leadFiltersToSearchParams, parseLeadListFilters } from '@/lib/leads-query'
+import { useCachedJson } from '@/lib/use-cached-json'
+
+type ListPayload = {
+  leads: LeadContact[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+type SummaryPayload = {
+  summary: LeadSummaryCounts
+}
 
 export function LeadsPanel() {
+  const router = useRouter()
   const searchParams = useSearchParams()
-  const [leads, setLeads] = useState<LeadContact[] | null>(null)
-  const [total, setTotal] = useState(0)
-  const [summary, setSummary] = useState<LeadSummaryCounts | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
+  // Keep last good rows on screen while the next filter/page fetch is in flight.
+  const [display, setDisplay] = useState<ListPayload | null>(null)
+  const requestId = useRef(0)
 
   const queryString = searchParams.toString()
-  const filters: LeadListFilters = parseLeadListFilters(new URLSearchParams(queryString))
+  const filters: LeadListFilters = useMemo(
+    () => parseLeadListFilters(new URLSearchParams(queryString)),
+    [queryString]
+  )
   const pageParam = Number(searchParams.get('page') ?? '1')
   const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1
 
-  const load = useCallback(async () => {
-    setError(null)
+  const listUrl = useMemo(() => {
+    const listParams = leadFiltersToSearchParams(filters)
+    listParams.set('page', String(page))
+    listParams.set('pageSize', String(LEAD_PAGE_SIZE))
+    return `/api/leads/list?${listParams.toString()}`
+  }, [filters, page])
+
+  // Global lane counts — independent of filters; long stale window so chip bar
+  // doesn't re-hit eight head-count queries on every filter click.
+  const summary = useCachedJson<SummaryPayload>('leads:summary:global', '/api/leads/summary', {
+    staleMs: 5 * 60_000
+  })
+
+  const [listError, setListError] = useState<string | null>(null)
+  const [listBusy, setListBusy] = useState(true)
+
+  const loadList = useCallback(async () => {
+    const id = ++requestId.current
+    setListBusy(true)
+    setListError(null)
     try {
-      const currentFilters = parseLeadListFilters(new URLSearchParams(queryString))
-      const listParams = leadFiltersToSearchParams(currentFilters)
-      listParams.set('page', String(page))
-      listParams.set('pageSize', String(LEAD_PAGE_SIZE))
-
-      const summaryParams = leadFiltersToSearchParams(currentFilters)
-
-      const [listRes, summaryRes] = await Promise.all([
-        fetch(`/api/leads/list?${listParams.toString()}`, {
-          headers: { Accept: 'application/json' }
-        }),
-        fetch(`/api/leads/summary?${summaryParams.toString()}`, {
-          headers: { Accept: 'application/json' }
-        })
-      ])
-
-      if (!listRes.ok) throw new Error(`Failed to load leads (${listRes.status})`)
-      const body = (await listRes.json()) as {
-        leads: LeadContact[]
-        total: number
-        page: number
-        pageSize: number
-      }
-      setLeads(body.leads ?? [])
-      setTotal(body.total ?? 0)
-
-      if (summaryRes.ok) {
-        const summaryBody = (await summaryRes.json()) as { summary: LeadSummaryCounts }
-        setSummary(summaryBody.summary ?? null)
-      } else {
-        setSummary(null)
-      }
+      const res = await fetch(listUrl, { headers: { Accept: 'application/json' } })
+      if (!res.ok) throw new Error(`Failed to load leads (${res.status})`)
+      const body = (await res.json()) as ListPayload
+      if (id !== requestId.current) return
+      setDisplay({
+        leads: body.leads ?? [],
+        total: body.total ?? 0,
+        page: body.page ?? page,
+        pageSize: body.pageSize ?? LEAD_PAGE_SIZE
+      })
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      if (id !== requestId.current) return
+      setListError(err instanceof Error ? err.message : String(err))
+    } finally {
+      if (id === requestId.current) setListBusy(false)
     }
-  }, [page, queryString])
+  }, [listUrl, page])
 
   useEffect(() => {
-    void load()
-  }, [load, reloadToken])
+    void loadList()
+  }, [loadList, reloadToken])
 
-  if (error) {
+  // Warm the next page so pagination feels instant.
+  useEffect(() => {
+    if (!display) return
+    const shown = (page - 1) * LEAD_PAGE_SIZE + display.leads.length
+    if (shown >= display.total) return
+    const nextParams = leadFiltersToSearchParams(filters)
+    nextParams.set('page', String(page + 1))
+    nextParams.set('pageSize', String(LEAD_PAGE_SIZE))
+    void fetch(`/api/leads/list?${nextParams.toString()}`, {
+      headers: { Accept: 'application/json' }
+    }).catch(() => {})
+  }, [display, page, filters])
+
+  const navigate = useCallback(
+    (nextFilters: LeadListFilters, nextPage = 1) => {
+      const qs = leadFiltersToSearchParams(nextFilters, nextPage).toString()
+      router.push(qs ? `/leads?${qs}` : '/leads')
+    },
+    [router]
+  )
+
+  const reloadSummary = summary.reload
+  const reload = useCallback(() => {
+    setReloadToken((n) => n + 1)
+    void reloadSummary(true)
+  }, [reloadSummary])
+
+  if (listError && !display) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-        {error}{' '}
-        <button type="button" className="underline" onClick={() => void load()}>
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 shadow-soft">
+        {listError}{' '}
+        <button type="button" className="underline" onClick={() => void loadList()}>
           Retry
         </button>
       </div>
     )
   }
 
-  if (!leads) return <LoadingBlock label="Loading leads…" />
+  if (!display) return <LoadingBlock label="Loading leads…" />
 
+  const leads = display.leads
+  const total = display.total
   const from = (page - 1) * LEAD_PAGE_SIZE
   const totalShown = from + leads.length
   const hasMore = totalShown < total
+  const summaryCounts = summary.data?.summary
+    ? { ...summary.data.summary, filtered: total }
+    : null
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-neutral-500">
-        {(summary?.filtered ?? total).toLocaleString()} lead
-        {(summary?.filtered ?? total) === 1 ? '' : 's'}
-        {summary && summary.filtered !== summary.total
-          ? ` matching filters · ${summary.total.toLocaleString()} total`
-          : ' in outbound database'}
-      </p>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-sm text-neutral-500">
+          {total.toLocaleString()} lead{total === 1 ? '' : 's'}
+          {summaryCounts && summaryCounts.total !== total
+            ? ` matching filters · ${summaryCounts.total.toLocaleString()} total`
+            : ' in outbound database'}
+        </p>
+        {listBusy ? <span className="text-xs text-neutral-400">Updating…</span> : null}
+      </div>
       <LeadTable
         leads={leads}
         filters={filters}
@@ -99,8 +147,9 @@ export function LeadsPanel() {
         totalShown={totalShown}
         hasMore={hasMore}
         total={total}
-        summary={summary}
-        onReload={() => setReloadToken((n) => n + 1)}
+        summary={summaryCounts}
+        onNavigate={navigate}
+        onReload={reload}
       />
     </div>
   )
