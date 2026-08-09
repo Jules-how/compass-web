@@ -1,20 +1,14 @@
 'use client'
 
-import type { CompassBusinessFunction, CompassProjectWithStats } from '@/lib/types'
 import { ProjectManager } from '@/components/ProjectManager'
 import { LoadingBlock } from '@/components/LoadingBlock'
+import { PROJECTS_CACHE_KEY, type ProjectsPayload } from '@/lib/projects-cache'
 import { useCachedJson } from '@/lib/use-cached-json'
-
-type ProjectsPayload = {
-  projects: CompassProjectWithStats[]
-  functions: CompassBusinessFunction[]
-  clients?: Array<{ id: string; name: string }>
-}
 
 export function ProjectsPanel() {
   const { data, error, loading, reload } = useCachedJson<ProjectsPayload>(
-    '/api/projects',
-    '/api/projects'
+    PROJECTS_CACHE_KEY,
+    PROJECTS_CACHE_KEY
   )
 
   if (error && !data) {
