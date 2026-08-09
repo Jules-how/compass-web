@@ -67,9 +67,12 @@ export function TargetingSuccessMap() {
   const model = useMemo(() => data ?? buildDemoTargetingMap(), [data])
   const mapped = useMemo(
     () =>
-      model.points.filter(
-        (p) => p.lat != null && p.lng != null && isInAustraliaBounds(p.lat, p.lng)
-      ),
+      model.points
+        .filter(
+          (p) => p.lat != null && p.lng != null && isInAustraliaBounds(p.lat, p.lng)
+        )
+        .sort((a, b) => b.targeted - a.targeted)
+        .slice(0, 18),
     [model.points]
   )
   const outsideAustralia = useMemo(
