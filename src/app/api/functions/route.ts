@@ -8,6 +8,8 @@ import {
   requireSameOrigin
 } from '@/lib/portal-http'
 import { FUNCTION_LIST_COLUMNS } from '@/lib/list-columns'
+import { computeFunctionStats, emptyFunctionStats } from '@/lib/function-stats'
+import type { CompassBusinessFunction, CompassProject, CompassTask } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,12 +28,32 @@ function nowIso(): string {
 export async function GET() {
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
-    const { data, error } = await supabase
-      .from('compass_business_functions')
-      .select(FUNCTION_LIST_COLUMNS)
-      .order('sort_order')
-    if (error) return portalJson({ error: 'fetch_failed', detail: error.message }, { status: 500 })
-    return portalJsonCached({ functions: data ?? [] })
+    const [functionsRes, projectsRes, tasksRes] = await Promise.all([
+      supabase.from('compass_business_functions').select(FUNCTION_LIST_COLUMNS).order('sort_order'),
+      supabase.from('compass_projects').select('id,business_function_id,status'),
+      supabase
+        .from('compass_tasks')
+        .select('id,business_function_id,project_id,status,parent_task_id')
+        .is('parent_task_id', null)
+    ])
+    if (functionsRes.error || projectsRes.error || tasksRes.error) {
+      return portalJson({ error: 'fetch_failed' }, { status: 500 })
+    }
+
+    const statsByFunction = computeFunctionStats(
+      (projectsRes.data ?? []) as Pick<CompassProject, 'id' | 'business_function_id' | 'status'>[],
+      (tasksRes.data ?? []) as Pick<
+        CompassTask,
+        'id' | 'business_function_id' | 'project_id' | 'status' | 'parent_task_id'
+      >[]
+    )
+
+    const functions = ((functionsRes.data ?? []) as CompassBusinessFunction[]).map((row) => ({
+      ...row,
+      stats: statsByFunction.get(row.id) ?? emptyFunctionStats()
+    }))
+
+    return portalJsonCached({ functions })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })
   }

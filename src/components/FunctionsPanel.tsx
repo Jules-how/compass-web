@@ -1,15 +1,14 @@
 'use client'
 
-import type { CompassBusinessFunction } from '@/lib/types'
+import type { CompassBusinessFunctionWithStats } from '@/lib/types'
 import { FunctionManager } from '@/components/FunctionManager'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { useCachedJson } from '@/lib/use-cached-json'
 
 export function FunctionsPanel() {
-  const { data, error, loading, reload } = useCachedJson<{ functions: CompassBusinessFunction[] }>(
-    '/api/functions',
-    '/api/functions'
-  )
+  const { data, error, loading, reload } = useCachedJson<{
+    functions: CompassBusinessFunctionWithStats[]
+  }>('/api/functions', '/api/functions')
 
   if (error && !data) {
     return (

@@ -316,6 +316,18 @@ export interface CompassBusinessFunction {
   mirrored_at: string
 }
 
+export interface FunctionWorkStats {
+  projectCount: number
+  activeProjectCount: number
+  taskCount: number
+  openTaskCount: number
+  completedTaskCount: number
+}
+
+export type CompassBusinessFunctionWithStats = CompassBusinessFunction & {
+  stats: FunctionWorkStats
+}
+
 export interface CompassTaskNoteRevision {
   id: string
   task_id: string
