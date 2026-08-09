@@ -1,5 +1,5 @@
 import { OperatorShell } from '@/components/OperatorShell'
-import { ClientDetailPanel } from '@/components/clients/ClientDetailPanel'
+import { ClientsPanel } from '@/components/ClientsPanel'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -10,11 +10,11 @@ export default async function ClientDetailPage({ params }: PageProps) {
 
   return (
     <OperatorShell
-      title="Client"
-      subtitle="Overview, issues, channels, and projects"
+      title="Clients"
+      subtitle="Accounts, relationships, and delivery workspaces"
       width="6xl"
     >
-      <ClientDetailPanel clientId={id} />
+      <ClientsPanel initialClientId={id} />
     </OperatorShell>
   )
 }

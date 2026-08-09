@@ -33,11 +33,14 @@ import {
   type ProjectHealth
 } from '@/lib/project-pm'
 import { formatPercentComplete } from '@/lib/project-stats'
+import { loadQueryCache, peekQueryCache } from '@/lib/query-cache'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { ClientChannelPanel } from '@/components/clients/ClientChannelPanel'
 import { ClientCommsPanel } from '@/components/clients/ClientCommsPanel'
 import { ClientWorkPlanner } from '@/components/clients/ClientWorkPlanner'
 import { MetaAdsManagerPanel } from '@/components/clients/MetaAdsManagerPanel'
+
+const clientDetailCacheKey = (id: string) => `/api/clients/${id}`
 
 type TabKey = 'overview' | 'activity' | 'comms' | 'issues' | 'meta' | 'google' | 'projects'
 type MetaSubView = 'ads_manager' | 'channel_log'
@@ -103,13 +106,30 @@ function StatusDot({ status }: { status: string }) {
   return <span className={`inline-block h-3 w-3 rounded-full border ${tone}`} />
 }
 
-export function ClientDetailPanel({ clientId }: { clientId: string }) {
+interface ClientDetailPanelProps {
+  clientId: string
+  mode?: 'page' | 'modal'
+  clientNameHint?: string
+  onClose?: () => void
+  onArchived?: () => void
+  onChanged?: () => void | Promise<void>
+}
+
+export function ClientDetailPanel({
+  clientId,
+  mode = 'page',
+  clientNameHint,
+  onClose,
+  onArchived,
+  onChanged
+}: ClientDetailPanelProps) {
   const [data, setData] = useState<ClientDetailPayload | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<TabKey>('overview')
   const [metaSubView, setMetaSubView] = useState<MetaSubView>('ads_manager')
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const isModal = mode === 'modal'
 
   const [editName, setEditName] = useState('')
   const [editSummary, setEditSummary] = useState('')
@@ -130,37 +150,62 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
   const [issueTitle, setIssueTitle] = useState('')
   const [issuePriority, setIssuePriority] = useState(0)
 
-  const load = useCallback(async () => {
-    setError(null)
-    try {
-      const res = await fetch(`/api/clients/${clientId}`, {
-        headers: { Accept: 'application/json' }
-      })
-      if (res.status === 404) throw new Error('Client not found')
-      if (!res.ok) throw new Error(`Failed to load client (${res.status})`)
-      const body = (await res.json()) as ClientDetailPayload
-      setData(body)
-      setEditName(body.client.name)
-      setEditSummary(body.client.summary ?? '')
-      setEditNotes(body.client.notes ?? '')
-      setEditStatus(body.client.status as ClientStatus)
-      setEditPriority(body.client.priority ?? 0)
-      setEditHealth((body.client.health as ProjectHealth) || 'no_updates')
-      setEditIndustry(body.client.industry ?? '')
-      setEditWebsite(body.client.website ?? '')
-      setEditContact(body.client.main_contact_name ?? '')
-      setEditRole(body.client.main_contact_role ?? '')
-      setEditEngagement(body.client.engagement_type ?? '')
-      setEditRetainer(body.client.retainer_status ?? '')
-      setEditTags((body.client.tags ?? []).join(', '))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    }
-  }, [clientId])
+  const applyPayload = useCallback((body: ClientDetailPayload) => {
+    setData(body)
+    setEditName(body.client.name)
+    setEditSummary(body.client.summary ?? '')
+    setEditNotes(body.client.notes ?? '')
+    setEditStatus(body.client.status as ClientStatus)
+    setEditPriority(body.client.priority ?? 0)
+    setEditHealth((body.client.health as ProjectHealth) || 'no_updates')
+    setEditIndustry(body.client.industry ?? '')
+    setEditWebsite(body.client.website ?? '')
+    setEditContact(body.client.main_contact_name ?? '')
+    setEditRole(body.client.main_contact_role ?? '')
+    setEditEngagement(body.client.engagement_type ?? '')
+    setEditRetainer(body.client.retainer_status ?? '')
+    setEditTags((body.client.tags ?? []).join(', '))
+  }, [])
+
+  const load = useCallback(
+    async (force = false) => {
+      setError(null)
+      const cacheKey = clientDetailCacheKey(clientId)
+      if (!force) {
+        const cached = peekQueryCache<ClientDetailPayload>(cacheKey)
+        if (cached?.data && !cached.error) applyPayload(cached.data)
+      }
+      try {
+        const entry = await loadQueryCache<ClientDetailPayload>(
+          cacheKey,
+          async () => {
+            const res = await fetch(`/api/clients/${clientId}`, {
+              headers: { Accept: 'application/json' }
+            })
+            if (res.status === 404) throw new Error('Client not found')
+            if (!res.ok) throw new Error(`Failed to load client (${res.status})`)
+            return (await res.json()) as ClientDetailPayload
+          },
+          { force }
+        )
+        if (entry.error) throw new Error(entry.error)
+        if (entry.data) applyPayload(entry.data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err))
+      }
+    },
+    [applyPayload, clientId]
+  )
 
   useEffect(() => {
-    void load()
-  }, [load])
+    setTab('overview')
+    setMetaSubView('ads_manager')
+    setSaveMessage(null)
+    const cached = peekQueryCache<ClientDetailPayload>(clientDetailCacheKey(clientId))
+    if (cached?.data && !cached.error) applyPayload(cached.data)
+    else setData(null)
+    void load(false)
+  }, [applyPayload, clientId, load])
 
   const issuesByStatus = useMemo(() => {
     if (!data) return []
@@ -215,7 +260,8 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
       setSaveMessage('Saved')
-      await load()
+      await load(true)
+      await onChanged?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -243,7 +289,8 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
       }
       setUpdateBody('')
       setTab('activity')
-      await load()
+      await load(true)
+      await onChanged?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -262,7 +309,10 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
-      window.location.href = '/clients'
+      await onChanged?.()
+      if (onArchived) onArchived()
+      else if (onClose) onClose()
+      else window.location.href = '/clients'
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
       setSaving(false)
@@ -290,7 +340,8 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
       }
       setIssueTitle('')
       setIssuePriority(0)
-      await load()
+      await load(true)
+      await onChanged?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -311,7 +362,8 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
-      await load()
+      await load(true)
+      await onChanged?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -332,7 +384,8 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
-      await load()
+      await load(true)
+      await onChanged?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -340,18 +393,73 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
     }
   }
 
+  const titleName = data?.client.name ?? clientNameHint ?? 'Client'
+
   if (error && !data) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-        {error}{' '}
-        <Link href="/clients" className="underline">
-          Back to clients
-        </Link>
+      <div className={`${isModal ? 'flex h-full flex-col' : ''}`}>
+        {isModal ? (
+          <div className="flex items-center justify-between border-b border-stone-200/80 bg-white px-5 py-4">
+            <h2 id="client-detail-title" className="font-display text-lg font-semibold text-neutral-900">
+              {titleName}
+            </h2>
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-stone-200 px-2.5 py-1.5 text-xs text-neutral-600 transition hover:bg-stone-50"
+              >
+                Close
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 m-5">
+          {error}{' '}
+          {isModal && onClose ? (
+            <button type="button" className="underline" onClick={onClose}>
+              Close
+            </button>
+          ) : (
+            <Link href="/clients" className="underline">
+              Back to clients
+            </Link>
+          )}
+        </div>
       </div>
     )
   }
 
-  if (!data) return <LoadingBlock label="Loading client…" />
+  if (!data) {
+    return (
+      <div className={`${isModal ? 'flex h-full flex-col' : ''}`}>
+        {isModal ? (
+          <div className="flex items-center justify-between border-b border-stone-200/80 bg-white px-5 py-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+                Client
+              </p>
+              <h2 id="client-detail-title" className="font-display text-lg font-semibold text-neutral-900">
+                {titleName}
+              </h2>
+            </div>
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-stone-200 px-2.5 py-1.5 text-xs text-neutral-600 transition hover:bg-stone-50"
+              >
+                Close
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        <div className={isModal ? 'flex flex-1 items-center justify-center p-8' : ''}>
+          <LoadingBlock label="Loading client…" />
+        </div>
+      </div>
+    )
+  }
 
   const { client, updates, activity } = data
   const tabs: Array<[TabKey, string]> = [
@@ -364,23 +472,60 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
     ['projects', `Projects (${data.projects.length})`]
   ]
 
+  const refresh = () => load(true)
+
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-neutral-500">
-          <Link href="/clients" className="hover:text-neutral-800">
-            Clients
-          </Link>
-          <span>/</span>
-          <span className="font-medium text-neutral-800">{client.name}</span>
-        </div>
-        <div className="flex flex-wrap rounded-lg border border-stone-200 bg-white p-0.5 text-sm">
+    <div className={isModal ? 'flex h-full min-h-0 flex-col' : 'space-y-5'}>
+      <div
+        className={
+          isModal
+            ? 'shrink-0 space-y-3 border-b border-stone-200/80 bg-white px-5 py-4'
+            : 'flex flex-wrap items-center justify-between gap-3'
+        }
+      >
+        {isModal ? (
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+                Client
+              </p>
+              <h2
+                id="client-detail-title"
+                className="truncate font-display text-lg font-semibold text-neutral-900"
+              >
+                {client.name}
+              </h2>
+              <p className="mt-0.5 text-xs text-neutral-500">
+                {clientStatusLabel(client.status)}
+                {client.next_action ? ` · Next: ${client.next_action}` : ''}
+              </p>
+            </div>
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="shrink-0 rounded-xl border border-stone-200 px-2.5 py-1.5 text-xs text-neutral-600 transition hover:bg-stone-50"
+              >
+                Close
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-sm text-neutral-500">
+            <Link href="/clients" className="hover:text-neutral-800">
+              Clients
+            </Link>
+            <span>/</span>
+            <span className="font-medium text-neutral-800">{client.name}</span>
+          </div>
+        )}
+        <div className="flex flex-wrap rounded-xl border border-stone-200 bg-white p-0.5 text-sm">
           {tabs.map(([key, label]) => (
             <button
               key={key}
               type="button"
               onClick={() => setTab(key)}
-              className={`rounded-md px-3 py-1.5 font-medium transition ${
+              className={`rounded-lg px-3 py-1.5 font-medium transition ${
                 tab === key ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-800'
               }`}
             >
@@ -390,7 +535,8 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
         </div>
       </div>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      <div className={isModal ? 'min-h-0 flex-1 space-y-5 overflow-y-auto p-5' : 'contents'}>
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       {tab === 'overview' ? (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -694,7 +840,7 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
           clientId={clientId}
           projects={data.projects}
           tasks={data.tasks ?? []}
-          onRefresh={load}
+          onRefresh={refresh}
         />
       ) : null}
 
@@ -750,7 +896,7 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
           saving={saving}
           onBusy={setSaving}
           onError={setError}
-          onClientRefresh={load}
+          onClientRefresh={refresh}
         />
       ) : null}
 
@@ -896,7 +1042,7 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
               saving={saving}
               onBusy={setSaving}
               onError={setError}
-              onRefresh={load}
+              onRefresh={refresh}
             />
           ) : (
             <ClientChannelPanel
@@ -908,7 +1054,7 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
               saving={saving}
               onBusy={setSaving}
               onError={setError}
-              onRefresh={load}
+              onRefresh={refresh}
             />
           )}
         </div>
@@ -924,7 +1070,7 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
           saving={saving}
           onBusy={setSaving}
           onError={setError}
-          onRefresh={load}
+          onRefresh={refresh}
         />
       ) : null}
 
@@ -933,10 +1079,11 @@ export function ClientDetailPanel({ clientId }: { clientId: string }) {
           clientId={clientId}
           projects={data.projects}
           tasks={data.tasks ?? []}
-          onRefresh={load}
+          onRefresh={refresh}
           compact
         />
       ) : null}
+      </div>
     </div>
   )
 }

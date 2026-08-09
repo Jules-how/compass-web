@@ -1,13 +1,15 @@
 'use client'
 
-import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CompassClientCard } from '@/lib/types'
 import { CLIENT_STATUSES, clientStatusLabel, formatRelativeTouch } from '@/lib/client-pm'
+import { prefetchJson } from '@/lib/use-cached-json'
+import { ClientDetailModal } from '@/components/clients/ClientDetailModal'
 
 interface ClientDirectoryProps {
   clients: CompassClientCard[]
   onRefresh: () => Promise<void>
+  initialClientId?: string | null
 }
 
 const emptyForm = {
@@ -22,12 +24,69 @@ const emptyForm = {
   tags: ''
 }
 
-export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
+function readClientIdFromUrl(): string | null {
+  if (typeof window === 'undefined') return null
+  const params = new URLSearchParams(window.location.search)
+  const fromQuery = params.get('client')
+  if (fromQuery) return fromQuery
+  const match = window.location.pathname.match(/^\/clients\/([^/]+)\/?$/)
+  return match?.[1] ? decodeURIComponent(match[1]) : null
+}
+
+function syncClientIdToUrl(clientId: string | null) {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  // Keep the directory route canonical so popup state is query-driven.
+  url.pathname = '/clients'
+  if (clientId) url.searchParams.set('client', clientId)
+  else url.searchParams.delete('client')
+  const next = `${url.pathname}${url.search}${url.hash}`
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`
+  if (next !== current) window.history.replaceState(null, '', next)
+}
+
+export function ClientDirectory({
+  clients,
+  onRefresh,
+  initialClientId = null
+}: ClientDirectoryProps) {
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(
+    () => initialClientId ?? readClientIdFromUrl()
+  )
+
+  useEffect(() => {
+    const fromUrl = readClientIdFromUrl()
+    const nextId = initialClientId ?? fromUrl
+    if (nextId) {
+      setSelectedClientId(nextId)
+      syncClientIdToUrl(nextId)
+    }
+    function onPopState() {
+      setSelectedClientId(readClientIdFromUrl())
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [initialClientId])
+
+  const openClient = useCallback((clientId: string) => {
+    setSelectedClientId(clientId)
+    syncClientIdToUrl(clientId)
+  }, [])
+
+  const closeClient = useCallback(() => {
+    setSelectedClientId(null)
+    syncClientIdToUrl(null)
+  }, [])
+
+  const selectedClient = useMemo(
+    () => clients.find((client) => client.id === selectedClientId) ?? null,
+    [clients, selectedClientId]
+  )
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -46,6 +105,11 @@ export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
       return haystack.includes(q)
     })
   }, [clients, query])
+
+  function prefetchClient(clientId: string) {
+    const key = `/api/clients/${clientId}`
+    prefetchJson(key, key)
+  }
 
   async function createClient(event: React.FormEvent) {
     event.preventDefault()
@@ -72,9 +136,11 @@ export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
+      const created = (await res.json().catch(() => null)) as { id?: string } | null
       setForm(emptyForm)
       setShowCreate(false)
       await onRefresh()
+      if (created?.id) openClient(created.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -110,7 +176,7 @@ export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
           <div>
             <h2 className="font-display text-lg font-semibold text-neutral-900">New client</h2>
             <p className="mt-1 text-sm text-neutral-500">
-              Short create flow — refine the profile inside the account.
+              Short create flow — refine the profile in the account panel.
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
@@ -225,10 +291,13 @@ export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((client) => (
-            <Link
+            <button
               key={client.id}
-              href={`/clients/${client.id}`}
-              className="compass-panel block p-5 transition hover:-translate-y-0.5 hover:shadow-lift"
+              type="button"
+              onClick={() => openClient(client.id)}
+              onMouseEnter={() => prefetchClient(client.id)}
+              onFocus={() => prefetchClient(client.id)}
+              className="compass-panel block w-full p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lift"
             >
               <div className="flex items-start justify-between gap-3">
                 <h3 className="font-display text-base font-semibold text-neutral-900">
@@ -244,10 +313,23 @@ export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
               <p className="mt-1 text-sm text-neutral-700">
                 Next · {client.next_action || 'No open issues'}
               </p>
-            </Link>
+            </button>
           ))}
         </div>
       )}
+
+      {selectedClientId ? (
+        <ClientDetailModal
+          clientId={selectedClientId}
+          clientName={selectedClient?.name}
+          onClose={closeClient}
+          onArchived={() => {
+            closeClient()
+            void onRefresh()
+          }}
+          onChanged={onRefresh}
+        />
+      ) : null}
     </div>
   )
 }

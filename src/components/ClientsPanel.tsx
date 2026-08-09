@@ -5,7 +5,7 @@ import { ClientDirectory } from '@/components/clients/ClientDirectory'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { useCachedJson } from '@/lib/use-cached-json'
 
-export function ClientsPanel() {
+export function ClientsPanel({ initialClientId = null }: { initialClientId?: string | null }) {
   const { data, error, loading, reload } = useCachedJson<{ clients: CompassClientCard[] }>(
     '/api/clients',
     '/api/clients'
@@ -27,6 +27,7 @@ export function ClientsPanel() {
   return (
     <ClientDirectory
       clients={data.clients ?? []}
+      initialClientId={initialClientId}
       onRefresh={async () => {
         await reload(true)
       }}
