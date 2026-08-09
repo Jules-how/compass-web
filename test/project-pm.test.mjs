@@ -30,6 +30,69 @@ function normalizeProjectStatus(status) {
   }
 }
 
+test('projectColorForFunction maps sales / client deliveries and ignores name churn', () => {
+  const FUNCTION_ICON_COLOR_BY_KEY = {
+    sales: '#E85D2A',
+    'client-deliveries': '#4CB782',
+    deliver: '#4CB782'
+  }
+  const DEFAULT_PROJECT_ICON_COLOR = '#95A2B3'
+
+  function normalizeFunctionKey(value) {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  }
+
+  function projectColorForFunction(fn) {
+    if (!fn) return DEFAULT_PROJECT_ICON_COLOR
+    const candidates = [fn.slug, fn.name]
+      .filter((value) => Boolean(value && value.trim()))
+      .map(normalizeFunctionKey)
+    for (const key of candidates) {
+      if (FUNCTION_ICON_COLOR_BY_KEY[key]) return FUNCTION_ICON_COLOR_BY_KEY[key]
+    }
+    for (const key of candidates) {
+      for (const [known, color] of Object.entries(FUNCTION_ICON_COLOR_BY_KEY)) {
+        if (key === known || key.startsWith(`${known}-`) || key.endsWith(`-${known}`)) {
+          return color
+        }
+      }
+    }
+    return DEFAULT_PROJECT_ICON_COLOR
+  }
+
+  assert.equal(projectColorForFunction(null), DEFAULT_PROJECT_ICON_COLOR)
+  assert.equal(projectColorForFunction({ slug: 'sales', name: 'Sales' }), '#E85D2A')
+  assert.equal(
+    projectColorForFunction({ slug: 'client-deliveries', name: 'Client Deliveries' }),
+    '#4CB782'
+  )
+  assert.equal(projectColorForFunction({ name: 'Client Deliveries' }), '#4CB782')
+  // Name typing must not change color — color comes only from function.
+  assert.equal(
+    projectColorForFunction({ slug: 'sales' }),
+    projectColorForFunction({ slug: 'sales', name: 'Sales' })
+  )
+})
+
+test('project icon color follows business function, not project name', () => {
+  const pm = read('src/lib/project-pm.ts')
+  const manager = read('src/components/ProjectManager.tsx')
+  const timeline = read('src/components/ProjectTimeline.tsx')
+
+  assert.match(pm, /export function projectColorForFunction/)
+  assert.match(pm, /client-deliveries/)
+  assert.match(pm, /DEFAULT_PROJECT_ICON_COLOR/)
+  assert.match(manager, /projectColorForFunction/)
+  assert.match(manager, /createIconColor/)
+  assert.doesNotMatch(manager, /ProjectGlyph seed=\{name/)
+  assert.match(timeline, /functionById/)
+  assert.match(timeline, /projectColorForFunction/)
+})
+
 test('legacy project statuses normalize into Linear-style board columns', () => {
   assert.equal(normalizeProjectStatus('active'), 'in_progress')
   assert.equal(normalizeProjectStatus('paused'), 'planned')
