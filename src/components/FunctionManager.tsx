@@ -72,7 +72,8 @@ export function FunctionManager({
     const sorted = [...functions].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
     if (!q) return sorted
     return sorted.filter((row) => {
-      const haystack = `${row.name} ${row.slug}`.toLowerCase()
+      const recent = (row.recentProjects ?? []).map((project) => project.name).join(' ')
+      const haystack = `${row.name} ${row.slug} ${recent}`.toLowerCase()
       return haystack.includes(q)
     })
   }, [functions, query])
@@ -213,88 +214,96 @@ export function FunctionManager({
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-3">
           {filtered.map((row) => {
             const stats = row.stats ?? emptyFunctionStats()
             const color = functionIconColor(row.id || row.slug || row.name)
+            const recent = row.recentProjects ?? []
             return (
               <Link
                 key={row.id}
                 href={`/functions/${row.id}`}
                 className={cn(
-                  'compass-panel group relative block overflow-hidden p-5 transition',
+                  'compass-panel group relative block overflow-hidden transition',
                   'hover:-translate-y-0.5 hover:shadow-lift'
                 )}
               >
                 <div
-                  className="pointer-events-none absolute inset-y-0 left-0 w-1 opacity-90"
+                  className="pointer-events-none absolute inset-y-0 left-0 w-1.5 opacity-90"
                   style={{ backgroundColor: color }}
                   aria-hidden
                 />
-                <div className="flex items-start gap-4 pl-1">
-                  <div
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white shadow-soft"
-                    style={{ backgroundColor: color }}
-                    aria-hidden
-                  >
-                    {initialsFromLabel(row.name)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="font-display truncate text-lg font-semibold tracking-tight text-neutral-900">
+                <div className="flex flex-col gap-4 p-5 pl-6 lg:flex-row lg:items-center lg:gap-6">
+                  <div className="flex min-w-0 flex-1 items-start gap-4">
+                    <div
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white shadow-soft"
+                      style={{ backgroundColor: color }}
+                      aria-hidden
+                    >
+                      {initialsFromLabel(row.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <h3 className="font-display text-xl font-semibold tracking-tight text-neutral-900">
                           {row.name}
                         </h3>
-                        <p className="mt-0.5 truncate text-sm text-neutral-500">/{row.slug}</p>
+                        <span className="text-sm text-neutral-400">/{row.slug}</span>
                       </div>
-                      <span className="mt-1 inline-flex shrink-0 items-center text-neutral-300 transition group-hover:translate-x-0.5 group-hover:text-neutral-500">
-                        <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" aria-hidden>
-                          <path
-                            d="M6 3.5 10.5 8 6 12.5"
-                            stroke="currentColor"
-                            strokeWidth="1.6"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </span>
+                      {recent.length > 0 ? (
+                        <p className="mt-2 truncate text-sm text-neutral-600">
+                          <span className="text-neutral-400">Projects · </span>
+                          {recent.map((project) => project.name).join(' · ')}
+                          {stats.projectCount > recent.length
+                            ? ` · +${stats.projectCount - recent.length} more`
+                            : ''}
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-sm text-neutral-400">
+                          No projects yet — open to add or assign work
+                        </p>
+                      )}
+                      <p className="mt-2 text-xs text-neutral-400">
+                        Updated {formatUpdated(row.updated_at)}
+                      </p>
                     </div>
+                  </div>
 
-                    <div className="mt-5 grid grid-cols-3 gap-3">
-                      <div className="rounded-xl bg-stone-50 px-3 py-2.5 ring-1 ring-inset ring-stone-200/70">
-                        <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                          Projects
-                        </p>
-                        <p className="mt-1 font-display text-xl font-semibold tabular-nums text-neutral-900">
-                          {stats.projectCount}
-                        </p>
-                        <p className="mt-0.5 text-xs text-neutral-500">
-                          {stats.activeProjectCount} active
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-stone-50 px-3 py-2.5 ring-1 ring-inset ring-stone-200/70">
-                        <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                          Open
-                        </p>
-                        <p className="mt-1 font-display text-xl font-semibold tabular-nums text-neutral-900">
-                          {stats.openTaskCount}
-                        </p>
-                        <p className="mt-0.5 text-xs text-neutral-500">tasks</p>
-                      </div>
-                      <div className="rounded-xl bg-stone-50 px-3 py-2.5 ring-1 ring-inset ring-stone-200/70">
-                        <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                          Done
-                        </p>
-                        <p className="mt-1 font-display text-xl font-semibold tabular-nums text-neutral-900">
-                          {stats.completedTaskCount}
-                        </p>
-                        <p className="mt-0.5 text-xs text-neutral-500">completed</p>
-                      </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2 lg:gap-3">
+                    <div className="rounded-xl bg-stone-50 px-3.5 py-2.5 text-center ring-1 ring-inset ring-stone-200/70 min-w-[5.5rem]">
+                      <p className="font-display text-lg font-semibold tabular-nums text-neutral-900">
+                        {stats.projectCount}
+                      </p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                        Projects
+                      </p>
                     </div>
-
-                    <p className="mt-4 text-xs text-neutral-400">
-                      Updated {formatUpdated(row.updated_at)}
-                    </p>
+                    <div className="rounded-xl bg-stone-50 px-3.5 py-2.5 text-center ring-1 ring-inset ring-stone-200/70 min-w-[5.5rem]">
+                      <p className="font-display text-lg font-semibold tabular-nums text-neutral-900">
+                        {stats.openTaskCount}
+                      </p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                        Open
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-stone-50 px-3.5 py-2.5 text-center ring-1 ring-inset ring-stone-200/70 min-w-[5.5rem]">
+                      <p className="font-display text-lg font-semibold tabular-nums text-neutral-900">
+                        {stats.completedTaskCount}
+                      </p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                        Done
+                      </p>
+                    </div>
+                    <span className="ml-1 inline-flex h-9 w-9 items-center justify-center rounded-xl text-neutral-300 transition group-hover:bg-stone-50 group-hover:text-neutral-600">
+                      <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" aria-hidden>
+                        <path
+                          d="M6 3.5 10.5 8 6 12.5"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
                   </div>
                 </div>
               </Link>

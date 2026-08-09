@@ -326,6 +326,7 @@ export interface FunctionWorkStats {
 
 export type CompassBusinessFunctionWithStats = CompassBusinessFunction & {
   stats: FunctionWorkStats
+  recentProjects?: Array<{ id: string; name: string }>
 }
 
 export interface CompassTaskNoteRevision {

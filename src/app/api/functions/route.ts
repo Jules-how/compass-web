@@ -30,7 +30,9 @@ export async function GET() {
     const { supabase } = await requirePortalAccess({ operator: true })
     const [functionsRes, projectsRes, tasksRes] = await Promise.all([
       supabase.from('compass_business_functions').select(FUNCTION_LIST_COLUMNS).order('sort_order'),
-      supabase.from('compass_projects').select('id,business_function_id,status'),
+      supabase.from('compass_projects').select('id,name,business_function_id,status').order('updated_at', {
+        ascending: false
+      }),
       supabase
         .from('compass_tasks')
         .select('id,business_function_id,project_id,status,parent_task_id')
@@ -40,17 +42,31 @@ export async function GET() {
       return portalJson({ error: 'fetch_failed' }, { status: 500 })
     }
 
+    const projects = (projectsRes.data ?? []) as Array<
+      Pick<CompassProject, 'id' | 'name' | 'business_function_id' | 'status'>
+    >
+
     const statsByFunction = computeFunctionStats(
-      (projectsRes.data ?? []) as Pick<CompassProject, 'id' | 'business_function_id' | 'status'>[],
+      projects,
       (tasksRes.data ?? []) as Pick<
         CompassTask,
         'id' | 'business_function_id' | 'project_id' | 'status' | 'parent_task_id'
       >[]
     )
 
+    const recentByFunction = new Map<string, Array<{ id: string; name: string }>>()
+    for (const project of projects) {
+      if (!project.business_function_id) continue
+      const list = recentByFunction.get(project.business_function_id) ?? []
+      if (list.length >= 3) continue
+      list.push({ id: project.id, name: project.name })
+      recentByFunction.set(project.business_function_id, list)
+    }
+
     const functions = ((functionsRes.data ?? []) as CompassBusinessFunction[]).map((row) => ({
       ...row,
-      stats: statsByFunction.get(row.id) ?? emptyFunctionStats()
+      stats: statsByFunction.get(row.id) ?? emptyFunctionStats(),
+      recentProjects: recentByFunction.get(row.id) ?? []
     }))
 
     return portalJsonCached({ functions })
