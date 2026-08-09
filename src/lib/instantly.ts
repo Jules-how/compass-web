@@ -212,13 +212,196 @@ export async function fetchInstantlyAnalyticsOverview(
 }
 
 export async function fetchInstantlyCampaignAnalytics(
-  apiKey: string
+  apiKey: string,
+  campaignId?: string
 ): Promise<InstantlyCampaignAnalytics[]> {
+  const qs = campaignId?.trim()
+    ? `?${new URLSearchParams({ id: campaignId.trim() })}`
+    : ''
   const rows = await instantlyFetch<InstantlyCampaignAnalytics[]>(
-    '/campaigns/analytics',
+    `/campaigns/analytics${qs}`,
     apiKey
   )
   return Array.isArray(rows) ? rows : []
+}
+
+/** UI payload for the sequence editor Analytics tab. */
+export type SequenceCampaignAnalytics = {
+  campaignId: string
+  campaignName: string
+  status: InstantlyUiCampaignStatus
+  leads: number
+  contacted: number
+  sent: number
+  replies: number
+  opportunities: number
+  completed: number
+  remaining: number
+  progress: number
+  replyRate: number
+}
+
+export function buildSequenceCampaignAnalytics(
+  row: InstantlyCampaignAnalytics
+): SequenceCampaignAnalytics {
+  const leads = Math.max(0, Number(row.leads_count) || 0)
+  const contacted = Math.max(0, Number(row.contacted_count) || 0)
+  const sent = Math.max(0, Number(row.emails_sent_count) || 0)
+  const replies =
+    Math.max(0, Number(row.reply_count_unique) || 0) ||
+    Math.max(0, Number(row.reply_count) || 0)
+  const opportunities = Math.max(0, Number(row.total_opportunities) || 0)
+  const completed = Math.max(0, Number(row.completed_count) || 0)
+  const progress = campaignProgress(row)
+  const remaining = Math.max(0, leads - Math.min(contacted, leads))
+  const replyRate = sent > 0 ? Math.round((1000 * replies) / sent) / 10 : 0
+
+  return {
+    campaignId: row.campaign_id,
+    campaignName: row.campaign_name || 'Untitled campaign',
+    status: mapInstantlyCampaignStatus(row.campaign_status),
+    leads,
+    contacted,
+    sent,
+    replies,
+    opportunities,
+    completed,
+    remaining,
+    progress,
+    replyRate
+  }
+}
+
+export function findCampaignAnalytics(
+  rows: InstantlyCampaignAnalytics[],
+  campaignId: string
+): InstantlyCampaignAnalytics | null {
+  const id = campaignId.trim()
+  if (!id) return null
+  return rows.find((row) => row.campaign_id === id) ?? null
+}
+
+const SEQUENCE_ANALYTICS_CACHE_TTL_MS = 60_000
+
+type SequenceAnalyticsCacheEntry = {
+  key: string
+  value: SequenceCampaignAnalytics
+  updatedAt: number
+  promise?: Promise<SequenceCampaignAnalytics>
+}
+
+const sequenceAnalyticsCache = new Map<string, SequenceAnalyticsCacheEntry>()
+
+/** Clear process-local per-campaign analytics cache (tests / forced refresh). */
+export function clearSequenceCampaignAnalyticsCache() {
+  sequenceAnalyticsCache.clear()
+}
+
+/**
+ * Demo metrics when INSTANTLY_API_KEY is unset — keyed so the same Instantly id
+ * always returns a stable shape for the editor Analytics tab.
+ */
+export function buildDemoSequenceCampaignAnalytics(
+  campaignId: string
+): SequenceCampaignAnalytics {
+  const id = campaignId.trim() || 'demo-campaign'
+  // Deterministic-ish demo numbers from the id so the UI isn't empty in local/dev.
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+  const leads = 800 + (hash % 1600)
+  const progress = 35 + (hash % 50)
+  const contacted = Math.round((leads * progress) / 100)
+  const sent = Math.round(contacted * (1.4 + (hash % 40) / 100))
+  const replies = Math.max(1, Math.round(sent * (0.02 + (hash % 30) / 1000)))
+  const opportunities = Math.max(0, Math.round(replies * 0.25))
+  const completed = Math.round(leads * (progress / 100) * 0.4)
+  return {
+    campaignId: id,
+    campaignName: 'Demo Instantly campaign',
+    status: 'live',
+    leads,
+    contacted,
+    sent,
+    replies,
+    opportunities,
+    completed,
+    remaining: Math.max(0, leads - contacted),
+    progress,
+    replyRate: sent > 0 ? Math.round((1000 * replies) / sent) / 10 : 0
+  }
+}
+
+export async function loadSequenceCampaignAnalytics(
+  campaignId: string,
+  apiKey = getInstantlyApiKey()
+): Promise<SequenceCampaignAnalytics> {
+  const id = campaignId.trim()
+  if (!id) {
+    throw new InstantlyApiError('campaign id is required', 400)
+  }
+  if (!apiKey) {
+    throw new InstantlyApiError('INSTANTLY_API_KEY is not configured', 503)
+  }
+
+  const cached = sequenceAnalyticsCache.get(id)
+  if (
+    cached &&
+    Date.now() - cached.updatedAt < SEQUENCE_ANALYTICS_CACHE_TTL_MS &&
+    !cached.promise
+  ) {
+    return cached.value
+  }
+  if (cached?.promise) {
+    return cached.promise
+  }
+
+  const promise = (async () => {
+    let rows = await fetchInstantlyCampaignAnalytics(apiKey, id)
+    let row = findCampaignAnalytics(rows, id)
+    // Some Instantly workspaces ignore the `id` filter — fall back to full list.
+    if (!row) {
+      rows = await fetchInstantlyCampaignAnalytics(apiKey)
+      row = findCampaignAnalytics(rows, id)
+    }
+    if (!row) {
+      throw new InstantlyApiError(`Campaign ${id} not found in Instantly analytics`, 404)
+    }
+    return buildSequenceCampaignAnalytics(row)
+  })()
+
+  sequenceAnalyticsCache.set(id, {
+    key: id,
+    value:
+      cached?.value ??
+      ({
+        campaignId: id,
+        campaignName: '',
+        status: 'paused',
+        leads: 0,
+        contacted: 0,
+        sent: 0,
+        replies: 0,
+        opportunities: 0,
+        completed: 0,
+        remaining: 0,
+        progress: 0,
+        replyRate: 0
+      } satisfies SequenceCampaignAnalytics),
+    updatedAt: cached?.updatedAt ?? 0,
+    promise
+  })
+
+  try {
+    const value = await promise
+    sequenceAnalyticsCache.set(id, { key: id, value, updatedAt: Date.now() })
+    return value
+  } catch (err) {
+    const entry = sequenceAnalyticsCache.get(id)
+    if (entry?.promise === promise) {
+      delete entry.promise
+    }
+    throw err
+  }
 }
 
 export async function fetchInstantlyUnreadCount(apiKey: string): Promise<number> {
