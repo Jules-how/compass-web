@@ -7,11 +7,19 @@ type CacheEntry<T> = {
 
 const store = new Map<string, CacheEntry<unknown>>()
 const listeners = new Map<string, Set<() => void>>()
+/** Bumped on each load start and each local write so older in-flight loaders cannot clobber newer data. */
+const generations = new Map<string, number>()
 
 function emit(key: string) {
   const set = listeners.get(key)
   if (!set) return
   for (const listener of set) listener()
+}
+
+function bumpGeneration(key: string): number {
+  const next = (generations.get(key) ?? 0) + 1
+  generations.set(key, next)
+  return next
 }
 
 export function subscribeQueryCache(key: string, listener: () => void) {
@@ -32,6 +40,7 @@ export function peekQueryCache<T>(key: string): CacheEntry<T> | null {
 }
 
 export function writeQueryCache<T>(key: string, data: T) {
+  bumpGeneration(key)
   store.set(key, { data, error: null, updatedAt: Date.now() })
   emit(key)
 }
@@ -56,15 +65,19 @@ export async function loadQueryCache<T>(
     return (store.get(key) as CacheEntry<T>) ?? { data: undefined as T, error: 'missing', updatedAt: 0 }
   }
 
+  const gen = bumpGeneration(key)
   const entry: CacheEntry<T> = existing
     ? { ...existing }
     : { data: undefined as T, error: null, updatedAt: 0 }
 
-  entry.promise = (async () => {
+  let loadPromise: Promise<void> = Promise.resolve()
+  loadPromise = (async () => {
     try {
       const data = await loader()
+      if (generations.get(key) !== gen) return
       store.set(key, { data, error: null, updatedAt: Date.now() })
     } catch (err) {
+      if (generations.get(key) !== gen) return
       const message = err instanceof Error ? err.message : String(err)
       const prev = store.get(key) as CacheEntry<T> | undefined
       store.set(key, {
@@ -74,7 +87,7 @@ export async function loadQueryCache<T>(
       })
     } finally {
       const current = store.get(key) as CacheEntry<T> | undefined
-      if (current) {
+      if (current?.promise === loadPromise) {
         delete current.promise
         store.set(key, current)
       }
@@ -82,9 +95,10 @@ export async function loadQueryCache<T>(
     }
   })()
 
+  entry.promise = loadPromise
   store.set(key, entry)
   emit(key)
-  await entry.promise
+  await loadPromise
   return (store.get(key) as CacheEntry<T>) ?? entry
 }
 

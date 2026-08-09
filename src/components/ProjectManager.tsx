@@ -1,9 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { CompassBusinessFunction, CompassProjectWithStats } from '@/lib/types'
-import { formatPercentComplete } from '@/lib/project-stats'
+import { emptyProjectStats, formatPercentComplete } from '@/lib/project-stats'
+import {
+  replaceCachedProject,
+  removeCachedProject,
+  upsertCachedProject
+} from '@/lib/projects-cache'
 import {
   PROJECT_BOARD_STATUSES,
   PROJECT_HEALTHS,
@@ -25,6 +30,29 @@ type OrderBy = 'name' | 'priority' | 'target_date' | 'updated_at'
 type InsightsTab = 'health' | 'leads'
 
 const PROJECTS_VIEW_STORAGE_KEY = 'compass.projects.view'
+
+function isPendingProjectId(id: string) {
+  return id.startsWith('project-temp-')
+}
+
+function ProjectTitleLink({
+  projectId,
+  className,
+  children
+}: {
+  projectId: string
+  className?: string
+  children: ReactNode
+}) {
+  if (isPendingProjectId(projectId)) {
+    return <span className={className}>{children}</span>
+  }
+  return (
+    <Link href={`/projects/${projectId}`} className={className}>
+      {children}
+    </Link>
+  )
+}
 
 function isViewMode(value: string | null): value is ViewMode {
   return value === 'list' || value === 'board' || value === 'timeline'
@@ -479,50 +507,103 @@ export function ProjectManager({
     if (!name.trim()) return
     setSaving(true)
     setError(null)
+
+    const stamp = new Date().toISOString()
+    const trimmedName = name.trim()
+    const trimmedSummary = summary.trim() || null
+    const trimmedNotes = notes.trim() || null
+    const resolvedClientId = clientId || null
+    const resolvedFunctionId = businessFunctionId || null
+    const resolvedLabels = labels
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+    const resolvedDependsOn = [...dependsOn]
+    const resolvedMilestones = milestones
+      .filter((milestone) => milestone.title.trim())
+      .map((milestone) => ({
+        title: milestone.title.trim(),
+        description: milestone.description.trim() || null,
+        target_date: milestone.target_date || null
+      }))
+    const resolvedStart = startDate || null
+    const resolvedTarget = targetDate || null
+    const resolvedStatus = normalizeProjectStatus(status)
+    const resolvedPriority = priority
+
+    const tempId = `project-temp-${crypto.randomUUID()}`
+    upsertCachedProject({
+      id: tempId,
+      name: trimmedName,
+      business_function_id: resolvedFunctionId,
+      client_id: resolvedClientId,
+      status: resolvedStatus,
+      priority: resolvedPriority,
+      health: 'no_updates',
+      start_date: resolvedStart,
+      target_date: resolvedTarget,
+      labels: resolvedLabels,
+      summary: trimmedSummary,
+      source: 'compass-web',
+      external_id: null,
+      notes: trimmedNotes,
+      created_at: stamp,
+      updated_at: stamp,
+      mirrored_at: stamp,
+      client_name: resolvedClientId ? (clientById[resolvedClientId]?.name ?? null) : null,
+      stats: emptyProjectStats()
+    })
+    resetCreateForm()
+    setCreating(false)
+    setSaving(false)
+
     try {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name.trim(),
-          summary: summary.trim() || null,
-          notes: notes.trim() || null,
-          status,
-          priority,
-          business_function_id: businessFunctionId || null,
-          client_id: clientId || null,
-          start_date: startDate || null,
-          target_date: targetDate || null,
-          labels: labels
-            .split(',')
-            .map((item) => item.trim())
-            .filter(Boolean),
-          depends_on_project_ids: dependsOn,
-          milestones: milestones
-            .filter((milestone) => milestone.title.trim())
-            .map((milestone) => ({
-              title: milestone.title.trim(),
-              description: milestone.description.trim() || null,
-              target_date: milestone.target_date || null
-            }))
+          name: trimmedName,
+          summary: trimmedSummary,
+          notes: trimmedNotes,
+          status: resolvedStatus,
+          priority: resolvedPriority,
+          business_function_id: resolvedFunctionId,
+          client_id: resolvedClientId,
+          start_date: resolvedStart,
+          target_date: resolvedTarget,
+          labels: resolvedLabels,
+          depends_on_project_ids: resolvedDependsOn,
+          milestones: resolvedMilestones
         })
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
-      resetCreateForm()
-      setCreating(false)
-      await onRefresh?.()
+      const created = (await res.json()) as CompassProjectWithStats
+      replaceCachedProject(tempId, {
+        ...created,
+        labels: Array.isArray(created.labels) ? created.labels : resolvedLabels,
+        priority: typeof created.priority === 'number' ? created.priority : resolvedPriority,
+        health: created.health || 'no_updates',
+        client_name:
+          created.client_name ??
+          (created.client_id ? (clientById[created.client_id]?.name ?? null) : null),
+        stats: created.stats ?? emptyProjectStats()
+      })
+      void onRefresh?.()
     } catch (err) {
+      removeCachedProject(tempId)
       setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
     }
   }
 
   async function patchProjectStatus(projectId: string, nextStatus: ProjectBoardStatus) {
-    setSaving(true)
+    if (isPendingProjectId(projectId)) return
+    const previous = projects.find((project) => project.id === projectId)
+    if (previous) {
+      upsertCachedProject({ ...previous, status: nextStatus, updated_at: new Date().toISOString() })
+    }
     setError(null)
     try {
       const res = await fetch(`/api/projects/${projectId}`, {
@@ -534,15 +615,24 @@ export function ProjectManager({
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
-      await onRefresh?.()
+      void onRefresh?.()
     } catch (err) {
+      if (previous) upsertCachedProject(previous)
       setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
     }
   }
 
   async function patchProjectDates(projectId: string, start: string, end: string) {
+    if (isPendingProjectId(projectId)) return
+    const previous = projects.find((project) => project.id === projectId)
+    if (previous) {
+      upsertCachedProject({
+        ...previous,
+        start_date: start,
+        target_date: end,
+        updated_at: new Date().toISOString()
+      })
+    }
     setError(null)
     const res = await fetch(`/api/projects/${projectId}`, {
       method: 'PATCH',
@@ -550,29 +640,33 @@ export function ProjectManager({
       body: JSON.stringify({ start_date: start, target_date: end })
     })
     if (!res.ok) {
+      if (previous) upsertCachedProject(previous)
       const body = await res.json().catch(() => ({}))
       const message = body.error ?? `Request failed (${res.status})`
       setError(message)
       throw new Error(message)
     }
-    await onRefresh?.()
+    void onRefresh?.()
   }
 
   async function removeProject(project: CompassProjectWithStats) {
+    if (isPendingProjectId(project.id)) {
+      removeCachedProject(project.id)
+      return
+    }
     if (!confirm(`Delete project “${project.name}”?`)) return
-    setSaving(true)
     setError(null)
+    removeCachedProject(project.id)
     try {
       const res = await fetch(`/api/projects/${project.id}`, { method: 'DELETE' })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
-      await onRefresh?.()
+      void onRefresh?.()
     } catch (err) {
+      upsertCachedProject(project)
       setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -1062,12 +1156,12 @@ export function ProjectManager({
                           className="flex flex-col gap-3 px-4 py-5 transition hover:bg-stone-50/80 lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.6fr)_minmax(0,0.5fr)_auto] lg:items-center"
                         >
                           <div className="min-w-0">
-                            <Link
-                              href={`/projects/${project.id}`}
+                            <ProjectTitleLink
+                              projectId={project.id}
                               className="block truncate text-sm font-medium text-neutral-900 hover:text-sf-orange-dark"
                             >
                               {project.name}
-                            </Link>
+                            </ProjectTitleLink>
                             <p className="mt-0.5 truncate text-xs text-neutral-500">
                               {(project.client_name ||
                                 (project.client_id ? clientById[project.client_id]?.name : null)) && (
@@ -1109,16 +1203,22 @@ export function ProjectManager({
                             </span>
                           </div>
                           <div className="flex justify-start gap-2 lg:justify-end">
-                            <Link
-                              href={`/projects/${project.id}`}
-                              className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600"
-                            >
-                              Open
-                            </Link>
+                            {isPendingProjectId(project.id) ? (
+                              <span className="rounded border border-neutral-200 px-2 py-0.5 text-xs text-neutral-400">
+                                Saving…
+                              </span>
+                            ) : (
+                              <Link
+                                href={`/projects/${project.id}`}
+                                className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600"
+                              >
+                                Open
+                              </Link>
+                            )}
                             <button
                               type="button"
                               onClick={() => removeProject(project)}
-                              disabled={saving}
+                              disabled={saving || isPendingProjectId(project.id)}
                               className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-red-600"
                             >
                               Delete
@@ -1212,12 +1312,12 @@ export function ProjectManager({
                                   </div>
                                 </div>
 
-                                <Link
-                                  href={`/projects/${project.id}`}
+                                <ProjectTitleLink
+                                  projectId={project.id}
                                   className="block text-[13px] font-medium leading-snug text-neutral-900 hover:text-neutral-700"
                                 >
                                   {project.name}
-                                </Link>
+                                </ProjectTitleLink>
 
                                 {(project.summary || clientLabel) && (
                                   <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-500">
@@ -1244,13 +1344,17 @@ export function ProjectManager({
 
                                 {menuOpen ? (
                                   <div className="absolute right-2 top-8 z-30 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 text-[13px] shadow-lg">
-                                    <Link
-                                      href={`/projects/${project.id}`}
-                                      className="block px-3 py-1.5 text-neutral-700 hover:bg-neutral-50"
-                                      onClick={() => setCardMenuId(null)}
-                                    >
-                                      Open project
-                                    </Link>
+                                    {isPendingProjectId(project.id) ? (
+                                      <span className="block px-3 py-1.5 text-neutral-400">Saving…</span>
+                                    ) : (
+                                      <Link
+                                        href={`/projects/${project.id}`}
+                                        className="block px-3 py-1.5 text-neutral-700 hover:bg-neutral-50"
+                                        onClick={() => setCardMenuId(null)}
+                                      >
+                                        Open project
+                                      </Link>
+                                    )}
                                     <div className="my-1 border-t border-neutral-100" />
                                     <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                                       Move to
@@ -1259,7 +1363,11 @@ export function ProjectManager({
                                       <button
                                         key={value}
                                         type="button"
-                                        disabled={saving || normalizeProjectStatus(project.status) === value}
+                                        disabled={
+                                          saving ||
+                                          isPendingProjectId(project.id) ||
+                                          normalizeProjectStatus(project.status) === value
+                                        }
                                         className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
                                         onClick={() => {
                                           setCardMenuId(null)
