@@ -26,7 +26,7 @@ import {
   type InboxTriageRow,
   type TriageLookup
 } from '@/lib/inbox-triage'
-import { fetchInstantlyUnreadCount, getInstantlyApiKey } from '@/lib/instantly'
+import { fetchInstantlyUnreadCount, resolveInstantlyApiKey } from '@/lib/instantly'
 import type { CompassTask, LeadContact } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -249,7 +249,7 @@ export async function GET(request: NextRequest) {
     const { supabase } = await requirePortalAccess({ operator: true })
 
     // Instantly Unibox unread runs alongside DB work (was a serial waterfall).
-    const instantlyKey = getInstantlyApiKey()
+    const instantlyKey = await resolveInstantlyApiKey(supabase)
     const [all, instantlyUnread] = await Promise.all([
       loadAllChannelItems(supabase),
       instantlyKey

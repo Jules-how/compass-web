@@ -1,9 +1,9 @@
 import { requirePortalAccess } from '@/lib/portal-access'
 import { portalAccessResponse, portalJson, portalJsonCached } from '@/lib/portal-http'
 import {
-  getInstantlyApiKey,
   InstantlyApiError,
-  loadColdEmailGlanceFromInstantly
+  loadColdEmailGlanceFromInstantly,
+  resolveInstantlyApiKey
 } from '@/lib/instantly'
 import { HOME_COLD_EMAIL_DEMO } from '@/lib/home-demo-data'
 
@@ -11,19 +11,20 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/instantly/cold-email — Home cold-email glance from Instantly.ai.
- * Requires operator portal access. Returns live metrics when INSTANTLY_API_KEY
- * is set; otherwise falls back to demo data with `source: "demo"`.
+ * Requires operator portal access. Returns live metrics when an Instantly API
+ * key is available via `INSTANTLY_API_KEY` or `compass_settings`; otherwise
+ * falls back to demo data with `source: "demo"`.
  */
 export async function GET() {
   try {
-    await requirePortalAccess({ operator: true })
+    const { supabase } = await requirePortalAccess({ operator: true })
 
-    const apiKey = getInstantlyApiKey()
+    const apiKey = await resolveInstantlyApiKey(supabase)
     if (!apiKey) {
       return portalJsonCached({
         ...HOME_COLD_EMAIL_DEMO,
         source: 'demo' as const,
-        warning: 'INSTANTLY_API_KEY is not configured'
+        warning: 'Instantly API key is not configured'
       })
     }
 

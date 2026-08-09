@@ -1,8 +1,13 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
 import type { ColdEmailGlance } from '@/lib/home-demo-data'
 
 const INSTANTLY_API_BASE = 'https://api.instantly.ai/api/v2'
 const DEFAULT_TIMEZONE = 'Australia/Melbourne'
 const HOME_CAMPAIGN_LIMIT = 5
+
+/** Stored in `compass_settings` when `INSTANTLY_API_KEY` env is unset. */
+export const INSTANTLY_API_KEY_SETTING_ID = 'integrations.instantly.api_key'
 
 /** Instantly campaign status codes (API v2). */
 export const INSTANTLY_CAMPAIGN_STATUS = {
@@ -90,6 +95,29 @@ export class InstantlyApiError extends Error {
 export function getInstantlyApiKey(): string | null {
   const key = process.env.INSTANTLY_API_KEY?.trim()
   return key || null
+}
+
+/**
+ * Resolve Instantly API key: env wins, then operator `compass_settings` secret.
+ * Prefer this over `getInstantlyApiKey` on server routes that already have a
+ * Supabase client so Home works without a Vercel env var.
+ */
+export async function resolveInstantlyApiKey(
+  supabase?: SupabaseClient | null
+): Promise<string | null> {
+  const fromEnv = getInstantlyApiKey()
+  if (fromEnv) return fromEnv
+  if (!supabase) return null
+
+  const { data, error } = await supabase
+    .from('compass_settings')
+    .select('value')
+    .eq('id', INSTANTLY_API_KEY_SETTING_ID)
+    .maybeSingle()
+
+  if (error || !data?.value) return null
+  const value = String(data.value).trim()
+  return value || null
 }
 
 export function getInstantlyTimezone(): string {
@@ -613,9 +641,10 @@ export function clearColdEmailGlanceCache() {
 }
 
 export async function loadColdEmailGlanceFromInstantly(
-  apiKey = getInstantlyApiKey()
+  apiKey?: string | null
 ): Promise<ColdEmailGlance> {
-  if (!apiKey) {
+  const resolved = (apiKey ?? getInstantlyApiKey())?.trim() || null
+  if (!resolved) {
     throw new InstantlyApiError('INSTANTLY_API_KEY is not configured', 503)
   }
 
@@ -640,10 +669,10 @@ export async function loadColdEmailGlanceFromInstantly(
 
   const promise = (async () => {
     const [todayOverview, rolling30d, unread, campaigns] = await Promise.all([
-      fetchInstantlyAnalyticsOverview(apiKey, today, today),
-      fetchInstantlyAnalyticsOverview(apiKey, window30.start, window30.end),
-      fetchInstantlyUnreadCount(apiKey),
-      fetchInstantlyCampaignAnalytics(apiKey)
+      fetchInstantlyAnalyticsOverview(resolved, today, today),
+      fetchInstantlyAnalyticsOverview(resolved, window30.start, window30.end),
+      fetchInstantlyUnreadCount(resolved),
+      fetchInstantlyCampaignAnalytics(resolved)
     ])
 
     return buildColdEmailGlance({

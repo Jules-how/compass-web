@@ -49,6 +49,7 @@ type AdsGlancePayload = HomeAdGlance & {
   source?: 'live' | 'demo'
   syncedAt?: string | null
   connectedAccounts?: number
+  accountsNeedingToken?: number
   migrationRequired?: boolean
 }
 
@@ -204,6 +205,8 @@ export function HomeDashboard() {
   const adsGlance = useCachedJson<AdsGlancePayload>('/api/ads/glance', '/api/ads/glance')
   const ads = adsGlance.data ?? HOME_AD_DEMO
   const adsSource = adsGlance.data?.source ?? 'demo'
+  const adsConnected = adsGlance.data?.connectedAccounts ?? 0
+  const adsNeedToken = (adsGlance.data?.accountsNeedingToken ?? 0) > 0
   const coldEmail = useCachedJson<ColdEmailPayload>(
     '/api/instantly/cold-email',
     '/api/instantly/cold-email',
@@ -746,6 +749,16 @@ export function HomeDashboard() {
                       hot={ads.creativesNeedingReview > 0}
                     />
                   </div>
+                  {adsSource !== 'live' && adsConnected > 0 ? (
+                    <p className="mb-2 text-[11px] text-red-600">
+                      Connected — awaiting sync (demo figures)
+                    </p>
+                  ) : null}
+                  {adsSource === 'live' && adsNeedToken ? (
+                    <p className="mb-2 text-[11px] text-neutral-500">
+                      Live snapshot — paste a Meta token in Settings to refresh
+                    </p>
+                  ) : null}
                   <ul className="space-y-1">
                     {ads.creatives.slice(0, 2).map((creative) => (
                       <li
