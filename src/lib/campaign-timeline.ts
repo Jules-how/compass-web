@@ -26,18 +26,55 @@ export function stepTimelineZoom(current: TimelineZoom, direction: 1 | -1): Time
   return direction > 0 ? zoomIn(current) : zoomOut(current)
 }
 
+/** Pixels per day at each named zoom level. */
+export const PX_PER_DAY: Record<TimelineZoom, number> = {
+  year: 2.4,
+  quarter: 9,
+  month: 22,
+  week: 56
+}
+
+export const MIN_PX_PER_DAY = PX_PER_DAY.year
+export const MAX_PX_PER_DAY = PX_PER_DAY.week
+
 /** Pixels per day at each zoom. */
 export function pxPerDay(zoom: TimelineZoom): number {
-  switch (zoom) {
-    case 'year':
-      return 2.4
-    case 'quarter':
-      return 9
-    case 'month':
-      return 22
-    case 'week':
-      return 56
+  return PX_PER_DAY[zoom]
+}
+
+/** Keep continuous density inside the Year↔Week envelope. */
+export function clampPxPerDay(value: number): number {
+  if (!Number.isFinite(value)) return MIN_PX_PER_DAY
+  return Math.min(MAX_PX_PER_DAY, Math.max(MIN_PX_PER_DAY, value))
+}
+
+/**
+ * Map a continuous density to the nearest named zoom for chrome (dropdown, headers).
+ * Midpoints sit halfway between adjacent levels on a log scale so transitions feel even.
+ */
+export function zoomFromPxPerDay(density: number): TimelineZoom {
+  const px = clampPxPerDay(density)
+  const logPx = Math.log(px)
+  let best: TimelineZoom = 'year'
+  let bestDist = Infinity
+  for (const level of ZOOM_LEVELS) {
+    const dist = Math.abs(logPx - Math.log(PX_PER_DAY[level]))
+    if (dist < bestDist) {
+      best = level
+      bestDist = dist
+    }
   }
+  return best
+}
+
+/**
+ * Apply a wheel/pinch delta to density. Exponential scaling keeps Year→Week
+ * perceptually even; returns the clamped next density.
+ */
+export function scalePxPerDay(current: number, deltaY: number): number {
+  // Trackpads emit many small deltas; mouse wheels emit larger steps.
+  const factor = Math.exp(-deltaY * 0.0018)
+  return clampPxPerDay(current * factor)
 }
 
 export function startOfDay(date: Date): Date {
@@ -96,12 +133,20 @@ export interface TimelineRange {
   end: Date
   today: Date
   widthPx: number
+  /** Continuous pixels-per-day used for layout (may sit between named zooms). */
+  pxPerDay: number
 }
+
+/** Stable day padding so zooming does not jump the coordinate origin. */
+const RANGE_PAD_BEFORE = 120
+const RANGE_PAD_AFTER = 240
 
 export function buildTimelineRange(
   dates: Array<string | null | undefined>,
   zoom: TimelineZoom,
-  today = startOfDay(new Date())
+  today = startOfDay(new Date()),
+  /** Optional continuous density; defaults to the named zoom's px/day. */
+  density?: number
 ): TimelineRange {
   const parsed = dates.map(parseDateOnly).filter((d): d is Date => Boolean(d))
   let min = parsed.length
@@ -111,26 +156,31 @@ export function buildTimelineRange(
     ? new Date(Math.max(...parsed.map((d) => d.getTime()), today.getTime()))
     : addDays(today, 270)
 
-  const padBefore = zoom === 'year' ? 150 : zoom === 'quarter' ? 60 : zoom === 'month' ? 28 : 10
-  const padAfter = zoom === 'year' ? 300 : zoom === 'quarter' ? 120 : zoom === 'month' ? 60 : 21
-  min = addDays(min, -padBefore)
-  max = addDays(max, padAfter)
+  min = addDays(min, -RANGE_PAD_BEFORE)
+  max = addDays(max, RANGE_PAD_AFTER)
 
+  const ppd = clampPxPerDay(density ?? pxPerDay(zoom))
   const days = Math.max(45, diffDays(max, min) + 1)
   return {
     start: min,
     end: max,
     today,
-    widthPx: Math.ceil(days * pxPerDay(zoom))
+    pxPerDay: ppd,
+    widthPx: Math.ceil(days * ppd)
   }
 }
 
-export function dateToX(date: Date, range: TimelineRange, zoom: TimelineZoom): number {
-  return diffDays(date, range.start) * pxPerDay(zoom)
+function densityOf(range: TimelineRange, zoom?: TimelineZoom): number {
+  if (range.pxPerDay > 0) return range.pxPerDay
+  return zoom ? pxPerDay(zoom) : MIN_PX_PER_DAY
 }
 
-export function xToDate(x: number, range: TimelineRange, zoom: TimelineZoom): Date {
-  const days = Math.round(x / pxPerDay(zoom))
+export function dateToX(date: Date, range: TimelineRange, zoom?: TimelineZoom): number {
+  return diffDays(date, range.start) * densityOf(range, zoom)
+}
+
+export function xToDate(x: number, range: TimelineRange, zoom?: TimelineZoom): Date {
+  const days = Math.round(x / densityOf(range, zoom))
   return addDays(range.start, days)
 }
 
@@ -214,14 +264,14 @@ export function buildHeaderModel(
       const day = new Date(dayCursor)
       const next = addDays(day, 1)
       const x = dateToX(day, range, zoom)
-      const width = pxPerDay(zoom)
+      const width = densityOf(range, zoom)
       const isWeekend = day.getDay() === 0 || day.getDay() === 6
       if (zoom === 'week' || day.getDay() === 1 || day.getDate() === 1 || secondary.length === 0) {
         secondary.push({
           key: `d-${toDateOnly(day)}`,
           label: String(day.getDate()),
           x,
-          width: zoom === 'week' ? width : width * (zoom === 'month' ? 1 : 1),
+          width: zoom === 'week' ? width : width,
           isWeekend
         })
       }

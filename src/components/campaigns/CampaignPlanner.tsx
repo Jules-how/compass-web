@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -40,6 +41,7 @@ import {
   pxPerDay,
   toDateOnly,
   xToDate,
+  zoomFromPxPerDay,
   type TimelineZoom
 } from '@/lib/campaign-timeline'
 
@@ -69,11 +71,14 @@ type DisplayProps = {
 }
 
 type RowMenuKind = 'actions' | 'status' | 'priority' | 'health'
+/** `left` = side pop-out beside the trigger (keeps the timeline bar clear). */
+type RowMenuPlacement = 'below' | 'left'
 type RowMenuState = {
   campaignId: string
   kind: RowMenuKind
   x: number
   y: number
+  placement: RowMenuPlacement
 }
 
 const DEFAULT_DISPLAY: DisplayProps = {
@@ -91,7 +96,9 @@ export function CampaignPlanner() {
   const router = useRouter()
   const [campaigns, setCampaigns] = useState<CompassCampaign[]>([])
   const [ready, setReady] = useState(false)
-  const [zoom, setZoom] = useState<TimelineZoom>('year')
+  /** Continuous px/day — wheel zooms smoothly; named zoom is derived for chrome. */
+  const [density, setDensity] = useState(() => pxPerDay('year'))
+  const zoom = zoomFromPxPerDay(density)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [sidecarOpen, setSidecarOpen] = useState(true)
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -151,15 +158,18 @@ export function CampaignPlanner() {
         draftDates[c.id]?.start ?? c.start_date,
         draftDates[c.id]?.end ?? c.end_date
       ]),
-      zoom
+      zoom,
+      undefined,
+      density
     )
-  }, [ordered, draftDates, zoom])
+  }, [ordered, draftDates, zoom, density])
 
   const header = useMemo(
     () => buildHeaderModel(range, zoom, display.showWeekNumbers),
     [range, zoom, display.showWeekNumbers]
   )
-  const todayX = dateToX(range.today, range, zoom)
+  const todayX = dateToX(range.today, range)
+  const dayWidth = range.pxPerDay
   const gridHeight = Math.max(ordered.length, EMPTY_ROWS) * ROW_HEIGHT
   const listWidth = display.showList ? LABEL_WIDTH : 0
 
@@ -180,17 +190,22 @@ export function CampaignPlanner() {
 
   useTimelineWheelZoom({
     scrollRef,
-    zoom,
+    density,
     range,
     labelWidth: listWidth,
     // Re-bind when the timeline scroller mounts (view switches) or first paints.
     enabled: view === 'timeline' && scrollNode !== null,
-    onZoomChange: setZoom,
+    onDensityChange: setDensity,
     onBeforeZoom: () => {
       // Keep the date under the cursor; skip the "center on today" path.
       didCenterToday.current = true
     }
   })
+
+  const setZoomLevel = useCallback((next: TimelineZoom) => {
+    didCenterToday.current = false
+    setDensity(pxPerDay(next))
+  }, [])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -204,13 +219,12 @@ export function CampaignPlanner() {
         setDisplayOpen(false)
       }
       if (key === 'y' || key === 'q' || key === 'm' || key === 'w') {
-        didCenterToday.current = false
-        setZoom(key === 'y' ? 'year' : key === 'q' ? 'quarter' : key === 'm' ? 'month' : 'week')
+        setZoomLevel(key === 'y' ? 'year' : key === 'q' ? 'quarter' : key === 'm' ? 'month' : 'week')
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [setZoomLevel])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -222,7 +236,12 @@ export function CampaignPlanner() {
     return () => el.removeEventListener('scroll', closeMenus)
   }, [ready, view])
 
-  function openRowMenu(campaignId: string, kind: RowMenuKind, anchor: HTMLElement) {
+  function openRowMenu(
+    campaignId: string,
+    kind: RowMenuKind,
+    anchor: HTMLElement,
+    placement: RowMenuPlacement = 'left'
+  ) {
     const rect = anchor.getBoundingClientRect()
     setFilterOpen(false)
     setDisplayOpen(false)
@@ -232,8 +251,10 @@ export function CampaignPlanner() {
         : {
             campaignId,
             kind,
-            x: Math.min(rect.left, window.innerWidth - 220),
-            y: rect.bottom + 4
+            // Anchor at the trigger; FixedMenu places the panel beside or below.
+            x: placement === 'left' ? rect.left : Math.min(rect.left, window.innerWidth - 220),
+            y: placement === 'left' ? rect.top : rect.bottom + 4,
+            placement
           }
     )
   }
@@ -300,7 +321,7 @@ export function CampaignPlanner() {
 
   function onPointerMove(e: ReactPointerEvent) {
     if (!drag) return
-    const deltaDays = Math.round((e.clientX - drag.originX) / pxPerDay(zoom))
+    const deltaDays = Math.round((e.clientX - drag.originX) / dayWidth)
     const startDate = parseDateOnly(drag.start)
     const endDate = parseDateOnly(drag.end)
     if (!startDate || !endDate) return
@@ -341,7 +362,7 @@ export function CampaignPlanner() {
       return
     }
     setHoverX(x)
-    setHoverDate(xToDate(x, range, zoom))
+    setHoverDate(xToDate(x, range))
   }
 
   const selected = selectedId && sidecarOpen ? selectedId : null
@@ -406,8 +427,7 @@ export function CampaignPlanner() {
                 <select
                   value={zoom}
                   onChange={(e) => {
-                    didCenterToday.current = false
-                    setZoom(e.target.value as TimelineZoom)
+                    setZoomLevel(e.target.value as TimelineZoom)
                   }}
                   className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
                 >
@@ -806,7 +826,7 @@ export function CampaignPlanner() {
                     ))}
                     <div
                       className="pointer-events-none absolute bottom-0 top-0 z-10 bg-[#5e6ad2]/15"
-                      style={{ left: todayX, width: Math.max(pxPerDay(zoom), 2) }}
+                      style={{ left: todayX, width: Math.max(dayWidth, 2) }}
                     >
                       <div className="absolute inset-y-0 left-0 w-px bg-[#5e6ad2]" />
                       <span className="absolute left-1/2 top-1 z-20 -translate-x-1/2 whitespace-nowrap rounded-[4px] bg-[#5e6ad2] px-1.5 py-[2px] text-[10px] font-semibold text-white">
@@ -856,7 +876,7 @@ export function CampaignPlanner() {
                     ))}
                     <div
                       className="absolute bottom-0 top-0 bg-[#5e6ad2]/10"
-                      style={{ left: todayX, width: Math.max(pxPerDay(zoom), 2) }}
+                      style={{ left: todayX, width: Math.max(dayWidth, 2) }}
                     >
                       <div className="absolute inset-y-0 left-0 w-px bg-[#5e6ad2]/50" />
                     </div>
@@ -871,8 +891,8 @@ export function CampaignPlanner() {
                     let left = 0
                     let width = 40
                     if (start && end) {
-                      left = dateToX(start, range, zoom)
-                      width = Math.max(28, dateToX(end, range, zoom) + pxPerDay(zoom) - left)
+                      left = dateToX(start, range)
+                      width = Math.max(28, dateToX(end, range) + dayWidth - left)
                     }
 
                     return (
@@ -889,7 +909,8 @@ export function CampaignPlanner() {
                             campaignId: campaign.id,
                             kind: 'actions',
                             x: Math.min(e.clientX, window.innerWidth - 220),
-                            y: e.clientY
+                            y: e.clientY,
+                            placement: 'below'
                           })
                         }}
                       >
@@ -1107,6 +1128,7 @@ export function CampaignPlanner() {
           key={`${rowMenu.campaignId}-${rowMenu.kind}`}
           x={rowMenu.x}
           y={rowMenu.y}
+          placement={rowMenu.placement}
           onClose={() => setRowMenu(null)}
         >
           {rowMenu.kind === 'actions' ? (
@@ -1354,24 +1376,38 @@ function FixedMenu({
   children,
   x,
   y,
+  placement = 'below',
   onClose
 }: {
   children: ReactNode
   x: number
   y: number
+  placement?: RowMenuPlacement
   onClose: () => void
 }) {
   const menuRef = useRef<HTMLDivElement>(null)
-  const [pos, setPos] = useState({ left: x, top: y })
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = menuRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
-    const left = Math.max(8, Math.min(x, window.innerWidth - rect.width - 8))
-    const top = Math.max(8, Math.min(y, window.innerHeight - rect.height - 8))
+    let left: number
+    let top: number
+    if (placement === 'left') {
+      // Side pop-out: sit just left of the three-dot trigger so the timeline bar stays clear.
+      left = Math.max(8, x - rect.width - 6)
+      top = Math.max(8, Math.min(y, window.innerHeight - rect.height - 8))
+      // If there's no room on the left (narrow viewport), fall back to the right of the point.
+      if (left <= 8 && x + 6 + rect.width < window.innerWidth - 8) {
+        left = Math.min(x + 6, window.innerWidth - rect.width - 8)
+      }
+    } else {
+      left = Math.max(8, Math.min(x, window.innerWidth - rect.width - 8))
+      top = Math.max(8, Math.min(y, window.innerHeight - rect.height - 8))
+    }
     setPos({ left, top })
-  }, [x, y])
+  }, [x, y, placement])
 
   return (
     <>
@@ -1385,7 +1421,11 @@ function FixedMenu({
         ref={menuRef}
         role="menu"
         className="fixed z-[70] w-52 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 text-sm shadow-xl"
-        style={{ left: pos.left, top: pos.top }}
+        style={{
+          left: pos?.left ?? x,
+          top: pos?.top ?? y,
+          visibility: pos ? 'visible' : 'hidden'
+        }}
       >
         {children}
       </div>
