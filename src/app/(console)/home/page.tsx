@@ -1,10 +1,9 @@
 import { OperatorShell } from '@/components/OperatorShell'
-import { HomeDashboard } from '@/components/home/HomeDashboard'
 
+/**
+ * Home surface is owned by ConsoleHomeInboxKeepAlive inside the persistent
+ * console layout so Home ↔ Inbox switches keep the dashboard mounted.
+ */
 export default function HomePage() {
-  return (
-    <OperatorShell flush>
-      <HomeDashboard />
-    </OperatorShell>
-  )
+  return <OperatorShell width="full">{null}</OperatorShell>
 }

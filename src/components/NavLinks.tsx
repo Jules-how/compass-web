@@ -16,6 +16,7 @@ import {
   SettingsIcon,
   TasksIcon
 } from '@/components/nav-icons'
+import { useConsoleNav } from '@/components/ConsoleNav'
 import { SidebarLabel, SidebarLink } from '@/components/ui/sidebar'
 import { prefetchJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
@@ -160,6 +161,7 @@ function NavItemLink({
   active: NavKey
   inboxCount?: number | null
 }) {
+  const consoleNav = useConsoleNav()
   const isActive = active === item.key
   const Icon = item.icon
   const showBadge =
@@ -177,6 +179,14 @@ function NavItemLink({
       active={isActive}
       onMouseEnter={() => prefetchApi(item.api)}
       onFocus={() => prefetchApi(item.api)}
+      onClick={(event) => {
+        if (!consoleNav) return
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+        if (event.button !== 0) return
+        event.preventDefault()
+        prefetchApi(item.api)
+        consoleNav.navigate(item.href)
+      }}
       badge={
         showBadge ? (
           <span className="min-w-[1.25rem] rounded-md bg-[#e85d2a] px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white">

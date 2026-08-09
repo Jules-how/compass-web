@@ -82,7 +82,8 @@ test('brain dump module exports a stable reorganize contract', () => {
   assert.match(read('src/lib/brain-dump-ai.ts'), /Output\.object/)
   assert.match(read('src/app/api/brain-dump/reorganize/route.ts'), /reorganizeBrainDumpSmart/)
   assert.match(read('src/components/home/HomeDashboard.tsx'), /\/api\/brain-dump\/reorganize/)
-  assert.match(read('src/app/(console)/home/page.tsx'), /HomeDashboard/)
+  assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /HomeDashboard/)
+  assert.match(read('src/app/(console)/home/page.tsx'), /OperatorShell/)
 })
 
 test('reorganizeBrainDump turns messy lines into prioritized suggestions', () => {

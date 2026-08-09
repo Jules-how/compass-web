@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
   // Keep the Next.js badge off the sidebar Sign out control.
   devIndicators: {
     position: 'bottom-right'
+  },
+  // Next 15 defaults dynamic staleTime to 0, so every Home ↔ Inbox click
+  // re-fetches RSC (middleware auth + layout). Reuse the client router cache
+  // briefly so back-and-forth feels instant; keep-alive covers the panels.
+  experimental: {
+    staleTimes: {
+      dynamic: 30,
+      static: 180
+    }
   }
 }
 

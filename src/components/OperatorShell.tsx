@@ -5,12 +5,20 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { CompassMark } from '@/components/nav-icons'
+import { ConsoleHomeInboxKeepAlive } from '@/components/ConsoleHomeInboxKeepAlive'
+import {
+  ConsoleNavProvider,
+  isHomeOrInboxPath,
+  useConsoleNav,
+  useConsoleViewPath
+} from '@/components/ConsoleNav'
 import { NavLinks, navKeyFromPathname, type NavKey, OPERATOR_PREFETCH } from '@/components/NavLinks'
 import SignOutButton from '@/components/SignOutButton'
 import { Sidebar, SidebarBody } from '@/components/ui/sidebar'
 import { INBOX_CACHE_KEY, type InboxPayload } from '@/lib/inbox-ui'
 import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
 import { loadQueryCache } from '@/lib/query-cache'
+import { prefetchJson } from '@/lib/use-cached-json'
 
 const WIDTH = {
   '3xl': 'max-w-3xl',
@@ -22,9 +30,17 @@ const WIDTH = {
 const ConsoleChromeContext = createContext(false)
 
 function Brand({ href = '/home' }: { href?: string }) {
+  const consoleNav = useConsoleNav()
   return (
     <Link
       href={href}
+      onClick={(event) => {
+        if (!consoleNav) return
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+        if (event.button !== 0) return
+        event.preventDefault()
+        consoleNav.navigate(href)
+      }}
       className="group flex items-center gap-2.5 rounded-xl px-1.5 py-1 transition hover:bg-white/60"
     >
       <CompassMark />
@@ -63,18 +79,42 @@ function ConsoleSidebarFrame({
   )
 }
 
-/** Persistent console chrome — sidebar stays mounted across operator routes. */
-export function OperatorConsoleLayout({
+function ConsoleMain({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
+  const viewPath = useConsoleViewPath()
+  const keepAliveRoute = isHomeOrInboxPath(viewPath)
+  // Use the real pathname for page children so we don't flash a stale RSC
+  // tree while an optimistic Home/Inbox target is showing.
+  const showChildren = !isHomeOrInboxPath(pathname) && !keepAliveRoute
+
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col md:overflow-y-auto">
+      {/*
+        min-h-full + flex-1 lets flush pages (Inbox, Campaign Planner) fill the
+        viewport like Linear, while still growing with tall non-flush pages so
+        this column remains the scroll container.
+      */}
+      <div className="flex min-h-full flex-1 flex-col">
+        <ConsoleHomeInboxKeepAlive />
+        {showChildren ? (
+          <div className="flex min-h-full flex-1 flex-col animate-fade-up">{children}</div>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function OperatorConsoleLayoutInner({
   role,
   children
 }: {
   role: PortalRole
   children: ReactNode
 }) {
-  const pathname = usePathname()
   const router = useRouter()
+  const viewPath = useConsoleViewPath()
   const operator = isOperatorRole(role)
-  const active = useMemo(() => navKeyFromPathname(pathname), [pathname])
+  const active = useMemo(() => navKeyFromPathname(viewPath), [viewPath])
   const [inboxCount, setInboxCount] = useState<number | null>(null)
   // Mobile drawer open state only — desktop sidebar stays permanently expanded.
   const [open, setOpen] = useState(false)
@@ -86,9 +126,11 @@ export function OperatorConsoleLayout({
     // Prefetch RSC routes only. Eager API prefetch of Instantly / clients /
     // projects / campaigns on every console mount was a thundering herd —
     // hover/focus on NavLinks still warms individual APIs on demand.
+    // Home plate needs /api/tasks; warm that with inbox so Home ↔ Inbox feels ready.
     for (const item of OPERATOR_PREFETCH) {
       router.prefetch(item.href)
     }
+    prefetchJson('/api/tasks', '/api/tasks')
 
     // Warm the shared inbox cache so opening Inbox (and tab switches) stay snappy.
     void loadQueryCache<InboxPayload>(
@@ -124,16 +166,24 @@ export function OperatorConsoleLayout({
         <Sidebar open={open} setOpen={setOpen} animate={false}>
           <ConsoleSidebarFrame role={role} active={active} inboxCount={inboxCount} />
         </Sidebar>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col md:overflow-y-auto">
-          {/*
-            min-h-full + flex-1 lets flush pages (Inbox, Campaign Planner) fill the
-            viewport like Linear, while still growing with tall non-flush pages so
-            this column remains the scroll container.
-          */}
-          <div className="flex min-h-full flex-1 flex-col animate-fade-up">{children}</div>
-        </div>
+        <ConsoleMain>{children}</ConsoleMain>
       </div>
     </ConsoleChromeContext.Provider>
+  )
+}
+
+/** Persistent console chrome — sidebar stays mounted across operator routes. */
+export function OperatorConsoleLayout({
+  role,
+  children
+}: {
+  role: PortalRole
+  children: ReactNode
+}) {
+  return (
+    <ConsoleNavProvider>
+      <OperatorConsoleLayoutInner role={role}>{children}</OperatorConsoleLayoutInner>
+    </ConsoleNavProvider>
   )
 }
 

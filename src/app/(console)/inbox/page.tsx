@@ -1,20 +1,9 @@
-import { Suspense } from 'react'
 import { OperatorShell } from '@/components/OperatorShell'
-import { InboxPanel } from '@/components/InboxPanel'
-import { LoadingBlock } from '@/components/LoadingBlock'
 
+/**
+ * Inbox surface is owned by ConsoleHomeInboxKeepAlive inside the persistent
+ * console layout so Home ↔ Inbox switches keep the panel mounted.
+ */
 export default function InboxPage() {
-  return (
-    <OperatorShell flush>
-      <Suspense
-        fallback={
-          <div className="flex flex-1 items-center justify-center p-6">
-            <LoadingBlock label="Loading inbox…" />
-          </div>
-        }
-      >
-        <InboxPanel />
-      </Suspense>
-    </OperatorShell>
-  )
+  return <OperatorShell flush>{null}</OperatorShell>
 }

@@ -51,7 +51,14 @@ test('operator pages still gate access and login supports open-operator fallback
     'src/app/leads/page.tsx'
   ]) {
     // Console pages inherit the shared layout gate; leads stays page-gated.
-    if (page.includes('(console)') && !page.includes('leads')) {
+    // Home/Inbox bodies live in ConsoleHomeInboxKeepAlive for instant tab switches.
+    if (page.includes('(console)/home') || page.includes('(console)/inbox')) {
+      assert.match(read(page), /OperatorShell/)
+      assert.match(
+        read('src/components/ConsoleHomeInboxKeepAlive.tsx'),
+        page.includes('/home') ? /HomeDashboard/ : /InboxPanel/
+      )
+    } else if (page.includes('(console)') && !page.includes('leads')) {
       assert.match(
         read(page),
         /OperatorShell|TasksPanel|ProjectsPanel|FunctionsPanel|InboxPanel|ProjectDetailPanel|HomeDashboard/
@@ -134,11 +141,20 @@ test('operator console uses persistent layout with animated sidebar and sales ov
   assert.match(layout, /OperatorConsoleLayout/)
   assert.match(shell, /OperatorConsoleLayout/)
   assert.match(shell, /router\.prefetch/)
-  // Route prefetch only — eager API prefetchJson on mount was a thundering herd.
-  assert.doesNotMatch(shell, /prefetchJson/)
+  // Route prefetch + a single Home plate warm (/api/tasks). Instantly / clients /
+  // campaigns stay hover-only to avoid the old mount-time thundering herd.
+  assert.match(shell, /prefetchJson\('\/api\/tasks'/)
+  assert.doesNotMatch(shell, /prefetchJson\('\/api\/instantly/)
+  assert.doesNotMatch(shell, /prefetchJson\('\/api\/clients/)
   assert.match(navLinks, /prefetchJson/)
+  assert.match(shell, /ConsoleHomeInboxKeepAlive/)
+  assert.match(shell, /ConsoleNavProvider/)
   assert.match(shell, /md:h-\[100dvh\]/)
   assert.match(shell, /md:overflow-y-auto/)
+  assert.match(read('src/components/ConsoleNav.tsx'), /isHomeOrInboxPath/)
+  assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /seenHome|seenInbox/)
+  assert.match(read('next.config.ts'), /staleTimes/)
+  assert.match(read('src/lib/portal-access.ts'), /MEMBERSHIP_CACHE_TTL_MS/)
   assert.match(sidebar, /framer-motion|motion\./)
   assert.match(sidebar, /sticky top-0/)
   assert.match(sales, /SalesOverview/)
