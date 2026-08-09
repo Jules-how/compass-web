@@ -66,6 +66,18 @@ test('clients migration alters legacy compass_clients instead of only CREATE IF 
   assert.match(migration, /legacy desktop sync/i)
 })
 
+test('client list columns split core CRM from optional comms summary', () => {
+  const cols = read('src/lib/list-columns.ts')
+  const data = read('src/lib/client-data.ts')
+  const listRoute = read('src/app/api/clients/route.ts')
+  assert.match(cols, /CLIENT_LIST_COLUMNS_CORE/)
+  assert.match(cols, /CLIENT_COMMS_SUMMARY_COLUMNS/)
+  assert.match(cols, /comms_summary,comms_summary_at,comms_summary_source/)
+  assert.match(data, /selectClientsWithCommsFallback/)
+  assert.match(data, /isMissingDbObjectError/)
+  assert.match(listRoute, /selectClientsWithCommsFallback/)
+})
+
 test('pickNextAction prefers urgent open issues then recent', () => {
   const next = pickNextAction([
     {

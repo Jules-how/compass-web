@@ -7,13 +7,14 @@ import {
   readBoundedJson,
   requireSameOrigin
 } from '@/lib/portal-http'
-import { CLIENT_ISSUE_COLUMNS, CLIENT_LIST_COLUMNS } from '@/lib/list-columns'
+import { CLIENT_ISSUE_COLUMNS } from '@/lib/list-columns'
 import {
   normalizeClientRow,
   normalizeTags,
   nowIso,
   pickNextAction,
-  recordClientActivity
+  recordClientActivity,
+  selectClientsWithCommsFallback
 } from '@/lib/client-data'
 import { normalizeClientStatus } from '@/lib/client-pm'
 import type { CompassClient, CompassClientIssue } from '@/lib/types'
@@ -25,14 +26,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
-    let query = supabase
-      .from('compass_clients')
-      .select(CLIENT_LIST_COLUMNS)
-      .order('name')
-    if (!includeArchived) query = query.is('archived_at', null)
-
     const [clientsRes, issuesRes] = await Promise.all([
-      query,
+      selectClientsWithCommsFallback((columns) => {
+        let query = supabase.from('compass_clients').select(columns).order('name')
+        if (!includeArchived) query = query.is('archived_at', null)
+        return query
+      }),
       supabase
         .from('compass_client_issues')
         .select(CLIENT_ISSUE_COLUMNS)
