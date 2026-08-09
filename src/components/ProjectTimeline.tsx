@@ -375,14 +375,12 @@ export const ProjectTimeline = forwardRef<
       start: toDateOnly(nextStart),
       end: toDateOnly(nextEnd)
     }
-    const next: BarDrag = {
+    barDragRef.current = {
       ...current,
       moved: current.moved || deltaDays !== 0,
       draftStart: ordered.start,
       draftEnd: ordered.end
     }
-    barDragRef.current = next
-    setBarDrag(next)
     setDraftDates((prev) => ({ ...prev, [current.projectId]: ordered }))
 
     const x = Math.max(0, readTimelineX(clientX))
