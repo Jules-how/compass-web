@@ -1,24 +1,8 @@
-/** Demo live / history campaign metrics for the Outbound hub. */
+/** Demo live / history campaign metrics for the Outbound hub (fallback when Instantly is unavailable). */
 
-export type OutboundLiveCampaign = {
-  id: string
-  name: string
-  status: 'live' | 'launching' | 'paused' | 'completed'
-  offer: string
-  offerKey: string
-  copyNotes: string
-  vertical: string
-  location: string
-  leadCount: number
-  sendCount: number
-  remaining: number
-  progress: number
-  replyRate: number
-  positiveReplies: number
-  meetings: number
-  startedAt: string
-  updatedAt: string
-}
+import type { OutboundBoard, OutboundBoardCampaign } from '@/lib/instantly'
+
+export type OutboundLiveCampaign = OutboundBoardCampaign
 
 /** Seeded live + recent campaigns for Outbound overview (richer than Sales overview). */
 export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
@@ -35,7 +19,11 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     sendCount: 1680,
     remaining: 720,
     progress: 70,
+    replyCount: 64,
     replyRate: 3.8,
+    opportunities: 11,
+    bouncedCount: 18,
+    completedCount: 980,
     positiveReplies: 42,
     meetings: 11,
     startedAt: '2026-07-28',
@@ -54,7 +42,11 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     sendCount: 980,
     remaining: 870,
     progress: 53,
+    replyCount: 40,
     replyRate: 4.1,
+    opportunities: 8,
+    bouncedCount: 12,
+    completedCount: 610,
     positiveReplies: 31,
     meetings: 8,
     startedAt: '2026-07-30',
@@ -73,7 +65,11 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     sendCount: 2100,
     remaining: 1100,
     progress: 66,
+    replyCount: 61,
     replyRate: 2.9,
+    opportunities: 9,
+    bouncedCount: 24,
+    completedCount: 1400,
     positiveReplies: 38,
     meetings: 9,
     startedAt: '2026-07-22',
@@ -92,7 +88,11 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     sendCount: 420,
     remaining: 680,
     progress: 38,
+    replyCount: 22,
     replyRate: 5.2,
+    opportunities: 5,
+    bouncedCount: 6,
+    completedCount: 180,
     positiveReplies: 18,
     meetings: 5,
     startedAt: '2026-08-01',
@@ -111,7 +111,11 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     sendCount: 210,
     remaining: 690,
     progress: 23,
+    replyCount: 7,
     replyRate: 3.1,
+    opportunities: 1,
+    bouncedCount: 4,
+    completedCount: 40,
     positiveReplies: 5,
     meetings: 1,
     startedAt: '2026-08-04',
@@ -130,7 +134,11 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     sendCount: 40,
     remaining: 600,
     progress: 6,
+    replyCount: 3,
     replyRate: 7.5,
+    opportunities: 0,
+    bouncedCount: 0,
+    completedCount: 0,
     positiveReplies: 2,
     meetings: 0,
     startedAt: '2026-08-06',
@@ -149,7 +157,11 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     sendCount: 1120,
     remaining: 380,
     progress: 75,
+    replyCount: 38,
     replyRate: 3.4,
+    opportunities: 6,
+    bouncedCount: 9,
+    completedCount: 820,
     positiveReplies: 28,
     meetings: 6,
     startedAt: '2026-07-18',
@@ -168,7 +180,11 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     sendCount: 260,
     remaining: 220,
     progress: 54,
+    replyCount: 12,
     replyRate: 4.6,
+    opportunities: 2,
+    bouncedCount: 3,
+    completedCount: 140,
     positiveReplies: 9,
     meetings: 2,
     startedAt: '2026-07-25',
@@ -187,7 +203,11 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     sendCount: 2000,
     remaining: 0,
     progress: 100,
+    replyCount: 72,
     replyRate: 3.6,
+    opportunities: 14,
+    bouncedCount: 22,
+    completedCount: 2000,
     positiveReplies: 51,
     meetings: 14,
     startedAt: '2026-06-01',
@@ -206,7 +226,11 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     sendCount: 4100,
     remaining: 0,
     progress: 100,
+    replyCount: 111,
     replyRate: 2.7,
+    opportunities: 16,
+    bouncedCount: 40,
+    completedCount: 4100,
     positiveReplies: 74,
     meetings: 16,
     startedAt: '2026-05-04',
@@ -225,7 +249,11 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     sendCount: 1200,
     remaining: 0,
     progress: 100,
+    replyCount: 48,
     replyRate: 4.0,
+    opportunities: 7,
+    bouncedCount: 11,
+    completedCount: 1200,
     positiveReplies: 33,
     meetings: 7,
     startedAt: '2026-04-02',
@@ -244,7 +272,11 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     sendCount: 350,
     remaining: 0,
     progress: 100,
+    replyCount: 21,
     replyRate: 6.1,
+    opportunities: 4,
+    bouncedCount: 2,
+    completedCount: 350,
     positiveReplies: 12,
     meetings: 4,
     startedAt: '2026-03-10',
@@ -261,7 +293,7 @@ export function listActiveOutboundCampaigns(rows = OUTBOUND_LIVE_DEMO): Outbound
     .sort((a, b) => {
       const byStatus = rank(a.status) - rank(b.status)
       if (byStatus !== 0) return byStatus
-      return b.updatedAt.localeCompare(a.updatedAt)
+      return (b.updatedAt || '').localeCompare(a.updatedAt || '')
     })
 }
 
@@ -269,5 +301,15 @@ export function listHistoryOutboundCampaigns(rows = OUTBOUND_LIVE_DEMO): Outboun
   return rows
     .filter((c) => c.status === 'completed')
     .slice()
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
+}
+
+export function demoOutboundBoard(): OutboundBoard {
+  const live = listActiveOutboundCampaigns()
+  const history = listHistoryOutboundCampaigns()
+  return {
+    live,
+    history,
+    liveCount: live.filter((c) => c.status === 'live').length
+  }
 }

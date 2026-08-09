@@ -30,6 +30,41 @@ export type InstantlyCampaignAnalytics = {
   reply_count_unique: number
   completed_count: number
   total_opportunities: number
+  bounced_count?: number
+  unsubscribed_count?: number
+}
+
+/** Outbound hub campaign card — mapped from Instantly analytics (or demo fallback). */
+export type OutboundBoardCampaign = {
+  id: string
+  name: string
+  status: 'live' | 'launching' | 'paused' | 'completed'
+  offer: string
+  offerKey: string
+  copyNotes: string
+  vertical: string
+  location: string
+  leadCount: number
+  sendCount: number
+  remaining: number
+  progress: number
+  replyCount: number
+  replyRate: number
+  opportunities: number
+  bouncedCount: number
+  completedCount: number
+  /** @deprecated Prefer replyCount / opportunities — kept for older demo rows. */
+  positiveReplies: number
+  /** @deprecated Prefer opportunities — kept for older demo rows. */
+  meetings: number
+  startedAt: string
+  updatedAt: string
+}
+
+export type OutboundBoard = {
+  live: OutboundBoardCampaign[]
+  history: OutboundBoardCampaign[]
+  liveCount: number
 }
 
 export type InstantlyAnalyticsOverview = {
@@ -91,6 +126,158 @@ export function mapInstantlyCampaignStatus(status: number): InstantlyUiCampaignS
       return 'launching'
     default:
       return 'paused'
+  }
+}
+
+export function mapInstantlyOutboundStatus(
+  status: number
+): OutboundBoardCampaign['status'] {
+  if (status === INSTANTLY_CAMPAIGN_STATUS.completed) return 'completed'
+  return mapInstantlyCampaignStatus(status)
+}
+
+export function campaignReplyRate(row: InstantlyCampaignAnalytics): number {
+  const sent = Math.max(0, Number(row.emails_sent_count) || 0)
+  if (sent <= 0) return 0
+  const replies =
+    Math.max(0, Number(row.reply_count_unique) || 0) ||
+    Math.max(0, Number(row.reply_count) || 0)
+  return Math.round((1000 * replies) / sent) / 10
+}
+
+export function mapInstantlyRowToOutboundCampaign(
+  row: InstantlyCampaignAnalytics
+): OutboundBoardCampaign {
+  const leads = Math.max(0, Number(row.leads_count) || 0)
+  const newContacted = Math.max(0, Number(row.new_leads_contacted_count) || 0)
+  const contacted = Math.max(0, Number(row.contacted_count) || 0)
+  const touched = newContacted > 0 ? newContacted : Math.min(contacted, leads)
+  const sendCount = Math.max(0, Number(row.emails_sent_count) || 0)
+  const replyCount =
+    Math.max(0, Number(row.reply_count_unique) || 0) ||
+    Math.max(0, Number(row.reply_count) || 0)
+  const opportunities = Math.max(0, Number(row.total_opportunities) || 0)
+  const remaining = Math.max(0, leads - touched)
+
+  return {
+    id: row.campaign_id,
+    name: row.campaign_name || 'Untitled campaign',
+    status: mapInstantlyOutboundStatus(row.campaign_status),
+    offer: '',
+    offerKey: '',
+    copyNotes: '',
+    vertical: '',
+    location: '',
+    leadCount: leads,
+    sendCount,
+    remaining,
+    progress: campaignProgress(row),
+    replyCount,
+    replyRate: campaignReplyRate(row),
+    opportunities,
+    bouncedCount: Math.max(0, Number(row.bounced_count) || 0),
+    completedCount: Math.max(0, Number(row.completed_count) || 0),
+    positiveReplies: opportunities,
+    meetings: opportunities,
+    startedAt: '',
+    updatedAt: ''
+  }
+}
+
+function outboundStatusRank(status: OutboundBoardCampaign['status']): number {
+  switch (status) {
+    case 'live':
+      return 0
+    case 'launching':
+      return 1
+    case 'paused':
+      return 2
+    default:
+      return 3
+  }
+}
+
+export function buildOutboundBoard(rows: InstantlyCampaignAnalytics[]): OutboundBoard {
+  const mapped = rows.map(mapInstantlyRowToOutboundCampaign)
+  const live = mapped
+    .filter((c) => c.status === 'live' || c.status === 'launching' || c.status === 'paused')
+    .sort((a, b) => {
+      const byStatus = outboundStatusRank(a.status) - outboundStatusRank(b.status)
+      if (byStatus !== 0) return byStatus
+      return b.sendCount - a.sendCount
+    })
+  const history = mapped
+    .filter((c) => c.status === 'completed')
+    .sort((a, b) => b.sendCount - a.sendCount)
+
+  return {
+    live,
+    history,
+    liveCount: live.filter((c) => c.status === 'live').length
+  }
+}
+
+const OUTBOUND_BOARD_CACHE_TTL_MS = 60_000
+
+type OutboundBoardCacheEntry = {
+  key: string
+  value: OutboundBoard
+  updatedAt: number
+  promise?: Promise<OutboundBoard>
+}
+
+let outboundBoardCache: OutboundBoardCacheEntry | null = null
+
+/** Clear the process-local outbound board cache (tests / forced refresh). */
+export function clearOutboundBoardCache() {
+  outboundBoardCache = null
+}
+
+export async function loadOutboundBoardFromInstantly(
+  apiKey = getInstantlyApiKey()
+): Promise<OutboundBoard> {
+  if (!apiKey) {
+    throw new InstantlyApiError('INSTANTLY_API_KEY is not configured', 503)
+  }
+
+  const timeZone = getInstantlyTimezone()
+  const today = calendarDateInTimezone(new Date(), timeZone)
+  const cacheKey = `outbound:${today}`
+
+  const cached = outboundBoardCache
+  if (
+    cached &&
+    cached.key === cacheKey &&
+    Date.now() - cached.updatedAt < OUTBOUND_BOARD_CACHE_TTL_MS &&
+    !cached.promise
+  ) {
+    return cached.value
+  }
+  if (cached?.promise && cached.key === cacheKey) {
+    return cached.promise
+  }
+
+  const promise = (async () => {
+    const rows = await fetchInstantlyCampaignAnalytics(apiKey)
+    return buildOutboundBoard(rows)
+  })()
+
+  outboundBoardCache = {
+    key: cacheKey,
+    value: cached?.value ?? { live: [], history: [], liveCount: 0 },
+    updatedAt: cached?.updatedAt ?? 0,
+    promise
+  }
+
+  try {
+    const value = await promise
+    outboundBoardCache = { key: cacheKey, value, updatedAt: Date.now() }
+    return value
+  } catch (err) {
+    if (outboundBoardCache?.promise === promise) {
+      delete outboundBoardCache.promise
+    }
+    throw err
   }
 }
 
