@@ -575,27 +575,10 @@ export function HomeDashboard() {
 
               <div className="space-y-3.5">
                 {plateBuckets.map((bucket) => {
-                  if (bucket.key !== 'today' && bucket.key !== 'tomorrow' && bucket.tasks.length === 0) {
-                    return null
-                  }
-                  // Always show Today / Tomorrow headers for plate rhythm
-                  if (
-                    (bucket.key === 'today' || bucket.key === 'tomorrow') &&
-                    bucket.tasks.length === 0 &&
-                    openTasks.length === 0
-                  ) {
-                    return null
-                  }
-                  if (bucket.tasks.length === 0) {
-                    return (
-                      <div key={bucket.key}>
-                        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-neutral-400">
-                          {bucket.label}
-                        </div>
-                        <p className="px-1 text-xs text-neutral-400">Nothing scheduled</p>
-                      </div>
-                    )
-                  }
+                  if (bucket.tasks.length === 0) return null
+                  const visible =
+                    bucket.key === 'later' ? bucket.tasks.slice(0, 12) : bucket.tasks
+                  const hidden = bucket.tasks.length - visible.length
                   return (
                     <div key={bucket.key}>
                       <div
@@ -610,7 +593,7 @@ export function HomeDashboard() {
                         </span>
                       </div>
                       <ul className="divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-100 bg-stone-50/40">
-                        {bucket.tasks.slice(0, bucket.key === 'later' ? 6 : 8).map((task) => {
+                        {visible.map((task) => {
                           const project = task.project_id
                             ? projectsById[task.project_id]
                             : null
@@ -650,6 +633,14 @@ export function HomeDashboard() {
                           )
                         })}
                       </ul>
+                      {hidden > 0 ? (
+                        <Link
+                          href="/tasks"
+                          className="mt-1.5 inline-block px-1 text-xs font-medium text-[#c2410c] hover:underline"
+                        >
+                          +{hidden} more in tasks
+                        </Link>
+                      ) : null}
                     </div>
                   )
                 })}
