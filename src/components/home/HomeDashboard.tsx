@@ -258,7 +258,6 @@ export function HomeDashboard() {
   const adsGlance = useCachedJson<AdsGlancePayload>('/api/ads/glance', '/api/ads/glance')
   const ads = adsGlance.data ?? HOME_AD_DEMO
   const adsSource = adsGlance.data?.source ?? 'demo'
-  const adsConnected = adsGlance.data?.connectedAccounts ?? 0
   const coldEmail = useCachedJson<ColdEmailPayload>(
     '/api/instantly/cold-email',
     '/api/instantly/cold-email',
@@ -457,20 +456,22 @@ export function HomeDashboard() {
   return (
     <>
       <motion.div
-        className="space-y-5"
+        className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden px-4 py-3 sm:px-6 lg:px-8"
         variants={staggerContainer}
         initial="hidden"
         animate="show"
       >
         <motion.div
           variants={staggerItem}
-          className="flex flex-wrap items-end justify-between gap-3"
+          className="flex shrink-0 flex-wrap items-center justify-between gap-3"
         >
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
               On your plate
             </p>
-            <h1 className="compass-page-title mt-1">{formatDayHeading(new Date())}</h1>
+            <h1 className="mt-0.5 text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
+              {formatDayHeading(new Date())}
+            </h1>
           </div>
           <button
             type="button"
@@ -487,14 +488,14 @@ export function HomeDashboard() {
           </button>
         </motion.div>
 
-        {/* Hero composition: priorities + pulse */}
+        {/* One composition: plate + pulse + engines in a single viewport */}
         <motion.div
           variants={staggerItem}
-          className="grid gap-4 lg:grid-cols-3 lg:gap-5"
+          className="grid min-h-0 flex-1 gap-3 lg:grid-cols-3 lg:grid-rows-[minmax(0,1fr)_auto]"
         >
-          <Card className="lg:col-span-2">
-            <CardContent className="p-5">
-              <div className="mb-3 flex items-center justify-between gap-3">
+          <Card className="min-h-0 overflow-hidden lg:col-span-2 lg:row-span-1">
+            <CardContent className="flex h-full min-h-0 flex-col p-4 sm:p-5">
+              <div className="mb-2.5 flex shrink-0 items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="h-5 w-1 shrink-0 rounded-full bg-[#e85d2a]" aria-hidden />
                   <h2 className="text-sm font-semibold tracking-tight text-neutral-900">
@@ -547,38 +548,35 @@ export function HomeDashboard() {
                 </div>
               ) : null}
 
-              {focus && openTasks.length > 0 ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, ease: easeOut, delay: 0.12 }}
-                  className="mb-3 rounded-xl border border-[#e85d2a]/20 bg-gradient-to-br from-orange-50/70 to-white px-3.5 py-3"
-                >
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#c2410c]">
-                    Focus
-                  </div>
-                  <Link
-                    href="/tasks"
-                    className="mt-1 block truncate text-base font-semibold tracking-tight text-neutral-900 hover:underline"
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-0.5">
+                {focus && openTasks.length > 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: easeOut, delay: 0.12 }}
+                    className="rounded-xl border border-[#e85d2a]/20 bg-gradient-to-br from-orange-50/70 to-white px-3.5 py-2.5"
                   >
-                    {focus.title}
-                  </Link>
-                  <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-neutral-500">
-                    <span className="capitalize">{focus.status.replace('-', ' ')}</span>
-                    {focus.project_id && projectsById[focus.project_id] ? (
-                      <span>· {projectsById[focus.project_id].name}</span>
-                    ) : null}
-                    {focus.due ? <span>· {focus.due.slice(0, 10)}</span> : null}
-                  </div>
-                </motion.div>
-              ) : null}
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#c2410c]">
+                      Focus
+                    </div>
+                    <Link
+                      href="/tasks"
+                      className="mt-1 block truncate text-base font-semibold tracking-tight text-neutral-900 hover:underline"
+                    >
+                      {focus.title}
+                    </Link>
+                    <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-neutral-500">
+                      <span className="capitalize">{focus.status.replace('-', ' ')}</span>
+                      {focus.project_id && projectsById[focus.project_id] ? (
+                        <span>· {projectsById[focus.project_id].name}</span>
+                      ) : null}
+                      {focus.due ? <span>· {focus.due.slice(0, 10)}</span> : null}
+                    </div>
+                  </motion.div>
+                ) : null}
 
-              <div className="space-y-3.5">
                 {plateBuckets.map((bucket) => {
                   if (bucket.tasks.length === 0) return null
-                  const visible =
-                    bucket.key === 'later' ? bucket.tasks.slice(0, 12) : bucket.tasks
-                  const hidden = bucket.tasks.length - visible.length
                   return (
                     <div key={bucket.key}>
                       <div
@@ -593,7 +591,7 @@ export function HomeDashboard() {
                         </span>
                       </div>
                       <ul className="divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-100 bg-stone-50/40">
-                        {visible.map((task) => {
+                        {bucket.tasks.map((task) => {
                           const project = task.project_id
                             ? projectsById[task.project_id]
                             : null
@@ -633,14 +631,6 @@ export function HomeDashboard() {
                           )
                         })}
                       </ul>
-                      {hidden > 0 ? (
-                        <Link
-                          href="/tasks"
-                          className="mt-1.5 inline-block px-1 text-xs font-medium text-[#c2410c] hover:underline"
-                        >
-                          +{hidden} more in tasks
-                        </Link>
-                      ) : null}
                     </div>
                   )
                 })}
@@ -648,8 +638,8 @@ export function HomeDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="flex h-full flex-col p-5">
+          <Card className="min-h-0 overflow-hidden lg:row-span-1">
+            <CardContent className="flex h-full min-h-0 flex-col overflow-y-auto p-4 sm:p-5">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <h2 className="text-sm font-semibold tracking-tight text-neutral-900">Pulse</h2>
                 {(coldDemo || adsSource !== 'live') && (
@@ -690,7 +680,7 @@ export function HomeDashboard() {
                 />
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 border-t border-stone-100 pt-4">
+              <div className="mt-3 grid grid-cols-2 gap-3 border-t border-stone-100 pt-3">
                 <MiniMetric
                   label="Sent today"
                   value={
@@ -717,24 +707,18 @@ export function HomeDashboard() {
                 />
               </div>
 
-              <p className="mt-auto pt-4 text-xs leading-relaxed text-neutral-400">
+              <p className="mt-auto pt-3 text-xs leading-relaxed text-neutral-400">
                 {overdueCount + blockedCount + (inboxCount ?? 0) + cold.repliesWaiting === 0
                   ? 'Quiet morning — stack is clear.'
-                  : 'Pressure signals only. Engines below.'}
+                  : 'Pressure + engines in one glance.'}
               </p>
             </CardContent>
           </Card>
-        </motion.div>
 
-        {/* Peer engines */}
-        <motion.div
-          variants={staggerItem}
-          className="grid gap-4 lg:grid-cols-3 lg:gap-5"
-        >
-          {/* Cold email — promoted (first) */}
-          <Card className="lg:col-span-1">
-            <CardContent className="p-5">
-              <div className="mb-3 flex items-start justify-between gap-2">
+          {/* Peer engines — pinned to bottom of composition */}
+          <Card className="min-h-0 lg:col-span-1">
+            <CardContent className="p-4">
+              <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm font-semibold tracking-tight text-neutral-900">
                     Cold email
@@ -753,7 +737,7 @@ export function HomeDashboard() {
                 <LoadingBlock label="Loading…" />
               ) : (
                 <>
-                  <div className="mb-3 grid grid-cols-2 gap-x-3 gap-y-2.5">
+                  <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1">
                     <MiniMetric
                       label="Sent"
                       value={cold.emailsSentToday.toLocaleString()}
@@ -763,38 +747,28 @@ export function HomeDashboard() {
                       value={String(cold.repliesWaiting)}
                       hot={cold.repliesWaiting > 0}
                     />
-                    <MiniMetric label="Meetings" value={String(cold.meetingsBooked)} />
                     <MiniMetric label="Reply %" value={`${cold.replyRate}%`} />
                   </div>
-                  <ul className="space-y-1.5">
+                  <ul className="space-y-1">
                     {cold.campaigns.length === 0 ? (
-                      <li className="rounded-xl border border-dashed border-stone-200 px-3 py-4 text-center text-xs text-neutral-500">
+                      <li className="rounded-xl border border-dashed border-stone-200 px-3 py-3 text-center text-xs text-neutral-500">
                         No campaigns
                       </li>
                     ) : (
-                      cold.campaigns.slice(0, 4).map((campaign) => (
+                      cold.campaigns.slice(0, 2).map((campaign) => (
                         <li
                           key={campaign.id}
-                          className="rounded-xl border border-stone-100 bg-stone-50/50 px-3 py-2"
+                          className="flex items-center justify-between gap-2 rounded-xl border border-stone-100 bg-stone-50/50 px-2.5 py-1.5"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="truncate text-sm font-medium text-neutral-900">
-                                {campaign.name}
-                              </div>
-                              <div className="mt-0.5 text-[11px] tabular-nums text-neutral-500">
-                                {campaign.sent.toLocaleString()} · {campaign.replies} replies ·{' '}
-                                {campaign.meetings} mtg
-                              </div>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium text-neutral-900">
+                              {campaign.name}
                             </div>
-                            {campaignStatusBadge(campaign.status)}
+                            <div className="text-[11px] tabular-nums text-neutral-500">
+                              {campaign.sent.toLocaleString()} · {campaign.replies} replies
+                            </div>
                           </div>
-                          <div className="mt-2 h-1 overflow-hidden rounded-full bg-stone-200/80">
-                            <div
-                              className="h-full rounded-full bg-[#e85d2a]"
-                              style={{ width: `${campaign.progress}%` }}
-                            />
-                          </div>
+                          {campaignStatusBadge(campaign.status)}
                         </li>
                       ))
                     )}
@@ -804,10 +778,9 @@ export function HomeDashboard() {
             </CardContent>
           </Card>
 
-          {/* Ads */}
-          <Card>
-            <CardContent className="p-5">
-              <div className="mb-3 flex items-start justify-between gap-2">
+          <Card className="min-h-0">
+            <CardContent className="p-4">
+              <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm font-semibold tracking-tight text-neutral-900">Ads</h2>
                   <DemoMark show={adsSource !== 'live'} />
@@ -824,34 +797,27 @@ export function HomeDashboard() {
                 <LoadingBlock label="Loading…" />
               ) : (
                 <>
-                  <div className="mb-3 grid grid-cols-2 gap-x-3 gap-y-2.5">
+                  <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1">
                     <MiniMetric label="Spend" value={formatMoney(ads.spendToday)} />
                     <MiniMetric label="ROAS" value={`${ads.roas.toFixed(1)}x`} />
-                    <MiniMetric label="CPA" value={formatMoney(ads.cpa)} />
                     <MiniMetric
                       label="Review"
                       value={String(ads.creativesNeedingReview)}
                       hot={ads.creativesNeedingReview > 0}
                     />
                   </div>
-                  {adsSource !== 'live' && adsConnected > 0 ? (
-                    <p className="mb-2 text-[11px] text-red-600">
-                      Connected — awaiting sync (demo figures)
-                    </p>
-                  ) : null}
-                  <ul className="space-y-1.5">
-                    {ads.creatives.slice(0, 4).map((creative) => (
+                  <ul className="space-y-1">
+                    {ads.creatives.slice(0, 2).map((creative) => (
                       <li
                         key={creative.id}
-                        className="flex items-center justify-between gap-2 rounded-xl border border-stone-100 bg-stone-50/50 px-3 py-2"
+                        className="flex items-center justify-between gap-2 rounded-xl border border-stone-100 bg-stone-50/50 px-2.5 py-1.5"
                       >
                         <div className="min-w-0">
                           <div className="truncate text-sm font-medium text-neutral-900">
                             {creative.name}
                           </div>
-                          <div className="mt-0.5 text-[11px] text-neutral-500">
-                            {creative.channel} · {formatMoney(creative.spend)} ·{' '}
-                            {creative.roas.toFixed(1)}x
+                          <div className="text-[11px] text-neutral-500">
+                            {creative.channel} · {creative.roas.toFixed(1)}x
                           </div>
                         </div>
                         {creativeStatusBadge(creative.status)}
@@ -863,10 +829,9 @@ export function HomeDashboard() {
             </CardContent>
           </Card>
 
-          {/* Projects */}
-          <Card>
-            <CardContent className="p-5">
-              <div className="mb-3 flex items-start justify-between gap-2">
+          <Card className="min-h-0">
+            <CardContent className="p-4">
+              <div className="mb-2 flex items-center justify-between gap-2">
                 <h2 className="text-sm font-semibold tracking-tight text-neutral-900">
                   Projects
                 </h2>
@@ -881,12 +846,12 @@ export function HomeDashboard() {
               {tasks.loading && !tasks.data ? (
                 <LoadingBlock label="Loading…" />
               ) : activeProjects.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-stone-200 px-3 py-6 text-center text-xs text-neutral-500">
+                <div className="rounded-xl border border-dashed border-stone-200 px-3 py-3 text-center text-xs text-neutral-500">
                   No active projects
                 </div>
               ) : (
                 <ul className="divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-100 bg-stone-50/40">
-                  {activeProjects.map((project) => {
+                  {activeProjects.slice(0, 4).map((project) => {
                     const client = project.client_id
                       ? clientsById[project.client_id]
                       : null
@@ -894,7 +859,7 @@ export function HomeDashboard() {
                       <li key={project.id}>
                         <Link
                           href={`/projects/${project.id}`}
-                          className="flex items-start justify-between gap-2 px-3 py-2.5 transition hover:bg-white"
+                          className="flex items-start justify-between gap-2 px-2.5 py-1.5 transition hover:bg-white"
                         >
                           <div className="min-w-0">
                             <div className="truncate text-sm font-medium text-neutral-900">
@@ -903,9 +868,6 @@ export function HomeDashboard() {
                             <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-neutral-500">
                               <span className="capitalize">{project.status}</span>
                               {client ? <span>{client.name}</span> : null}
-                              {project.priority > 0 ? (
-                                <span>P{project.priority}</span>
-                              ) : null}
                             </div>
                           </div>
                         </Link>
