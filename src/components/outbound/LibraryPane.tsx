@@ -255,10 +255,13 @@ export function LibraryPane({
 }
 
 export function parseLibraryDrag(dataTransfer: DataTransfer): LibraryDragPayload | null {
-  const raw = dataTransfer.getData('application/x-outbound-library')
+  const raw =
+    dataTransfer.getData('application/x-outbound-library') || dataTransfer.getData('text/plain')
   if (!raw) return null
   try {
-    return JSON.parse(raw) as LibraryDragPayload
+    const parsed = JSON.parse(raw) as LibraryDragPayload
+    if (!parsed || typeof parsed !== 'object' || !('kind' in parsed)) return null
+    return parsed
   } catch {
     return null
   }

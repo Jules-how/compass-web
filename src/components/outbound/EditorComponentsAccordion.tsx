@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   FileText,
@@ -116,23 +116,44 @@ function LibraryRow({
   payload: LibraryDragPayload
   onInsert: (payload: LibraryDragPayload) => void
 }) {
+  const draggedRef = useRef(false)
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       draggable
       onDragStart={(e) => {
-        e.dataTransfer.setData('application/x-outbound-library', JSON.stringify(payload))
+        draggedRef.current = true
+        const raw = JSON.stringify(payload)
+        e.dataTransfer.setData('application/x-outbound-library', raw)
+        // Some browsers only expose text/plain during drop; keep a fallback.
+        e.dataTransfer.setData('text/plain', raw)
         e.dataTransfer.effectAllowed = 'copy'
       }}
-      onClick={() => onInsert(payload)}
+      onDragEnd={() => {
+        // Allow click after a short delay so drop doesn't also insert twice.
+        window.setTimeout(() => {
+          draggedRef.current = false
+        }, 0)
+      }}
+      onClick={() => {
+        if (draggedRef.current) return
+        onInsert(payload)
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onInsert(payload)
+        }
+      }}
       className="w-full cursor-grab rounded-xl border border-stone-200/80 bg-stone-50/50 p-2.5 text-left transition hover:border-stone-300 hover:bg-white active:cursor-grabbing"
     >
-      <div className="text-[12px] font-semibold text-neutral-900">{title}</div>
-      {meta ? <div className="mt-0.5 text-[10px] text-neutral-500">{meta}</div> : null}
+      <div className="text-[13px] font-semibold text-neutral-900">{title}</div>
+      {meta ? <div className="mt-0.5 text-[11px] text-neutral-500">{meta}</div> : null}
       {body ? (
-        <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-neutral-600">{body}</p>
+        <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-neutral-600">{body}</p>
       ) : null}
-    </button>
+    </div>
   )
 }
 
@@ -260,14 +281,14 @@ export function EditorComponentsAccordion({
     <div className={cn('flex h-full min-h-0 flex-col', className)}>
       <div className="shrink-0 space-y-2 border-b border-stone-100 px-4 py-3">
         <div>
-          <h2 className="text-[13px] font-semibold text-neutral-900">Components</h2>
-          <p className="mt-0.5 text-[11px] text-neutral-500">Click or drag into the draft</p>
+          <h2 className="text-[15px] font-semibold text-neutral-900">Components</h2>
+          <p className="mt-0.5 text-[12px] text-neutral-500">Click or drag into the draft</p>
         </div>
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search library…"
-          className="w-full rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-1.5 text-[12px] outline-none focus:border-[#e85d2a]/40"
+          className="w-full rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-1.5 text-[13px] outline-none focus:border-[#e85d2a]/40"
         />
         <div className="flex flex-wrap gap-1">
           {[...VERTICAL_TAG_HINTS, ...LOCATION_TAG_HINTS].map((tag) => {
@@ -312,10 +333,10 @@ export function EditorComponentsAccordion({
                       <Icon className="size-4" size={16} />
                     </div>
                     <div className="flex flex-col items-start text-left">
-                      <span className="text-[12px] font-semibold text-neutral-900">
+                      <span className="text-[14px] font-semibold text-neutral-900">
                         {section.title}
                       </span>
-                      <span className="text-[10px] font-normal text-neutral-500">
+                      <span className="text-[12px] font-normal text-neutral-500">
                         {section.subtitle}
                       </span>
                     </div>

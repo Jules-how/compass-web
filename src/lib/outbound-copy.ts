@@ -308,18 +308,26 @@ export function scaffoldSequence(
   }
 }
 
+type ForkSequenceExtras = Partial<
+  Pick<OutboundSequence, 'offer_key' | 'template_origin_id' | 'structure_id'>
+> & {
+  /** When true, assign fresh step ids (template isolation). Default preserves ids for in-editor edits. */
+  remintStepIds?: boolean
+}
+
 /** Deep-clone sequence so library/template rows are never mutated by campaign edits. */
 export function forkSequence(
   sequence: OutboundSequence,
-  extras?: Partial<Pick<OutboundSequence, 'offer_key' | 'template_origin_id' | 'structure_id'>>
+  extras?: ForkSequenceExtras
 ): OutboundSequence {
+  const { remintStepIds = false, ...sequenceExtras } = extras ?? {}
   const cloned = JSON.parse(JSON.stringify(sequence)) as OutboundSequence
   return {
     ...cloned,
-    ...extras,
+    ...sequenceExtras,
     steps: (cloned.steps ?? []).map((step) => ({
       ...step,
-      id: newId('step'),
+      id: remintStepIds ? newId('step') : step.id,
       slots: (step.slots ?? []).map((slot) => ({ ...slot }))
     })),
     updated_at: new Date().toISOString()
