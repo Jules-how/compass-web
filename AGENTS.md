@@ -1,5 +1,14 @@
 # Compass-Web agent notes
 
+## Agent ↔ Compass bridge
+
+Local and cloud Cursor agents connect to Compass over `/api/agent/*` (secret auth). Daily cron: `/api/cron/daily-sync`.
+
+- Skill: [`.cursor/skills/compass-agent/SKILL.md`](.cursor/skills/compass-agent/SKILL.md)
+- Docs: [`docs/AGENT_BRIDGE.md`](docs/AGENT_BRIDGE.md)
+- Prefer `GET /api/agent/brief` before dumping data — keep prompts token-lean.
+- Instantly replied/interested/meeting leads sync into `lead_contacts` so Inbox Instantly stays aligned.
+
 ## UI aesthetic is locked
 
 The operator UI depth effect, rounded corners, card separation, and **sidebar (sidecar) animations/UI** are **approved and locked**.
