@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   forwardRef,
   useCallback,
@@ -14,6 +15,7 @@ import {
 import type { CompassBusinessFunction, CompassProjectWithStats } from '@/lib/types'
 import {
   ZOOM_OPTIONS,
+  addDays,
   buildHeaderModel,
   buildTimelineRange,
   clampDateOrder,
@@ -52,6 +54,30 @@ type CreateDrag = {
   originDate: string
   start: string
   end: string
+}
+
+type BarDragMode = 'move' | 'resize-start' | 'resize-end'
+
+type BarDrag = {
+  projectId: string
+  mode: BarDragMode
+  originX: number
+  start: string
+  end: string
+  moved: boolean
+  draftStart: string
+  draftEnd: string
+}
+
+/** Resolve displayed bar dates when only start or end is set. */
+function resolveBarDates(
+  start: Date | null,
+  end: Date | null
+): { start: string; end: string } | null {
+  if (start && end) return { start: toDateOnly(start), end: toDateOnly(end) }
+  if (start) return { start: toDateOnly(start), end: toDateOnly(addDays(start, 13)) }
+  if (end) return { start: toDateOnly(addDays(end, -13)), end: toDateOnly(end) }
+  return null
 }
 
 function statusDotClass(status: string): string {
@@ -117,16 +143,20 @@ export const ProjectTimeline = forwardRef<
   },
   ref
 ) {
+  const router = useRouter()
   const scrollRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const didCenterToday = useRef(false)
   const zoomAnchorRef = useRef<{ date: Date; offsetX: number } | null>(null)
   const createDragRef = useRef<CreateDrag | null>(null)
+  const barDragRef = useRef<BarDrag | null>(null)
+  const suppressBarClickRef = useRef(false)
   const [hoverDate, setHoverDate] = useState<Date | null>(null)
   const [hoverX, setHoverX] = useState<number | null>(null)
   const [hoverRowId, setHoverRowId] = useState<string | null>(null)
   const [draftDates, setDraftDates] = useState<DraftDates>({})
   const [createDrag, setCreateDrag] = useState<CreateDrag | null>(null)
+  const [barDrag, setBarDrag] = useState<BarDrag | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
 
   const range = useMemo(
@@ -297,8 +327,94 @@ export const ProjectTimeline = forwardRef<
     await persistDates(current.projectId, current.start, current.end)
   }
 
+  function beginBarDrag(
+    projectId: string,
+    mode: BarDragMode,
+    clientX: number,
+    start: string,
+    end: string
+  ) {
+    const next: BarDrag = {
+      projectId,
+      mode,
+      originX: clientX,
+      start,
+      end,
+      moved: false,
+      draftStart: start,
+      draftEnd: end
+    }
+    barDragRef.current = next
+    setBarDrag(next)
+    setHoverRowId(projectId)
+  }
+
+  function updateBarDrag(clientX: number) {
+    const current = barDragRef.current
+    if (!current) return
+    const deltaDays = Math.round((clientX - current.originX) / pxPerDay(zoom))
+
+    const startDate = parseDateOnly(current.start)
+    const endDate = parseDateOnly(current.end)
+    if (!startDate || !endDate) return
+
+    let nextStart = new Date(startDate)
+    let nextEnd = new Date(endDate)
+    if (current.mode === 'move') {
+      nextStart = addDays(startDate, deltaDays)
+      nextEnd = addDays(endDate, deltaDays)
+    } else if (current.mode === 'resize-start') {
+      nextStart = addDays(startDate, deltaDays)
+      if (nextStart > endDate) nextStart = new Date(endDate)
+    } else {
+      nextEnd = addDays(endDate, deltaDays)
+      if (nextEnd < startDate) nextEnd = new Date(startDate)
+    }
+
+    const ordered = {
+      start: toDateOnly(nextStart),
+      end: toDateOnly(nextEnd)
+    }
+    const next: BarDrag = {
+      ...current,
+      moved: current.moved || deltaDays !== 0,
+      draftStart: ordered.start,
+      draftEnd: ordered.end
+    }
+    barDragRef.current = next
+    setBarDrag(next)
+    setDraftDates((prev) => ({ ...prev, [current.projectId]: ordered }))
+
+    const x = Math.max(0, readTimelineX(clientX))
+    setHoverX(x)
+    setHoverDate(xToDate(x, range, zoom))
+  }
+
+  async function endBarDrag() {
+    const current = barDragRef.current
+    barDragRef.current = null
+    setBarDrag(null)
+    if (!current) return
+    suppressBarClickRef.current = current.moved
+    const start = current.draftStart
+    const end = current.draftEnd
+    if (start !== current.start || end !== current.end) {
+      await persistDates(current.projectId, start, end)
+    } else {
+      setDraftDates((prev) => {
+        const next = { ...prev }
+        delete next[current.projectId]
+        return next
+      })
+    }
+  }
+
+  const isDragging = Boolean(createDrag || barDrag)
+  const barDragActive = barDrag !== null
+  const createDragActive = createDrag !== null
+
   useEffect(() => {
-    if (!createDrag) return
+    if (!createDragActive) return
 
     function onMove(e: PointerEvent) {
       updateCreateDrag(e.clientX)
@@ -316,7 +432,29 @@ export const ProjectTimeline = forwardRef<
       window.removeEventListener('pointercancel', onUp)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- drag handlers close over latest range/zoom via refs+state setters
-  }, [createDrag, range, zoom])
+  }, [createDragActive, range, zoom])
+
+  useEffect(() => {
+    if (!barDragActive) return
+
+    function onMove(e: PointerEvent) {
+      e.preventDefault()
+      updateBarDrag(e.clientX)
+    }
+    function onUp() {
+      void endBarDrag()
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- drag handlers close over latest range/zoom via refs+state setters
+  }, [barDragActive, range, zoom])
 
   return (
     <div className="flex min-h-[560px] flex-col overflow-hidden rounded-xl border border-neutral-200/80 bg-[#f7f8f9]">
@@ -341,7 +479,7 @@ export const ProjectTimeline = forwardRef<
           style={{ minWidth: LABEL_WIDTH + range.widthPx, minHeight: '100%' }}
           onMouseMove={onTimelineMouseMove}
           onMouseLeave={() => {
-            if (createDrag) return
+            if (isDragging) return
             setHoverDate(null)
             setHoverX(null)
             setHoverRowId(null)
@@ -404,7 +542,7 @@ export const ProjectTimeline = forwardRef<
                     .toUpperCase()}
                 </span>
               </div>
-              {hoverDate && hoverX !== null && !createDrag ? (
+              {hoverDate && hoverX !== null && !isDragging ? (
                 <div className="pointer-events-none absolute bottom-0 top-0 z-20" style={{ left: hoverX }}>
                   <div className="absolute inset-y-0 w-px bg-neutral-400/50" />
                   <span className="absolute left-1/2 top-1 z-30 -translate-x-1/2 whitespace-nowrap rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-white">
@@ -475,7 +613,9 @@ export const ProjectTimeline = forwardRef<
               }
 
               const hasDates = Boolean(start || end)
+              const resolvedDates = resolveBarDates(start, end)
               const isCreating = createDrag?.projectId === project.id
+              const isBarDragging = barDrag?.projectId === project.id
               const showPlus =
                 !hasDates &&
                 !isCreating &&
@@ -491,6 +631,7 @@ export const ProjectTimeline = forwardRef<
                   onMouseEnter={() => setHoverRowId(project.id)}
                   onMouseLeave={() => {
                     if (createDragRef.current?.projectId === project.id) return
+                    if (barDragRef.current?.projectId === project.id) return
                     setHoverRowId((current) => (current === project.id ? null : current))
                   }}
                 >
@@ -561,7 +702,23 @@ export const ProjectTimeline = forwardRef<
                           height: ROW_HEIGHT - 14
                         }}
                       >
-                        <span className="mb-1 block truncate pr-1 text-[11px] font-medium leading-none text-neutral-700">
+                        <span
+                          className={`mb-1 block truncate pr-1 text-[11px] font-medium leading-none text-neutral-700 ${
+                            resolvedDates && !isCreating ? 'cursor-grab active:cursor-grabbing' : ''
+                          }`}
+                          onPointerDown={(e) => {
+                            if (!resolvedDates || isCreating || e.button !== 0) return
+                            e.preventDefault()
+                            e.stopPropagation()
+                            beginBarDrag(
+                              project.id,
+                              'move',
+                              e.clientX,
+                              resolvedDates.start,
+                              resolvedDates.end
+                            )
+                          }}
+                        >
                           {project.name}
                         </span>
                         {isCreating ? (
@@ -574,13 +731,60 @@ export const ProjectTimeline = forwardRef<
                               style={{ background: accent }}
                             />
                           </span>
-                        ) : (
-                          <Link
-                            href={`/projects/${project.id}`}
-                            className="relative block overflow-hidden rounded-[6px] border border-neutral-300 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition group-hover:border-neutral-400"
+                        ) : resolvedDates ? (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            className={`relative block touch-none overflow-hidden rounded-[6px] border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition select-none ${
+                              isBarDragging
+                                ? 'cursor-grabbing border-[#5e6ad2] shadow-[0_0_0_1px_rgba(94,106,210,0.28)]'
+                                : 'cursor-grab border-neutral-300 group-hover:border-neutral-400 active:cursor-grabbing'
+                            }`}
                             style={{ width, height: BAR_HEIGHT }}
-                            title={`${formatProjectDate(project.start_date)} → ${formatProjectDate(project.target_date)}`}
+                            title={`${formatProjectDate(resolvedDates.start)} → ${formatProjectDate(resolvedDates.end)} · Drag to move`}
+                            onPointerDown={(e) => {
+                              if (e.button !== 0) return
+                              e.preventDefault()
+                              e.stopPropagation()
+                              beginBarDrag(
+                                project.id,
+                                'move',
+                                e.clientX,
+                                resolvedDates.start,
+                                resolvedDates.end
+                              )
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              if (suppressBarClickRef.current) {
+                                suppressBarClickRef.current = false
+                                return
+                              }
+                              router.push(`/projects/${project.id}`)
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                router.push(`/projects/${project.id}`)
+                              }
+                            }}
                           >
+                            <div
+                              className="absolute inset-y-0 left-0 z-10 w-2 cursor-ew-resize"
+                              onPointerDown={(e) => {
+                                if (e.button !== 0) return
+                                e.preventDefault()
+                                e.stopPropagation()
+                                beginBarDrag(
+                                  project.id,
+                                  'resize-start',
+                                  e.clientX,
+                                  resolvedDates.start,
+                                  resolvedDates.end
+                                )
+                              }}
+                            />
                             <span
                               className="absolute inset-y-0 left-0 w-[3px] rounded-l-[5px]"
                               style={{ background: accent }}
@@ -594,8 +798,23 @@ export const ProjectTimeline = forwardRef<
                                 }}
                               />
                             ) : null}
-                          </Link>
-                        )}
+                            <div
+                              className="absolute inset-y-0 right-0 z-10 w-2 cursor-ew-resize"
+                              onPointerDown={(e) => {
+                                if (e.button !== 0) return
+                                e.preventDefault()
+                                e.stopPropagation()
+                                beginBarDrag(
+                                  project.id,
+                                  'resize-end',
+                                  e.clientX,
+                                  resolvedDates.start,
+                                  resolvedDates.end
+                                )
+                              }}
+                            />
+                          </div>
+                        ) : null}
                         {savingId === project.id ? (
                           <span className="mt-1 block text-[10px] text-neutral-400">Saving…</span>
                         ) : null}
@@ -620,7 +839,7 @@ export const ProjectTimeline = forwardRef<
                       </div>
                     ) : null}
 
-                    {isCreating && createDrag && hoverDate ? (
+                    {(isCreating || isBarDragging) && hoverDate ? (
                       <div
                         className="pointer-events-none absolute z-20 -translate-x-1/2"
                         style={{ left: hoverX ?? left, top: 4 }}

@@ -145,6 +145,9 @@ test('project timeline supports Linear-like date create and trackpad zoom', () =
 
   assert.match(timeline, /ROW_HEIGHT = 68/)
   assert.match(timeline, /beginCreateDrag/)
+  assert.match(timeline, /beginBarDrag/)
+  assert.match(timeline, /resize-start/)
+  assert.match(timeline, /cursor-grab/)
   assert.match(timeline, /ctrlKey \|\| e\.metaKey/)
   assert.match(timeline, /zoomIn\(zoom\)/)
   assert.match(timeline, /onDatesChange/)
