@@ -198,6 +198,104 @@ export function isFocusTask(
   return isActiveTask(task) || highManual || dueSoon
 }
 
+/** Cap for Home Priorities — curated Focus slice, not the full open plate. */
+export const HOME_PRIORITY_LIMIT = 24
+
+/**
+ * Home Priorities = same Focus membership as My Tasks Focus window,
+ * ordered with the same manual sort (priority → due → created).
+ */
+export function selectHomePriorities(tasks: CompassTask[], now = new Date()): CompassTask[] {
+  return tasks
+    .filter((task) => isFocusTask(task, now))
+    .sort((a, b) => compareTasksByManual(a, b, now))
+    .slice(0, HOME_PRIORITY_LIMIT)
+}
+
+export type PriorityPlateBucketKey =
+  | 'overdue'
+  | 'today'
+  | 'nodate'
+  | 'tomorrow'
+  | 'week'
+  | 'later'
+
+export type PriorityPlateBucket = {
+  key: PriorityPlateBucketKey
+  label: string
+  tasks: CompassTask[]
+}
+
+/**
+ * Bucket a Focus/priority slice by due proximity.
+ * Undated focus work sits near the top (after overdue) so Instantly
+ * follow-ups and P1–P2 without dates are not buried under “Later”.
+ */
+export function bucketPriorityPlate(
+  tasks: CompassTask[],
+  now = new Date()
+): PriorityPlateBucket[] {
+  const today = startOfLocalDay(now)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const weekEnd = new Date(today)
+  weekEnd.setDate(weekEnd.getDate() + 7)
+
+  const buckets: Record<PriorityPlateBucketKey, CompassTask[]> = {
+    overdue: [],
+    today: [],
+    nodate: [],
+    tomorrow: [],
+    week: [],
+    later: []
+  }
+
+  for (const task of tasks) {
+    const days = daysUntilDue(task.due, now)
+    if (days === null) {
+      buckets.nodate.push(task)
+      continue
+    }
+    if (days < 0) buckets.overdue.push(task)
+    else if (days === 0) buckets.today.push(task)
+    else if (days === 1) buckets.tomorrow.push(task)
+    else if (days <= 7) buckets.week.push(task)
+    else buckets.later.push(task)
+  }
+
+  const order: Array<{ key: PriorityPlateBucketKey; label: string }> = [
+    { key: 'overdue', label: 'Overdue' },
+    { key: 'today', label: 'Today' },
+    { key: 'nodate', label: 'No date' },
+    { key: 'tomorrow', label: 'Tomorrow' },
+    { key: 'week', label: 'This week' },
+    { key: 'later', label: 'Later' }
+  ]
+
+  return order
+    .map(({ key, label }) => ({ key, label, tasks: buckets[key] }))
+    .filter((bucket) => bucket.tasks.length > 0)
+}
+
+export function isFocusWindow(value: string | null | undefined): value is FocusWindow {
+  return (
+    value === 'today' ||
+    value === 'week' ||
+    value === 'focus' ||
+    value === 'backlog' ||
+    value === 'done'
+  )
+}
+
+/** Deep-link into My Tasks with the matching window (and optional task). */
+export function tasksHref(opts?: { window?: FocusWindow; taskId?: string | null }): string {
+  const params = new URLSearchParams()
+  if (opts?.window) params.set('window', opts.window)
+  if (opts?.taskId) params.set('task', opts.taskId)
+  const qs = params.toString()
+  return qs ? `/tasks?${qs}` : '/tasks'
+}
+
 /**
  * Today: due today/overdue or actively working.
  * Week: due within 7 days or actively working.
@@ -242,16 +340,26 @@ export type TaskOrganisationFilters = {
   hideCompleted: boolean
 }
 
-export function defaultTaskOrganisationFilters(): TaskOrganisationFilters {
+export function defaultTaskOrganisationFilters(
+  window: FocusWindow = 'today'
+): TaskOrganisationFilters {
+  const done = window === 'done'
   return {
-    window: 'today',
-    status: 'open',
+    window,
+    status: done ? 'all' : 'open',
     functionId: 'all',
     clientId: 'all',
     projectId: 'all',
     taskType: 'all',
-    hideCompleted: true
+    hideCompleted: !done
   }
+}
+
+export function taskOrganisationFiltersFromSearch(
+  search: URLSearchParams | { get: (key: string) => string | null }
+): TaskOrganisationFilters {
+  const windowParam = search.get('window')
+  return defaultTaskOrganisationFilters(isFocusWindow(windowParam) ? windowParam : 'today')
 }
 
 export function filterTasksForOrganisation(

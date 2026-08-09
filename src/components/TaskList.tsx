@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import type {
   CompassBusinessFunction,
   CompassProject,
@@ -13,11 +14,11 @@ import TaskCreate from './TaskCreate'
 import TaskDetailPanel from './TaskDetailPanel'
 import {
   compareTasksByManual,
-  defaultTaskOrganisationFilters,
   filterTasksForOrganisation,
   groupTasks,
   isDoneTask,
   isOpenTask,
+  taskOrganisationFiltersFromSearch,
   type FocusWindow,
   type TaskClientMeta,
   type TaskFocusContext,
@@ -53,14 +54,29 @@ export default function TaskList({
   clientsById,
   onRefresh
 }: TaskListProps) {
+  const searchParams = useSearchParams()
   const [creating, setCreating] = useState(false)
-  const [filters, setFilters] = useState<TaskOrganisationFilters>(defaultTaskOrganisationFilters)
+  const [filters, setFilters] = useState<TaskOrganisationFilters>(() =>
+    taskOrganisationFiltersFromSearch(searchParams)
+  )
   const [groupBy, setGroupBy] = useState<TaskGroupBy>('none')
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(
+    () => searchParams.get('task')
+  )
   const [completedOpen, setCompletedOpen] = useState(false)
   const [lingeringIds, setLingeringIds] = useState<Record<string, true>>({})
   const [togglingIds, setTogglingIds] = useState<Record<string, true>>({})
   const lingerTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const syncedQuery = useRef<string | null>(null)
+
+  useEffect(() => {
+    const key = searchParams.toString()
+    if (syncedQuery.current === key) return
+    syncedQuery.current = key
+    setFilters(taskOrganisationFiltersFromSearch(searchParams))
+    const taskId = searchParams.get('task')
+    if (taskId) setSelectedTaskId(taskId)
+  }, [searchParams])
 
   useEffect(() => {
     const timers = lingerTimers.current

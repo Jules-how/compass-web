@@ -28,6 +28,7 @@ import {
 } from '@/lib/inbox-ui'
 import type { InboxSuggestion, InboxTriageState, LeadLifecycleStatus } from '@/lib/inbox-triage'
 import { peekQueryCache, writeQueryCache } from '@/lib/query-cache'
+import { tasksHref } from '@/lib/task-organisation'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
@@ -575,13 +576,24 @@ export function InboxPanel() {
         ]
           .filter(Boolean)
           .join('\n')
+        const today = new Date()
+        const dueToday = [
+          today.getFullYear(),
+          String(today.getMonth() + 1).padStart(2, '0'),
+          String(today.getDate()).padStart(2, '0')
+        ].join('-')
+        const fromSales = selected.tab === 'instantly' || selected.tab === 'leads'
         const res = await fetch('/api/tasks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({
             title,
             notes,
+            // Instantly opportunities land as high priority + due today so they
+            // show on Home Priorities and My Tasks Today/Focus together.
             priority: selected.tab === 'instantly' ? 2 : 3,
+            due: fromSales ? dueToday : null,
+            task_type: fromSales ? 'SELL' : null,
             source: 'inbox'
           })
         })
@@ -589,8 +601,14 @@ export function InboxPanel() {
           setActionError('Could not create task')
           return
         }
+        const created = (await res.json().catch(() => null)) as { id?: string } | null
         await patchTriage(selected, 'read')
-        router.push('/tasks')
+        router.push(
+          tasksHref({
+            window: fromSales ? 'today' : 'focus',
+            taskId: created?.id ?? null
+          })
+        )
       })()
     })
   }
