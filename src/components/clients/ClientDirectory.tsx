@@ -9,6 +9,7 @@ import { ClientDetailModal } from '@/components/clients/ClientDetailModal'
 interface ClientDirectoryProps {
   clients: CompassClientCard[]
   onRefresh: () => Promise<void>
+  initialClientId?: string | null
 }
 
 const emptyForm = {
@@ -25,12 +26,18 @@ const emptyForm = {
 
 function readClientIdFromUrl(): string | null {
   if (typeof window === 'undefined') return null
-  return new URLSearchParams(window.location.search).get('client')
+  const params = new URLSearchParams(window.location.search)
+  const fromQuery = params.get('client')
+  if (fromQuery) return fromQuery
+  const match = window.location.pathname.match(/^\/clients\/([^/]+)\/?$/)
+  return match?.[1] ? decodeURIComponent(match[1]) : null
 }
 
 function syncClientIdToUrl(clientId: string | null) {
   if (typeof window === 'undefined') return
   const url = new URL(window.location.href)
+  // Keep the directory route canonical so popup state is query-driven.
+  url.pathname = '/clients'
   if (clientId) url.searchParams.set('client', clientId)
   else url.searchParams.delete('client')
   const next = `${url.pathname}${url.search}${url.hash}`
@@ -38,22 +45,33 @@ function syncClientIdToUrl(clientId: string | null) {
   if (next !== current) window.history.replaceState(null, '', next)
 }
 
-export function ClientDirectory({ clients, onRefresh }: ClientDirectoryProps) {
+export function ClientDirectory({
+  clients,
+  onRefresh,
+  initialClientId = null
+}: ClientDirectoryProps) {
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(
+    () => initialClientId ?? readClientIdFromUrl()
+  )
 
   useEffect(() => {
-    setSelectedClientId(readClientIdFromUrl())
+    const fromUrl = readClientIdFromUrl()
+    const nextId = initialClientId ?? fromUrl
+    if (nextId) {
+      setSelectedClientId(nextId)
+      syncClientIdToUrl(nextId)
+    }
     function onPopState() {
       setSelectedClientId(readClientIdFromUrl())
     }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
-  }, [])
+  }, [initialClientId])
 
   const openClient = useCallback((clientId: string) => {
     setSelectedClientId(clientId)

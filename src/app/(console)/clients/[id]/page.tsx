@@ -1,4 +1,5 @@
-import { redirect } from 'next/navigation'
+import { OperatorShell } from '@/components/OperatorShell'
+import { ClientsPanel } from '@/components/ClientsPanel'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -6,5 +7,14 @@ interface PageProps {
 
 export default async function ClientDetailPage({ params }: PageProps) {
   const { id } = await params
-  redirect(`/clients?client=${encodeURIComponent(id)}`)
+
+  return (
+    <OperatorShell
+      title="Clients"
+      subtitle="Accounts, relationships, and delivery workspaces"
+      width="6xl"
+    >
+      <ClientsPanel initialClientId={id} />
+    </OperatorShell>
+  )
 }
