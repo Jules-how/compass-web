@@ -128,6 +128,7 @@ test('sequence editor fork-copy and subject ban helpers exist', () => {
   const editor = read('src/components/outbound/SequenceEditor.tsx')
   assert.match(editor, /EditorComponentsAccordion/)
   assert.match(editor, /CampaignCopyMeta/)
+  assert.match(editor, /SequenceAnalyticsPanel/)
   assert.match(editor, /forkTemplateIntoSequence/)
   assert.match(editor, /variant === 'overlay'|variant = 'overlay'|variant\?: 'page' \| 'overlay'/)
   assert.match(editor, /Subject line/)

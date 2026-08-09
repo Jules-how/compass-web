@@ -180,4 +180,5 @@ test('Instantly cold-email route is operator-gated and Home fetches it', () => {
   assert.match(client, /emails\/unread\/count/)
   assert.match(client, /campaigns\/analytics\/overview/)
   assert.match(client, /COLD_EMAIL_CACHE_TTL_MS/)
+  assert.match(client, /buildSequenceCampaignAnalytics/)
 })

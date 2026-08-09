@@ -50,6 +50,7 @@ import {
   type LibraryDragPayload
 } from '@/components/outbound/EditorComponentsAccordion'
 import { CampaignCopyMeta } from '@/components/outbound/CampaignCopyMeta'
+import { SequenceAnalyticsPanel } from '@/components/outbound/SequenceAnalyticsPanel'
 import { cn } from '@/lib/utils'
 
 const UNBOUND_KEY = 'compass.outbound.unbound-draft.v1'
@@ -664,15 +665,18 @@ export function SequenceEditor({
             </div>
           ) : null}
 
-          {tab === 'analytics' || tab === 'leads' ? (
+          {tab === 'analytics' ? (
+            <SequenceAnalyticsPanel
+              instantlyCampaignId={campaign.instantly_campaign_id}
+              onOpenSettings={() => setTab('settings')}
+            />
+          ) : null}
+
+          {tab === 'leads' ? (
             <div className="mx-auto max-w-lg px-4 py-16 text-center">
-              <p className="text-[15px] font-semibold text-neutral-900">
-                {tab === 'analytics' ? 'Analytics' : 'Leads'}
-              </p>
+              <p className="text-[15px] font-semibold text-neutral-900">Leads</p>
               <p className="mt-2 text-sm text-neutral-500">
-                {tab === 'analytics'
-                  ? 'Live Instantly analytics for this sequence will land here once the campaign is attached and launched.'
-                  : 'Lead membership and suppression for this campaign will appear here after launch.'}
+                Lead membership and suppression for this campaign will appear here after launch.
               </p>
             </div>
           ) : null}
