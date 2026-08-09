@@ -11,7 +11,9 @@ Cursor **local** and **cloud** agents connect to Compass-Web over a secret-authe
 | `INSTANTLY_API_KEY` | Instantly glance + lead sync |
 | Ad account tokens | Already stored encrypted via Settings → Ad accounts |
 
-Apply migration `0035_compass_agent_sync.sql` for `compass_sync_snapshots`.
+Apply migrations:
+- `0034_compass_outbound_copy.sql` — outbound libraries + campaign copy columns
+- `0035_compass_agent_sync.sql` — `compass_sync_snapshots`
 
 ## Endpoints
 
@@ -21,7 +23,18 @@ Apply migration `0035_compass_agent_sync.sql` for `compass_sync_snapshots`.
 | `POST` | `/api/agent/sync` | `{ sources?: ['ads','instantly','instantly_leads'] }` |
 | `GET` | `/api/agent/leads` | Lean Instantly-hot leads (`status`, `limit`, `q`) |
 | `GET` | `/api/agent/campaigns` | Pipeline + Instantly campaign glance |
+| `GET` | `/api/agent/outbound/summary` | Library counts + offer keys (~1–2KB) |
+| `GET` | `/api/agent/outbound/:kind` | Compact list (`limit` default 40 max 100; `full=1` for bodies/sequences) |
+| `POST` | `/api/agent/outbound/:kind` | Create library row |
+| `GET` | `/api/agent/outbound/:kind/:id` | Full row |
+| `PATCH` | `/api/agent/outbound/:kind/:id` | Partial update (`Prefer: return=minimal` for lean ack) |
+| `DELETE` | `/api/agent/outbound/:kind/:id` | Soft-archive |
+| `GET/PATCH` | `/api/agent/outbound/campaigns/:campaignId/copy` | Campaign copy bind fields (`full=1` includes `sequence_draft`) |
 | `GET/POST` | `/api/cron/daily-sync` | Vercel Cron daily runner |
+
+Kinds: `offers` | `expressions` | `structures` | `ctas` | `subjects` | `openers` | `templates`.
+
+List filters: `offer_key`, `vertical`, `location`, `q`, `archived=1`, `limit`, `full=1`.
 
 ## Instantly ↔ Leads
 
