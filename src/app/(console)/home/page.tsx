@@ -3,7 +3,7 @@ import { HomeDashboard } from '@/components/home/HomeDashboard'
 
 export default function HomePage() {
   return (
-    <OperatorShell width="full">
+    <OperatorShell flush>
       <HomeDashboard />
     </OperatorShell>
   )
