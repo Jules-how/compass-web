@@ -256,15 +256,28 @@ export default function TaskList({
     }
   }
 
+  const emptyMessage =
+    topTasks.length === 0
+      ? 'No tasks yet. Create one to get started.'
+      : filters.window === 'done'
+        ? 'No completed tasks yet.'
+        : 'Nothing in this view. Try another tab or clear a filter.'
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap rounded-xl border border-stone-200 bg-white p-0.5 text-xs">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <div
+            className="inline-flex shrink-0 rounded-xl border border-stone-200 bg-white p-0.5 text-xs"
+            role="tablist"
+            aria-label="Task windows"
+          >
             {WINDOW_ORDER.map((window) => (
               <button
                 key={window}
                 type="button"
+                role="tab"
+                aria-selected={filters.window === window}
                 onClick={() => patchFilters({ window })}
                 className={`rounded-lg px-2.5 py-1.5 font-medium transition ${
                   filters.window === window
@@ -273,18 +286,20 @@ export default function TaskList({
                 }`}
               >
                 {WINDOW_LABELS[window]}
-                <span className="ml-1.5 tabular-nums opacity-70">{windowCounts[window]}</span>
+                <span className="ml-1.5 inline-block min-w-[1.25rem] text-right tabular-nums opacity-70">
+                  {windowCounts[window]}
+                </span>
               </button>
             ))}
           </div>
-          <p className="text-xs text-neutral-500">
+          <p className="min-w-[11.5rem] text-xs tabular-nums text-neutral-500">
             {visibleTasks.length} shown · {openCount} open · {doneCount} done
           </p>
         </div>
         <button
           type="button"
           onClick={() => setCreating((v) => !v)}
-          className="compass-btn-primary"
+          className="compass-btn-primary shrink-0"
         >
           {creating ? 'Cancel' : 'New task'}
         </button>
@@ -373,25 +388,19 @@ export default function TaskList({
         />
       )}
 
-      {visibleTasks.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-stone-300/80 bg-stone-50/40 px-4 py-12 text-center text-sm text-neutral-500">
-          {topTasks.length === 0
-            ? 'No tasks yet. Create one to get started.'
-            : filters.window === 'done'
-              ? 'No completed tasks yet.'
-              : 'Nothing in this view. Try another tab or clear a filter.'}
+      <div className="overflow-hidden rounded-2xl border border-stone-200/70 bg-white shadow-soft">
+        <div className="hidden grid-cols-[auto_minmax(0,1fr)_minmax(5.5rem,7.5rem)_minmax(4.5rem,6rem)_minmax(3.5rem,5rem)_auto] gap-x-3 border-b border-stone-100 bg-stone-50/80 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 sm:grid">
+          <span className="w-5" />
+          <span>Task</span>
+          <span>Project</span>
+          <span>Created</span>
+          <span>Due</span>
+          <span className="text-right"> </span>
         </div>
-      ) : (
-        <div className="overflow-hidden rounded-2xl border border-stone-200/70 bg-white shadow-soft">
-          <div className="hidden grid-cols-[auto_minmax(0,1fr)_minmax(5.5rem,7.5rem)_minmax(4.5rem,6rem)_minmax(3.5rem,5rem)_auto] gap-x-3 border-b border-stone-100 bg-stone-50/80 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 sm:grid">
-            <span className="w-5" />
-            <span>Task</span>
-            <span>Project</span>
-            <span>Created</span>
-            <span>Due</span>
-            <span className="text-right"> </span>
-          </div>
-          {groups.map((group) => (
+        {visibleTasks.length === 0 ? (
+          <div className="px-4 py-12 text-center text-sm text-neutral-500">{emptyMessage}</div>
+        ) : (
+          groups.map((group) => (
             <section key={group.key} className="border-b border-stone-100 last:border-b-0">
               {groupBy !== 'none' ? (
                 <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-stone-100 bg-stone-50/95 px-3 py-1.5 backdrop-blur">
@@ -421,9 +430,9 @@ export default function TaskList({
                 ))}
               </ul>
             </section>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
       {filters.window !== 'done' && completedTasks.length > 0 ? (
         <div className="overflow-hidden rounded-2xl border border-stone-200/70 bg-white shadow-soft">

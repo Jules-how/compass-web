@@ -89,11 +89,14 @@ function ConsoleMain({ children }: { children: ReactNode }) {
   const showChildren = !isHomeOrInboxPath(pathname) && !keepAliveRoute
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col md:overflow-y-auto">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col md:overflow-y-auto md:scrollbar-gutter-stable">
       {/*
         min-h-full + flex-1 lets flush pages (Inbox, Campaign Planner) fill the
         viewport like Linear, while still growing with tall non-flush pages so
         this column remains the scroll container.
+        scrollbar-gutter:stable keeps the main column width fixed when tall
+        pages (e.g. My Tasks Focus/Backlog) gain/lose a vertical scrollbar —
+        otherwise mx-auto content shifts left/right between tabs.
       */}
       <div className="flex min-h-full flex-1 flex-col">
         <ConsoleHomeInboxKeepAlive />
@@ -213,7 +216,7 @@ function PageMain({
 
   return (
     <main
-      className={`mx-auto ${WIDTH[width]} px-4 sm:px-6 lg:px-8 ${compact ? 'py-3' : 'py-7'}`}
+      className={`mx-auto w-full ${WIDTH[width]} px-4 sm:px-6 lg:px-8 ${compact ? 'py-3' : 'py-7'}`}
     >
       {(title || actions) && (
         <header
