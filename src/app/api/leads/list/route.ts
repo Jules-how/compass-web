@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server'
 import type { LeadContact, LeadListFilters } from '@/lib/types'
 import { requirePortalAccess } from '@/lib/portal-access'
-import { portalAccessResponse, portalJson, portalJsonCached } from '@/lib/portal-http'
+import { portalAccessResponse, portalJson } from '@/lib/portal-http'
 import { LEAD_LIST_COLUMNS, LEAD_PAGE_SIZE } from '@/lib/list-columns'
 import { applyLeadFilters, parseLeadListFilters, type LeadFilterQuery } from '@/lib/leads-query'
 
@@ -59,16 +59,14 @@ export async function GET(request: NextRequest) {
     if (error) {
       return portalJson({ error: 'fetch_failed', detail: error.message }, { status: 400 })
     }
-    return portalJsonCached(
+    return portalJson(
       {
         leads: data ?? [],
         total: count ?? 0,
         page,
         pageSize: exportLimit ?? pageSize,
         filters
-      },
-      {},
-      30
+      }
     )
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })

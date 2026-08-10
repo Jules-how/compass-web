@@ -4,18 +4,7 @@ import { useCallback, useRef, useState } from 'react'
 import Papa from 'papaparse'
 import Link from 'next/link'
 import type { LeadSourceService, LeadVertical, LeadUploadResult } from '@/lib/types'
-import { humanizeVertical } from '@/lib/leads-meta'
-
-const VERTICALS: LeadVertical[] = [
-  'mortgage-brokers',
-  'hvac',
-  'electrician',
-  'broker',
-  'recruitment',
-  'trades',
-  'agency',
-  'other'
-]
+import { LEAD_VERTICALS, humanizeVertical, normalizeVerticalSlug } from '@/lib/leads-meta'
 
 const SOURCE_SERVICES: LeadSourceService[] = ['prospeo', 'origami', 'vibe', 'manual', 'other']
 
@@ -28,7 +17,9 @@ interface ParsedPreview {
 }
 
 export default function LeadUploadClient() {
-  const [vertical, setVertical] = useState<LeadVertical>('other')
+  const [vertical, setVertical] = useState<string>('other')
+  const [customVertical, setCustomVertical] = useState('')
+  const [preferFormVertical, setPreferFormVertical] = useState(true)
   const [sourceService, setSourceService] = useState<LeadSourceService>('prospeo')
   const [parsed, setParsed] = useState<ParsedPreview | null>(null)
   const [status, setStatus] = useState<Status>('idle')
@@ -69,7 +60,11 @@ export default function LeadUploadClient() {
           return
         }
         const headers = res.meta.fields ?? Object.keys(rows[0] ?? {})
-        setParsed({ filename: file.name, rows: rows as Record<string, string | undefined>[], headers })
+        setParsed({
+          filename: file.name,
+          rows: rows as Record<string, string | undefined>[],
+          headers
+        })
         setStatus('idle')
       },
       error: (err) => {
@@ -86,8 +81,20 @@ export default function LeadUploadClient() {
     if (file) handleFile(file)
   }
 
+  function resolveVertical(): string {
+    if (vertical === '__custom__') {
+      return normalizeVerticalSlug(customVertical) || 'other'
+    }
+    return normalizeVerticalSlug(vertical) || vertical
+  }
+
   async function handleUpload() {
     if (!parsed) return
+    if (vertical === '__custom__' && !customVertical.trim()) {
+      setError('Enter a custom vertical name (e.g. plumbers).')
+      setStatus('error')
+      return
+    }
     setStatus('uploading')
     setError(null)
     setResult(null)
@@ -97,9 +104,10 @@ export default function LeadUploadClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           rows: parsed.rows,
-          vertical,
+          vertical: resolveVertical() as LeadVertical,
           sourceService,
-          filename: parsed.filename
+          filename: parsed.filename,
+          preferFormVertical
         })
       })
       const body = (await res.json().catch(() => ({}))) as Partial<LeadUploadResult> & {
@@ -129,12 +137,12 @@ export default function LeadUploadClient() {
       <header className="mb-6">
         <h1 className="text-2xl font-semibold text-neutral-900">Upload leads</h1>
         <p className="text-sm text-neutral-500">
-          Parse a CSV client-side, then import it into the lead cloud mirror. Existing
-          emails are deduped against <code>lead_contacts</code>.
+          Parse a CSV client-side, then import it into the lead cloud mirror. Existing emails are
+          deduped against <code>lead_contacts</code>. New verticals become filterable in CRM as soon
+          as they are uploaded.
         </p>
       </header>
 
-      {/* Step 1: file */}
       <section className="space-y-4 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
         <div
           onDragOver={(e) => {
@@ -183,20 +191,20 @@ export default function LeadUploadClient() {
           />
         </div>
 
-        {/* Step 2: metadata */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-neutral-500">Vertical</span>
             <select
               value={vertical}
-              onChange={(e) => setVertical(e.target.value as LeadVertical)}
+              onChange={(e) => setVertical(e.target.value)}
               className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm focus:border-sf-orange focus:outline-none"
             >
-              {VERTICALS.map((v) => (
+              {LEAD_VERTICALS.map((v) => (
                 <option key={v} value={v}>
                   {humanizeVertical(v)}
                 </option>
               ))}
+              <option value="__custom__">Custom vertical…</option>
             </select>
           </label>
           <label className="block">
@@ -214,6 +222,34 @@ export default function LeadUploadClient() {
             </select>
           </label>
         </div>
+
+        {vertical === '__custom__' && (
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-neutral-500">
+              Custom vertical name
+            </span>
+            <input
+              type="text"
+              placeholder="e.g. plumbers, solar, landscapers"
+              value={customVertical}
+              onChange={(e) => setCustomVertical(e.target.value)}
+              className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm focus:border-sf-orange focus:outline-none"
+            />
+          </label>
+        )}
+
+        <label className="flex items-start gap-2 text-sm text-neutral-600">
+          <input
+            type="checkbox"
+            checked={preferFormVertical}
+            onChange={(e) => setPreferFormVertical(e.target.checked)}
+            className="mt-0.5 rounded border-neutral-300"
+          />
+          <span>
+            Apply this vertical to every row (recommended). Uncheck to keep per-row Industry /
+            Category from the CSV for mixed lists.
+          </span>
+        </label>
 
         {parsed && (
           <details className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs">
@@ -250,7 +286,7 @@ export default function LeadUploadClient() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={handleUpload}
+            onClick={() => void handleUpload()}
             disabled={!canUpload}
             className="compass-btn-primary"
           >
@@ -271,7 +307,6 @@ export default function LeadUploadClient() {
         {error && <p className="text-sm text-red-600">{error}</p>}
       </section>
 
-      {/* Result */}
       {result && (
         <section className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm">
           <h2 className="mb-2 font-semibold text-emerald-900">Import complete</h2>
@@ -295,6 +330,7 @@ export default function LeadUploadClient() {
           </dl>
           <p className="mt-2 text-xs text-emerald-700">
             Batch id: <code>{result.batchId}</code>
+            {` · Vertical: ${resolveVertical()}`}
           </p>
           {result.errors.length > 0 && (
             <details className="mt-2">
@@ -310,8 +346,11 @@ export default function LeadUploadClient() {
             </details>
           )}
           <div className="mt-3">
-            <Link href="/leads" className="text-sm font-medium text-sf-orange-dark hover:underline">
-              View leads →
+            <Link
+              href={`/leads?vertical=${encodeURIComponent(resolveVertical())}`}
+              className="text-sm font-medium text-sf-orange-dark hover:underline"
+            >
+              View {humanizeVertical(resolveVertical())} leads →
             </Link>
           </div>
         </section>

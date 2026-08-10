@@ -79,7 +79,17 @@ export function applyLeadFilters<T extends LeadFilterQuery>(query: T, filters: L
 
   if (filters.vertical) {
     const values = verticalFilterValues(filters.vertical)
-    q = (values.length === 1 ? q.eq('vertical', values[0]) : q.in('vertical', values)) as T
+    if (values.length === 1) {
+      // Case-insensitive exact match for free-text historical values.
+      q = q.ilike('vertical', values[0]) as T
+    } else if (values.length > 1) {
+      // PostgREST `or` with ilike covers casing / spaced Industry spellings.
+      const clause = values
+        .slice(0, 40)
+        .map((v) => `vertical.ilike.${escapePostgrestOrValue(v)}`)
+        .join(',')
+      q = q.or(clause) as T
+    }
   }
   if (filters.source) q = q.eq('source', filters.source) as T
   if (filters.outbound_status) {
@@ -178,6 +188,16 @@ function applySyncState(query: LeadFilterQuery, syncState: string): LeadFilterQu
 
 function escapeIlike(value: string): string {
   return value.replace(/[%_,]/g, ' ').trim()
+}
+
+/** Escape a value for PostgREST `or=(col.ilike.VALUE)` grammar. */
+function escapePostgrestOrValue(value: string): string {
+  const cleaned = value.replace(/[%]/g, ' ').trim()
+  // Quote when spaces / commas / parens would break the filter list.
+  if (/[\s,()]/.test(cleaned) || cleaned.includes('.')) {
+    return `"${cleaned.replace(/"/g, '')}"`
+  }
+  return cleaned
 }
 
 export function leadFiltersToSearchParams(filters: LeadListFilters, page?: number): URLSearchParams {
