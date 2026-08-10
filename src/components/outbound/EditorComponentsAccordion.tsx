@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   FileText,
@@ -31,7 +31,6 @@ import {
   listLocalSubjects,
   listLocalTemplates
 } from '@/lib/outbound-local-store'
-import { LOCATION_TAG_HINTS, VERTICAL_TAG_HINTS } from '@/lib/outbound-copy'
 import { cn } from '@/lib/utils'
 
 export { parseLibraryDrag }
@@ -158,31 +157,15 @@ function LibraryRow({
 }
 
 export function EditorComponentsAccordion({
-  offerKeyFilter,
   onInsert,
   className
 }: {
-  offerKeyFilter?: string | null
   onInsert: (payload: LibraryDragPayload) => void
   className?: string
 }) {
-  const [q, setQ] = useState('')
-  const [vertical, setVertical] = useState('')
-  const [location, setLocation] = useState('')
-
-  const filters = useMemo(
-    () => ({
-      offer_key: offerKeyFilter || undefined,
-      vertical: vertical || undefined,
-      location: location || undefined,
-      q: q || undefined
-    }),
-    [offerKeyFilter, vertical, location, q]
-  )
-
   const lists = useMemo(() => {
     return {
-      offers: listLocalOffers({ ...filters, offer_key: undefined }).map((row) => (
+      offers: listLocalOffers().map((row) => (
         <LibraryRow
           key={row.id}
           title={row.name}
@@ -192,7 +175,7 @@ export function EditorComponentsAccordion({
           onInsert={onInsert}
         />
       )),
-      expressions: listLocalExpressions(filters).map((row) => (
+      expressions: listLocalExpressions().map((row) => (
         <LibraryRow
           key={row.id}
           title={row.label}
@@ -208,7 +191,7 @@ export function EditorComponentsAccordion({
           onInsert={onInsert}
         />
       )),
-      structures: listLocalStructures(filters).map((row) => (
+      structures: listLocalStructures().map((row) => (
         <LibraryRow
           key={row.id}
           title={row.name}
@@ -223,7 +206,7 @@ export function EditorComponentsAccordion({
           onInsert={onInsert}
         />
       )),
-      ctas: listLocalCtas(filters).map((row) => (
+      ctas: listLocalCtas().map((row) => (
         <LibraryRow
           key={row.id}
           title={row.label}
@@ -239,7 +222,7 @@ export function EditorComponentsAccordion({
           onInsert={onInsert}
         />
       )),
-      subjects: listLocalSubjects(filters).map((row) => (
+      subjects: listLocalSubjects().map((row) => (
         <LibraryRow
           key={row.id}
           title={row.label}
@@ -249,7 +232,7 @@ export function EditorComponentsAccordion({
           onInsert={onInsert}
         />
       )),
-      openers: listLocalOpeners(filters).map((row) => (
+      openers: listLocalOpeners().map((row) => (
         <LibraryRow
           key={row.id}
           title={row.label}
@@ -265,7 +248,7 @@ export function EditorComponentsAccordion({
           onInsert={onInsert}
         />
       )),
-      templates: listLocalTemplates(filters).map((row) => (
+      templates: listLocalTemplates().map((row) => (
         <LibraryRow
           key={row.id}
           title={row.name}
@@ -275,45 +258,13 @@ export function EditorComponentsAccordion({
         />
       ))
     }
-  }, [filters, onInsert])
+  }, [onInsert])
 
   return (
     <div className={cn('flex h-full min-h-0 flex-col', className)}>
-      <div className="shrink-0 space-y-2 border-b border-stone-100 px-4 py-3">
-        <div>
-          <h2 className="text-[15px] font-semibold text-neutral-900">Components</h2>
-          <p className="mt-0.5 text-[12px] text-neutral-500">Click or drag into the draft</p>
-        </div>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search library…"
-          className="w-full rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-1.5 text-[13px] outline-none focus:border-[#e85d2a]/40"
-        />
-        <div className="flex flex-wrap gap-1">
-          {[...VERTICAL_TAG_HINTS, ...LOCATION_TAG_HINTS].map((tag) => {
-            const isV = (VERTICAL_TAG_HINTS as readonly string[]).includes(tag)
-            const active = isV ? vertical === tag : location === tag
-            return (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => {
-                  if (isV) setVertical((v) => (v === tag ? '' : tag))
-                  else setLocation((v) => (v === tag ? '' : tag))
-                }}
-                className={cn(
-                  'rounded-xl border px-2 py-0.5 text-[10px] font-medium',
-                  active
-                    ? 'border-[#e85d2a]/40 bg-[#e85d2a]/10 text-[#c2410c]'
-                    : 'border-stone-200 bg-white text-neutral-500'
-                )}
-              >
-                {tag}
-              </button>
-            )
-          })}
-        </div>
+      <div className="shrink-0 space-y-1 border-b border-stone-100 px-4 py-3">
+        <h2 className="text-[15px] font-semibold text-neutral-900">Components</h2>
+        <p className="text-[12px] text-neutral-500">Click or drag into the draft</p>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
@@ -346,7 +297,7 @@ export function EditorComponentsAccordion({
                   {rows.length === 0 ? (
                     <p className="flex items-center gap-2 px-1 text-[11px] text-neutral-400">
                       <FileText className="size-3.5" />
-                      No items match
+                      No items yet
                     </p>
                   ) : (
                     rows
