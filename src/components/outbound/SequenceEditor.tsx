@@ -3,23 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import {
-  ArrowLeft,
-  Braces,
-  Eye,
-  Image as ImageIcon,
-  Link2,
-  Monitor,
-  Plus,
-  Rocket,
-  Smartphone,
-  Sparkles,
-  Type,
-  User,
-  Wand2,
-  X,
-  Zap
-} from 'lucide-react'
+import { ArrowLeft, Monitor, Plus, Rocket, Smartphone, X, Zap } from 'lucide-react'
 import {
   createLocalCampaign,
   getLocalCampaignDetail,
@@ -51,6 +35,7 @@ import {
 } from '@/components/outbound/EditorComponentsAccordion'
 import { CampaignCopyMeta } from '@/components/outbound/CampaignCopyMeta'
 import { SequenceAnalyticsPanel } from '@/components/outbound/SequenceAnalyticsPanel'
+import { INSTANTLY_BASE_VARIABLES } from '@/lib/instantly-variables'
 import { cn } from '@/lib/utils'
 
 const UNBOUND_KEY = 'compass.outbound.unbound-draft.v1'
@@ -506,11 +491,12 @@ export function SequenceEditor({
 
       <div className="flex min-h-0 flex-1">
         {/* Canvas */}
-        <div className="relative min-w-0 flex-1 overflow-y-auto">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto">
           {tab === 'editor' ? (
             <div
               className={cn(
-                'mx-auto w-full px-4 pb-28 pt-8',
+                'mx-auto w-full px-4 pb-8 pt-8',
                 previewDevice === 'mobile' ? 'max-w-md' : 'max-w-2xl'
               )}
               onDragOver={(e) => {
@@ -690,55 +676,59 @@ export function SequenceEditor({
               </p>
             </div>
           ) : null}
+          </div>
 
-          {/* Floating toolbar */}
           {tab === 'editor' ? (
-            <div className="pointer-events-none absolute inset-x-0 bottom-5 z-20 flex justify-center px-4">
-              <div className="pointer-events-auto flex items-center gap-1 rounded-2xl border border-stone-200/80 bg-white/95 px-2 py-1.5 shadow-lift backdrop-blur">
-                <ToolbarIcon
-                  label="Text"
-                  onClick={() => setFocusField('body')}
-                  icon={<Type className="size-4" />}
-                />
-                <ToolbarIcon
-                  label="Variable"
-                  onClick={() => insertVariable('{{firstName}}')}
-                  icon={<Zap className="size-4" />}
-                />
-                <ToolbarIcon
-                  label="Link"
-                  onClick={() => insertVariable('https://')}
-                  icon={<Link2 className="size-4" />}
-                />
-                <ToolbarIcon label="Image" onClick={() => undefined} icon={<ImageIcon className="size-4" />} />
-                <ToolbarIcon label="Launch tip" onClick={() => undefined} icon={<Rocket className="size-4" />} />
-                <ToolbarIcon
-                  label="Personalize"
-                  onClick={() => insertVariable('{{companyName}}')}
-                  icon={<User className="size-4" />}
-                />
-                <span className="mx-1 h-5 w-px bg-stone-200" />
-                <ToolbarIcon
-                  label="Desktop"
-                  active={previewDevice === 'desktop'}
-                  onClick={() => setPreviewDevice('desktop')}
-                  icon={<Monitor className="size-4" />}
-                />
-                <ToolbarIcon
-                  label="Mobile"
-                  active={previewDevice === 'mobile'}
-                  onClick={() => setPreviewDevice('mobile')}
-                  icon={<Smartphone className="size-4" />}
-                />
-                <span className="mx-1 h-5 w-px bg-stone-200" />
-                <ToolbarIcon label="Style" onClick={() => undefined} icon={<Wand2 className="size-4" />} />
-                <ToolbarIcon label="Code" onClick={() => insertVariable('{{}}')} icon={<Braces className="size-4" />} />
-                <ToolbarIcon label="Preview" onClick={() => undefined} icon={<Eye className="size-4" />} />
-                <ToolbarIcon
-                  label="AI assist"
-                  onClick={() => insertVariable('\n\n')}
-                  icon={<Sparkles className="size-4" />}
-                />
+            <div className="shrink-0 border-t border-stone-200/80 bg-white px-4 py-3 shadow-soft">
+              <div className="mx-auto flex max-w-2xl flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+                    <Zap className="size-3.5 text-[#e85d2a]" />
+                    Instantly variables
+                    <span className="font-normal normal-case tracking-normal text-neutral-400">
+                      · insert into {focusField === 'subject' ? 'subject' : 'body'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      title="Desktop width"
+                      aria-label="Desktop width"
+                      onClick={() => setPreviewDevice('desktop')}
+                      className={cn(
+                        'rounded-xl p-1.5 text-neutral-400 transition hover:bg-stone-50 hover:text-neutral-700',
+                        previewDevice === 'desktop' && 'bg-[#e85d2a]/10 text-[#c2410c]'
+                      )}
+                    >
+                      <Monitor className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Mobile width"
+                      aria-label="Mobile width"
+                      onClick={() => setPreviewDevice('mobile')}
+                      className={cn(
+                        'rounded-xl p-1.5 text-neutral-400 transition hover:bg-stone-50 hover:text-neutral-700',
+                        previewDevice === 'mobile' && 'bg-[#e85d2a]/10 text-[#c2410c]'
+                      )}
+                    >
+                      <Smartphone className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {INSTANTLY_BASE_VARIABLES.map((variable) => (
+                    <button
+                      key={variable.key}
+                      type="button"
+                      title={variable.token}
+                      onClick={() => insertVariable(variable.token)}
+                      className="rounded-xl border border-stone-200 bg-stone-50/80 px-2.5 py-1 text-[12px] font-medium text-neutral-700 transition hover:border-[#e85d2a]/35 hover:bg-[#e85d2a]/5 hover:text-[#c2410c]"
+                    >
+                      {`{{${variable.key}}}`}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           ) : null}
@@ -748,7 +738,6 @@ export function SequenceEditor({
         {tab === 'editor' ? (
           <aside className="hidden w-[400px] shrink-0 border-l border-stone-200/80 bg-white lg:flex lg:flex-col">
             <EditorComponentsAccordion
-              offerKeyFilter={campaign.offer_key}
               onInsert={(payload) => applyLibraryPayload(payload)}
               className="min-h-0 flex-1"
             />
@@ -756,33 +745,6 @@ export function SequenceEditor({
         ) : null}
       </div>
     </>
-  )
-}
-
-function ToolbarIcon({
-  icon,
-  label,
-  onClick,
-  active
-}: {
-  icon: React.ReactNode
-  label: string
-  onClick: () => void
-  active?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      onClick={onClick}
-      className={cn(
-        'rounded-xl p-2 text-neutral-500 transition hover:bg-stone-50 hover:text-neutral-800',
-        active && 'bg-[#e85d2a]/10 text-[#c2410c]'
-      )}
-    >
-      {icon}
-    </button>
   )
 }
 

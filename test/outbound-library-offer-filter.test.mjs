@@ -45,3 +45,37 @@ test('local store / API / agent filters use scoped-only offer_key matching', () 
     )
   }
 })
+
+test('editor components rail lists all library items without filters', () => {
+  const src = read('src/components/outbound/EditorComponentsAccordion.tsx')
+  assert.doesNotMatch(src, /offerKeyFilter/)
+  assert.doesNotMatch(src, /VERTICAL_TAG_HINTS/)
+  assert.doesNotMatch(src, /setVertical/)
+  assert.match(src, /listLocalCtas\(\)/)
+  assert.match(src, /listLocalSubjects\(\)/)
+})
+
+test('sequence editor exposes Instantly base variables for copy transfer', () => {
+  const vars = read('src/lib/instantly-variables.ts')
+  for (const key of [
+    'email',
+    'firstName',
+    'lastName',
+    'companyName',
+    'jobTitle',
+    'personalization',
+    'phone',
+    'website',
+    'location',
+    'linkedIn'
+  ]) {
+    assert.match(vars, new RegExp(`key: '${key}'`))
+    assert.match(vars, new RegExp(`token: '\\{\\{${key}\\}\\}'`))
+  }
+
+  const editor = read('src/components/outbound/SequenceEditor.tsx')
+  assert.match(editor, /INSTANTLY_BASE_VARIABLES/)
+  assert.match(editor, /Instantly variables/)
+  assert.doesNotMatch(editor, /ToolbarIcon/)
+  assert.doesNotMatch(editor, /label="AI assist"/)
+})
