@@ -494,3 +494,104 @@ export const LIBRARY_NAV = [
     blurb: 'Multi-step sequence forks'
   }
 ] as const
+
+export type LibraryNavKey = (typeof LIBRARY_NAV)[number]['key']
+
+/** Two most-relevant library examples shown when an Email components accordion row expands. */
+export type LibraryFeaturedExample = {
+  id: string
+  title: string
+  detail: string
+}
+
+export const LIBRARY_FEATURED_EXAMPLES: Record<
+  LibraryNavKey,
+  readonly [LibraryFeaturedExample, LibraryFeaturedExample]
+> = {
+  offers: [
+    {
+      id: 'offer-growth-system',
+      title: 'Growth System',
+      detail: 'Qualified booked appointments from paid ads — hybrid signup + retainer + performance'
+    },
+    {
+      id: 'offer-ai-enablement',
+      title: 'AI enablement',
+      detail: 'Install marketing, quote follow-up, and review tools in-house; install fee refund path'
+    }
+  ],
+  expressions: [
+    {
+      id: 'expr-growth-mortgage',
+      title: 'Growth System · mortgage brokers',
+      detail:
+        "I'll get you {{bookedN}} booked borrower chats in the first 30 days after access and budget are live, or I refund the setup fee in full."
+    },
+    {
+      id: 'expr-ai-enablement-tradies',
+      title: 'AI Enablement · tradies',
+      detail:
+        'Within 30 days of access, your marketing, quote follow-up, and review tools are set up and someone on your side can run them, or you get the install fee back.'
+    }
+  ],
+  structures: [
+    {
+      id: 'struct-nick-3step',
+      title: 'Nick 3-step',
+      detail: 'Opener → cold expression → CTA — default thin-proof skeleton'
+    },
+    {
+      id: 'struct-nick-4step',
+      title: 'Nick 4-step',
+      detail: 'Opener → proof → cold expression → CTA — when social proof earns a slot'
+    }
+  ],
+  ctas: [
+    {
+      id: 'cta-permission-default',
+      title: 'Permission default',
+      detail: 'Mind if I send over {{asset}}?'
+    },
+    {
+      id: 'cta-timed-call',
+      title: 'Timed call',
+      detail: 'Would you be open to 15 minutes? If so, I can ring at {{t1}} or {{t2}}.'
+    }
+  ],
+  subjects: [
+    {
+      id: 'subj-colleague-register',
+      title: 'Colleague register',
+      detail: '{{companyName}} / {{firstName}}'
+    },
+    {
+      id: 'subj-outcome-stem',
+      title: 'Outcome stem',
+      detail: '{{outcome}} for {{companyName}}'
+    }
+  ],
+  openers: [
+    {
+      id: 'opener-nick-tier',
+      title: 'Nick tier',
+      detail: 'Research-backed fact — usually filled per lead via Instantly vars'
+    },
+    {
+      id: 'opener-platten-hook',
+      title: 'Platten hook',
+      detail: 'Optional hook-style opener for AIDA-style sequences'
+    }
+  ],
+  templates: [
+    {
+      id: 'tmpl-thin-proof-nick-3',
+      title: 'Thin proof · nick-3step',
+      detail: 'Forkable 3-step with permission CTA and cold-expression placeholder'
+    },
+    {
+      id: 'tmpl-ai-enablement-tradies',
+      title: 'AI Enablement · tradies',
+      detail: 'Enablement expression + dream-ask CTA on nick-3step'
+    }
+  ]
+}

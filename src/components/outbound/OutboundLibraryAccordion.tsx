@@ -18,7 +18,12 @@ import {
   AccordionItem,
   AccordionTrigger
 } from '@/components/ui/accordion'
-import { LIBRARY_NAV } from '@/lib/outbound-copy'
+import {
+  LIBRARY_FEATURED_EXAMPLES,
+  LIBRARY_NAV,
+  type LibraryFeaturedExample,
+  type LibraryNavKey
+} from '@/lib/outbound-copy'
 import { cn } from '@/lib/utils'
 
 const ICON_MAP: Record<
@@ -32,6 +37,42 @@ const ICON_MAP: Record<
   subjects: { icon: Type, textColor: 'text-sky-700', bgColor: 'bg-sky-500/10' },
   openers: { icon: Sparkles, textColor: 'text-violet-700', bgColor: 'bg-violet-500/10' },
   templates: { icon: LayoutTemplate, textColor: 'text-rose-700', bgColor: 'bg-rose-500/10' }
+}
+
+function ExampleRow({
+  example,
+  href,
+  onPick
+}: {
+  example: LibraryFeaturedExample
+  href: string
+  onPick?: () => void
+}) {
+  const className =
+    'block w-full rounded-xl border border-stone-200/80 bg-stone-50/50 p-2.5 text-left transition hover:border-stone-300 hover:bg-white'
+
+  const body = (
+    <>
+      <div className="text-[13px] font-semibold text-neutral-900">{example.title}</div>
+      <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-neutral-600">
+        {example.detail}
+      </p>
+    </>
+  )
+
+  if (onPick) {
+    return (
+      <button type="button" onClick={onPick} className={className}>
+        {body}
+      </button>
+    )
+  }
+
+  return (
+    <Link href={href} className={className}>
+      {body}
+    </Link>
+  )
 }
 
 export function OutboundLibraryAccordion({
@@ -56,6 +97,7 @@ export function OutboundLibraryAccordion({
           bgColor: 'bg-stone-500/10'
         }
         const Icon = meta.icon
+        const examples = LIBRARY_FEATURED_EXAMPLES[item.key as LibraryNavKey]
         return (
           <AccordionItem
             key={item.key}
@@ -73,26 +115,21 @@ export function OutboundLibraryAccordion({
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="ps-14">
-              <p className="text-[12px] leading-relaxed text-neutral-500">
-                Browse and fork {item.label.toLowerCase()} into campaign drafts. Library text is
-                always copied — never live-bound.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {onPick ? (
-                  <button
-                    type="button"
-                    onClick={() => onPick(item.key)}
-                    className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-1.5 text-[12px] font-semibold text-neutral-800 shadow-soft hover:bg-white"
-                  >
-                    Use in editor
-                  </button>
-                ) : null}
+            <AccordionContent className="space-y-2 ps-14 pb-3">
+              {examples.map((example) => (
+                <ExampleRow
+                  key={example.id}
+                  example={example}
+                  href={item.href}
+                  onPick={onPick ? () => onPick(item.key) : undefined}
+                />
+              ))}
+              <div className="pt-1">
                 <Link
                   href={item.href}
-                  className="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-neutral-800 shadow-soft hover:border-stone-300"
+                  className="text-[12px] font-medium text-[#c2410c] hover:underline"
                 >
-                  Open library
+                  Browse all {item.label.toLowerCase()} →
                 </Link>
               </div>
             </AccordionContent>
