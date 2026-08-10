@@ -100,14 +100,14 @@ export function formatProjectDate(value: string | null | undefined): string {
 
 /** Palette used for project icons / timeline accents. */
 export const PROJECT_ICON_COLORS = [
-  '#5E6AD2',
-  '#26B5CE',
-  '#4CB782',
-  '#F2C94C',
+  '#5B5FE8',
+  '#D9487D',
+  '#1FA971',
+  '#D4A017',
   '#E85D2A',
   '#EB5757',
-  '#BB87FC',
-  '#95A2B3'
+  '#7C6CF0',
+  '#6B7C8F'
 ] as const
 
 /** Neutral default when a project has no business function. */
@@ -123,29 +123,29 @@ const FUNCTION_ICON_COLOR_BY_KEY: Record<string, string> = {
   outbound: '#E85D2A',
   pipeline: '#E85D2A',
   crm: '#E85D2A',
-  'client-deliveries': '#4CB782',
-  'client-delivery': '#4CB782',
-  deliveries: '#4CB782',
-  delivery: '#4CB782',
-  deliver: '#4CB782',
-  fulfilment: '#4CB782',
-  fulfillment: '#4CB782',
-  build: '#5E6AD2',
-  product: '#5E6AD2',
-  systems: '#5E6AD2',
-  'product-systems': '#5E6AD2',
-  'product-and-systems': '#5E6AD2',
-  engineering: '#5E6AD2',
-  think: '#F2C94C',
-  strategy: '#F2C94C',
-  admin: '#95A2B3',
-  operations: '#95A2B3',
-  ops: '#95A2B3',
-  finances: '#95A2B3',
-  finance: '#95A2B3',
-  marketing: '#26B5CE',
-  growth: '#26B5CE',
-  brand: '#26B5CE'
+  'client-deliveries': '#1FA971',
+  'client-delivery': '#1FA971',
+  deliveries: '#1FA971',
+  delivery: '#1FA971',
+  deliver: '#1FA971',
+  fulfilment: '#1FA971',
+  fulfillment: '#1FA971',
+  build: '#5B5FE8',
+  product: '#5B5FE8',
+  systems: '#5B5FE8',
+  'product-systems': '#5B5FE8',
+  'product-and-systems': '#5B5FE8',
+  engineering: '#5B5FE8',
+  think: '#D4A017',
+  strategy: '#D4A017',
+  admin: '#6B7C8F',
+  operations: '#6B7C8F',
+  ops: '#6B7C8F',
+  finances: '#6B7C8F',
+  finance: '#6B7C8F',
+  marketing: '#D9487D',
+  growth: '#D9487D',
+  brand: '#D9487D'
 }
 
 function normalizeFunctionKey(value: string): string {
@@ -184,10 +184,11 @@ export function projectColorForFunction(fn: ProjectFunctionColorInput): string {
   }
 
   // Partial matches: "Client Deliveries AU" → client-deliveries-au still hits "client-deliveries"
+  const knownKeys = Object.keys(FUNCTION_ICON_COLOR_BY_KEY).sort((a, b) => b.length - a.length)
   for (const key of candidates) {
-    for (const [known, color] of Object.entries(FUNCTION_ICON_COLOR_BY_KEY)) {
-      if (key === known || key.startsWith(`${known}-`) || key.endsWith(`-${known}`)) {
-        return color
+    for (const known of knownKeys) {
+      if (key.startsWith(`${known}-`) || key.endsWith(`-${known}`)) {
+        return FUNCTION_ICON_COLOR_BY_KEY[known]
       }
     }
   }

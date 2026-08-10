@@ -145,9 +145,9 @@ export function FunctionMark({
     <div
       className={cn('flex shrink-0 items-center justify-center', dim, className)}
       style={{
-        background: `linear-gradient(145deg, color-mix(in srgb, ${color} 22%, white), color-mix(in srgb, ${color} 10%, white))`,
+        background: `linear-gradient(145deg, color-mix(in srgb, ${color} 34%, white), color-mix(in srgb, ${color} 16%, white))`,
         color,
-        boxShadow: `0 1px 2px rgba(15, 18, 23, 0.05), inset 0 0 0 1px color-mix(in srgb, ${color} 32%, transparent)`
+        boxShadow: `0 1px 2px rgba(15, 18, 23, 0.06), inset 0 0 0 1px color-mix(in srgb, ${color} 42%, transparent)`
       }}
       aria-hidden
     >

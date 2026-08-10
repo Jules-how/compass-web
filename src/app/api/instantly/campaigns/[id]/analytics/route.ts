@@ -2,9 +2,9 @@ import { requirePortalAccess } from '@/lib/portal-access'
 import { portalAccessResponse, portalJson, portalJsonCached } from '@/lib/portal-http'
 import {
   buildDemoSequenceCampaignAnalytics,
-  getInstantlyApiKey,
   InstantlyApiError,
-  loadSequenceCampaignAnalytics
+  loadSequenceCampaignAnalytics,
+  resolveInstantlyApiKey
 } from '@/lib/instantly'
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +19,7 @@ type RouteContext = { params: Promise<{ id: string }> }
  */
 export async function GET(_request: Request, context: RouteContext) {
   try {
-    await requirePortalAccess({ operator: true })
+    const { supabase } = await requirePortalAccess({ operator: true })
 
     const { id: rawId } = await context.params
     const id = decodeURIComponent(rawId || '').trim()
@@ -27,7 +27,7 @@ export async function GET(_request: Request, context: RouteContext) {
       return portalJson({ error: 'missing_campaign_id', source: 'error' as const }, { status: 400 })
     }
 
-    const apiKey = getInstantlyApiKey()
+    const apiKey = await resolveInstantlyApiKey(supabase)
     if (!apiKey) {
       return portalJsonCached({
         ...buildDemoSequenceCampaignAnalytics(id),

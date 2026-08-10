@@ -1,12 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
-import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
+import { useEffect, useMemo, useState } from 'react'
 import type { CompassCampaign } from '@/lib/campaigns'
-import { copyStatusLabel, LOCATION_TAG_HINTS, VERTICAL_TAG_HINTS } from '@/lib/outbound-copy'
-import { listLocalOffers } from '@/lib/outbound-local-store'
-import { useCachedJson } from '@/lib/use-cached-json'
+import { listCampaigns } from '@/lib/campaigns-client'
+import {
+  copyStatusLabel,
+  LOCATION_TAG_HINTS,
+  VERTICAL_TAG_HINTS,
+  type OutboundOffer
+} from '@/lib/outbound-copy'
+import {
+  ensureOutboundLibrarySeeded,
+  listLibraryItems
+} from '@/lib/outbound-library-client'
 import { cn } from '@/lib/utils'
 
 export function CampaignCopyMatrix({
@@ -22,15 +29,34 @@ export function CampaignCopyMatrix({
   const [verticalFilter, setVerticalFilter] = useState(vertical || 'all')
   const [locationFilter, setLocationFilter] = useState(location || 'all')
   const [copyFilter, setCopyFilter] = useState('all')
-  const offers = listLocalOffers()
-  const campaignsQuery = useCachedJson<{ campaigns: CompassCampaign[] }>(
-    CAMPAIGNS_QUERY_KEY,
-    '/api/campaigns',
-    { staleMs: 30_000 }
-  )
+  const [offers, setOffers] = useState<OutboundOffer[]>([])
+  const [campaigns, setCampaigns] = useState<CompassCampaign[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        await ensureOutboundLibrarySeeded()
+        const [cams, offerRows] = await Promise.all([
+          listCampaigns(),
+          listLibraryItems<OutboundOffer>('offers')
+        ])
+        if (cancelled) return
+        setCampaigns(cams)
+        setOffers(offerRows)
+      } catch {
+        if (cancelled) return
+        setCampaigns([])
+        setOffers([])
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const rows = useMemo(() => {
-    const campaigns = campaignsQuery.data?.campaigns ?? []
     return campaigns.filter((c) => {
       if (offerFilter !== 'all' && c.offer_key !== offerFilter) return false
       if (verticalFilter !== 'all' && !(c.vertical_tags ?? []).includes(verticalFilter)) return false
@@ -38,7 +64,7 @@ export function CampaignCopyMatrix({
       if (copyFilter !== 'all' && (c.copy_status || 'none') !== copyFilter) return false
       return true
     })
-  }, [campaignsQuery.data?.campaigns, offerFilter, verticalFilter, locationFilter, copyFilter])
+  }, [campaigns, offerFilter, verticalFilter, locationFilter, copyFilter])
 
   return (
     <div className="rounded-2xl border border-stone-200/70 bg-white shadow-soft">

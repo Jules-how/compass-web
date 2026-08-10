@@ -1,10 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { LibraryPageShell } from '@/components/outbound/OutboundHub'
 import { Card, CardContent } from '@/components/ui/card'
-import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
+import { listCampaigns } from '@/lib/campaigns-client'
 import type { CompassCampaign } from '@/lib/campaigns'
 import {
   ensureLibraryMutationUnlocked,
@@ -12,33 +12,26 @@ import {
   lockLibraryMutations
 } from '@/lib/outbound-library-lock'
 import { scaffoldSequence, structureSlots } from '@/lib/outbound-copy'
+import type {
+  OutboundCta,
+  OutboundExpression,
+  OutboundOffer,
+  OutboundOpener,
+  OutboundStructure,
+  OutboundSubject,
+  OutboundTemplate
+} from '@/lib/outbound-copy'
 import {
-  archiveLocalLibraryItem,
-  getLocalCta,
-  getLocalExpression,
-  getLocalOffer,
-  getLocalOpener,
-  getLocalStructure,
-  getLocalSubject,
-  getLocalTemplate,
-  listLocalCtas,
-  listLocalExpressions,
-  listLocalOffers,
-  listLocalOpeners,
-  listLocalStructures,
-  listLocalSubjects,
-  listLocalTemplates,
-  saveLocalCta,
-  saveLocalExpression,
-  saveLocalOffer,
-  saveLocalOpener,
-  saveLocalStructure,
-  saveLocalSubject,
-  saveLocalTemplate
-} from '@/lib/outbound-local-store'
-import { useCachedJson } from '@/lib/use-cached-json'
+  archiveLibraryItem,
+  createLibraryItem,
+  ensureOutboundLibrarySeeded,
+  getLibraryItem,
+  listLibraryItems,
+  patchLibraryItem,
+  type LibraryKind
+} from '@/lib/outbound-library-client'
 
-type Kind = 'offers' | 'expressions' | 'structures' | 'ctas' | 'subjects' | 'openers' | 'templates'
+type Kind = LibraryKind
 
 const META: Record<Kind, { title: string; subtitle: string }> = {
   offers: { title: 'Offers', subtitle: 'Pack offer keys with short commercial summaries' },
@@ -55,239 +48,273 @@ function promptRequired(label: string, initial = ''): string | null {
   return value || null
 }
 
+type RowView = {
+  id: string
+  title: string
+  meta: string
+  body: string
+  tags: string[]
+  refKey: string | null
+}
+
 export function LibraryBrowser({ kind }: { kind: Kind }) {
   const [q, setQ] = useState('')
-  const [tick, setTick] = useState(0)
+  const [rows, setRows] = useState<RowView[]>([])
+  const [campaigns, setCampaigns] = useState<CompassCampaign[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [unlocked, setUnlocked] = useState(() => isLibraryMutationUnlocked())
   const meta = META[kind]
-  const campaignsQuery = useCachedJson<{ campaigns: CompassCampaign[] }>(
-    CAMPAIGNS_QUERY_KEY,
-    '/api/campaigns',
-    { staleMs: 30_000 }
-  )
-  const campaigns = campaignsQuery.data?.campaigns ?? []
 
-  const rows = useMemo(() => {
-    void tick
-    const filters = { q: q || undefined }
-    switch (kind) {
-      case 'offers':
-        return listLocalOffers(filters).map((r) => ({
-          id: r.id,
-          title: r.name,
-          meta: r.offer_key,
-          body: r.pack_summary,
-          tags: [...r.vertical_tags, ...r.location_tags],
-          refKey: r.offer_key
-        }))
-      case 'expressions':
-        return listLocalExpressions(filters).map((r) => ({
-          id: r.id,
-          title: r.label,
-          meta: `${r.offer_key} · ${r.status}`,
-          body: r.body,
-          tags: [...r.vertical_tags, ...r.location_tags],
-          refKey: r.offer_key
-        }))
-      case 'structures':
-        return listLocalStructures(filters).map((r) => ({
-          id: r.id,
-          title: r.name,
-          meta: r.structure_id,
-          body: r.description ?? '',
-          tags: [],
-          refKey: r.structure_id
-        }))
-      case 'ctas':
-        return listLocalCtas(filters).map((r) => ({
-          id: r.id,
-          title: r.label,
-          meta: r.cta_type,
-          body: r.body,
-          tags: r.vertical_tags,
-          refKey: null
-        }))
-      case 'subjects':
-        return listLocalSubjects(filters).map((r) => ({
-          id: r.id,
-          title: r.label,
-          meta: r.pattern,
-          body: r.notes ?? '',
-          tags: r.vertical_tags,
-          refKey: null
-        }))
-      case 'openers':
-        return listLocalOpeners(filters).map((r) => ({
-          id: r.id,
-          title: r.label,
-          meta: r.opener_mode,
-          body: r.body || r.notes || '',
-          tags: r.vertical_tags,
-          refKey: null
-        }))
-      case 'templates':
-        return listLocalTemplates(filters).map((r) => ({
-          id: r.id,
-          title: r.name,
-          meta: `${r.structure_id}${r.offer_key ? ` · ${r.offer_key}` : ''}`,
-          body: `${r.sequence.steps.length} steps`,
-          tags: [...r.vertical_tags, ...r.location_tags],
-          refKey: r.offer_key
-        }))
+  const reload = useCallback(async () => {
+    try {
+      await ensureOutboundLibrarySeeded()
+      const [items, cams] = await Promise.all([
+        listLibraryItems<Record<string, unknown>>(kind, { q: q || undefined }),
+        listCampaigns()
+      ])
+      setCampaigns(cams)
+      setLoadError(null)
+      setRows(
+        items.map((raw) => {
+          const r = raw as Record<string, unknown>
+          if (kind === 'offers') {
+            const row = r as unknown as OutboundOffer
+            return {
+              id: row.id,
+              title: row.name,
+              meta: row.offer_key,
+              body: row.pack_summary,
+              tags: [...(row.vertical_tags ?? []), ...(row.location_tags ?? [])],
+              refKey: row.offer_key
+            }
+          }
+          if (kind === 'expressions') {
+            const row = r as unknown as OutboundExpression
+            return {
+              id: row.id,
+              title: row.label,
+              meta: `${row.offer_key} · ${row.status}`,
+              body: row.body,
+              tags: [...(row.vertical_tags ?? []), ...(row.location_tags ?? [])],
+              refKey: row.offer_key
+            }
+          }
+          if (kind === 'structures') {
+            const row = r as unknown as OutboundStructure
+            return {
+              id: row.id,
+              title: row.name,
+              meta: row.structure_id,
+              body: row.description ?? '',
+              tags: [],
+              refKey: row.structure_id
+            }
+          }
+          if (kind === 'ctas') {
+            const row = r as unknown as OutboundCta
+            return {
+              id: row.id,
+              title: row.label,
+              meta: row.cta_type,
+              body: row.body,
+              tags: row.vertical_tags ?? [],
+              refKey: null
+            }
+          }
+          if (kind === 'subjects') {
+            const row = r as unknown as OutboundSubject
+            return {
+              id: row.id,
+              title: row.label,
+              meta: row.pattern,
+              body: row.notes ?? '',
+              tags: row.vertical_tags ?? [],
+              refKey: null
+            }
+          }
+          if (kind === 'openers') {
+            const row = r as unknown as OutboundOpener
+            return {
+              id: row.id,
+              title: row.label,
+              meta: row.opener_mode,
+              body: row.body || row.notes || '',
+              tags: row.vertical_tags ?? [],
+              refKey: null
+            }
+          }
+          const row = r as unknown as OutboundTemplate
+          return {
+            id: row.id,
+            title: row.name,
+            meta: `${row.structure_id}${row.offer_key ? ` · ${row.offer_key}` : ''}`,
+            body: `${row.sequence?.steps?.length ?? 0} steps`,
+            tags: [...(row.vertical_tags ?? []), ...(row.location_tags ?? [])],
+            refKey: row.offer_key
+          }
+        })
+      )
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Failed to load library')
     }
-  }, [kind, q, tick])
+  }, [kind, q])
 
-  function campaignsFor(refKey: string | null) {
-    if (!refKey) return []
-    if (kind === 'structures') {
-      return campaigns.filter((c) => c.structure_id === refKey)
+  useEffect(() => {
+    void reload()
+  }, [reload])
+
+  const campaignsFor = useMemo(() => {
+    return (refKey: string | null) => {
+      if (!refKey) return []
+      if (kind === 'structures') {
+        return campaigns.filter((c) => c.structure_id === refKey)
+      }
+      return campaigns.filter((c) => c.offer_key === refKey)
     }
-    return campaigns.filter((c) => c.offer_key === refKey)
-  }
+  }, [campaigns, kind])
 
-  function bump() {
-    setTick((n) => n + 1)
-  }
-
-  /** Add is always free — no library lock. */
-  function createItem() {
-    if (kind === 'offers') {
-      const offer_key = promptRequired('offer_key')
-      const name = promptRequired('Name')
-      const pack_summary = promptRequired('Pack summary')
-      if (!offer_key || !name || !pack_summary) return
-      saveLocalOffer({ offer_key, name, pack_summary })
-    } else if (kind === 'expressions') {
-      const offer_key = promptRequired('offer_key')
-      const label = promptRequired('Label')
-      const body = promptRequired('Body')
-      if (!offer_key || !label || !body) return
-      saveLocalExpression({ offer_key, label, body, status: 'draft' })
-    } else if (kind === 'structures') {
-      const structure_id = promptRequired('structure_id (e.g. nick-3step or custom-key)')
-      const name = promptRequired('Name')
-      if (!structure_id || !name) return
-      const description = window.prompt('Description (optional)')?.trim() || null
-      saveLocalStructure({
-        structure_id,
-        name,
-        description,
-        slots: structureSlots(structure_id)
-      })
-    } else if (kind === 'ctas') {
-      const label = promptRequired('Label')
-      const body = promptRequired('Body')
-      if (!label || !body) return
-      saveLocalCta({ label, body, cta_type: 'permission' })
-    } else if (kind === 'subjects') {
-      const label = promptRequired('Label')
-      const pattern = promptRequired('Pattern')
-      if (!label || !pattern) return
-      saveLocalSubject({ label, pattern })
-    } else if (kind === 'openers') {
-      const label = promptRequired('Label')
-      const opener_mode = window.prompt('opener_mode', 'custom')?.trim() || 'custom'
-      const body = window.prompt('Body') ?? ''
-      if (!label) return
-      saveLocalOpener({ label, opener_mode, body })
-    } else if (kind === 'templates') {
-      const name = promptRequired('Name')
-      if (!name) return
-      const structure_id =
-        window.prompt('structure_id', 'nick-3step')?.trim() || 'nick-3step'
-      const offerRaw = window.prompt('offer_key (optional)')?.trim() || ''
-      const offer_key = offerRaw || null
-      saveLocalTemplate({
-        name,
-        structure_id,
-        offer_key,
-        sequence: scaffoldSequence(structure_id, { offerKey: offer_key })
-      })
+  async function createItem() {
+    try {
+      if (kind === 'offers') {
+        const offer_key = promptRequired('offer_key')
+        const name = promptRequired('Name')
+        const pack_summary = promptRequired('Pack summary')
+        if (!offer_key || !name || !pack_summary) return
+        await createLibraryItem('offers', { offer_key, name, pack_summary })
+      } else if (kind === 'expressions') {
+        const offer_key = promptRequired('offer_key')
+        const label = promptRequired('Label')
+        const body = promptRequired('Body')
+        if (!offer_key || !label || !body) return
+        await createLibraryItem('expressions', { offer_key, label, body, status: 'draft' })
+      } else if (kind === 'structures') {
+        const structure_id = promptRequired('structure_id (e.g. nick-3step or custom-key)')
+        const name = promptRequired('Name')
+        if (!structure_id || !name) return
+        const description = window.prompt('Description (optional)')?.trim() || null
+        await createLibraryItem('structures', {
+          structure_id,
+          name,
+          description,
+          slots: structureSlots(structure_id)
+        })
+      } else if (kind === 'ctas') {
+        const label = promptRequired('Label')
+        const body = promptRequired('Body')
+        if (!label || !body) return
+        await createLibraryItem('ctas', { label, body, cta_type: 'permission' })
+      } else if (kind === 'subjects') {
+        const label = promptRequired('Label')
+        const pattern = promptRequired('Pattern')
+        if (!label || !pattern) return
+        await createLibraryItem('subjects', { label, pattern })
+      } else if (kind === 'openers') {
+        const label = promptRequired('Label')
+        const opener_mode = window.prompt('opener_mode', 'custom')?.trim() || 'custom'
+        const body = window.prompt('Body') ?? ''
+        if (!label) return
+        await createLibraryItem('openers', { label, opener_mode, body })
+      } else if (kind === 'templates') {
+        const name = promptRequired('Name')
+        if (!name) return
+        const structure_id =
+          window.prompt('structure_id', 'nick-3step')?.trim() || 'nick-3step'
+        const offerRaw = window.prompt('offer_key (optional)')?.trim() || ''
+        const offer_key = offerRaw || null
+        await createLibraryItem('templates', {
+          name,
+          structure_id,
+          offer_key,
+          sequence: scaffoldSequence(structure_id, { offerKey: offer_key })
+        })
+      }
+      await reload()
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Create failed')
     }
-    bump()
   }
 
   async function editItem(id: string) {
     if (!(await ensureLibraryMutationUnlocked('edit'))) return
     setUnlocked(true)
-
-    if (kind === 'offers') {
-      const existing = getLocalOffer(id)
-      if (!existing) return
-      const offer_key = promptRequired('offer_key', existing.offer_key)
-      const name = promptRequired('Name', existing.name)
-      const pack_summary = promptRequired('Pack summary', existing.pack_summary)
-      if (!offer_key || !name || !pack_summary) return
-      saveLocalOffer({ ...existing, offer_key, name, pack_summary })
-    } else if (kind === 'expressions') {
-      const existing = getLocalExpression(id)
-      if (!existing) return
-      const offer_key = promptRequired('offer_key', existing.offer_key)
-      const label = promptRequired('Label', existing.label)
-      const body = promptRequired('Body', existing.body)
-      if (!offer_key || !label || !body) return
-      saveLocalExpression({ ...existing, offer_key, label, body })
-    } else if (kind === 'structures') {
-      const existing = getLocalStructure(id)
-      if (!existing) return
-      const structure_id = promptRequired('structure_id', existing.structure_id)
-      const name = promptRequired('Name', existing.name)
-      if (!structure_id || !name) return
-      const description =
-        window.prompt('Description (optional)', existing.description ?? '')?.trim() || null
-      const slots =
-        structure_id === existing.structure_id && existing.slots.length
-          ? existing.slots
-          : structureSlots(structure_id)
-      saveLocalStructure({ ...existing, structure_id, name, description, slots })
-    } else if (kind === 'ctas') {
-      const existing = getLocalCta(id)
-      if (!existing) return
-      const label = promptRequired('Label', existing.label)
-      const body = promptRequired('Body', existing.body)
-      if (!label || !body) return
-      const cta_type = window.prompt('cta_type', existing.cta_type)?.trim() || existing.cta_type
-      saveLocalCta({ ...existing, label, body, cta_type })
-    } else if (kind === 'subjects') {
-      const existing = getLocalSubject(id)
-      if (!existing) return
-      const label = promptRequired('Label', existing.label)
-      const pattern = promptRequired('Pattern', existing.pattern)
-      if (!label || !pattern) return
-      saveLocalSubject({ ...existing, label, pattern })
-    } else if (kind === 'openers') {
-      const existing = getLocalOpener(id)
-      if (!existing) return
-      const label = promptRequired('Label', existing.label)
-      if (!label) return
-      const opener_mode =
-        window.prompt('opener_mode', existing.opener_mode)?.trim() || existing.opener_mode
-      const body = window.prompt('Body', existing.body) ?? existing.body
-      saveLocalOpener({ ...existing, label, opener_mode, body })
-    } else if (kind === 'templates') {
-      const existing = getLocalTemplate(id)
-      if (!existing) return
-      const name = promptRequired('Name', existing.name)
-      if (!name) return
-      const structure_id =
-        window.prompt('structure_id', existing.structure_id)?.trim() || existing.structure_id
-      const offerRaw =
-        window.prompt('offer_key (optional)', existing.offer_key ?? '')?.trim() || ''
-      const offer_key = offerRaw || null
-      const sequence =
-        structure_id === existing.structure_id
-          ? existing.sequence
-          : scaffoldSequence(structure_id, { offerKey: offer_key })
-      saveLocalTemplate({ ...existing, name, structure_id, offer_key, sequence })
+    try {
+      if (kind === 'offers') {
+        const existing = await getLibraryItem<OutboundOffer>('offers', id)
+        const offer_key = promptRequired('offer_key', existing.offer_key)
+        const name = promptRequired('Name', existing.name)
+        const pack_summary = promptRequired('Pack summary', existing.pack_summary)
+        if (!offer_key || !name || !pack_summary) return
+        await patchLibraryItem('offers', id, { offer_key, name, pack_summary })
+      } else if (kind === 'expressions') {
+        const existing = await getLibraryItem<OutboundExpression>('expressions', id)
+        const offer_key = promptRequired('offer_key', existing.offer_key)
+        const label = promptRequired('Label', existing.label)
+        const body = promptRequired('Body', existing.body)
+        if (!offer_key || !label || !body) return
+        await patchLibraryItem('expressions', id, { offer_key, label, body })
+      } else if (kind === 'structures') {
+        const existing = await getLibraryItem<OutboundStructure>('structures', id)
+        const structure_id = promptRequired('structure_id', existing.structure_id)
+        const name = promptRequired('Name', existing.name)
+        if (!structure_id || !name) return
+        const description =
+          window.prompt('Description (optional)', existing.description ?? '')?.trim() || null
+        const slots =
+          structure_id === existing.structure_id && existing.slots.length
+            ? existing.slots
+            : structureSlots(structure_id)
+        await patchLibraryItem('structures', id, { structure_id, name, description, slots })
+      } else if (kind === 'ctas') {
+        const existing = await getLibraryItem<OutboundCta>('ctas', id)
+        const label = promptRequired('Label', existing.label)
+        const body = promptRequired('Body', existing.body)
+        if (!label || !body) return
+        const cta_type = window.prompt('cta_type', existing.cta_type)?.trim() || existing.cta_type
+        await patchLibraryItem('ctas', id, { label, body, cta_type })
+      } else if (kind === 'subjects') {
+        const existing = await getLibraryItem<OutboundSubject>('subjects', id)
+        const label = promptRequired('Label', existing.label)
+        const pattern = promptRequired('Pattern', existing.pattern)
+        if (!label || !pattern) return
+        await patchLibraryItem('subjects', id, { label, pattern })
+      } else if (kind === 'openers') {
+        const existing = await getLibraryItem<OutboundOpener>('openers', id)
+        const label = promptRequired('Label', existing.label)
+        if (!label) return
+        const opener_mode =
+          window.prompt('opener_mode', existing.opener_mode)?.trim() || existing.opener_mode
+        const body = window.prompt('Body', existing.body) ?? existing.body
+        await patchLibraryItem('openers', id, { label, opener_mode, body })
+      } else if (kind === 'templates') {
+        const existing = await getLibraryItem<OutboundTemplate>('templates', id)
+        const name = promptRequired('Name', existing.name)
+        if (!name) return
+        const structure_id =
+          window.prompt('structure_id', existing.structure_id)?.trim() || existing.structure_id
+        const offerRaw =
+          window.prompt('offer_key (optional)', existing.offer_key ?? '')?.trim() || ''
+        const offer_key = offerRaw || null
+        const sequence =
+          structure_id === existing.structure_id
+            ? existing.sequence
+            : scaffoldSequence(structure_id, { offerKey: offer_key })
+        await patchLibraryItem('templates', id, { name, structure_id, offer_key, sequence })
+      }
+      await reload()
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Edit failed')
     }
-    bump()
   }
 
   async function archiveItem(id: string) {
     if (!(await ensureLibraryMutationUnlocked('archive'))) return
     setUnlocked(true)
-    archiveLocalLibraryItem(kind, id, true)
-    bump()
+    try {
+      await archiveLibraryItem(kind, id)
+      await reload()
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Archive failed')
+    }
   }
 
   function relock() {
@@ -319,7 +346,7 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
           ) : null}
           <button
             type="button"
-            onClick={createItem}
+            onClick={() => void createItem()}
             className="rounded-xl bg-[#e85d2a] px-3.5 py-2 text-[12px] font-semibold text-white shadow-soft"
           >
             Add
@@ -327,6 +354,7 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
         </div>
       }
     >
+      {loadError ? <p className="mb-3 text-sm text-red-600">{loadError}</p> : null}
       <div className="space-y-3">
         {rows.map((row) => {
           const related = campaignsFor(row.refKey)

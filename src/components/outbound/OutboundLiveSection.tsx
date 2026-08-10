@@ -1,11 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import type { OutboundBoardCampaign } from '@/lib/instantly'
-import { demoOutboundBoard } from '@/lib/outbound-live-demo'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
@@ -120,10 +119,11 @@ export function OutboundLiveSection() {
     '/api/instantly/outbound-campaigns',
     { staleMs: 60_000 }
   )
-  const fallback = useMemo(() => demoOutboundBoard(), [])
-  const active = board.data?.live ?? fallback.live
-  const liveCount = board.data?.liveCount ?? fallback.liveCount
+  const active = board.data?.live ?? []
+  const liveCount = board.data?.liveCount ?? 0
   const fromInstantly = board.data?.source === 'instantly'
+  const fromDemo = board.data?.source === 'demo'
+  const fromError = board.data?.source === 'error' || Boolean(board.error && !board.data)
   const top = active.slice(0, VISIBLE)
   const rest = active.slice(VISIBLE)
 
@@ -145,23 +145,37 @@ export function OutboundLiveSection() {
                 'rounded-xl px-2.5 py-1 text-[11px] font-semibold',
                 fromInstantly
                   ? 'bg-emerald-50 text-emerald-700'
-                  : 'bg-amber-50 text-amber-800'
+                  : fromError
+                    ? 'bg-rose-50 text-rose-700'
+                    : 'bg-amber-50 text-amber-800'
               )}
             >
-              {fromInstantly ? `${liveCount} live · Instantly` : `${liveCount} live · demo`}
+              {fromInstantly
+                ? `${liveCount} live · Instantly`
+                : fromError
+                  ? 'Instantly unavailable'
+                  : `${liveCount} live · demo`}
             </span>
           )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {board.error && !board.data ? (
+        {fromError ? (
           <p className="text-sm text-amber-800">
-            Instantly is unavailable right now — showing demo campaigns until it reconnects.
+            Instantly is unavailable right now — live metrics will show when it reconnects.
+          </p>
+        ) : null}
+        {fromDemo && !fromError ? (
+          <p className="text-sm text-amber-800">
+            Instantly API key is not configured — showing sample campaigns. Add the key in Settings
+            or <code className="text-[12px]">INSTANTLY_API_KEY</code>.
           </p>
         ) : null}
 
         {top.length === 0 && !board.loading ? (
-          <p className="text-sm text-neutral-500">No live campaigns yet.</p>
+          <p className="text-sm text-neutral-500">
+            {fromError ? 'No live metrics to show.' : 'No live campaigns yet.'}
+          </p>
         ) : null}
 
         {top.map((c) => (

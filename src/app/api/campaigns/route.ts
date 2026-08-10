@@ -8,7 +8,6 @@ import {
   requireSameOrigin
 } from '@/lib/portal-http'
 import {
-  CAMPAIGN_COLORS,
   CAMPAIGN_LIST_COLUMNS,
   emptyCampaignCopyFields,
   normalizeCampaignHealth,
@@ -68,7 +67,6 @@ export async function POST(request: NextRequest) {
   if (originError) return originError
 
   let body: {
-    id?: string
     name?: string
     status?: string
     priority?: number
@@ -90,7 +88,7 @@ export async function POST(request: NextRequest) {
     copy_status?: string
   }
   try {
-    body = (await readBoundedJson(request)) as typeof body
+    body = (await readBoundedJson(request, 256 * 1024)) as typeof body
   } catch {
     return portalJson({ error: 'invalid_request' }, { status: 400 })
   }
@@ -98,70 +96,45 @@ export async function POST(request: NextRequest) {
   const name = body.name?.trim()
   if (!name) return portalJson({ error: 'name_required' }, { status: 400 })
 
+  if (body.sequence_draft != null && !isValidSequence(body.sequence_draft)) {
+    return portalJson({ error: 'invalid_sequence' }, { status: 400 })
+  }
+
   const stamp = nowIso()
   const today = stamp.slice(0, 10)
   const start = body.start_date || today
-  let end = body.end_date || start
-  if (end < start) end = start
-
-  const requestedId = typeof body.id === 'string' ? body.id.trim() : ''
-  const id =
-    requestedId && /^campaign-[0-9a-f-]{8,}$/i.test(requestedId)
-      ? requestedId
-      : `campaign-${crypto.randomUUID()}`
-
-  const copyFields = emptyCampaignCopyFields()
-  if (body.instantly_campaign_id !== undefined) {
-    copyFields.instantly_campaign_id = body.instantly_campaign_id?.trim() || null
-  }
-  if (body.offer_key !== undefined) copyFields.offer_key = body.offer_key?.trim() || null
-  if (body.structure_id !== undefined) copyFields.structure_id = body.structure_id?.trim() || null
-  if (body.opener_mode !== undefined) {
-    copyFields.opener_mode = body.opener_mode?.trim() || 'nick-tier'
-  }
-  if (body.vertical_tags !== undefined) {
-    copyFields.vertical_tags = normalizeOutboundTagList(body.vertical_tags)
-  }
-  if (body.location_tags !== undefined) {
-    copyFields.location_tags = normalizeOutboundTagList(body.location_tags)
-  }
-  if (body.cold_expression !== undefined) {
-    copyFields.cold_expression = body.cold_expression?.trim() || null
-  }
-  if (body.sequence_draft !== undefined) {
-    if (body.sequence_draft === null) {
-      copyFields.sequence_draft = null
-    } else if (!isValidSequence(body.sequence_draft)) {
-      return portalJson({ error: 'invalid_sequence' }, { status: 400 })
-    } else {
-      copyFields.sequence_draft = body.sequence_draft
-      copyFields.structure_id = body.sequence_draft.structure_id
-      if (body.sequence_draft.offer_key) copyFields.offer_key = body.sequence_draft.offer_key
-      const locked = coldExpressionFromSequence(body.sequence_draft)
-      if (locked) copyFields.cold_expression = locked
-    }
-  }
-  if (body.copy_status !== undefined) {
-    copyFields.copy_status = normalizeCopyStatus(body.copy_status)
-  } else if (body.sequence_draft) {
-    copyFields.copy_status = 'draft'
-  }
+  const end = body.end_date || start
+  const copyDefaults = emptyCampaignCopyFields()
+  const sequenceDraft = body.sequence_draft ?? null
+  const lockedExpression =
+    (sequenceDraft && coldExpressionFromSequence(sequenceDraft)) ||
+    body.cold_expression?.trim() ||
+    null
 
   const row = {
-    id,
+    id: `campaign-${crypto.randomUUID()}`,
     name,
     status: normalizeCampaignStatus(body.status),
     priority: typeof body.priority === 'number' ? body.priority : 0,
     health: normalizeCampaignHealth(body.health),
     start_date: start,
-    end_date: end,
-    color:
-      body.color?.trim() ||
-      CAMPAIGN_COLORS[Math.floor(Math.random() * CAMPAIGN_COLORS.length)],
+    end_date: end < start ? start : end,
+    color: body.color?.trim() || '#94a3b8',
     summary: body.summary?.trim() || null,
     labels: normalizeLabels(body.labels),
     owner_label: body.owner_label?.trim() || null,
-    ...copyFields,
+    ...copyDefaults,
+    instantly_campaign_id: body.instantly_campaign_id?.trim() || null,
+    offer_key: body.offer_key?.trim() || sequenceDraft?.offer_key || null,
+    structure_id: body.structure_id?.trim() || sequenceDraft?.structure_id || null,
+    opener_mode: body.opener_mode?.trim() || copyDefaults.opener_mode,
+    vertical_tags: normalizeOutboundTagList(body.vertical_tags),
+    location_tags: normalizeOutboundTagList(body.location_tags),
+    cold_expression: lockedExpression,
+    sequence_draft: sequenceDraft,
+    copy_status: normalizeCopyStatus(
+      body.copy_status || (sequenceDraft ? 'draft' : copyDefaults.copy_status)
+    ),
     created_at: stamp,
     updated_at: stamp
   }

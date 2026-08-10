@@ -7,15 +7,17 @@ import {
   type CompassCampaign
 } from '@/lib/campaigns'
 import {
-  getInstantlyApiKey,
   InstantlyApiError,
   loadOutboundBoardFromInstantly,
+  resolveInstantlyApiKey,
   type OutboundBoard
 } from '@/lib/instantly'
 import { enrichOutboundBoardFactors } from '@/lib/outbound-factor-performance'
 import { demoOutboundBoard } from '@/lib/outbound-live-demo'
 
 export const dynamic = 'force-dynamic'
+
+const EMPTY_BOARD: OutboundBoard = { live: [], history: [], liveCount: 0 }
 
 async function loadPipelineBinds(
   supabase: Awaited<ReturnType<typeof requirePortalAccess>>['supabase']
@@ -65,7 +67,7 @@ export async function GET() {
       // Board still works without binds.
     }
 
-    const apiKey = getInstantlyApiKey()
+    const apiKey = await resolveInstantlyApiKey(supabase)
     if (!apiKey) {
       const board = withFactors(demoOutboundBoard(), pipeline, offerNames)
       return portalJsonCached({
@@ -82,16 +84,21 @@ export async function GET() {
     if (access) return access
 
     if (err instanceof InstantlyApiError) {
-      return portalJson(
-        {
-          error: 'instantly_unavailable',
-          detail: err.message,
-          source: 'error' as const
-        },
-        { status: err.status >= 400 && err.status < 600 ? err.status : 502 }
-      )
+      // Keep 200 so the UI can render an honest empty board (not fake demo cards).
+      return portalJson({
+        ...EMPTY_BOARD,
+        error: 'instantly_unavailable',
+        detail: err.message,
+        source: 'error' as const,
+        warning: err.message
+      })
     }
 
-    return portalJson({ error: 'fetch_failed', source: 'error' as const }, { status: 500 })
+    return portalJson({
+      ...EMPTY_BOARD,
+      error: 'fetch_failed',
+      source: 'error' as const,
+      warning: 'fetch_failed'
+    })
   }
 }

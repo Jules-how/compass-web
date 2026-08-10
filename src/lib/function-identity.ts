@@ -15,6 +15,20 @@ export type FunctionKind =
 
 export type FunctionIdentityInput = ProjectFunctionColorInput
 
+/**
+ * Hue-separated accents so module cards read as distinct at a glance.
+ * Avoid stacking multiple cool blues (old cyan + indigo looked identical).
+ */
+export const FUNCTION_KIND_COLORS: Record<FunctionKind, string> = {
+  sales: '#E85D2A',
+  marketing: '#D9487D',
+  product: '#5B5FE8',
+  delivery: '#1FA971',
+  strategy: '#D4A017',
+  operations: '#6B7C8F',
+  generic: DEFAULT_PROJECT_ICON_COLOR
+}
+
 const KIND_BY_KEY: Record<string, FunctionKind> = {
   sales: 'sales',
   sell: 'sales',
@@ -61,12 +75,7 @@ function candidatesFor(fn: FunctionIdentityInput): string[] {
     .map(normalizeFunctionKey)
 }
 
-/** Accent color for a business function (shared with project icons). */
-export function functionAccentColor(fn: FunctionIdentityInput): string {
-  return projectColorForFunction(fn) || DEFAULT_PROJECT_ICON_COLOR
-}
-
-/** Stable visual kind used to pick a unique logo. */
+/** Stable visual kind used to pick a unique logo + accent. */
 export function resolveFunctionKind(fn: FunctionIdentityInput): FunctionKind {
   const candidates = candidatesFor(fn)
 
@@ -74,15 +83,24 @@ export function resolveFunctionKind(fn: FunctionIdentityInput): FunctionKind {
     if (KIND_BY_KEY[key]) return KIND_BY_KEY[key]
   }
 
+  // Prefer longer keys first so "client-delivery" wins over bare "delivery".
+  const knownKeys = Object.keys(KIND_BY_KEY).sort((a, b) => b.length - a.length)
   for (const key of candidates) {
-    for (const [known, kind] of Object.entries(KIND_BY_KEY)) {
-      if (key === known || key.startsWith(`${known}-`) || key.endsWith(`-${known}`)) {
-        return kind
+    for (const known of knownKeys) {
+      if (key.startsWith(`${known}-`) || key.endsWith(`-${known}`)) {
+        return KIND_BY_KEY[known]
       }
     }
   }
 
   return 'generic'
+}
+
+/** Accent color for a business function (shared with project icons). */
+export function functionAccentColor(fn: FunctionIdentityInput): string {
+  const kind = resolveFunctionKind(fn)
+  if (kind !== 'generic') return FUNCTION_KIND_COLORS[kind]
+  return projectColorForFunction(fn) || DEFAULT_PROJECT_ICON_COLOR
 }
 
 /** Hex → rgba string for soft washes / wells. */

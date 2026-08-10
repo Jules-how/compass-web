@@ -111,7 +111,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     copy_status?: string
   }
   try {
-    body = (await readBoundedJson(request)) as typeof body
+    body = (await readBoundedJson(request, 256 * 1024)) as typeof body
   } catch {
     return portalJson({ error: 'invalid_request' }, { status: 400 })
   }

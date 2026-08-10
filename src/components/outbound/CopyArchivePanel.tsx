@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   Archive,
   Clock3,
@@ -15,16 +15,18 @@ import {
   sequenceEmailBodyText,
   VERTICAL_TAG_HINTS,
   type CopyArchiveEntry,
-  type CopyArchiveSortKey
+  type CopyArchiveSortKey,
+  type OutboundOffer
 } from '@/lib/outbound-copy'
 import {
   forkCopyArchiveIntoSequence,
   listCopyArchive,
   saveCopyArchiveEntry
 } from '@/lib/outbound-copy-archive'
-import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
-import { listLocalOffers } from '@/lib/outbound-local-store'
-import { useCachedJson } from '@/lib/use-cached-json'
+import {
+  ensureOutboundLibrarySeeded,
+  listLibraryItems
+} from '@/lib/outbound-library-client'
 import { cn } from '@/lib/utils'
 import type { CompassCampaign } from '@/lib/campaigns'
 import type { OutboundSequence } from '@/lib/outbound-copy'
@@ -201,18 +203,30 @@ export function CopyArchivePanel({
   onInsertIntoStep: (subject: string, body: string) => void
   onSaved?: () => void
 }) {
-  const offers = listLocalOffers()
+  const [offers, setOffers] = useState<OutboundOffer[]>([])
   const [q, setQ] = useState('')
   const [vertical, setVertical] = useState('all')
   const [offer, setOffer] = useState('all')
   const [sort, setSort] = useState<CopyArchiveSortKey>('reply')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
-  const campaignsQuery = useCachedJson<{ campaigns: CompassCampaign[] }>(
-    CAMPAIGNS_QUERY_KEY,
-    '/api/campaigns',
-    { staleMs: 30_000 }
-  )
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        await ensureOutboundLibrarySeeded()
+        const rows = await listLibraryItems<OutboundOffer>('offers')
+        if (!cancelled) setOffers(rows)
+      } catch {
+        if (!cancelled) setOffers([])
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const entries = useMemo(() => {
     void tick
@@ -220,10 +234,9 @@ export function CopyArchivePanel({
       q: q.trim() || undefined,
       vertical: vertical === 'all' ? undefined : vertical,
       offer_key: offer === 'all' ? undefined : offer,
-      sort,
-      pipelineCampaigns: campaignsQuery.data?.campaigns ?? []
+      sort
     })
-  }, [q, vertical, offer, sort, tick, campaignsQuery.data?.campaigns])
+  }, [q, vertical, offer, sort, tick])
 
   const selected = entries.find((e) => e.id === selectedId) ?? entries[0] ?? null
 

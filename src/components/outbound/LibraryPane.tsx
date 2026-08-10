@@ -1,16 +1,20 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import {
-  listLocalCtas,
-  listLocalExpressions,
-  listLocalOffers,
-  listLocalOpeners,
-  listLocalStructures,
-  listLocalSubjects,
-  listLocalTemplates
-} from '@/lib/outbound-local-store'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { LOCATION_TAG_HINTS, VERTICAL_TAG_HINTS } from '@/lib/outbound-copy'
+import type {
+  OutboundCta,
+  OutboundExpression,
+  OutboundOffer,
+  OutboundOpener,
+  OutboundStructure,
+  OutboundSubject,
+  OutboundTemplate
+} from '@/lib/outbound-copy'
+import {
+  ensureOutboundLibrarySeeded,
+  listLibraryItems
+} from '@/lib/outbound-library-client'
 import { cn } from '@/lib/utils'
 
 export type LibraryDragPayload =
@@ -91,6 +95,8 @@ export function LibraryPane({
   const [vertical, setVertical] = useState<string>('')
   const [location, setLocation] = useState<string>('')
   const [q, setQ] = useState('')
+  const [items, setItems] = useState<ReactNode[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const filters = useMemo(
     () => ({
@@ -102,94 +108,127 @@ export function LibraryPane({
     [offerKeyFilter, vertical, location, q]
   )
 
-  const items = useMemo(() => {
-    switch (tab) {
-      case 'offers':
-        return listLocalOffers({ ...filters, offer_key: undefined }).map((row) => (
-          <DraggableCard
-            key={row.id}
-            title={row.name}
-            meta={row.offer_key}
-            body={row.pack_summary}
-            payload={{ kind: 'offer', id: row.id, offer_key: row.offer_key, name: row.name }}
-          />
-        ))
-      case 'expressions':
-        return listLocalExpressions(filters).map((row) => (
-          <DraggableCard
-            key={row.id}
-            title={row.label}
-            meta={`${row.offer_key} · ${row.status}`}
-            body={row.body}
-            payload={{
-              kind: 'expression',
-              id: row.id,
-              offer_key: row.offer_key,
-              body: row.body,
-              label: row.label
-            }}
-          />
-        ))
-      case 'structures':
-        return listLocalStructures(filters).map((row) => (
-          <DraggableCard
-            key={row.id}
-            title={row.name}
-            meta={row.structure_id}
-            body={row.description ?? undefined}
-            payload={{
-              kind: 'structure',
-              id: row.id,
-              structure_id: row.structure_id,
-              name: row.name
-            }}
-          />
-        ))
-      case 'ctas':
-        return listLocalCtas(filters).map((row) => (
-          <DraggableCard
-            key={row.id}
-            title={row.label}
-            meta={row.cta_type + (row.is_default ? ' · default' : '')}
-            body={row.body}
-            payload={{ kind: 'cta', id: row.id, body: row.body, label: row.label, cta_type: row.cta_type }}
-          />
-        ))
-      case 'subjects':
-        return listLocalSubjects(filters).map((row) => (
-          <DraggableCard
-            key={row.id}
-            title={row.label}
-            meta={row.pattern}
-            body={row.notes ?? undefined}
-            payload={{ kind: 'subject', id: row.id, pattern: row.pattern, label: row.label }}
-          />
-        ))
-      case 'openers':
-        return listLocalOpeners(filters).map((row) => (
-          <DraggableCard
-            key={row.id}
-            title={row.label}
-            meta={row.opener_mode}
-            body={row.body || row.notes || undefined}
-            payload={{
-              kind: 'opener',
-              id: row.id,
-              body: row.body,
-              label: row.label,
-              opener_mode: row.opener_mode
-            }}
-          />
-        ))
-      case 'templates':
-        return listLocalTemplates(filters).map((row) => (
-          <DraggableCard
-            key={row.id}
-            title={row.name}
-            meta={`${row.structure_id}${row.offer_key ? ` · ${row.offer_key}` : ''}`}
-            payload={{ kind: 'template', id: row.id, name: row.name }}
-          />
-        ))
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        await ensureOutboundLibrarySeeded()
+        const filterForOffers = { ...filters, offer_key: undefined }
+        let next: ReactNode[] = []
+        if (tab === 'offers') {
+          const rows = await listLibraryItems<OutboundOffer>('offers', filterForOffers)
+          next = rows.map((row) => (
+            <DraggableCard
+              key={row.id}
+              title={row.name}
+              meta={row.offer_key}
+              body={row.pack_summary}
+              payload={{ kind: 'offer', id: row.id, offer_key: row.offer_key, name: row.name }}
+            />
+          ))
+        } else if (tab === 'expressions') {
+          const rows = await listLibraryItems<OutboundExpression>('expressions', filters)
+          next = rows.map((row) => (
+            <DraggableCard
+              key={row.id}
+              title={row.label}
+              meta={`${row.offer_key} · ${row.status}`}
+              body={row.body}
+              payload={{
+                kind: 'expression',
+                id: row.id,
+                offer_key: row.offer_key,
+                body: row.body,
+                label: row.label
+              }}
+            />
+          ))
+        } else if (tab === 'structures') {
+          const rows = await listLibraryItems<OutboundStructure>('structures', filters)
+          next = rows.map((row) => (
+            <DraggableCard
+              key={row.id}
+              title={row.name}
+              meta={row.structure_id}
+              body={row.description ?? undefined}
+              payload={{
+                kind: 'structure',
+                id: row.id,
+                structure_id: row.structure_id,
+                name: row.name
+              }}
+            />
+          ))
+        } else if (tab === 'ctas') {
+          const rows = await listLibraryItems<OutboundCta>('ctas', filters)
+          next = rows.map((row) => (
+            <DraggableCard
+              key={row.id}
+              title={row.label}
+              meta={row.cta_type + (row.is_default ? ' · default' : '')}
+              body={row.body}
+              payload={{
+                kind: 'cta',
+                id: row.id,
+                body: row.body,
+                label: row.label,
+                cta_type: row.cta_type
+              }}
+            />
+          ))
+        } else if (tab === 'subjects') {
+          const rows = await listLibraryItems<OutboundSubject>('subjects', filters)
+          next = rows.map((row) => (
+            <DraggableCard
+              key={row.id}
+              title={row.label}
+              meta={row.pattern}
+              body={row.notes ?? undefined}
+              payload={{ kind: 'subject', id: row.id, pattern: row.pattern, label: row.label }}
+            />
+          ))
+        } else if (tab === 'openers') {
+          const rows = await listLibraryItems<OutboundOpener>('openers', filters)
+          next = rows.map((row) => (
+            <DraggableCard
+              key={row.id}
+              title={row.label}
+              meta={row.opener_mode}
+              body={row.body || row.notes || undefined}
+              payload={{
+                kind: 'opener',
+                id: row.id,
+                body: row.body,
+                label: row.label,
+                opener_mode: row.opener_mode
+              }}
+            />
+          ))
+        } else {
+          const rows = await listLibraryItems<OutboundTemplate>('templates', filters)
+          next = rows.map((row) => (
+            <DraggableCard
+              key={row.id}
+              title={row.name}
+              meta={`${row.structure_id}${row.offer_key ? ` · ${row.offer_key}` : ''}`}
+              payload={{ kind: 'template', id: row.id, name: row.name }}
+            />
+          ))
+        }
+        if (!cancelled) {
+          setLoadError(null)
+          setItems(next)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err instanceof Error ? err.message : 'Failed to load library')
+          setItems([])
+        }
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
     }
   }, [tab, filters])
 
@@ -198,6 +237,7 @@ export function LibraryPane({
       <div className="border-b border-stone-100 px-4 py-3">
         <h2 className="text-[13px] font-semibold text-neutral-900">Libraries</h2>
         <p className="mt-0.5 text-[11px] text-neutral-500">Drag to copy into the campaign draft</p>
+        {loadError ? <p className="mt-1 text-[11px] text-red-600">{loadError}</p> : null}
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}

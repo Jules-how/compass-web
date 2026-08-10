@@ -1,13 +1,20 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
 import type { CompassCampaign } from '@/lib/campaigns'
+import { listCampaigns } from '@/lib/campaigns-client'
 import type { OutboundBoardCampaign } from '@/lib/instantly'
-import { copyStatusLabel, LOCATION_TAG_HINTS, VERTICAL_TAG_HINTS } from '@/lib/outbound-copy'
-import { demoOutboundBoard } from '@/lib/outbound-live-demo'
-import { listLocalOffers } from '@/lib/outbound-local-store'
+import {
+  copyStatusLabel,
+  LOCATION_TAG_HINTS,
+  VERTICAL_TAG_HINTS,
+  type OutboundOffer
+} from '@/lib/outbound-copy'
+import {
+  ensureOutboundLibrarySeeded,
+  listLibraryItems
+} from '@/lib/outbound-library-client'
 import { useCachedJson } from '@/lib/use-cached-json'
 import Link from 'next/link'
 
@@ -59,15 +66,10 @@ export function OutboundHistorySection() {
     '/api/instantly/outbound-campaigns',
     { staleMs: 60_000 }
   )
-  const pipelineQuery = useCachedJson<{ campaigns: CompassCampaign[] }>(
-    CAMPAIGNS_QUERY_KEY,
-    '/api/campaigns',
-    { staleMs: 30_000 }
-  )
-  const fallback = useMemo(() => demoOutboundBoard(), [])
-  const instantlyHistory = board.data?.history ?? fallback.history
+  const instantlyHistory = board.data?.history ?? []
   const fromInstantly = board.data?.source === 'instantly'
-  const offers = listLocalOffers()
+  const [localCampaigns, setLocalCampaigns] = useState<CompassCampaign[]>([])
+  const [offers, setOffers] = useState<OutboundOffer[]>([])
 
   const [nameQ, setNameQ] = useState('')
   const [vertical, setVertical] = useState('all')
@@ -78,11 +80,34 @@ export function OutboundHistorySection() {
   const [dateTo, setDateTo] = useState('')
   const [sort, setSort] = useState<SortKey>('date')
 
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        await ensureOutboundLibrarySeeded()
+        const [cams, offerRows] = await Promise.all([
+          listCampaigns(),
+          listLibraryItems<OutboundOffer>('offers')
+        ])
+        if (cancelled) return
+        setLocalCampaigns(cams)
+        setOffers(offerRows)
+      } catch {
+        if (cancelled) return
+        setLocalCampaigns([])
+        setOffers([])
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const rows = useMemo(() => {
     let list: OutboundBoardCampaign[] = instantlyHistory.slice()
-    const localCampaigns = pipelineQuery.data?.campaigns ?? []
 
-    // Merge completed / non-live pipeline campaigns as lightweight history rows
+    // Merge local completed / non-live pipeline campaigns as lightweight history rows
     for (const c of localCampaigns) {
       if (c.status === 'completed' || c.copy_status === 'none' || c.status === 'cancelled') {
         if (list.some((r) => r.id === c.id || r.id === c.instantly_campaign_id)) continue
@@ -144,7 +169,7 @@ export function OutboundHistorySection() {
     return list
   }, [
     instantlyHistory,
-    pipelineQuery.data?.campaigns,
+    localCampaigns,
     nameQ,
     vertical,
     location,
@@ -154,8 +179,6 @@ export function OutboundHistorySection() {
     dateTo,
     sort
   ])
-
-  const pipelineCampaigns = pipelineQuery.data?.campaigns ?? []
 
   return (
     <Card>
@@ -325,14 +348,14 @@ export function OutboundHistorySection() {
           </table>
         </div>
 
-        {pipelineCampaigns.some((c) => c.copy_status && c.copy_status !== 'none') ? (
+        {localCampaigns.some((c) => c.copy_status && c.copy_status !== 'none') ? (
           <div className="rounded-xl border border-stone-200/70 bg-stone-50/50 px-4 py-3 text-[12px] text-neutral-600">
             Pipeline drafts with copy still open in the{' '}
             <Link href="/sales/pipeline" className="font-medium text-[#c2410c] hover:underline">
               planner
             </Link>
             {' · '}
-            {pipelineCampaigns
+            {localCampaigns
               .filter((c) => c.copy_status && c.copy_status !== 'none')
               .slice(0, 3)
               .map((c) => (

@@ -42,9 +42,10 @@ function MetricChip({
 }) {
   return (
     <div
-      className="relative min-w-[5.5rem] overflow-hidden rounded-xl bg-white/80 px-3.5 pb-2.5 pt-3 text-center"
+      className="relative min-w-[5.5rem] overflow-hidden rounded-xl px-3.5 pb-2.5 pt-3 text-center"
       style={{
-        boxShadow: `inset 0 0 0 1px ${withAlpha(color, 0.16)}`
+        backgroundColor: withAlpha(color, 0.08),
+        boxShadow: `inset 0 0 0 1px ${withAlpha(color, 0.2)}`
       }}
     >
       <span
@@ -239,7 +240,7 @@ export function FunctionManager({
                 <div
                   className="pointer-events-none absolute inset-0"
                   style={{
-                    background: `radial-gradient(520px 200px at 0% 0%, ${withAlpha(color, 0.2)}, transparent 62%), radial-gradient(380px 160px at 100% 100%, ${withAlpha(color, 0.08)}, transparent 55%)`
+                    background: `linear-gradient(105deg, ${withAlpha(color, 0.14)} 0%, ${withAlpha(color, 0.04)} 42%, transparent 68%), radial-gradient(420px 180px at 100% 0%, ${withAlpha(color, 0.1)}, transparent 60%)`
                   }}
                   aria-hidden
                 />
@@ -259,7 +260,7 @@ export function FunctionManager({
                         <span
                           className="rounded-lg px-2 py-0.5 text-xs font-medium tabular-nums"
                           style={{
-                            backgroundColor: withAlpha(color, 0.12),
+                            backgroundColor: withAlpha(color, 0.14),
                             color
                           }}
                         >

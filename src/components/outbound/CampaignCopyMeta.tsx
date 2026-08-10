@@ -1,15 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import type { CompassCampaign } from '@/lib/campaigns'
 import {
   copyStatusLabel,
+  LOCATION_TAG_HINTS,
+  VERTICAL_TAG_HINTS,
   previewExpression,
   type OutboundSequence
 } from '@/lib/outbound-copy'
-import { getLocalOfferByKey } from '@/lib/outbound-local-store'
-import { LOCATION_TAG_HINTS, VERTICAL_TAG_HINTS } from '@/lib/outbound-copy'
+import {
+  ensureOutboundLibrarySeeded,
+  getOfferByKey
+} from '@/lib/outbound-library-client'
 
 export function CampaignCopyMeta({
   campaign,
@@ -22,10 +26,28 @@ export function CampaignCopyMeta({
   onChange: (patch: Partial<CompassCampaign>) => void
   unbound?: boolean
 }) {
-  const offer = useMemo(
-    () => (campaign?.offer_key ? getLocalOfferByKey(campaign.offer_key) : null),
-    [campaign?.offer_key]
-  )
+  const [offer, setOffer] = useState<{ name: string; offer_key: string } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      if (!campaign?.offer_key) {
+        setOffer(null)
+        return
+      }
+      try {
+        await ensureOutboundLibrarySeeded()
+        const row = await getOfferByKey(campaign.offer_key)
+        if (!cancelled) setOffer(row)
+      } catch {
+        if (!cancelled) setOffer(null)
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [campaign?.offer_key])
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-2xl border border-stone-200/70 bg-white shadow-soft">

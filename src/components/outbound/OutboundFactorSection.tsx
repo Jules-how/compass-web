@@ -1,15 +1,22 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import type { CompassCampaign } from '@/lib/campaigns'
+import { listCampaigns } from '@/lib/campaigns-client'
 import type { OutboundBoardCampaign } from '@/lib/instantly'
+import type { OutboundOffer } from '@/lib/outbound-copy'
 import {
+  enrichOutboundCampaignFactors,
   factorValue,
   rollupOutboundByFactor,
   type OutboundFactorCampaign,
   type OutboundFactorKey
 } from '@/lib/outbound-factor-performance'
-import { demoOutboundBoard } from '@/lib/outbound-live-demo'
+import {
+  ensureOutboundLibrarySeeded,
+  listLibraryItems
+} from '@/lib/outbound-library-client'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
@@ -59,19 +66,47 @@ export function OutboundFactorSection() {
     '/api/instantly/outbound-campaigns',
     { staleMs: 60_000 }
   )
-  const fallback = useMemo(() => demoOutboundBoard(), [])
   const fromInstantly = board.data?.source === 'instantly'
 
   const [factor, setFactor] = useState<OutboundFactorKey>('offer')
   const [scope, setScope] = useState<Scope>('all')
   const [selected, setSelected] = useState<string | null>(null)
+  const [pipeline, setPipeline] = useState<CompassCampaign[]>([])
+  const [offers, setOffers] = useState<OutboundOffer[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        await ensureOutboundLibrarySeeded()
+        const [cams, offerRows] = await Promise.all([
+          listCampaigns(),
+          listLibraryItems<OutboundOffer>('offers')
+        ])
+        if (cancelled) return
+        setPipeline(cams)
+        setOffers(offerRows)
+      } catch {
+        if (cancelled) return
+        setPipeline([])
+        setOffers([])
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const enriched = useMemo(() => {
-    const live = board.data?.live ?? fallback.live
-    const history = board.data?.history ?? fallback.history
-    // Server already enriches Instantly rows with pipeline binds from Supabase.
-    return [...live, ...history] as OutboundFactorCampaign[]
-  }, [board.data, fallback.live, fallback.history])
+    const live = board.data?.live ?? []
+    const history = board.data?.history ?? []
+    const offerNames = Object.fromEntries(offers.map((o) => [o.offer_key, o.name]))
+    const all = [...live, ...history].map((c) =>
+      enrichOutboundCampaignFactors(c, pipeline, offerNames)
+    )
+    return all
+  }, [board.data, pipeline, offers])
 
   const scoped = useMemo(() => {
     if (scope === 'live') {

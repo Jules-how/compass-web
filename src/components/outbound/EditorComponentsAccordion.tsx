@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   FileText,
@@ -23,21 +23,35 @@ import {
   parseLibraryDrag
 } from '@/components/outbound/LibraryPane'
 import {
-  listLocalCtas,
-  listLocalExpressions,
-  listLocalOffers,
-  listLocalOpeners,
-  listLocalStructures,
-  listLocalSubjects,
-  listLocalTemplates
-} from '@/lib/outbound-local-store'
+  ensureOutboundLibrarySeeded,
+  listLibraryItems
+} from '@/lib/outbound-library-client'
+import type {
+  OutboundCta,
+  OutboundExpression,
+  OutboundOffer,
+  OutboundOpener,
+  OutboundStructure,
+  OutboundSubject,
+  OutboundTemplate
+} from '@/lib/outbound-copy'
 import { cn } from '@/lib/utils'
 
 export { parseLibraryDrag }
 export type { LibraryDragPayload }
 
+type LibraryLists = {
+  offers: ReactNode[]
+  expressions: ReactNode[]
+  structures: ReactNode[]
+  ctas: ReactNode[]
+  subjects: ReactNode[]
+  openers: ReactNode[]
+  templates: ReactNode[]
+}
+
 const SECTIONS: {
-  key: string
+  key: keyof LibraryLists
   title: string
   subtitle: string
   icon: LucideIcon
@@ -125,12 +139,10 @@ function LibraryRow({
         draggedRef.current = true
         const raw = JSON.stringify(payload)
         e.dataTransfer.setData('application/x-outbound-library', raw)
-        // Some browsers only expose text/plain during drop; keep a fallback.
         e.dataTransfer.setData('text/plain', raw)
         e.dataTransfer.effectAllowed = 'copy'
       }}
       onDragEnd={() => {
-        // Allow click after a short delay so drop doesn't also insert twice.
         window.setTimeout(() => {
           draggedRef.current = false
         }, 0)
@@ -156,6 +168,16 @@ function LibraryRow({
   )
 }
 
+const EMPTY_LISTS: LibraryLists = {
+  offers: [],
+  expressions: [],
+  structures: [],
+  ctas: [],
+  subjects: [],
+  openers: [],
+  templates: []
+}
+
 export function EditorComponentsAccordion({
   onInsert,
   className
@@ -163,100 +185,129 @@ export function EditorComponentsAccordion({
   onInsert: (payload: LibraryDragPayload) => void
   className?: string
 }) {
-  const lists = useMemo(() => {
-    return {
-      offers: listLocalOffers().map((row) => (
-        <LibraryRow
-          key={row.id}
-          title={row.name}
-          meta={row.offer_key}
-          body={row.pack_summary}
-          payload={{ kind: 'offer', id: row.id, offer_key: row.offer_key, name: row.name }}
-          onInsert={onInsert}
-        />
-      )),
-      expressions: listLocalExpressions().map((row) => (
-        <LibraryRow
-          key={row.id}
-          title={row.label}
-          meta={`${row.offer_key} · ${row.status}`}
-          body={row.body}
-          payload={{
-            kind: 'expression',
-            id: row.id,
-            offer_key: row.offer_key,
-            body: row.body,
-            label: row.label
-          }}
-          onInsert={onInsert}
-        />
-      )),
-      structures: listLocalStructures().map((row) => (
-        <LibraryRow
-          key={row.id}
-          title={row.name}
-          meta={row.structure_id}
-          body={row.description ?? undefined}
-          payload={{
-            kind: 'structure',
-            id: row.id,
-            structure_id: row.structure_id,
-            name: row.name
-          }}
-          onInsert={onInsert}
-        />
-      )),
-      ctas: listLocalCtas().map((row) => (
-        <LibraryRow
-          key={row.id}
-          title={row.label}
-          meta={row.cta_type}
-          body={row.body}
-          payload={{
-            kind: 'cta',
-            id: row.id,
-            body: row.body,
-            label: row.label,
-            cta_type: row.cta_type
-          }}
-          onInsert={onInsert}
-        />
-      )),
-      subjects: listLocalSubjects().map((row) => (
-        <LibraryRow
-          key={row.id}
-          title={row.label}
-          meta={row.pattern}
-          body={row.notes ?? undefined}
-          payload={{ kind: 'subject', id: row.id, pattern: row.pattern, label: row.label }}
-          onInsert={onInsert}
-        />
-      )),
-      openers: listLocalOpeners().map((row) => (
-        <LibraryRow
-          key={row.id}
-          title={row.label}
-          meta={row.opener_mode}
-          body={row.body || row.notes || undefined}
-          payload={{
-            kind: 'opener',
-            id: row.id,
-            body: row.body,
-            label: row.label,
-            opener_mode: row.opener_mode
-          }}
-          onInsert={onInsert}
-        />
-      )),
-      templates: listLocalTemplates().map((row) => (
-        <LibraryRow
-          key={row.id}
-          title={row.name}
-          meta={`${row.structure_id}${row.offer_key ? ` · ${row.offer_key}` : ''}`}
-          payload={{ kind: 'template', id: row.id, name: row.name }}
-          onInsert={onInsert}
-        />
-      ))
+  const [lists, setLists] = useState<LibraryLists>(EMPTY_LISTS)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        await ensureOutboundLibrarySeeded()
+        const [offers, expressions, structures, ctas, subjects, openers, templates] =
+          await Promise.all([
+            listLibraryItems<OutboundOffer>('offers'),
+            listLibraryItems<OutboundExpression>('expressions'),
+            listLibraryItems<OutboundStructure>('structures'),
+            listLibraryItems<OutboundCta>('ctas'),
+            listLibraryItems<OutboundSubject>('subjects'),
+            listLibraryItems<OutboundOpener>('openers'),
+            listLibraryItems<OutboundTemplate>('templates')
+          ])
+        if (cancelled) return
+        setLoadError(null)
+        setLists({
+          offers: offers.map((row) => (
+            <LibraryRow
+              key={row.id}
+              title={row.name}
+              meta={row.offer_key}
+              body={row.pack_summary}
+              payload={{ kind: 'offer', id: row.id, offer_key: row.offer_key, name: row.name }}
+              onInsert={onInsert}
+            />
+          )),
+          expressions: expressions.map((row) => (
+            <LibraryRow
+              key={row.id}
+              title={row.label}
+              meta={`${row.offer_key} · ${row.status}`}
+              body={row.body}
+              payload={{
+                kind: 'expression',
+                id: row.id,
+                offer_key: row.offer_key,
+                body: row.body,
+                label: row.label
+              }}
+              onInsert={onInsert}
+            />
+          )),
+          structures: structures.map((row) => (
+            <LibraryRow
+              key={row.id}
+              title={row.name}
+              meta={row.structure_id}
+              body={row.description ?? undefined}
+              payload={{
+                kind: 'structure',
+                id: row.id,
+                structure_id: row.structure_id,
+                name: row.name
+              }}
+              onInsert={onInsert}
+            />
+          )),
+          ctas: ctas.map((row) => (
+            <LibraryRow
+              key={row.id}
+              title={row.label}
+              meta={row.cta_type}
+              body={row.body}
+              payload={{
+                kind: 'cta',
+                id: row.id,
+                body: row.body,
+                label: row.label,
+                cta_type: row.cta_type
+              }}
+              onInsert={onInsert}
+            />
+          )),
+          subjects: subjects.map((row) => (
+            <LibraryRow
+              key={row.id}
+              title={row.label}
+              meta={row.pattern}
+              body={row.notes ?? undefined}
+              payload={{ kind: 'subject', id: row.id, pattern: row.pattern, label: row.label }}
+              onInsert={onInsert}
+            />
+          )),
+          openers: openers.map((row) => (
+            <LibraryRow
+              key={row.id}
+              title={row.label}
+              meta={row.opener_mode}
+              body={row.body || row.notes || undefined}
+              payload={{
+                kind: 'opener',
+                id: row.id,
+                body: row.body,
+                label: row.label,
+                opener_mode: row.opener_mode
+              }}
+              onInsert={onInsert}
+            />
+          )),
+          templates: templates.map((row) => (
+            <LibraryRow
+              key={row.id}
+              title={row.name}
+              meta={`${row.structure_id}${row.offer_key ? ` · ${row.offer_key}` : ''}`}
+              payload={{ kind: 'template', id: row.id, name: row.name }}
+              onInsert={onInsert}
+            />
+          ))
+        })
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err instanceof Error ? err.message : 'Failed to load library')
+        }
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
     }
   }, [onInsert])
 
@@ -265,13 +316,14 @@ export function EditorComponentsAccordion({
       <div className="shrink-0 space-y-1 border-b border-stone-100 px-4 py-3">
         <h2 className="text-[15px] font-semibold text-neutral-900">Components</h2>
         <p className="text-[12px] text-neutral-500">Click or drag into the draft</p>
+        {loadError ? <p className="text-[11px] text-red-600">{loadError}</p> : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
         <Accordion className="w-full -space-y-px" defaultValue={['offers']} type="multiple">
           {SECTIONS.map((section) => {
             const Icon = section.icon
-            const rows = lists[section.key as keyof typeof lists] ?? []
+            const rows = lists[section.key] ?? []
             return (
               <AccordionItem
                 key={section.key}

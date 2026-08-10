@@ -23,11 +23,10 @@ import {
   type OutboundStep
 } from '@/lib/outbound-copy'
 import {
+  createLibraryItem,
   forkTemplateIntoSequence,
-  getLocalOfferByKey,
-  saveLocalCta,
-  saveLocalExpression
-} from '@/lib/outbound-local-store'
+  getOfferByKey
+} from '@/lib/outbound-library-client'
 import {
   EditorComponentsAccordion,
   parseLibraryDrag,
@@ -113,7 +112,7 @@ export function SequenceEditor({
   const [focusField, setFocusField] = useState<'subject' | 'body'>('body')
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const hydrate = useCallback(() => {
+  const hydrate = useCallback(async () => {
     if (unbound) {
       const existing = readUnbound()
       if (existing) {
@@ -149,29 +148,25 @@ export function SequenceEditor({
       return
     }
     if (!campaignId) return
-    void getCampaignDetail(campaignId)
-      .then((detail) => {
-        if (!detail) {
-          setError('Campaign not found')
-          return
-        }
-        const seq =
-          detail.campaign.sequence_draft ??
-          scaffoldSequence(detail.campaign.structure_id || 'nick-3step', {
-            offerKey: detail.campaign.offer_key
-          })
-        setCampaign(detail.campaign)
-        setSequence(seq)
-        setActiveStepId(seq.steps[0]?.id ?? null)
-        setError(null)
-      })
-      .catch(() => {
-        setError('Campaign not found')
-      })
+    try {
+      setError(null)
+      const detail = await getCampaignDetail(campaignId)
+      if (!detail) throw new Error('Campaign not found')
+      const seq =
+        detail.campaign.sequence_draft ??
+        scaffoldSequence(detail.campaign.structure_id || 'nick-3step', {
+          offerKey: detail.campaign.offer_key
+        })
+      setCampaign(detail.campaign)
+      setSequence(seq)
+      setActiveStepId(seq.steps[0]?.id ?? null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Campaign not found')
+    }
   }, [campaignId, unbound])
 
   useEffect(() => {
-    hydrate()
+    void hydrate()
   }, [hydrate])
 
   useEffect(() => {
@@ -189,45 +184,41 @@ export function SequenceEditor({
   }, [variant, onClose])
 
   const persist = useCallback(
-    (nextCampaign: CompassCampaign, nextSequence: OutboundSequence) => {
+    async (nextCampaign: CompassCampaign, nextSequence: OutboundSequence) => {
       setSaveState('saving')
       const stamped = {
         ...nextSequence,
         updated_at: new Date().toISOString(),
         offer_key: nextCampaign.offer_key ?? nextSequence.offer_key
       }
-      if (unbound) {
-        const cam = { ...nextCampaign, sequence_draft: stamped, updated_at: new Date().toISOString() }
-        writeUnbound(cam, stamped)
-        setCampaign(cam)
-        setSequence(stamped)
+      try {
+        if (unbound) {
+          const cam = { ...nextCampaign, sequence_draft: stamped, updated_at: new Date().toISOString() }
+          writeUnbound(cam, stamped)
+          setCampaign(cam)
+          setSequence(stamped)
+        } else if (campaignId) {
+          const updated = await updateCampaign(campaignId, {
+            offer_key: nextCampaign.offer_key ?? null,
+            structure_id: stamped.structure_id,
+            opener_mode: nextCampaign.opener_mode ?? 'nick-tier',
+            vertical_tags: nextCampaign.vertical_tags ?? [],
+            location_tags: nextCampaign.location_tags ?? [],
+            cold_expression: nextCampaign.cold_expression ?? null,
+            sequence_draft: stamped,
+            copy_status: (nextCampaign.copy_status as string) || 'draft',
+            instantly_campaign_id: nextCampaign.instantly_campaign_id ?? null,
+            name: nextCampaign.name
+          })
+          setCampaign(updated)
+          setSequence(updated.sequence_draft ?? stamped)
+        }
         setSaveState('saved')
         window.setTimeout(() => setSaveState('idle'), 1200)
-        return
+      } catch (err) {
+        setSaveState('idle')
+        setError(err instanceof Error ? err.message : 'Save failed')
       }
-      if (!campaignId) return
-      void updateCampaign(campaignId, {
-        offer_key: nextCampaign.offer_key ?? null,
-        structure_id: stamped.structure_id,
-        opener_mode: nextCampaign.opener_mode ?? 'nick-tier',
-        vertical_tags: nextCampaign.vertical_tags ?? [],
-        location_tags: nextCampaign.location_tags ?? [],
-        cold_expression: nextCampaign.cold_expression ?? null,
-        sequence_draft: stamped,
-        copy_status: (nextCampaign.copy_status as string) || 'draft',
-        instantly_campaign_id: nextCampaign.instantly_campaign_id ?? null,
-        name: nextCampaign.name
-      })
-        .then((updated) => {
-          setCampaign(updated)
-          setSequence(stamped)
-          setSaveState('saved')
-          window.setTimeout(() => setSaveState('idle'), 1200)
-        })
-        .catch(() => {
-          setSaveState('idle')
-          setError('Failed to save campaign')
-        })
     },
     [campaignId, unbound]
   )
@@ -235,7 +226,9 @@ export function SequenceEditor({
   const scheduleAutosave = useCallback(
     (nextCampaign: CompassCampaign, nextSequence: OutboundSequence) => {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
-      autosaveTimer.current = setTimeout(() => persist(nextCampaign, nextSequence), 500)
+      autosaveTimer.current = setTimeout(() => {
+        void persist(nextCampaign, nextSequence)
+      }, 500)
     },
     [persist]
   )
@@ -252,7 +245,7 @@ export function SequenceEditor({
   )
 
   const applyLibraryPayload = useCallback(
-    (payload: LibraryDragPayload, stepId?: string, slotKey?: string) => {
+    async (payload: LibraryDragPayload, stepId?: string, slotKey?: string) => {
       if (!campaign || !sequence) return
       let next = sequence
       let patch: Partial<CompassCampaign> = {}
@@ -260,14 +253,18 @@ export function SequenceEditor({
 
       if (payload.kind === 'offer') {
         patch = { offer_key: payload.offer_key }
-        const offer = getLocalOfferByKey(payload.offer_key)
-        if (offer) {
-          patch.vertical_tags = Array.from(
-            new Set([...(campaign.vertical_tags ?? []), ...offer.vertical_tags])
-          )
-          patch.location_tags = Array.from(
-            new Set([...(campaign.location_tags ?? []), ...offer.location_tags])
-          )
+        try {
+          const offer = await getOfferByKey(payload.offer_key)
+          if (offer) {
+            patch.vertical_tags = Array.from(
+              new Set([...(campaign.vertical_tags ?? []), ...(offer.vertical_tags ?? [])])
+            )
+            patch.location_tags = Array.from(
+              new Set([...(campaign.location_tags ?? []), ...(offer.location_tags ?? [])])
+            )
+          }
+        } catch {
+          /* offer lookup optional */
         }
         next = { ...next, offer_key: payload.offer_key }
       } else if (payload.kind === 'structure') {
@@ -287,7 +284,13 @@ export function SequenceEditor({
         patch = { structure_id: payload.structure_id }
         setActiveStepId(next.steps[0]?.id ?? null)
       } else if (payload.kind === 'template') {
-        const forked = forkTemplateIntoSequence(payload.id)
+        let forked: OutboundSequence | null = null
+        try {
+          forked = await forkTemplateIntoSequence(payload.id)
+        } catch {
+          setError('Could not load template')
+          return
+        }
         if (!forked) return
         const ok = window.confirm(`Fork template “${payload.name}” into this campaign draft?`)
         if (!ok) return
@@ -325,31 +328,34 @@ export function SequenceEditor({
 
   function saveExplicit() {
     if (!campaign || !sequence) return
-    persist(campaign, sequence)
+    void persist(campaign, sequence)
   }
 
-  function attachUnboundToNewCampaign() {
+  async function attachUnboundToNewCampaign() {
     if (!campaign || !sequence) return
-    void createCampaign({
-      name: campaign.name || 'Outbound campaign',
-      offer_key: campaign.offer_key ?? null,
-      structure_id: sequence.structure_id,
-      opener_mode: campaign.opener_mode ?? 'nick-tier',
-      vertical_tags: campaign.vertical_tags ?? [],
-      location_tags: campaign.location_tags ?? [],
-      cold_expression: campaign.cold_expression ?? null,
-      sequence_draft: forkSequence(sequence, { remintStepIds: true }),
-      copy_status: 'draft',
-      instantly_campaign_id: campaign.instantly_campaign_id ?? null
-    }).then((created) => {
+    try {
+      setSaveState('saving')
+      const created = await createCampaign({
+        name: campaign.name || 'Outbound campaign',
+        offer_key: campaign.offer_key ?? null,
+        structure_id: sequence.structure_id,
+        opener_mode: campaign.opener_mode ?? 'nick-tier',
+        vertical_tags: campaign.vertical_tags ?? [],
+        location_tags: campaign.location_tags ?? [],
+        cold_expression: campaign.cold_expression ?? null,
+        sequence_draft: forkSequence(sequence, { remintStepIds: true }),
+        copy_status: 'draft',
+        instantly_campaign_id: campaign.instantly_campaign_id ?? null
+      })
       window.localStorage.removeItem(UNBOUND_KEY)
       if (variant === 'overlay') {
         onClose?.()
-        window.location.href = `/sales/outbound/editor/${created.id}`
-        return
       }
       window.location.href = `/sales/outbound/editor/${created.id}`
-    })
+    } catch (err) {
+      setSaveState('idle')
+      setError(err instanceof Error ? err.message : 'Could not create campaign')
+    }
   }
 
   function insertVariable(token: string) {
@@ -545,7 +551,7 @@ export function SequenceEditor({
               onDrop={(e) => {
                 e.preventDefault()
                 const payload = parseLibraryDrag(e.dataTransfer)
-                if (payload) applyLibraryPayload(payload)
+                if (payload) void applyLibraryPayload(payload)
               }}
             >
               {sequence.steps.map((step, index) => (
@@ -778,7 +784,7 @@ export function SequenceEditor({
         {tab === 'editor' ? (
           <aside className="hidden w-[400px] shrink-0 border-l border-stone-200/80 bg-white lg:flex lg:flex-col">
             <EditorComponentsAccordion
-              onInsert={(payload) => applyLibraryPayload(payload)}
+              onInsert={(payload) => void applyLibraryPayload(payload)}
               className="min-h-0 flex-1"
             />
           </aside>
@@ -789,7 +795,7 @@ export function SequenceEditor({
 }
 
 /** Keep slot-save helpers available for future settings tools. */
-export function saveActiveSlotToLibrary(
+export async function saveActiveSlotToLibrary(
   campaign: CompassCampaign | null,
   step: OutboundStep,
   slotKey: string
@@ -799,7 +805,7 @@ export function saveActiveSlotToLibrary(
   if (slotKey === 'cold_expression') {
     const label = window.prompt('Save expression as', 'Campaign expression')
     if (!label) return
-    saveLocalExpression({
+    await createLibraryItem('expressions', {
       offer_key: campaign?.offer_key || 'growth-system',
       label,
       body: slot.body,
@@ -812,6 +818,6 @@ export function saveActiveSlotToLibrary(
   if (slotKey === 'cta' || slotKey === 'availability_ask') {
     const label = window.prompt('Save CTA as', 'Campaign CTA')
     if (!label) return
-    saveLocalCta({ label, body: slot.body, cta_type: 'other' })
+    await createLibraryItem('ctas', { label, body: slot.body, cta_type: 'other' })
   }
 }
