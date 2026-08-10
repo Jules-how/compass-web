@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  deleteLocalCampaign,
-  getLocalCampaignDetail,
-  replaceLocalMilestones,
-  updateLocalCampaign
-} from '@/lib/campaign-local-store'
+  deleteCampaign,
+  getCampaignDetail,
+  replaceCampaignMilestones,
+  updateCampaign,
+  type CampaignPatch
+} from '@/lib/campaigns-client'
 import {
   CAMPAIGN_COLORS,
   CAMPAIGN_HEALTHS,
@@ -66,39 +67,44 @@ export function CampaignSidecar({
     Array<{ id?: string; title: string; description: string; target_date: string; completed: boolean }>
   >([])
 
-  function hydrate(id: string) {
-    const detail = getLocalCampaignDetail(id)
-    if (!detail) {
+  async function hydrate(id: string) {
+    try {
+      const detail = await getCampaignDetail(id)
+      if (!detail) {
+        setError('not_found')
+        setCampaign(null)
+        return
+      }
+      setError(null)
+      setCampaign(detail.campaign)
+      setActivity(detail.activity)
+      setName(detail.campaign.name)
+      setStatus(detail.campaign.status)
+      setPriority(detail.campaign.priority)
+      setHealth(detail.campaign.health)
+      setStartDate(detail.campaign.start_date ?? '')
+      setEndDate(detail.campaign.end_date ?? '')
+      setSummary(detail.campaign.summary ?? '')
+      setOwnerLabel(detail.campaign.owner_label ?? '')
+      setColor(detail.campaign.color || '#94a3b8')
+      setLabelsText((detail.campaign.labels ?? []).join(', '))
+      setMilestones(
+        detail.milestones.map((m) => ({
+          id: m.id,
+          title: m.title,
+          description: m.description ?? '',
+          target_date: m.target_date ?? '',
+          completed: m.completed
+        }))
+      )
+    } catch {
       setError('not_found')
       setCampaign(null)
-      return
     }
-    setError(null)
-    setCampaign(detail.campaign)
-    setActivity(detail.activity)
-    setName(detail.campaign.name)
-    setStatus(detail.campaign.status)
-    setPriority(detail.campaign.priority)
-    setHealth(detail.campaign.health)
-    setStartDate(detail.campaign.start_date ?? '')
-    setEndDate(detail.campaign.end_date ?? '')
-    setSummary(detail.campaign.summary ?? '')
-    setOwnerLabel(detail.campaign.owner_label ?? '')
-    setColor(detail.campaign.color || '#94a3b8')
-    setLabelsText((detail.campaign.labels ?? []).join(', '))
-    setMilestones(
-      detail.milestones.map((m) => ({
-        id: m.id,
-        title: m.title,
-        description: m.description ?? '',
-        target_date: m.target_date ?? '',
-        completed: m.completed
-      }))
-    )
   }
 
   useEffect(() => {
-    hydrate(campaignId)
+    void hydrate(campaignId)
     setShowAllActivity(false)
     setMenuOpen(false)
   }, [campaignId])
@@ -110,14 +116,15 @@ export function CampaignSidecar({
     return { scope, started, completed }
   }, [milestones])
 
-  function saveCampaign(patch: Parameters<typeof updateLocalCampaign>[1]) {
-    const updated = updateLocalCampaign(campaignId, patch)
-    if (!updated) {
-      setError('not_found')
-      return
-    }
-    hydrate(campaignId)
-    onUpdated(updated)
+  function saveCampaign(patch: CampaignPatch) {
+    void updateCampaign(campaignId, patch)
+      .then((updated) => {
+        void hydrate(campaignId)
+        onUpdated(updated)
+      })
+      .catch(() => {
+        setError('not_found')
+      })
   }
 
   function saveMilestones(
@@ -129,7 +136,7 @@ export function CampaignSidecar({
       completed: boolean
     }>
   ) {
-    const rows = replaceLocalMilestones(
+    void replaceCampaignMilestones(
       campaignId,
       next.map((m) => ({
         id: m.id,
@@ -139,17 +146,22 @@ export function CampaignSidecar({
         completed: m.completed
       }))
     )
-    setMilestones(
-      rows.map((m: CompassCampaignMilestone) => ({
-        id: m.id,
-        title: m.title,
-        description: m.description ?? '',
-        target_date: m.target_date ?? '',
-        completed: m.completed
-      }))
-    )
-    hydrate(campaignId)
-    onUpdated()
+      .then((rows) => {
+        setMilestones(
+          rows.map((m: CompassCampaignMilestone) => ({
+            id: m.id,
+            title: m.title,
+            description: m.description ?? '',
+            target_date: m.target_date ?? '',
+            completed: m.completed
+          }))
+        )
+        void hydrate(campaignId)
+        onUpdated()
+      })
+      .catch(() => {
+        setError('not_found')
+      })
   }
 
   const visibleActivity = showAllActivity ? activity : activity.slice(0, 5)
@@ -243,9 +255,10 @@ export function CampaignSidecar({
                 type="button"
                 className="block w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-50"
                 onClick={() => {
-                  deleteLocalCampaign(campaignId)
-                  onDeleted?.()
-                  if (isPage) router.push('/sales/pipeline')
+                  void deleteCampaign(campaignId).then(() => {
+                    onDeleted?.()
+                    if (isPage) router.push('/sales/pipeline')
+                  })
                 }}
               >
                 Delete

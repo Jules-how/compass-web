@@ -2,17 +2,14 @@
 
 import { useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { listLocalCampaigns } from '@/lib/campaign-local-store'
 import type { OutboundBoardCampaign } from '@/lib/instantly'
 import {
-  enrichOutboundCampaignFactors,
   factorValue,
   rollupOutboundByFactor,
   type OutboundFactorCampaign,
   type OutboundFactorKey
 } from '@/lib/outbound-factor-performance'
 import { demoOutboundBoard } from '@/lib/outbound-live-demo'
-import { listLocalOffers } from '@/lib/outbound-local-store'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
@@ -72,12 +69,8 @@ export function OutboundFactorSection() {
   const enriched = useMemo(() => {
     const live = board.data?.live ?? fallback.live
     const history = board.data?.history ?? fallback.history
-    const pipeline = listLocalCampaigns()
-    const offerNames = Object.fromEntries(listLocalOffers().map((o) => [o.offer_key, o.name]))
-    const all = [...live, ...history].map((c) =>
-      enrichOutboundCampaignFactors(c, pipeline, offerNames)
-    )
-    return all
+    // Server already enriches Instantly rows with pipeline binds from Supabase.
+    return [...live, ...history] as OutboundFactorCampaign[]
   }, [board.data, fallback.live, fallback.history])
 
   const scoped = useMemo(() => {

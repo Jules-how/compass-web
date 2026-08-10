@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { listLocalCampaigns } from '@/lib/campaign-local-store'
+import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
+import type { CompassCampaign } from '@/lib/campaigns'
 import type { OutboundBoardCampaign } from '@/lib/instantly'
 import { copyStatusLabel, LOCATION_TAG_HINTS, VERTICAL_TAG_HINTS } from '@/lib/outbound-copy'
 import { demoOutboundBoard } from '@/lib/outbound-live-demo'
@@ -58,10 +59,14 @@ export function OutboundHistorySection() {
     '/api/instantly/outbound-campaigns',
     { staleMs: 60_000 }
   )
+  const pipelineQuery = useCachedJson<{ campaigns: CompassCampaign[] }>(
+    CAMPAIGNS_QUERY_KEY,
+    '/api/campaigns',
+    { staleMs: 30_000 }
+  )
   const fallback = useMemo(() => demoOutboundBoard(), [])
   const instantlyHistory = board.data?.history ?? fallback.history
   const fromInstantly = board.data?.source === 'instantly'
-  const localCampaigns = listLocalCampaigns()
   const offers = listLocalOffers()
 
   const [nameQ, setNameQ] = useState('')
@@ -75,8 +80,9 @@ export function OutboundHistorySection() {
 
   const rows = useMemo(() => {
     let list: OutboundBoardCampaign[] = instantlyHistory.slice()
+    const localCampaigns = pipelineQuery.data?.campaigns ?? []
 
-    // Merge local completed / non-live pipeline campaigns as lightweight history rows
+    // Merge completed / non-live pipeline campaigns as lightweight history rows
     for (const c of localCampaigns) {
       if (c.status === 'completed' || c.copy_status === 'none' || c.status === 'cancelled') {
         if (list.some((r) => r.id === c.id || r.id === c.instantly_campaign_id)) continue
@@ -138,7 +144,7 @@ export function OutboundHistorySection() {
     return list
   }, [
     instantlyHistory,
-    localCampaigns,
+    pipelineQuery.data?.campaigns,
     nameQ,
     vertical,
     location,
@@ -148,6 +154,8 @@ export function OutboundHistorySection() {
     dateTo,
     sort
   ])
+
+  const pipelineCampaigns = pipelineQuery.data?.campaigns ?? []
 
   return (
     <Card>
@@ -317,14 +325,14 @@ export function OutboundHistorySection() {
           </table>
         </div>
 
-        {localCampaigns.some((c) => c.copy_status && c.copy_status !== 'none') ? (
+        {pipelineCampaigns.some((c) => c.copy_status && c.copy_status !== 'none') ? (
           <div className="rounded-xl border border-stone-200/70 bg-stone-50/50 px-4 py-3 text-[12px] text-neutral-600">
             Pipeline drafts with copy still open in the{' '}
             <Link href="/sales/pipeline" className="font-medium text-[#c2410c] hover:underline">
               planner
             </Link>
             {' · '}
-            {localCampaigns
+            {pipelineCampaigns
               .filter((c) => c.copy_status && c.copy_status !== 'none')
               .slice(0, 3)
               .map((c) => (

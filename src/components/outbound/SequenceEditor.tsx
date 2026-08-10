@@ -5,10 +5,10 @@ import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, Monitor, Plus, Rocket, Smartphone, X, Zap } from 'lucide-react'
 import {
-  createLocalCampaign,
-  getLocalCampaignDetail,
-  updateLocalCampaign
-} from '@/lib/campaign-local-store'
+  createCampaign,
+  getCampaignDetail,
+  updateCampaign
+} from '@/lib/campaigns-client'
 import type { CompassCampaign } from '@/lib/campaigns'
 import { emptyCampaignCopyFields } from '@/lib/campaigns'
 import {
@@ -149,20 +149,25 @@ export function SequenceEditor({
       return
     }
     if (!campaignId) return
-    const detail = getLocalCampaignDetail(campaignId)
-    if (!detail) {
-      setError('Campaign not found')
-      return
-    }
-    const seq =
-      detail.campaign.sequence_draft ??
-      scaffoldSequence(detail.campaign.structure_id || 'nick-3step', {
-        offerKey: detail.campaign.offer_key
+    void getCampaignDetail(campaignId)
+      .then((detail) => {
+        if (!detail) {
+          setError('Campaign not found')
+          return
+        }
+        const seq =
+          detail.campaign.sequence_draft ??
+          scaffoldSequence(detail.campaign.structure_id || 'nick-3step', {
+            offerKey: detail.campaign.offer_key
+          })
+        setCampaign(detail.campaign)
+        setSequence(seq)
+        setActiveStepId(seq.steps[0]?.id ?? null)
+        setError(null)
       })
-    setCampaign(detail.campaign)
-    setSequence(seq)
-    setActiveStepId(seq.steps[0]?.id ?? null)
-    setError(null)
+      .catch(() => {
+        setError('Campaign not found')
+      })
   }, [campaignId, unbound])
 
   useEffect(() => {
@@ -196,26 +201,33 @@ export function SequenceEditor({
         writeUnbound(cam, stamped)
         setCampaign(cam)
         setSequence(stamped)
-      } else if (campaignId) {
-        const updated = updateLocalCampaign(campaignId, {
-          offer_key: nextCampaign.offer_key ?? null,
-          structure_id: stamped.structure_id,
-          opener_mode: nextCampaign.opener_mode ?? 'nick-tier',
-          vertical_tags: nextCampaign.vertical_tags ?? [],
-          location_tags: nextCampaign.location_tags ?? [],
-          cold_expression: nextCampaign.cold_expression ?? null,
-          sequence_draft: stamped,
-          copy_status: (nextCampaign.copy_status as string) || 'draft',
-          instantly_campaign_id: nextCampaign.instantly_campaign_id ?? null,
-          name: nextCampaign.name
-        })
-        if (updated) {
+        setSaveState('saved')
+        window.setTimeout(() => setSaveState('idle'), 1200)
+        return
+      }
+      if (!campaignId) return
+      void updateCampaign(campaignId, {
+        offer_key: nextCampaign.offer_key ?? null,
+        structure_id: stamped.structure_id,
+        opener_mode: nextCampaign.opener_mode ?? 'nick-tier',
+        vertical_tags: nextCampaign.vertical_tags ?? [],
+        location_tags: nextCampaign.location_tags ?? [],
+        cold_expression: nextCampaign.cold_expression ?? null,
+        sequence_draft: stamped,
+        copy_status: (nextCampaign.copy_status as string) || 'draft',
+        instantly_campaign_id: nextCampaign.instantly_campaign_id ?? null,
+        name: nextCampaign.name
+      })
+        .then((updated) => {
           setCampaign(updated)
           setSequence(stamped)
-        }
-      }
-      setSaveState('saved')
-      window.setTimeout(() => setSaveState('idle'), 1200)
+          setSaveState('saved')
+          window.setTimeout(() => setSaveState('idle'), 1200)
+        })
+        .catch(() => {
+          setSaveState('idle')
+          setError('Failed to save campaign')
+        })
     },
     [campaignId, unbound]
   )
@@ -318,8 +330,8 @@ export function SequenceEditor({
 
   function attachUnboundToNewCampaign() {
     if (!campaign || !sequence) return
-    const created = createLocalCampaign({ name: campaign.name || 'Outbound campaign' })
-    updateLocalCampaign(created.id, {
+    void createCampaign({
+      name: campaign.name || 'Outbound campaign',
       offer_key: campaign.offer_key ?? null,
       structure_id: sequence.structure_id,
       opener_mode: campaign.opener_mode ?? 'nick-tier',
@@ -329,14 +341,15 @@ export function SequenceEditor({
       sequence_draft: forkSequence(sequence, { remintStepIds: true }),
       copy_status: 'draft',
       instantly_campaign_id: campaign.instantly_campaign_id ?? null
-    })
-    window.localStorage.removeItem(UNBOUND_KEY)
-    if (variant === 'overlay') {
-      onClose?.()
+    }).then((created) => {
+      window.localStorage.removeItem(UNBOUND_KEY)
+      if (variant === 'overlay') {
+        onClose?.()
+        window.location.href = `/sales/outbound/editor/${created.id}`
+        return
+      }
       window.location.href = `/sales/outbound/editor/${created.id}`
-      return
-    }
-    window.location.href = `/sales/outbound/editor/${created.id}`
+    })
   }
 
   function insertVariable(token: string) {

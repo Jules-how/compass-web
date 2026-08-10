@@ -14,11 +14,12 @@ import { useRouter } from 'next/navigation'
 import { CampaignSidecar } from '@/components/campaigns/CampaignSidecar'
 import { useTimelineWheelZoom } from '@/hooks/useTimelineWheelZoom'
 import {
-  createLocalCampaign,
-  deleteLocalCampaign,
-  listLocalCampaigns,
-  updateLocalCampaign
-} from '@/lib/campaign-local-store'
+  createCampaign,
+  deleteCampaign,
+  listCampaigns,
+  migrateLocalCampaignsOnce,
+  updateCampaign
+} from '@/lib/campaigns-client'
 import {
   CAMPAIGN_HEALTHS,
   CAMPAIGN_STATUSES,
@@ -123,13 +124,30 @@ export function CampaignPlanner() {
     setScrollNode(node)
   }, [])
 
-  const refresh = useCallback(() => {
-    setCampaigns(listLocalCampaigns())
-    setReady(true)
+  const refresh = useCallback(async () => {
+    try {
+      const rows = await listCampaigns({ force: true })
+      setCampaigns(rows)
+    } catch {
+      setCampaigns([])
+    } finally {
+      setReady(true)
+    }
   }, [])
 
   useEffect(() => {
-    refresh()
+    let cancelled = false
+    void (async () => {
+      try {
+        await migrateLocalCampaignsOnce()
+      } catch {
+        // Migration is best-effort; planner still loads from Supabase.
+      }
+      if (!cancelled) await refresh()
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [refresh])
 
   const filtered = useMemo(() => {
@@ -264,24 +282,26 @@ export function CampaignPlanner() {
     router.push(`/sales/pipeline/${id}`)
   }
 
-  function createCampaign(nextStatus?: CampaignStatus, openCopyEditor = false) {
+  async function handleCreateCampaign(nextStatus?: CampaignStatus, openCopyEditor = false) {
     const today = toDateOnly(range.today)
     const end = toDateOnly(
       new Date(range.today.getFullYear(), range.today.getMonth() + 1, range.today.getDate())
     )
-    const campaign = createLocalCampaign({
-      name: 'New campaign',
-      start_date: today,
-      end_date: end
-    })
-    if (nextStatus && nextStatus !== campaign.status) {
-      updateLocalCampaign(campaign.id, { status: nextStatus })
+    try {
+      const campaign = await createCampaign({
+        name: 'New campaign',
+        start_date: today,
+        end_date: end,
+        status: nextStatus
+      })
+      await refresh()
+      setSelectedId(campaign.id)
+      setSidecarOpen(true)
+      if (openCopyEditor) router.push(`/sales/outbound/editor/${campaign.id}`)
+      return campaign
+    } catch {
+      return null
     }
-    refresh()
-    setSelectedId(campaign.id)
-    setSidecarOpen(true)
-    if (openCopyEditor) router.push(`/sales/outbound/editor/${campaign.id}`)
-    return campaign
   }
 
   function openCampaign(id: string) {
@@ -291,19 +311,22 @@ export function CampaignPlanner() {
   }
 
   function moveCampaignStatus(id: string, status: CampaignStatus) {
-    updateLocalCampaign(id, { status })
-    refresh()
+    void updateCampaign(id, { status }).then(() => refresh())
   }
 
   function persistDates(id: string, start: string, end: string) {
     const orderedDates = clampDateOrder(start, end)
-    updateLocalCampaign(id, { start_date: orderedDates.start, end_date: orderedDates.end })
-    setDraftDates((prev) => {
-      const next = { ...prev }
-      delete next[id]
-      return next
+    void updateCampaign(id, {
+      start_date: orderedDates.start,
+      end_date: orderedDates.end
+    }).then(() => {
+      setDraftDates((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+      return refresh()
     })
-    refresh()
   }
 
   function onPointerDownBar(e: ReactPointerEvent, campaign: CompassCampaign, mode: DragMode) {
@@ -445,7 +468,7 @@ export function CampaignPlanner() {
           ) : null}
           <button
             type="button"
-            onClick={() => createCampaign()}
+            onClick={() => void handleCreateCampaign()}
             className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-neutral-600 hover:bg-neutral-100"
             aria-label="New campaign"
             title="New campaign"
@@ -454,7 +477,7 @@ export function CampaignPlanner() {
           </button>
           <button
             type="button"
-            onClick={() => createCampaign(undefined, true)}
+            onClick={() => void handleCreateCampaign(undefined, true)}
             className="flex h-7 items-center rounded-md px-2 text-[11px] font-medium text-neutral-600 hover:bg-neutral-100"
             title="New campaign with copy editor"
           >
@@ -608,7 +631,7 @@ export function CampaignPlanner() {
                     <p className="mt-1 text-xs text-neutral-500">Create a campaign to start planning.</p>
                     <button
                       type="button"
-                      onClick={() => createCampaign()}
+                      onClick={() => void handleCreateCampaign()}
                       className="mt-3 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
                     >
                       New campaign
@@ -688,7 +711,7 @@ export function CampaignPlanner() {
                         <span className="text-[12px] tabular-nums text-neutral-400">{items.length}</span>
                         <button
                           type="button"
-                          onClick={() => createCampaign(column)}
+                          onClick={() => void handleCreateCampaign(column)}
                           className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-neutral-400 hover:bg-white hover:text-neutral-700"
                           aria-label={`New campaign in ${campaignStatusLabel(column)}`}
                           title="New campaign"
@@ -1094,7 +1117,7 @@ export function CampaignPlanner() {
                         </p>
                         <button
                           type="button"
-                          onClick={() => createCampaign()}
+                          onClick={() => void handleCreateCampaign()}
                           className="mt-3 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
                         >
                           New campaign
@@ -1181,9 +1204,10 @@ export function CampaignPlanner() {
                 <MenuItem
                   danger
                   onClick={() => {
-                    deleteLocalCampaign(menuCampaign.id)
-                    if (selectedId === menuCampaign.id) setSelectedId(null)
-                    refresh()
+                    void deleteCampaign(menuCampaign.id).then(() => {
+                      if (selectedId === menuCampaign.id) setSelectedId(null)
+                      return refresh()
+                    })
                     setRowMenu(null)
                   }}
                 >
@@ -1219,8 +1243,7 @@ export function CampaignPlanner() {
                 <div className="my-1 border-t border-neutral-100" />
                 <MenuItem
                   onClick={() => {
-                    updateLocalCampaign(menuCampaign.id, { status: 'active' })
-                    refresh()
+                    void updateCampaign(menuCampaign.id, { status: 'active' }).then(() => refresh())
                     setRowMenu(null)
                   }}
                 >
@@ -1228,8 +1251,7 @@ export function CampaignPlanner() {
                 </MenuItem>
                 <MenuItem
                   onClick={() => {
-                    updateLocalCampaign(menuCampaign.id, { priority: 2 })
-                    refresh()
+                    void updateCampaign(menuCampaign.id, { priority: 2 }).then(() => refresh())
                     setRowMenu(null)
                   }}
                 >
@@ -1247,9 +1269,10 @@ export function CampaignPlanner() {
                 <MenuItem
                   danger
                   onClick={() => {
-                    deleteLocalCampaign(menuCampaign.id)
-                    if (selectedId === menuCampaign.id) setSelectedId(null)
-                    refresh()
+                    void deleteCampaign(menuCampaign.id).then(() => {
+                      if (selectedId === menuCampaign.id) setSelectedId(null)
+                      return refresh()
+                    })
                     setRowMenu(null)
                   }}
                 >
@@ -1268,8 +1291,7 @@ export function CampaignPlanner() {
                 <MenuItem
                   key={value}
                   onClick={() => {
-                    updateLocalCampaign(menuCampaign.id, { status: value })
-                    refresh()
+                    void updateCampaign(menuCampaign.id, { status: value }).then(() => refresh())
                     setRowMenu(null)
                   }}
                 >
@@ -1294,8 +1316,7 @@ export function CampaignPlanner() {
                 <MenuItem
                   key={value}
                   onClick={() => {
-                    updateLocalCampaign(menuCampaign.id, { priority: value })
-                    refresh()
+                    void updateCampaign(menuCampaign.id, { priority: value }).then(() => refresh())
                     setRowMenu(null)
                   }}
                 >
@@ -1320,8 +1341,7 @@ export function CampaignPlanner() {
                 <MenuItem
                   key={value}
                   onClick={() => {
-                    updateLocalCampaign(menuCampaign.id, { health: value })
-                    refresh()
+                    void updateCampaign(menuCampaign.id, { health: value }).then(() => refresh())
                     setRowMenu(null)
                   }}
                 >

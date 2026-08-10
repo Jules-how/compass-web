@@ -9,7 +9,7 @@ export function CampaignDetail({ campaignId }: { campaignId: string }) {
         campaignId={campaignId}
         variant="page"
         onUpdated={() => {
-          /* local store already updated */
+          /* persisted via /api/campaigns */
         }}
       />
     </div>

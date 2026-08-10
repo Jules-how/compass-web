@@ -22,7 +22,9 @@ import {
   listCopyArchive,
   saveCopyArchiveEntry
 } from '@/lib/outbound-copy-archive'
+import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
 import { listLocalOffers } from '@/lib/outbound-local-store'
+import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 import type { CompassCampaign } from '@/lib/campaigns'
 import type { OutboundSequence } from '@/lib/outbound-copy'
@@ -206,6 +208,11 @@ export function CopyArchivePanel({
   const [sort, setSort] = useState<CopyArchiveSortKey>('reply')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
+  const campaignsQuery = useCachedJson<{ campaigns: CompassCampaign[] }>(
+    CAMPAIGNS_QUERY_KEY,
+    '/api/campaigns',
+    { staleMs: 30_000 }
+  )
 
   const entries = useMemo(() => {
     void tick
@@ -213,9 +220,10 @@ export function CopyArchivePanel({
       q: q.trim() || undefined,
       vertical: vertical === 'all' ? undefined : vertical,
       offer_key: offer === 'all' ? undefined : offer,
-      sort
+      sort,
+      pipelineCampaigns: campaignsQuery.data?.campaigns ?? []
     })
-  }, [q, vertical, offer, sort, tick])
+  }, [q, vertical, offer, sort, tick, campaignsQuery.data?.campaigns])
 
   const selected = entries.find((e) => e.id === selectedId) ?? entries[0] ?? null
 
