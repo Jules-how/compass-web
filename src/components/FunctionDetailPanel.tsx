@@ -10,6 +10,7 @@ import type {
 } from '@/lib/types'
 import { TASK_STATUSES } from '@/lib/types'
 import { emptyFunctionStats } from '@/lib/function-stats'
+import { functionAccentColor, resolveFunctionKind, withAlpha } from '@/lib/function-identity'
 import {
   formatProjectDate,
   projectHealthLabel,
@@ -18,6 +19,7 @@ import {
 } from '@/lib/project-pm'
 import { formatPercentComplete } from '@/lib/project-stats'
 import { taskPriorityLabel } from '@/lib/task-priority'
+import { FunctionMark } from '@/components/FunctionGlyph'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { cn } from '@/lib/utils'
 
@@ -194,6 +196,9 @@ export function FunctionDetailPanel({ functionId }: { functionId: string }) {
   if (!data) return null
 
   const fn = data.function
+  const identity = { id: fn.id, slug: fn.slug, name: fn.name }
+  const accent = functionAccentColor(identity)
+  const kind = resolveFunctionKind(identity)
   const tabs: Array<[TabKey, string]> = [
     ['overview', 'Overview'],
     ['projects', `Projects (${data.projects.length})`],
@@ -203,32 +208,52 @@ export function FunctionDetailPanel({ functionId }: { functionId: string }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-500">
-            <Link href="/functions" className="hover:text-neutral-800">
-              Functions
-            </Link>
-            <span>/</span>
-            <span className="font-medium text-neutral-800">{fn.name}</span>
+      <div className="compass-panel relative overflow-hidden p-5">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: `radial-gradient(480px 180px at 0% 0%, ${withAlpha(accent, 0.16)}, transparent 65%)`
+          }}
+          aria-hidden
+        />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-4">
+            <FunctionMark kind={kind} color={accent} size="lg" />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-500">
+                <Link href="/functions" className="hover:text-neutral-800">
+                  Functions
+                </Link>
+                <span>/</span>
+                <span className="font-medium text-neutral-800">{fn.name}</span>
+              </div>
+              <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-neutral-900">
+                {fn.name}
+              </h1>
+              <p className="mt-2 text-sm text-neutral-500">
+                <span
+                  className="rounded-lg px-2 py-0.5 text-xs font-medium"
+                  style={{ backgroundColor: withAlpha(accent, 0.12), color: accent }}
+                >
+                  /{fn.slug}
+                </span>
+                <span className="mx-1.5 text-neutral-300">·</span>
+                Order {fn.sort_order}
+                <span className="mx-1.5 text-neutral-300">·</span>
+                {stats.projectCount} projects
+                <span className="mx-1.5 text-neutral-300">·</span>
+                {stats.openTaskCount} open tasks
+              </p>
+            </div>
           </div>
-          <p className="mt-2 text-sm text-neutral-500">
-            /{fn.slug}
-            <span className="mx-1.5 text-neutral-300">·</span>
-            Order {fn.sort_order}
-            <span className="mx-1.5 text-neutral-300">·</span>
-            {stats.projectCount} projects
-            <span className="mx-1.5 text-neutral-300">·</span>
-            {stats.openTaskCount} open tasks
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/projects" className="compass-btn-secondary">
-            All projects
-          </Link>
-          <Link href="/tasks" className="compass-btn-secondary">
-            All tasks
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/projects" className="compass-btn-secondary">
+              All projects
+            </Link>
+            <Link href="/tasks" className="compass-btn-secondary">
+              All tasks
+            </Link>
+          </div>
         </div>
       </div>
 

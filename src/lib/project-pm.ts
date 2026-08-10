@@ -132,6 +132,9 @@ const FUNCTION_ICON_COLOR_BY_KEY: Record<string, string> = {
   fulfillment: '#4CB782',
   build: '#5E6AD2',
   product: '#5E6AD2',
+  systems: '#5E6AD2',
+  'product-systems': '#5E6AD2',
+  'product-and-systems': '#5E6AD2',
   engineering: '#5E6AD2',
   think: '#F2C94C',
   strategy: '#F2C94C',
@@ -140,7 +143,9 @@ const FUNCTION_ICON_COLOR_BY_KEY: Record<string, string> = {
   ops: '#95A2B3',
   finances: '#95A2B3',
   finance: '#95A2B3',
-  marketing: '#26B5CE'
+  marketing: '#26B5CE',
+  growth: '#26B5CE',
+  brand: '#26B5CE'
 }
 
 function normalizeFunctionKey(value: string): string {

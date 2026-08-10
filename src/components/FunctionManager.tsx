@@ -4,18 +4,13 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import type { CompassBusinessFunctionWithStats } from '@/lib/types'
 import { emptyFunctionStats } from '@/lib/function-stats'
+import {
+  functionAccentColor,
+  resolveFunctionKind,
+  withAlpha
+} from '@/lib/function-identity'
+import { FunctionMark } from '@/components/FunctionGlyph'
 import { cn } from '@/lib/utils'
-
-const FUNCTION_ICON_COLORS = [
-  '#F2994A',
-  '#5E6AD2',
-  '#26B5CE',
-  '#4CB782',
-  '#EB5757',
-  '#BB87FC',
-  '#F2C94C',
-  '#95A2B3'
-] as const
 
 function slugify(name: string): string {
   return name
@@ -23,22 +18,6 @@ function slugify(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-}
-
-function functionIconColor(seed: string): string {
-  let hash = 0
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
-  return FUNCTION_ICON_COLORS[hash % FUNCTION_ICON_COLORS.length]
-}
-
-function initialsFromLabel(label: string): string {
-  const parts = label.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  return parts
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
 }
 
 function formatUpdated(value: string): string {
@@ -50,6 +29,33 @@ function formatUpdated(value: string): string {
   } catch {
     return value
   }
+}
+
+function MetricChip({
+  label,
+  value,
+  color
+}: {
+  label: string
+  value: number
+  color: string
+}) {
+  return (
+    <div
+      className="relative min-w-[5.5rem] overflow-hidden rounded-xl bg-white/80 px-3.5 pb-2.5 pt-3 text-center"
+      style={{
+        boxShadow: `inset 0 0 0 1px ${withAlpha(color, 0.16)}`
+      }}
+    >
+      <span
+        className="absolute inset-x-0 top-0 h-1"
+        style={{ backgroundColor: color }}
+        aria-hidden
+      />
+      <p className="font-display text-lg font-semibold tabular-nums text-neutral-900">{value}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{label}</p>
+    </div>
+  )
 }
 
 export function FunctionManager({
@@ -217,7 +223,9 @@ export function FunctionManager({
         <div className="space-y-3">
           {filtered.map((row) => {
             const stats = row.stats ?? emptyFunctionStats()
-            const color = functionIconColor(row.id || row.slug || row.name)
+            const identity = { id: row.id, slug: row.slug, name: row.name }
+            const color = functionAccentColor(identity)
+            const kind = resolveFunctionKind(identity)
             const recent = row.recentProjects ?? []
             return (
               <Link
@@ -229,25 +237,34 @@ export function FunctionManager({
                 )}
               >
                 <div
-                  className="pointer-events-none absolute inset-y-0 left-0 w-1.5 opacity-90"
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background: `radial-gradient(520px 200px at 0% 0%, ${withAlpha(color, 0.2)}, transparent 62%), radial-gradient(380px 160px at 100% 100%, ${withAlpha(color, 0.08)}, transparent 55%)`
+                  }}
+                  aria-hidden
+                />
+                <div
+                  className="pointer-events-none absolute inset-y-0 left-0 w-1.5"
                   style={{ backgroundColor: color }}
                   aria-hidden
                 />
-                <div className="flex flex-col gap-4 p-5 pl-6 lg:flex-row lg:items-center lg:gap-6">
+                <div className="relative flex flex-col gap-4 p-5 pl-6 lg:flex-row lg:items-center lg:gap-6">
                   <div className="flex min-w-0 flex-1 items-start gap-4">
-                    <div
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white shadow-soft"
-                      style={{ backgroundColor: color }}
-                      aria-hidden
-                    >
-                      {initialsFromLabel(row.name)}
-                    </div>
+                    <FunctionMark kind={kind} color={color} />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <h3 className="font-display text-xl font-semibold tracking-tight text-neutral-900">
                           {row.name}
                         </h3>
-                        <span className="text-sm text-neutral-400">/{row.slug}</span>
+                        <span
+                          className="rounded-lg px-2 py-0.5 text-xs font-medium tabular-nums"
+                          style={{
+                            backgroundColor: withAlpha(color, 0.12),
+                            color
+                          }}
+                        >
+                          /{row.slug}
+                        </span>
                       </div>
                       {recent.length > 0 ? (
                         <p className="mt-2 truncate text-sm text-neutral-600">
@@ -269,31 +286,13 @@ export function FunctionManager({
                   </div>
 
                   <div className="flex shrink-0 flex-wrap items-center gap-2 lg:gap-3">
-                    <div className="rounded-xl bg-stone-50 px-3.5 py-2.5 text-center ring-1 ring-inset ring-stone-200/70 min-w-[5.5rem]">
-                      <p className="font-display text-lg font-semibold tabular-nums text-neutral-900">
-                        {stats.projectCount}
-                      </p>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                        Projects
-                      </p>
-                    </div>
-                    <div className="rounded-xl bg-stone-50 px-3.5 py-2.5 text-center ring-1 ring-inset ring-stone-200/70 min-w-[5.5rem]">
-                      <p className="font-display text-lg font-semibold tabular-nums text-neutral-900">
-                        {stats.openTaskCount}
-                      </p>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                        Open
-                      </p>
-                    </div>
-                    <div className="rounded-xl bg-stone-50 px-3.5 py-2.5 text-center ring-1 ring-inset ring-stone-200/70 min-w-[5.5rem]">
-                      <p className="font-display text-lg font-semibold tabular-nums text-neutral-900">
-                        {stats.completedTaskCount}
-                      </p>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                        Done
-                      </p>
-                    </div>
-                    <span className="ml-1 inline-flex h-9 w-9 items-center justify-center rounded-xl text-neutral-300 transition group-hover:bg-stone-50 group-hover:text-neutral-600">
+                    <MetricChip label="Projects" value={stats.projectCount} color={color} />
+                    <MetricChip label="Open" value={stats.openTaskCount} color={color} />
+                    <MetricChip label="Done" value={stats.completedTaskCount} color={color} />
+                    <span
+                      className="ml-1 inline-flex h-9 w-9 items-center justify-center rounded-xl transition group-hover:bg-white/80"
+                      style={{ color: withAlpha(color, 0.7) }}
+                    >
                       <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" aria-hidden>
                         <path
                           d="M6 3.5 10.5 8 6 12.5"
