@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   InstantlyApiError,
   getInstantlyApiKey,
+  resolveInstantlyApiKey,
   type InstantlyCampaignAnalytics
 } from '@/lib/instantly'
 import { lookupCopyForInstantlyCampaign, recordOutreachTouch } from '@/lib/lead-outreach'
@@ -12,16 +13,39 @@ const PAGE_LIMIT = 100
 /** Cap pages per filter so a daily job stays bounded. */
 const MAX_PAGES_PER_FILTER = 10
 
-/** High-signal Instantly filters that should surface in Compass Inbox / Leads. */
+/**
+ * Instantly lead filters that should surface in Compass Inbox.
+ * Positive, neutral reply, negative, and OOO — anything Jules may need to triage.
+ */
 export const INSTANTLY_INBOX_FILTERS = [
   'FILTER_VAL_REPLIED',
   'FILTER_LEAD_INTERESTED',
   'FILTER_LEAD_MEETING_BOOKED',
   'FILTER_LEAD_MEETING_COMPLETED',
-  'FILTER_LEAD_CLOSED'
+  'FILTER_LEAD_CLOSED',
+  'FILTER_LEAD_NOT_INTERESTED',
+  'FILTER_LEAD_OUT_OF_OFFICE',
+  'FILTER_LEAD_WRONG_PERSON',
+  'FILTER_LEAD_LOST',
+  'FILTER_LEAD_NO_SHOW',
+  'FILTER_LEAD_CUSTOM_LABEL_POSITIVE',
+  'FILTER_LEAD_CUSTOM_LABEL_NEGATIVE'
 ] as const
 
 export type InstantlyLeadListFilter = (typeof INSTANTLY_INBOX_FILTERS)[number]
+
+/** Outbound statuses the Inbox Instantly tab should load. */
+export const INSTANTLY_INBOX_OUTBOUND_STATUSES = [
+  'replied',
+  'interested',
+  'meeting_booked',
+  'not_interested',
+  'out_of_office',
+  'wrong_person',
+  // Legacy Compass mirror values (pre-agent-sync taxonomy).
+  'replied_positive',
+  'replied_negative'
+] as const
 
 export type InstantlyLeadRow = {
   id: string
@@ -73,11 +97,16 @@ export function mapInstantlyInterestToOutboundStatus(
       return 'meeting_booked'
     case 1:
       return 'interested'
+    case 0:
+      return 'out_of_office'
     case -1:
+      return 'not_interested'
     case -2:
+      return 'wrong_person'
     case -3:
     case -4:
-      return 'suppressed'
+      // Lost / no-show still need Inbox triage; keep recontact blocked.
+      return 'not_interested'
     default:
       break
   }
@@ -89,6 +118,44 @@ export function mapInstantlyInterestToOutboundStatus(
   const replies = Number(lead.email_reply_count) || 0
   if (replies > 0 || lead.timestamp_last_reply) return 'replied'
   return 'in_instantly'
+}
+
+export function interestLabelForOutbound(outbound: string): string {
+  switch (outbound) {
+    case 'interested':
+    case 'replied_positive':
+      return 'Interested'
+    case 'meeting_booked':
+      return 'Meeting booked'
+    case 'converted':
+      return 'Closed'
+    case 'not_interested':
+    case 'replied_negative':
+      return 'Not interested'
+    case 'out_of_office':
+      return 'Out of office'
+    case 'wrong_person':
+      return 'Wrong person'
+    case 'suppressed':
+      return 'Suppressed'
+    case 'replied':
+      return 'Replied'
+    default:
+      return outbound.replace(/_/g, ' ')
+  }
+}
+
+/** True when Instantly outcome should block further cold outreach. */
+export function isInstantlySuppressedOutbound(outbound: string): boolean {
+  switch (outbound) {
+    case 'not_interested':
+    case 'wrong_person':
+    case 'suppressed':
+    case 'replied_negative':
+      return true
+    default:
+      return false
+  }
 }
 
 export function buildLeadDisplayName(lead: InstantlyLeadRow): string | null {
@@ -232,7 +299,8 @@ export async function syncInstantlyLeadsIntoCompass(
     campaigns?: InstantlyCampaignAnalytics[]
   }
 ): Promise<InstantlyLeadsSyncResult> {
-  const apiKey = options?.apiKey ?? getInstantlyApiKey()
+  const apiKey =
+    options?.apiKey ?? (await resolveInstantlyApiKey(supabase)) ?? getInstantlyApiKey()
   if (!apiKey) throw new InstantlyApiError('INSTANTLY_API_KEY is not configured', 503)
 
   const filters = options?.filters ?? INSTANTLY_INBOX_FILTERS
@@ -277,11 +345,14 @@ export async function syncInstantlyLeadsIntoCompass(
     const name = buildLeadDisplayName(lead)
 
     const match = pickExisting(byInstantlyId, byEmail, lead.id, email)
-    const suppressed = outbound === 'suppressed'
+    const suppressed = isInstantlySuppressedOutbound(outbound)
     const suppressionReason = suppressed
       ? interestSuppressionReason(lead.lt_interest_status, lead.status)
       : null
-    const lastContactAt = str(lead.timestamp_last_contact) || stamp
+    const lastContactAt =
+      str(lead.timestamp_last_reply) ||
+      str(lead.timestamp_last_contact) ||
+      stamp
     const patch: Record<string, unknown> = {
       email: email,
       phone,
@@ -289,7 +360,7 @@ export async function syncInstantlyLeadsIntoCompass(
       role,
       source: 'instantly',
       outbound_status: outbound,
-      interest_label: outbound,
+      interest_label: interestLabelForOutbound(outbound),
       lead_status_source: 'instantly_sync',
       instantly_lead_id: lead.id,
       instantly_campaign_id: campaignId,
@@ -300,7 +371,7 @@ export async function syncInstantlyLeadsIntoCompass(
       updated_at: stamp,
       mirrored_at: stamp,
       suppression_reason: suppressionReason,
-      // Negative Instantly outcomes block recontact; otherwise keep/allow.
+      // Negative Instantly outcomes block recontact; OOO / positive stay open.
       recontact_ok: suppressed ? 0 : 1
     }
 
@@ -410,8 +481,13 @@ const OUTBOUND_RANK: Record<string, number> = {
   uncontacted: 0,
   in_instantly: 1,
   contacted: 2,
+  out_of_office: 2.5,
   replied: 3,
+  replied_positive: 4,
   interested: 4,
+  not_interested: 4.5,
+  replied_negative: 4.5,
+  wrong_person: 4.5,
   meeting_booked: 5,
   booked: 5,
   converted: 6,
@@ -423,9 +499,21 @@ function shouldOverwriteOutbound(
   incoming: string
 ): boolean {
   if (!existing) return true
-  const a = OUTBOUND_RANK[existing.toLowerCase()] ?? 0
-  const b = OUTBOUND_RANK[incoming.toLowerCase()] ?? 0
-  // Always apply Instantly suppression / conversion signals.
-  if (incoming === 'suppressed' || incoming === 'converted') return true
+  const existingKey = existing.toLowerCase()
+  const incomingKey = incoming.toLowerCase()
+  const a = OUTBOUND_RANK[existingKey] ?? 0
+  const b = OUTBOUND_RANK[incomingKey] ?? 0
+  // Always apply Instantly suppression / conversion / negative / OOO signals.
+  if (
+    incomingKey === 'suppressed' ||
+    incomingKey === 'converted' ||
+    incomingKey === 'not_interested' ||
+    incomingKey === 'wrong_person' ||
+    incomingKey === 'out_of_office'
+  ) {
+    return true
+  }
+  // Normalize legacy replied_positive/negative whenever Instantly has a fresher lane.
+  if (existingKey === 'replied_positive' || existingKey === 'replied_negative') return true
   return b >= a
 }

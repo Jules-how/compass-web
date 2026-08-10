@@ -95,7 +95,7 @@ export const INBOX_TAB_LABELS: Record<InboxTab, string> = {
 
 export const INBOX_TAB_HINTS: Record<InboxTab, string> = {
   agents: 'Blocked agent work first — completions stay for review until Done',
-  instantly: 'Instantly replies and positive interest, ranked by intent',
+  instantly: 'Instantly replies — positive, negative, and OOO — ranked by intent',
   leads: 'Website, guide, and Meta inbound — new through qualified'
 }
 
@@ -279,7 +279,7 @@ export function projectInstantlyInboxItem(
     body:
       interest ||
       (campaign ? `Reply associated with campaign “${campaign}”.` : 'Instantly inbound reply.'),
-    href: `/leads?outbound_status=replied`,
+    href: `/leads?outbound_status=${encodeURIComponent(lead.outbound_status || 'replied')}`,
     meta,
     agentStatus: null,
     instantlyStatus: lead.outbound_status

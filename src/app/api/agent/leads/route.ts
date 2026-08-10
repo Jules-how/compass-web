@@ -17,7 +17,9 @@ export async function GET(request: Request) {
   if (authError) return authError
 
   const url = new URL(request.url)
-  const statusParam = url.searchParams.get('status') || 'replied,interested,meeting_booked'
+  const statusParam =
+    url.searchParams.get('status') ||
+    'replied,interested,meeting_booked,not_interested,out_of_office,wrong_person,replied_positive,replied_negative'
   const statuses = statusParam
     .split(',')
     .map((s) => s.trim().toLowerCase())

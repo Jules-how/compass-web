@@ -21,11 +21,14 @@ function mapInstantlyInterestToOutboundStatus(lead) {
       return 'meeting_booked'
     case 1:
       return 'interested'
+    case 0:
+      return 'out_of_office'
     case -1:
-    case -2:
     case -3:
     case -4:
-      return 'suppressed'
+      return 'not_interested'
+    case -2:
+      return 'wrong_person'
     default:
       break
   }
@@ -73,10 +76,12 @@ test('Instantly interest statuses map into Compass outbound lanes', () => {
   assert.equal(mapInstantlyInterestToOutboundStatus({ lt_interest_status: 1 }), 'interested')
   assert.equal(mapInstantlyInterestToOutboundStatus({ lt_interest_status: 2 }), 'meeting_booked')
   assert.equal(mapInstantlyInterestToOutboundStatus({ lt_interest_status: 4 }), 'converted')
+  assert.equal(mapInstantlyInterestToOutboundStatus({ lt_interest_status: 0 }), 'out_of_office')
   assert.equal(mapInstantlyInterestToOutboundStatus({ email_reply_count: 2 }), 'replied')
   assert.equal(mapInstantlyInterestToOutboundStatus({ timestamp_last_reply: '2026-01-01' }), 'replied')
   assert.equal(mapInstantlyInterestToOutboundStatus({}), 'in_instantly')
-  assert.equal(mapInstantlyInterestToOutboundStatus({ lt_interest_status: -1 }), 'suppressed')
+  assert.equal(mapInstantlyInterestToOutboundStatus({ lt_interest_status: -1 }), 'not_interested')
+  assert.equal(mapInstantlyInterestToOutboundStatus({ lt_interest_status: -2 }), 'wrong_person')
 })
 
 test('lead display name prefers Instantly name fields', () => {
@@ -124,7 +129,11 @@ test('instantly leads sync targets inbox-relevant filters', () => {
   assert.match(src, /FILTER_VAL_REPLIED/)
   assert.match(src, /FILTER_LEAD_INTERESTED/)
   assert.match(src, /FILTER_LEAD_MEETING_BOOKED/)
+  assert.match(src, /FILTER_LEAD_NOT_INTERESTED/)
+  assert.match(src, /FILTER_LEAD_OUT_OF_OFFICE/)
   assert.match(src, /lead_contacts/)
+  assert.match(src, /resolveInstantlyApiKey/)
+  assert.match(src, /INSTANTLY_INBOX_OUTBOUND_STATUSES/)
 })
 
 test('compass-agent skill documents lean brief-first workflow', () => {

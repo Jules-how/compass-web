@@ -4,7 +4,7 @@ import { portalJson, requireSameOrigin } from '@/lib/portal-http'
 export const dynamic = 'force-dynamic'
 
 /** Default friction passphrase when COMPASS_LIBRARY_LOCK_PASSWORD is unset. */
-export function libraryLockPassword(): string {
+function libraryLockPassword(): string {
   return (process.env.COMPASS_LIBRARY_LOCK_PASSWORD || 'compass-library').trim()
 }
 

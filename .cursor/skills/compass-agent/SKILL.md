@@ -56,6 +56,10 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/expressions/<id>" \
   -d '{"notes":"..."}'
 ```
 
+Campaign copy (brief of record): `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`).
+
+**Operating model:** Compass = workshop · vault agent = runner · Instantly = mail truck. Do not invent vault `brief.md` for new campaigns.
+
 Kinds: `offers` | `expressions` | `structures` | `ctas` | `subjects` | `openers` | `templates`.
 
 3. **Sync when data may be stale** (or let Vercel cron do it nightly) — not needed for library CRUD:
@@ -73,7 +77,7 @@ Sources:
 |--------|--------|
 | `ads` | Sync all connected Meta/Google/LinkedIn accounts → Home glance |
 | `instantly` | Refresh Instantly cold-email glance snapshot |
-| `instantly_leads` | Pull replied/interested/meeting Instantly leads into `lead_contacts` (Inbox Instantly) |
+| `instantly_leads` | Pull replied / interested / meeting / not interested / OOO / wrong-person Instantly leads into `lead_contacts` (Inbox Instantly) |
 
 4. **Drill Instantly / pipeline only when needed**:
 

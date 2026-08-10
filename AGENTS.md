@@ -7,7 +7,9 @@ Local and cloud Cursor agents connect to Compass over `/api/agent/*` (secret aut
 - Skill: [`.cursor/skills/compass-agent/SKILL.md`](.cursor/skills/compass-agent/SKILL.md)
 - Docs: [`docs/AGENT_BRIDGE.md`](docs/AGENT_BRIDGE.md)
 - Prefer `GET /api/agent/brief` before dumping data — keep prompts token-lean.
-- Instantly replied/interested/meeting leads sync into `lead_contacts` so Inbox Instantly stays aligned.
+- Instantly replied/interested/meeting/not-interested/OOO/wrong-person leads sync into `lead_contacts` so Inbox Instantly stays aligned.
+- Outbound craft UI persists campaigns + library to Supabase (same store as `/api/agent/outbound/*`). Unbound editor drafts stay browser-local until “save as campaign.”
+- Campaign brief of record = Compass campaign copy (`sequence_draft`, `cold_expression`, …), not vault `brief.md`.
 
 ## UI aesthetic is locked
 
@@ -59,3 +61,15 @@ non-obvious bits for working in the Cursor Cloud environment.
 ### Tests / lint / build
 - `npm run lint`, `npm run typecheck`, and `npm run build` should pass.
 - Prefer operator-console / project-management tests in `test/` for this repo mirror.
+
+## Learned User Preferences
+
+- Keep the Compass ↔ vault ↔ Instantly cold-email loop simple; do not encode elaborate multi-gate ceremony spines.
+- Treat `offer-library.md` as a loose baseline guide; campaign-specific offer variants live in Compass.
+- Cheap lead habits only: Instantly-screen before upload, mark Compass the same turn after upload, and never treat upload as activate (activate only after Jules sign-off).
+
+## Learned Workspace Facts
+
+- Cold-email operating model: Compass = workshop (orient + craft sequences from library components/templates + leads); vault agent = runner (research/openers/personalizations + Instantly screen/upload + mark Compass); Instantly = mail truck (activate after Jules sign-off).
+- Vault outbound `.md` files hold process and per-lead work, not a parallel offer/template warehouse.
+- Compass stores reusable opener formats/examples; per-lead openers stay vault enrich → Instantly merge vars.

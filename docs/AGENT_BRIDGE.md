@@ -41,7 +41,7 @@ List filters: `offer_key`, `vertical`, `location`, `q`, `archived=1`, `limit`, `
 
 ## Instantly ↔ Leads
 
-Daily `instantly_leads` sync lists high-signal Instantly filters (replied / interested / meeting / closed) and upserts `lead_contacts` by `instantly_lead_id` or email. Inbox Instantly already reads those statuses — after sync, Instantly and Compass stay nearly aligned for the leads that matter.
+Daily `instantly_leads` sync lists Instantly reply filters (replied / interested / meeting / not interested / OOO / wrong person / closed) and upserts `lead_contacts` by `instantly_lead_id` or email. Inbox Instantly reads those outbound statuses (plus legacy `replied_positive` / `replied_negative`) so positive, negative, and OOO replies all triage in one place.
 
 ## Agent skill
 

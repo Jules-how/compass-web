@@ -40,9 +40,16 @@ function instantlyStatusWeight(status) {
     case 'meeting_booked':
       return 100
     case 'interested':
+    case 'replied_positive':
       return 80
     case 'replied':
       return 55
+    case 'out_of_office':
+      return 45
+    case 'not_interested':
+    case 'replied_negative':
+    case 'wrong_person':
+      return 35
     default:
       return 40
   }

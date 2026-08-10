@@ -8,8 +8,8 @@ import { rebuildHomeGlance, syncAdAccount } from '@/lib/ad-sync'
 import {
   InstantlyApiError,
   fetchInstantlyCampaignAnalytics,
-  getInstantlyApiKey,
   loadColdEmailGlanceFromInstantly,
+  resolveInstantlyApiKey,
   type InstantlyCampaignAnalytics
 } from '@/lib/instantly'
 import {
@@ -110,7 +110,7 @@ async function syncInstantlyGlance(
   result: NonNullable<AgentSyncResult['instantly']>
   campaigns: InstantlyCampaignAnalytics[]
 }> {
-  const apiKey = getInstantlyApiKey()
+  const apiKey = await resolveInstantlyApiKey(supabase)
   if (!apiKey) {
     return {
       result: { ok: false, error: 'INSTANTLY_API_KEY is not configured' },
@@ -178,10 +178,14 @@ export async function runAgentSync(
 
   if (sources.includes('instantly_leads')) {
     try {
-      if (campaigns.length === 0 && getInstantlyApiKey()) {
-        campaigns = await fetchInstantlyCampaignAnalytics(getInstantlyApiKey()!)
+      const apiKey = await resolveInstantlyApiKey(supabase)
+      if (campaigns.length === 0 && apiKey) {
+        campaigns = await fetchInstantlyCampaignAnalytics(apiKey)
       }
-      result.instantlyLeads = await syncInstantlyLeadsIntoCompass(supabase, { campaigns })
+      result.instantlyLeads = await syncInstantlyLeadsIntoCompass(supabase, {
+        apiKey,
+        campaigns
+      })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'instantly_leads_sync_failed'
       result.instantlyLeads = {

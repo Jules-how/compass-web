@@ -117,7 +117,16 @@ export function isAgentAttentionTask(
 
 export function isInstantlyInboundLead(lead: Pick<LeadContact, 'outbound_status'>): boolean {
   const status = (lead.outbound_status || '').toLowerCase()
-  return status === 'replied' || status === 'interested' || status === 'meeting_booked'
+  return (
+    status === 'replied' ||
+    status === 'interested' ||
+    status === 'meeting_booked' ||
+    status === 'not_interested' ||
+    status === 'out_of_office' ||
+    status === 'wrong_person' ||
+    status === 'replied_positive' ||
+    status === 'replied_negative'
+  )
 }
 
 export function instantlyStatusWeight(status: string | null | undefined): number {
@@ -125,9 +134,16 @@ export function instantlyStatusWeight(status: string | null | undefined): number
     case 'meeting_booked':
       return 100
     case 'interested':
+    case 'replied_positive':
       return 80
     case 'replied':
       return 55
+    case 'out_of_office':
+      return 45
+    case 'not_interested':
+    case 'replied_negative':
+    case 'wrong_person':
+      return 35
     default:
       return 40
   }
@@ -261,10 +277,28 @@ export function suggestInboxNextStep(input: InboxSuggestInput): InboxSuggestion 
         source: 'heuristic'
       }
     }
-    if (status === 'interested') {
+    if (status === 'interested' || status === 'replied_positive') {
       return {
         nextStep: 'Reply within a few hours with a concrete next step or booking link.',
         rationale: 'Positive Instantly interest cools quickly without a human reply.',
+        source: 'heuristic'
+      }
+    }
+    if (status === 'out_of_office') {
+      return {
+        nextStep: 'Note the return date if present, then snooze or mark Done until they’re back.',
+        rationale: 'OOO replies are timing signals, not intent.',
+        source: 'heuristic'
+      }
+    }
+    if (
+      status === 'not_interested' ||
+      status === 'replied_negative' ||
+      status === 'wrong_person'
+    ) {
+      return {
+        nextStep: 'Mark Done after a quick skim — no follow-up unless the reply leaves an opening.',
+        rationale: 'Negative Instantly labels still need a human glance before closing.',
         source: 'heuristic'
       }
     }

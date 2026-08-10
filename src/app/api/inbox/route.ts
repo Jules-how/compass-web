@@ -26,6 +26,7 @@ import {
   type InboxTriageRow,
   type TriageLookup
 } from '@/lib/inbox-triage'
+import { INSTANTLY_INBOX_OUTBOUND_STATUSES } from '@/lib/instantly-leads-sync'
 import { fetchInstantlyUnreadCount, resolveInstantlyApiKey } from '@/lib/instantly'
 import type { CompassTask, LeadContact } from '@/lib/types'
 
@@ -112,7 +113,7 @@ async function fetchInstantlyLeads(supabase: Supabase): Promise<LeadContact[]> {
   const { data, error } = await supabase
     .from('lead_contacts')
     .select(LEAD_LIST_COLUMNS)
-    .in('outbound_status', ['replied', 'interested', 'meeting_booked'])
+    .in('outbound_status', [...INSTANTLY_INBOX_OUTBOUND_STATUSES])
     .order('updated_at', { ascending: false })
     .limit(LEAD_PAGE_SIZE)
 
