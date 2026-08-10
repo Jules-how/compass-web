@@ -911,7 +911,7 @@ export function CampaignPlanner() {
                     return (
                       <div
                         key={campaign.id}
-                        className={`group relative flex shrink-0 overflow-hidden border-b border-neutral-100 ${
+                        className={`group relative flex shrink-0 border-b border-neutral-100 ${
                           isSelected ? 'bg-white' : 'hover:bg-white/90'
                         }`}
                         style={{ height: ROW_HEIGHT }}
@@ -1033,7 +1033,7 @@ export function CampaignPlanner() {
                         >
                           {start && end ? (
                             <div
-                              className={`absolute top-1/2 flex h-7 -translate-y-1/2 items-center rounded-md border bg-white ${
+                              className={`absolute top-1/2 h-7 -translate-y-1/2 cursor-grab overflow-clip rounded-md border bg-white active:cursor-grabbing ${
                                 isSelected
                                   ? 'border-[#5e6ad2] shadow-[0_0_0_1px_rgba(94,106,210,0.28)]'
                                   : 'border-neutral-200 shadow-sm'
@@ -1047,12 +1047,16 @@ export function CampaignPlanner() {
                                 onPointerDown={(e) => onPointerDownBar(e, campaign, 'resize-start')}
                               />
                               <div
-                                className="h-full w-1.5 shrink-0 rounded-l-[5px]"
+                                className="absolute inset-y-0 left-0 w-1.5 rounded-l-[5px]"
                                 style={{ background: campaign.color || '#94a3b8' }}
                               />
-                              <div className="min-w-0 flex-1 cursor-grab px-2 text-[11px] font-medium text-neutral-700 active:cursor-grabbing">
-                                <span className="block truncate">{campaign.name}</span>
-                              </div>
+                              {/* Stick the title to the visible left edge of the bar while zoomed/panned. */}
+                              <span
+                                className="sticky z-[1] inline-block max-w-full truncate py-1.5 pl-3.5 pr-2 text-[11px] font-medium text-neutral-700"
+                                style={{ left: listWidth + 6 }}
+                              >
+                                {campaign.name}
+                              </span>
                               <div
                                 className="absolute inset-y-0 right-0 z-10 w-2 cursor-ew-resize"
                                 onPointerDown={(e) => onPointerDownBar(e, campaign, 'resize-end')}

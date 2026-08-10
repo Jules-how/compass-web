@@ -125,6 +125,7 @@ test('timeline zoom helpers move between macro and micro scales', () => {
   assert.match(timeline, /export function scalePxPerDay/)
   assert.match(timeline, /export function zoomFromPxPerDay/)
   assert.match(timeline, /export function clampPxPerDay/)
+  assert.match(timeline, /export const WHEEL_ZOOM_GAIN/)
   assert.match(timeline, /pxPerDay:/)
 
   const ZOOM_LEVELS = ['year', 'quarter', 'month', 'week']
@@ -161,7 +162,7 @@ test('continuous density helpers clamp and map named zooms', () => {
     return Math.min(MAX, Math.max(MIN, value))
   }
   function scalePxPerDay(current, deltaY) {
-    const factor = Math.exp(-deltaY * 0.0018)
+    const factor = Math.exp(-deltaY * 0.0055)
     return clampPxPerDay(current * factor)
   }
   function zoomFromPxPerDay(density) {

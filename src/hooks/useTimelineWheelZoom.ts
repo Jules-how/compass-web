@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
 import {
+  WHEEL_ZOOM_GAIN,
   dateToX,
   scalePxPerDay,
   xToDate,
@@ -124,7 +125,7 @@ export function useTimelineWheelZoom({
       const ratio = scale / prev
       gestureScaleRef.current = scale
       if (Math.abs(ratio - 1) < 0.002) return
-      const deltaY = -Math.log(ratio) / 0.0018
+      const deltaY = -Math.log(ratio) / WHEEL_ZOOM_GAIN
       const rect = scrollRef.current?.getBoundingClientRect()
       const clientX =
         typeof gesture.clientX === 'number'

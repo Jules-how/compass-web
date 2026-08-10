@@ -68,12 +68,19 @@ export function zoomFromPxPerDay(density: number): TimelineZoom {
 }
 
 /**
+ * Wheel/pinch gain for continuous Year↔Week density.
+ * Higher = fewer gestures to traverse the full envelope.
+ * Keep in sync with the Safari gesture→delta conversion in useTimelineWheelZoom.
+ */
+export const WHEEL_ZOOM_GAIN = 0.0055
+
+/**
  * Apply a wheel/pinch delta to density. Exponential scaling keeps Year→Week
  * perceptually even; returns the clamped next density.
  */
 export function scalePxPerDay(current: number, deltaY: number): number {
   // Trackpads emit many small deltas; mouse wheels emit larger steps.
-  const factor = Math.exp(-deltaY * 0.0018)
+  const factor = Math.exp(-deltaY * WHEEL_ZOOM_GAIN)
   return clampPxPerDay(current * factor)
 }
 
