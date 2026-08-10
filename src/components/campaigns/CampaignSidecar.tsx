@@ -6,9 +6,9 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   deleteCampaign,
   getCampaignDetail,
+  patchCampaign,
   replaceCampaignMilestones,
-  updateCampaign,
-  type CampaignPatch
+  type CampaignCopyPatch
 } from '@/lib/campaigns-client'
 import {
   CAMPAIGN_COLORS,
@@ -22,7 +22,11 @@ import {
   type CompassCampaignMilestone
 } from '@/lib/campaigns'
 import { copyStatusLabel, ctaFromSequence, previewExpression } from '@/lib/outbound-copy'
-import { forkTemplateIntoSequence, listLocalTemplates } from '@/lib/outbound-local-store'
+import {
+  forkTemplateIntoSequence,
+  listLibraryItems
+} from '@/lib/outbound-library-client'
+import type { OutboundTemplate } from '@/lib/outbound-copy'
 
 export function CampaignSidecar({
   campaignId,
@@ -70,11 +74,6 @@ export function CampaignSidecar({
   async function hydrate(id: string) {
     try {
       const detail = await getCampaignDetail(id)
-      if (!detail) {
-        setError('not_found')
-        setCampaign(null)
-        return
-      }
       setError(null)
       setCampaign(detail.campaign)
       setActivity(detail.activity)
@@ -116,15 +115,13 @@ export function CampaignSidecar({
     return { scope, started, completed }
   }, [milestones])
 
-  function saveCampaign(patch: CampaignPatch) {
-    void updateCampaign(campaignId, patch)
+  function saveCampaign(patch: CampaignCopyPatch) {
+    void patchCampaign(campaignId, patch)
       .then((updated) => {
         void hydrate(campaignId)
         onUpdated(updated)
       })
-      .catch(() => {
-        setError('not_found')
-      })
+      .catch(() => setError('not_found'))
   }
 
   function saveMilestones(
@@ -156,12 +153,9 @@ export function CampaignSidecar({
             completed: m.completed
           }))
         )
-        void hydrate(campaignId)
         onUpdated()
       })
-      .catch(() => {
-        setError('not_found')
-      })
+      .catch(() => setError('not_found'))
   }
 
   const visibleActivity = showAllActivity ? activity : activity.slice(0, 5)
@@ -531,22 +525,30 @@ export function CampaignSidecar({
                       type="button"
                       className="rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700"
                       onClick={() => {
-                        const templates = listLocalTemplates()
-                        const pick = window.prompt(
-                          `Attach template id:\n${templates.map((t) => `${t.id} — ${t.name}`).join('\n')}`,
-                          templates[0]?.id ?? ''
-                        )
-                        if (!pick) return
-                        const forked = forkTemplateIntoSequence(pick)
-                        if (!forked) {
-                          window.alert('Template not found')
-                          return
-                        }
-                        saveCampaign({
-                          sequence_draft: forked,
-                          structure_id: forked.structure_id,
-                          offer_key: forked.offer_key ?? campaign.offer_key ?? null,
-                          copy_status: 'draft'
+                        void listLibraryItems<OutboundTemplate>('templates').then(async (templates) => {
+                          const options = templates
+                            .map((t) => `${t.id} - ${t.name}`)
+                            .join('\n')
+                          const pick = window.prompt(
+                            `Attach template id:\n${options}`,
+                            templates[0]?.id ?? ''
+                          )
+                          if (!pick) return
+                          try {
+                            const forked = await forkTemplateIntoSequence(pick)
+                            if (!forked) {
+                              window.alert('Template not found')
+                              return
+                            }
+                            saveCampaign({
+                              sequence_draft: forked,
+                              structure_id: forked.structure_id,
+                              offer_key: forked.offer_key ?? campaign.offer_key ?? null,
+                              copy_status: 'draft'
+                            })
+                          } catch {
+                            window.alert('Template not found')
+                          }
                         })
                       }}
                     >
@@ -568,19 +570,30 @@ export function CampaignSidecar({
                       type="button"
                       className="rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700"
                       onClick={() => {
-                        const templates = listLocalTemplates()
-                        const pick = window.prompt(
-                          `Attach template id:\n${templates.map((t) => `${t.id} — ${t.name}`).join('\n')}`,
-                          templates[0]?.id ?? ''
-                        )
-                        if (!pick) return
-                        const forked = forkTemplateIntoSequence(pick)
-                        if (!forked) return
-                        saveCampaign({
-                          sequence_draft: forked,
-                          structure_id: forked.structure_id,
-                          offer_key: forked.offer_key ?? null,
-                          copy_status: 'draft'
+                        void listLibraryItems<OutboundTemplate>('templates').then(async (templates) => {
+                          const options = templates
+                            .map((t) => `${t.id} - ${t.name}`)
+                            .join('\n')
+                          const pick = window.prompt(
+                            `Attach template id:\n${options}`,
+                            templates[0]?.id ?? ''
+                          )
+                          if (!pick) return
+                          try {
+                            const forked = await forkTemplateIntoSequence(pick)
+                            if (!forked) {
+                              window.alert('Template not found')
+                              return
+                            }
+                            saveCampaign({
+                              sequence_draft: forked,
+                              structure_id: forked.structure_id,
+                              offer_key: forked.offer_key ?? campaign.offer_key ?? null,
+                              copy_status: 'draft'
+                            })
+                          } catch {
+                            window.alert('Template not found')
+                          }
                         })
                       }}
                     >

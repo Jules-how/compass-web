@@ -14,11 +14,10 @@ import { useRouter } from 'next/navigation'
 import { CampaignSidecar } from '@/components/campaigns/CampaignSidecar'
 import { useTimelineWheelZoom } from '@/hooks/useTimelineWheelZoom'
 import {
-  createCampaign,
-  deleteCampaign,
+  createCampaign as createCampaignRemote,
+  deleteCampaign as deleteCampaignRemote,
   listCampaigns,
-  migrateLocalCampaignsOnce,
-  updateCampaign
+  patchCampaign
 } from '@/lib/campaigns-client'
 import {
   CAMPAIGN_HEALTHS,
@@ -124,30 +123,20 @@ export function CampaignPlanner() {
     setScrollNode(node)
   }, [])
 
-  const refresh = useCallback(async () => {
-    try {
-      const rows = await listCampaigns({ force: true })
-      setCampaigns(rows)
-    } catch {
-      setCampaigns([])
-    } finally {
-      setReady(true)
-    }
+  const refresh = useCallback(() => {
+    void listCampaigns()
+      .then((rows) => {
+        setCampaigns(rows)
+        setReady(true)
+      })
+      .catch(() => {
+        setCampaigns([])
+        setReady(true)
+      })
   }, [])
 
   useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      try {
-        await migrateLocalCampaignsOnce()
-      } catch {
-        // Migration is best-effort; planner still loads from Supabase.
-      }
-      if (!cancelled) await refresh()
-    })()
-    return () => {
-      cancelled = true
-    }
+    refresh()
   }, [refresh])
 
   const filtered = useMemo(() => {
@@ -282,26 +271,26 @@ export function CampaignPlanner() {
     router.push(`/sales/pipeline/${id}`)
   }
 
-  async function handleCreateCampaign(nextStatus?: CampaignStatus, openCopyEditor = false) {
+  function createCampaign(nextStatus?: CampaignStatus, openCopyEditor = false) {
     const today = toDateOnly(range.today)
     const end = toDateOnly(
       new Date(range.today.getFullYear(), range.today.getMonth() + 1, range.today.getDate())
     )
-    try {
-      const campaign = await createCampaign({
-        name: 'New campaign',
-        start_date: today,
-        end_date: end,
-        status: nextStatus
+    void createCampaignRemote({
+      name: 'New campaign',
+      start_date: today,
+      end_date: end,
+      status: nextStatus
+    })
+      .then((campaign) => {
+        refresh()
+        setSelectedId(campaign.id)
+        setSidecarOpen(true)
+        if (openCopyEditor) router.push(`/sales/outbound/editor/${campaign.id}`)
       })
-      await refresh()
-      setSelectedId(campaign.id)
-      setSidecarOpen(true)
-      if (openCopyEditor) router.push(`/sales/outbound/editor/${campaign.id}`)
-      return campaign
-    } catch {
-      return null
-    }
+      .catch(() => {
+        refresh()
+      })
   }
 
   function openCampaign(id: string) {
@@ -311,22 +300,23 @@ export function CampaignPlanner() {
   }
 
   function moveCampaignStatus(id: string, status: CampaignStatus) {
-    void updateCampaign(id, { status }).then(() => refresh())
+    void patchCampaign(id, { status }).then(refresh).catch(refresh)
   }
 
   function persistDates(id: string, start: string, end: string) {
     const orderedDates = clampDateOrder(start, end)
-    void updateCampaign(id, {
+    void patchCampaign(id, {
       start_date: orderedDates.start,
       end_date: orderedDates.end
-    }).then(() => {
-      setDraftDates((prev) => {
-        const next = { ...prev }
-        delete next[id]
-        return next
-      })
-      return refresh()
     })
+      .then(refresh)
+      .catch(refresh)
+    setDraftDates((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    refresh()
   }
 
   function onPointerDownBar(e: ReactPointerEvent, campaign: CompassCampaign, mode: DragMode) {
@@ -468,7 +458,7 @@ export function CampaignPlanner() {
           ) : null}
           <button
             type="button"
-            onClick={() => void handleCreateCampaign()}
+            onClick={() => createCampaign()}
             className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-neutral-600 hover:bg-neutral-100"
             aria-label="New campaign"
             title="New campaign"
@@ -477,7 +467,7 @@ export function CampaignPlanner() {
           </button>
           <button
             type="button"
-            onClick={() => void handleCreateCampaign(undefined, true)}
+            onClick={() => createCampaign(undefined, true)}
             className="flex h-7 items-center rounded-md px-2 text-[11px] font-medium text-neutral-600 hover:bg-neutral-100"
             title="New campaign with copy editor"
           >
@@ -631,7 +621,7 @@ export function CampaignPlanner() {
                     <p className="mt-1 text-xs text-neutral-500">Create a campaign to start planning.</p>
                     <button
                       type="button"
-                      onClick={() => void handleCreateCampaign()}
+                      onClick={() => createCampaign()}
                       className="mt-3 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
                     >
                       New campaign
@@ -711,7 +701,7 @@ export function CampaignPlanner() {
                         <span className="text-[12px] tabular-nums text-neutral-400">{items.length}</span>
                         <button
                           type="button"
-                          onClick={() => void handleCreateCampaign(column)}
+                          onClick={() => createCampaign(column)}
                           className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-neutral-400 hover:bg-white hover:text-neutral-700"
                           aria-label={`New campaign in ${campaignStatusLabel(column)}`}
                           title="New campaign"
@@ -921,7 +911,7 @@ export function CampaignPlanner() {
                     return (
                       <div
                         key={campaign.id}
-                        className={`group relative flex shrink-0 border-b border-neutral-100 ${
+                        className={`group relative flex shrink-0 overflow-hidden border-b border-neutral-100 ${
                           isSelected ? 'bg-white' : 'hover:bg-white/90'
                         }`}
                         style={{ height: ROW_HEIGHT }}
@@ -939,19 +929,19 @@ export function CampaignPlanner() {
                       >
                         {display.showList ? (
                           <div
-                            className="sticky left-0 z-20 flex items-center gap-2 overflow-visible border-r border-neutral-200/80 bg-inherit px-3"
+                            className="sticky left-0 z-20 flex h-full min-w-0 items-center gap-1.5 overflow-hidden border-r border-neutral-200/80 bg-inherit px-3"
                             style={{ width: LABEL_WIDTH }}
                           >
                             <button
                               type="button"
-                              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                              className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-left"
                               onClick={() => {
                                 setSelectedId(campaign.id)
                                 setSidecarOpen(true)
                                 setRowMenu(null)
                               }}
                               onDoubleClick={() => openCampaignPage(campaign.id)}
-                              title={`${campaign.name} — double-click to open page`}
+                              title={timelineRowTitle(campaign)}
                             >
                               <span
                                 className="h-4 w-4 shrink-0 rounded-full"
@@ -961,8 +951,6 @@ export function CampaignPlanner() {
                                 {campaign.name}
                               </span>
                             </button>
-
-                            <CopyChips campaign={campaign} compact />
 
                             <div className="flex shrink-0 items-center gap-0.5 pr-0.5 text-neutral-400">
                               {display.showStatus ? (
@@ -1117,7 +1105,7 @@ export function CampaignPlanner() {
                         </p>
                         <button
                           type="button"
-                          onClick={() => void handleCreateCampaign()}
+                          onClick={() => createCampaign()}
                           className="mt-3 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
                         >
                           New campaign
@@ -1204,10 +1192,10 @@ export function CampaignPlanner() {
                 <MenuItem
                   danger
                   onClick={() => {
-                    void deleteCampaign(menuCampaign.id).then(() => {
+                    void deleteCampaignRemote(menuCampaign.id).then(() => {
                       if (selectedId === menuCampaign.id) setSelectedId(null)
-                      return refresh()
-                    })
+                      refresh()
+                    }).catch(refresh)
                     setRowMenu(null)
                   }}
                 >
@@ -1243,7 +1231,7 @@ export function CampaignPlanner() {
                 <div className="my-1 border-t border-neutral-100" />
                 <MenuItem
                   onClick={() => {
-                    void updateCampaign(menuCampaign.id, { status: 'active' }).then(() => refresh())
+                    void patchCampaign(menuCampaign.id, { status: 'active' }).then(refresh).catch(refresh)
                     setRowMenu(null)
                   }}
                 >
@@ -1251,7 +1239,7 @@ export function CampaignPlanner() {
                 </MenuItem>
                 <MenuItem
                   onClick={() => {
-                    void updateCampaign(menuCampaign.id, { priority: 2 }).then(() => refresh())
+                    void patchCampaign(menuCampaign.id, { priority: 2 }).then(refresh).catch(refresh)
                     setRowMenu(null)
                   }}
                 >
@@ -1269,10 +1257,10 @@ export function CampaignPlanner() {
                 <MenuItem
                   danger
                   onClick={() => {
-                    void deleteCampaign(menuCampaign.id).then(() => {
+                    void deleteCampaignRemote(menuCampaign.id).then(() => {
                       if (selectedId === menuCampaign.id) setSelectedId(null)
-                      return refresh()
-                    })
+                      refresh()
+                    }).catch(refresh)
                     setRowMenu(null)
                   }}
                 >
@@ -1291,7 +1279,7 @@ export function CampaignPlanner() {
                 <MenuItem
                   key={value}
                   onClick={() => {
-                    void updateCampaign(menuCampaign.id, { status: value }).then(() => refresh())
+                    void patchCampaign(menuCampaign.id, { status: value }).then(refresh).catch(refresh)
                     setRowMenu(null)
                   }}
                 >
@@ -1316,7 +1304,7 @@ export function CampaignPlanner() {
                 <MenuItem
                   key={value}
                   onClick={() => {
-                    void updateCampaign(menuCampaign.id, { priority: value }).then(() => refresh())
+                    void patchCampaign(menuCampaign.id, { priority: value }).then(refresh).catch(refresh)
                     setRowMenu(null)
                   }}
                 >
@@ -1341,7 +1329,7 @@ export function CampaignPlanner() {
                 <MenuItem
                   key={value}
                   onClick={() => {
-                    void updateCampaign(menuCampaign.id, { health: value }).then(() => refresh())
+                    void patchCampaign(menuCampaign.id, { health: value }).then(refresh).catch(refresh)
                     setRowMenu(null)
                   }}
                 >
@@ -1585,22 +1573,26 @@ function LeadGlyph({ label }: { label: string | null }) {
   )
 }
 
-function CopyChips({
-  campaign,
-  compact = false
-}: {
-  campaign: CompassCampaign
-  compact?: boolean
-}) {
-  const bits = [
+function copyMetaBits(campaign: CompassCampaign): string[] {
+  return [
     campaign.offer_key,
     campaign.structure_id,
     ...(campaign.vertical_tags ?? []).slice(0, 1),
     ...(campaign.location_tags ?? []).slice(0, 1)
   ].filter(Boolean) as string[]
+}
+
+function timelineRowTitle(campaign: CompassCampaign): string {
+  const bits = copyMetaBits(campaign)
+  const meta = bits.length ? ` · ${bits.join(' · ')}` : ''
+  return `${campaign.name}${meta} - double-click to open page`
+}
+
+function CopyChips({ campaign }: { campaign: CompassCampaign }) {
+  const bits = copyMetaBits(campaign)
   if (bits.length === 0) return null
   return (
-    <div className={`flex min-w-0 flex-wrap gap-1 ${compact ? 'max-w-[120px]' : 'mt-0.5'}`}>
+    <div className="mt-0.5 flex min-w-0 flex-wrap gap-1">
       {bits.map((bit) => (
         <span
           key={bit}
