@@ -8,7 +8,6 @@ import {
   COMPLETENESS_OPTIONS,
   LEAD_SEGMENTS_STORAGE_KEY,
   LEAD_SOURCES,
-  LEAD_VERTICALS,
   PIPELINE_STATUSES,
   PRESET_SEGMENTS,
   SYNC_STATES,
@@ -18,13 +17,21 @@ import {
   humanizeSyncState,
   humanizeVertical,
   inferSyncState,
+  mergeVerticalOptions,
   outboundBadgeTone,
   type CompletenessFilter,
   type SavedLeadSegment
 } from '@/lib/leads-meta'
+import {
+  LEAD_COLUMN_DEFS,
+  formatRelativeLeadDate,
+  formatShortLeadDate,
+  type LeadColumnId
+} from '@/lib/lead-columns'
 import { computeRecontactEligibility } from '@/lib/recontact-eligibility'
 import { RecontactProgressRing } from '@/components/RecontactProgressRing'
 import { LeadRecontactPanel } from '@/components/LeadRecontactPanel'
+import { LeadColumnPicker, useLeadColumnVisibility } from '@/components/LeadColumnPicker'
 
 interface LeadTableProps {
   leads: LeadContact[]
@@ -35,6 +42,7 @@ interface LeadTableProps {
   hasMore: boolean
   total: number
   summary: LeadSummaryCounts | null
+  discoveredVerticals?: string[]
   onNavigate: (filters: LeadListFilters, page?: number) => void
   onReload: () => void
 }
@@ -111,6 +119,7 @@ export default function LeadTable({
   hasMore,
   total,
   summary,
+  discoveredVerticals = [],
   onNavigate,
   onReload
 }: LeadTableProps) {
@@ -142,10 +151,27 @@ export default function LeadTable({
     return withPhone / leads.length < 0.15
   }, [leads])
 
+  const { visible: visibleColumns, setVisible: setVisibleColumns } =
+    useLeadColumnVisibility(phoneSparse)
+
+  const verticalOptions = useMemo(
+    () => mergeVerticalOptions(discoveredVerticals),
+    [discoveredVerticals]
+  )
+
   const allSelected = leads.length > 0 && leads.every((l) => selected.has(l.id))
 
-  function applyFilters() {
-    onNavigate(draftFilters, 1)
+  function applyFilters(next: LeadListFilters = draftFilters) {
+    onNavigate(next, 1)
+  }
+
+  function patchFilters(patch: Partial<LeadListFilters>) {
+    setDraftFilters((f) => {
+      const next = { ...f, ...patch }
+      // Selects apply immediately so filter chips match the table (Attio-style).
+      onNavigate(next, 1)
+      return next
+    })
   }
 
   function resetFilters() {
@@ -482,37 +508,34 @@ export default function LeadTable({
           <FilterSelect
             label="Vertical"
             value={draftFilters.vertical ?? ''}
-            onChange={(v) => setDraftFilters((f) => ({ ...f, vertical: v || undefined }))}
-            options={LEAD_VERTICALS.map((v) => ({ value: v, label: humanizeVertical(v) }))}
+            onChange={(v) => patchFilters({ vertical: v || undefined })}
+            options={verticalOptions.map((v) => ({ value: v, label: humanizeVertical(v) }))}
           />
           <FilterSelect
             label="Source"
             value={draftFilters.source ?? ''}
-            onChange={(v) => setDraftFilters((f) => ({ ...f, source: v || undefined }))}
+            onChange={(v) => patchFilters({ source: v || undefined })}
             options={LEAD_SOURCES.map((s) => ({ value: s, label: s }))}
           />
           <FilterSelect
             label="Pipeline stage"
             value={draftFilters.outbound_status ?? ''}
-            onChange={(v) =>
-              setDraftFilters((f) => ({ ...f, outbound_status: v || undefined }))
-            }
+            onChange={(v) => patchFilters({ outbound_status: v || undefined })}
             options={PIPELINE_STATUSES.map((s) => ({ value: s, label: humanizeStatus(s) }))}
           />
           <FilterSelect
             label="Sync state"
             value={draftFilters.sync_state ?? ''}
-            onChange={(v) => setDraftFilters((f) => ({ ...f, sync_state: v || undefined }))}
+            onChange={(v) => patchFilters({ sync_state: v || undefined })}
             options={SYNC_STATES.map((s) => ({ value: s, label: humanizeSyncState(s) }))}
           />
           <FilterSelect
             label="Completeness"
             value={draftFilters.completeness ?? ''}
             onChange={(v) =>
-              setDraftFilters((f) => ({
-                ...f,
+              patchFilters({
                 completeness: (v || undefined) as CompletenessFilter | undefined
-              }))
+              })
             }
             options={COMPLETENESS_OPTIONS.filter((c) => c !== 'any').map((c) => ({
               value: c,
@@ -528,6 +551,10 @@ export default function LeadTable({
               onChange={(e) =>
                 setDraftFilters((f) => ({ ...f, city: e.target.value || undefined }))
               }
+              onBlur={() => applyFilters()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') applyFilters()
+              }}
               className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
             />
           </label>
@@ -538,10 +565,9 @@ export default function LeadTable({
             hideLabel
             value={draftFilters.suppressed ?? ''}
             onChange={(v) =>
-              setDraftFilters((f) => ({
-                ...f,
+              patchFilters({
                 suppressed: v === '1' || v === '0' ? v : undefined
-              }))
+              })
             }
             options={[
               { value: '1', label: 'Suppressed only' },
@@ -554,10 +580,9 @@ export default function LeadTable({
             hideLabel
             value={draftFilters.recontact_ok ?? ''}
             onChange={(v) =>
-              setDraftFilters((f) => ({
-                ...f,
+              patchFilters({
                 recontact_ok: v === '1' || v === '0' ? v : undefined
-              }))
+              })
             }
             options={[
               { value: '1', label: 'Recontact OK' },
@@ -570,10 +595,9 @@ export default function LeadTable({
             hideLabel
             value={draftFilters.recontact_ready ?? ''}
             onChange={(v) =>
-              setDraftFilters((f) => ({
-                ...f,
+              patchFilters({
                 recontact_ready: v === '1' || v === '0' ? v : undefined
-              }))
+              })
             }
             options={[
               { value: '1', label: 'Ready (90d+)' },
@@ -583,7 +607,7 @@ export default function LeadTable({
           />
           <button
             type="button"
-            onClick={applyFilters}
+            onClick={() => applyFilters()}
             className="compass-btn-primary"
           >
             Apply filters
@@ -597,6 +621,11 @@ export default function LeadTable({
           </button>
           <div className="ml-auto flex flex-wrap items-center gap-3">
             {exportNote && <span className="text-xs text-neutral-500">{exportNote}</span>}
+            <LeadColumnPicker
+              phoneSparse={phoneSparse}
+              visible={visibleColumns}
+              onChange={setVisibleColumns}
+            />
             <button
               type="button"
               onClick={() => void handleExport(false)}
@@ -686,11 +715,11 @@ export default function LeadTable({
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-2xl border border-stone-200/70 bg-white shadow-soft">
-        <table className="w-full min-w-[1100px] text-left text-sm">
-          <thead className="bg-stone-50/80 text-xs uppercase tracking-wide text-neutral-500">
+      <div className="max-h-[70vh] overflow-auto rounded-2xl border border-stone-200/70 bg-white shadow-soft">
+        <table className="w-full min-w-[980px] border-collapse text-left text-[13px] leading-tight">
+          <thead className="sticky top-0 z-10 border-b border-stone-200 bg-stone-50/95 text-[11px] font-medium text-neutral-500 backdrop-blur-sm">
             <tr>
-              <th className="w-10 px-4 py-3">
+              <th className="w-9 px-2.5 py-1.5">
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -698,23 +727,35 @@ export default function LeadTable({
                   aria-label="Select all on page"
                 />
               </th>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Email</th>
-              {!phoneSparse && <th className="px-4 py-3 font-medium">Phone</th>}
-              <th className="px-4 py-3 font-medium">Company</th>
-              <th className="px-4 py-3 font-medium">Location</th>
-              <th className="min-w-[200px] px-4 py-3 font-medium">Campaign</th>
-              <th className="px-4 py-3 font-medium">Stage</th>
-              <th className="px-4 py-3 font-medium">Cooldown</th>
-              <th className="px-4 py-3 font-medium">Last touch</th>
+              {visibleColumns.map((colId) => {
+                const def = LEAD_COLUMN_DEFS.find((c) => c.id === colId)
+                return (
+                  <th
+                    key={colId}
+                    className={`whitespace-nowrap px-2.5 py-1.5 font-medium ${
+                      colId === 'campaign' ? 'min-w-[160px]' : ''
+                    }`}
+                  >
+                    {def?.label ?? colId}
+                  </th>
+                )
+              })}
+              <th className="w-10 px-2 py-1.5 text-right">
+                <LeadColumnPicker
+                  phoneSparse={phoneSparse}
+                  visible={visibleColumns}
+                  onChange={setVisibleColumns}
+                  variant="header"
+                />
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
             {leads.length === 0 && (
               <tr>
                 <td
-                  colSpan={phoneSparse ? 9 : 10}
-                  className="px-4 py-10 text-center text-neutral-500"
+                  colSpan={visibleColumns.length + 2}
+                  className="px-3 py-8 text-center text-neutral-500"
                 >
                   No leads match these filters.
                 </td>
@@ -729,11 +770,11 @@ export default function LeadTable({
               return (
                 <Fragment key={lead.id}>
                   <tr
-                    className={`transition hover:bg-stone-50/70 ${
+                    className={`transition hover:bg-stone-50/80 ${
                       selected.has(lead.id) ? 'bg-orange-50/40' : ''
-                    } ${recontact.lane === 'ready' ? 'bg-emerald-50/40' : ''}`}
+                    } ${recontact.lane === 'ready' ? 'bg-emerald-50/25' : ''}`}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1">
                       <input
                         type="checkbox"
                         checked={selected.has(lead.id)}
@@ -742,94 +783,23 @@ export default function LeadTable({
                         aria-label={`Select ${lead.name || lead.email || lead.id}`}
                       />
                     </td>
-                    <td
-                      className="cursor-pointer px-4 py-3 font-medium text-neutral-900"
-                      onClick={() => setExpandedId(expanded ? null : lead.id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span>{lead.name || '—'}</span>
-                        {lead.interest_label && (
-                          <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700">
-                            {lead.interest_label}
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-0.5 text-xs font-normal text-neutral-400">
-                        {humanizeVertical(lead.vertical)}
-                        {lead.source ? ` · ${lead.source}` : ''}
-                      </div>
-                    </td>
-                    <td
-                      className="cursor-pointer px-4 py-3 text-neutral-700"
-                      onClick={() => setExpandedId(expanded ? null : lead.id)}
-                    >
-                      {lead.email || '—'}
-                    </td>
-                    {!phoneSparse && (
-                      <td className="px-4 py-3 text-neutral-700">{lead.phone || '—'}</td>
-                    )}
-                    <td
-                      className="cursor-pointer px-4 py-3 text-neutral-700"
-                      onClick={() => setExpandedId(expanded ? null : lead.id)}
-                    >
-                      {lead.company || '—'}
-                    </td>
-                    <td className="px-4 py-3 text-neutral-600">
-                      {formatLeadLocation(lead.city, lead.state)}
-                    </td>
-                    <td className="max-w-[280px] truncate px-4 py-3 text-neutral-600" title={campaign ?? ''}>
-                      {campaign || '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col items-start gap-1">
-                        <span
-                          className={`inline-block rounded-lg px-2 py-0.5 text-xs font-medium ${badgeClass(
-                            lead.outbound_status
-                          )}`}
-                        >
-                          {humanizeStatus(lead.outbound_status)}
-                        </span>
-                        {sync && sync !== 'in_instantly' && lead.outbound_status !== sync && (
-                          <span className="text-[10px] text-neutral-400">
-                            {humanizeSyncState(sync)}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td
-                      className="cursor-pointer px-4 py-3"
-                      onClick={() => setExpandedId(expanded ? null : lead.id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <RecontactProgressRing eligibility={recontact} />
-                        <span
-                          className={`text-[11px] leading-tight ${
-                            recontact.lane === 'ready'
-                              ? 'font-medium text-emerald-700'
-                              : 'text-neutral-500'
-                          }`}
-                        >
-                          {recontact.lane === 'ready'
-                            ? 'Ready'
-                            : recontact.lane === 'cooling' && recontact.daysRemaining != null
-                              ? `${recontact.daysRemaining}d`
-                              : recontact.lane === 'blocked'
-                                ? 'Blocked'
-                                : recontact.lane === 'never_contacted'
-                                  ? 'New'
-                                  : recontact.progressPercent != null
-                                    ? `${recontact.progressPercent}%`
-                                    : '—'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-neutral-500">
-                      {formatDate(lead.last_outbound_at)}
-                    </td>
+                    {visibleColumns.map((colId) => (
+                      <LeadCell
+                        key={colId}
+                        colId={colId}
+                        lead={lead}
+                        campaign={campaign}
+                        sync={sync}
+                        recontact={recontact}
+                        showVerticalUnderName={false}
+                        onToggleExpand={() => setExpandedId(expanded ? null : lead.id)}
+                      />
+                    ))}
+                    <td className="px-2 py-1" />
                   </tr>
                   {expanded && (
                     <tr key={`${lead.id}-detail`} className="bg-stone-50/60">
-                      <td colSpan={phoneSparse ? 9 : 10} className="px-5 py-5">
+                      <td colSpan={visibleColumns.length + 2} className="px-4 py-4">
                         <LeadDetail
                           lead={lead}
                           sync={sync}
@@ -877,6 +847,164 @@ export default function LeadTable({
       </div>
     </div>
   )
+}
+
+function LeadCell({
+  colId,
+  lead,
+  campaign,
+  sync,
+  recontact,
+  showVerticalUnderName,
+  onToggleExpand
+}: {
+  colId: LeadColumnId
+  lead: LeadContact
+  campaign: string | null
+  sync: ReturnType<typeof inferSyncState>
+  recontact: ReturnType<typeof computeRecontactEligibility>
+  showVerticalUnderName: boolean
+  onToggleExpand: () => void
+}) {
+  const cellPad = 'px-2.5 py-1'
+  switch (colId) {
+    case 'name':
+      return (
+        <td
+          className={`cursor-pointer ${cellPad} font-medium text-neutral-900`}
+          onClick={onToggleExpand}
+        >
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate">{lead.name || '—'}</span>
+            {lead.interest_label && (
+              <span className="shrink-0 rounded bg-emerald-50 px-1 py-px text-[9px] font-medium uppercase tracking-wide text-emerald-700">
+                {lead.interest_label}
+              </span>
+            )}
+            {showVerticalUnderName ? (
+              <span className="truncate text-[11px] font-normal text-neutral-400">
+                · {humanizeVertical(lead.vertical)}
+              </span>
+            ) : null}
+          </div>
+        </td>
+      )
+    case 'email':
+      return (
+        <td className={`cursor-pointer ${cellPad} text-neutral-700`} onClick={onToggleExpand}>
+          <span className="truncate">{lead.email || '—'}</span>
+        </td>
+      )
+    case 'phone':
+      return <td className={`${cellPad} text-neutral-700`}>{lead.phone || '—'}</td>
+    case 'company':
+      return (
+        <td className={`cursor-pointer ${cellPad} text-neutral-700`} onClick={onToggleExpand}>
+          <span className="truncate">{lead.company || '—'}</span>
+        </td>
+      )
+    case 'location':
+      return (
+        <td className={`${cellPad} text-neutral-600`}>
+          {formatLeadLocation(lead.city, lead.state)}
+        </td>
+      )
+    case 'vertical':
+      return (
+        <td className={`${cellPad} text-neutral-600`}>{humanizeVertical(lead.vertical)}</td>
+      )
+    case 'campaign':
+      return (
+        <td className={`max-w-[220px] truncate ${cellPad} text-neutral-600`} title={campaign ?? ''}>
+          {campaign || '—'}
+        </td>
+      )
+    case 'stage':
+      return (
+        <td className={cellPad}>
+          <div className="flex flex-col items-start gap-0.5">
+            <span
+              className={`inline-block rounded-md px-1.5 py-px text-[11px] font-medium ${badgeClass(
+                lead.outbound_status
+              )}`}
+            >
+              {humanizeStatus(lead.outbound_status)}
+            </span>
+            {sync && sync !== 'in_instantly' && lead.outbound_status !== sync && (
+              <span className="text-[10px] text-neutral-400">{humanizeSyncState(sync)}</span>
+            )}
+          </div>
+        </td>
+      )
+    case 'cooldown':
+      return (
+        <td className={`cursor-pointer ${cellPad}`} onClick={onToggleExpand} title={recontact.detail}>
+          <div className="flex items-center gap-1.5">
+            <RecontactProgressRing eligibility={recontact} size={18} />
+            <span
+              className={`whitespace-nowrap text-[11px] leading-tight ${
+                recontact.lane === 'ready'
+                  ? 'font-medium text-emerald-700'
+                  : 'text-neutral-500'
+              }`}
+            >
+              {recontact.lane === 'ready'
+                ? 'Ready'
+                : recontact.lane === 'cooling' && recontact.daysRemaining != null
+                  ? `${recontact.daysRemaining}d left`
+                  : recontact.lane === 'blocked'
+                    ? 'Blocked'
+                    : recontact.lane === 'never_contacted'
+                      ? 'New'
+                      : recontact.progressPercent != null
+                        ? `${recontact.progressPercent}%`
+                        : '—'}
+            </span>
+          </div>
+        </td>
+      )
+    case 'last_touch':
+      return (
+        <td
+          className={`${cellPad} whitespace-nowrap ${
+            lead.last_outbound_at ? 'text-neutral-600' : 'text-neutral-400'
+          }`}
+          title={formatDate(lead.last_outbound_at)}
+        >
+          {formatRelativeLeadDate(lead.last_outbound_at)}
+        </td>
+      )
+    case 'date_added':
+      return (
+        <td className={`${cellPad} whitespace-nowrap text-neutral-500`} title={formatDate(lead.created_at)}>
+          {formatShortLeadDate(lead.created_at)}
+        </td>
+      )
+    case 'source':
+      return <td className={`${cellPad} text-neutral-600`}>{lead.source || '—'}</td>
+    case 'role':
+      return <td className={`${cellPad} text-neutral-600`}>{lead.role || '—'}</td>
+    case 'linkedin':
+      return (
+        <td className={`${cellPad} max-w-[140px] truncate text-neutral-600`}>
+          {lead.linkedin ? (
+            <a
+              href={lead.linkedin.startsWith('http') ? lead.linkedin : `https://${lead.linkedin}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sf-orange hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Profile
+            </a>
+          ) : (
+            '—'
+          )}
+        </td>
+      )
+    default:
+      return <td className={cellPad}>—</td>
+  }
 }
 
 function FilterSelect({
@@ -980,10 +1108,10 @@ function LeadDetail({
               emailCampaignCount(lead.instantly_campaign_ids, lead.instantly_campaign_id)
             )}
           />
-          <DetailRow label="Last touch" value={formatDate(lead.last_outbound_at)} />
+          <DetailRow label="Last interaction" value={formatDate(lead.last_outbound_at)} />
           <DetailRow label="Status source" value={lead.lead_status_source} />
           <DetailRow
-            label="Recontact"
+            label="Recontact OK"
             value={
               lead.recontact_ok == null ? '—' : lead.recontact_ok ? 'Allowed' : 'Blocked'
             }
@@ -1008,7 +1136,7 @@ function LeadDetail({
           <DetailRow label="Context" value={lead.lead_context_status} />
           <DetailRow label="Context updated" value={formatDate(lead.lead_context_updated_at)} />
           <DetailRow label="Import batch" value={lead.import_batch_id} />
-          <DetailRow label="Created" value={formatDate(lead.created_at)} />
+          <DetailRow label="Date added" value={formatDate(lead.created_at)} />
           <DetailRow label="Updated" value={formatDate(lead.updated_at)} />
         </dl>
       </section>

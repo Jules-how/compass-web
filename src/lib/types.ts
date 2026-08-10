@@ -430,11 +430,13 @@ export type LeadVertical =
   | 'mortgage-brokers'
   | 'hvac'
   | 'electrician'
+  | 'plumber'
   | 'broker'
   | 'recruitment'
   | 'trades'
   | 'agency'
   | 'other'
+  | (string & {})
 
 export type LeadSourceService =
   | 'prospeo'

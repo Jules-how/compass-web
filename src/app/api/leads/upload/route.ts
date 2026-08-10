@@ -1,5 +1,6 @@
-import { NextResponse, type NextRequest } from 'next/server'
+import { type NextRequest } from 'next/server'
 import { normalizeEmail, normalizePhone, normalizeLinkedin, mapCsvRow } from '@/lib/lead-import-shared'
+import { normalizeVerticalSlug } from '@/lib/leads-meta'
 import type { LeadSourceService, LeadVertical } from '@/lib/types'
 import { requirePortalAccess } from '@/lib/portal-access'
 import { portalAccessResponse, portalJson, readBoundedJson, requireSameOrigin } from '@/lib/portal-http'
@@ -11,6 +12,11 @@ interface UploadBody {
   vertical?: LeadVertical | string
   sourceService?: LeadSourceService | string
   filename?: string
+  /**
+   * When true (default), the picker vertical is applied to every imported row.
+   * Set false to keep per-row CSV Industry/Category when present (mixed consolidations).
+   */
+  preferFormVertical?: boolean
 }
 
 // POST /api/leads/upload — import a parsed CSV into lead_contacts +
@@ -45,10 +51,16 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const vertical = typeof body.vertical === 'string' && body.vertical.trim() ? body.vertical.trim() : null
+  const vertical =
+    typeof body.vertical === 'string' && body.vertical.trim()
+      ? normalizeVerticalSlug(body.vertical)
+      : null
   const sourceService =
     typeof body.sourceService === 'string' && body.sourceService.trim() ? body.sourceService.trim() : 'manual'
   const filename = typeof body.filename === 'string' ? body.filename : null
+  // When true (default), the upload form vertical wins over CSV Industry/Category.
+  // Mixed-industry consolidations can set preferFormVertical: false to keep per-row Industry.
+  const preferFormVertical = body.preferFormVertical !== false
 
   const now = new Date().toISOString()
   const batchId = `batch-${crypto.randomUUID()}`
@@ -125,7 +137,11 @@ export async function POST(request: NextRequest) {
       const phone = normalizePhone(mapped.phone ?? '')
       const linkedin = normalizeLinkedin(mapped.linkedin ?? '')
       const sourceRowId = `source-${crypto.randomUUID()}`
-      const rowVertical = mapped.vertical || vertical
+      const csvVertical = normalizeVerticalSlug(mapped.vertical)
+      // Form vertical wins when the operator picked a real vertical. Leaving
+      // "other" keeps per-row CSV Industry/Category so mixed consolidations stay tagged.
+      const formWins = preferFormVertical && vertical && vertical !== 'other'
+      const rowVertical = formWins ? vertical : csvVertical || vertical
 
       const baseSourceRow: Record<string, unknown> = {
         id: sourceRowId,

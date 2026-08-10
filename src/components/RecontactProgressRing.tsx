@@ -4,8 +4,6 @@ import type { RecontactEligibility, RecontactLane } from '@/lib/recontact-eligib
 
 const SIZE = 36
 const STROKE = 3.5
-const R = (SIZE - STROKE) / 2
-const C = 2 * Math.PI * R
 
 function ringColors(lane: RecontactLane, percent: number | null): {
   track: string
@@ -45,7 +43,10 @@ export function RecontactProgressRing({
   const { lane, progressPercent, daysRemaining, label } = eligibility
   const colors = ringColors(lane, progressPercent)
   const pct = progressPercent == null ? 0 : Math.min(100, Math.max(0, progressPercent))
-  const offset = C * (1 - pct / 100)
+  const stroke = size < 28 ? 2.5 : STROKE
+  const r = (size - stroke) / 2
+  const c = 2 * Math.PI * r
+  const offset = c * (1 - pct / 100)
   const display =
     lane === 'blocked'
       ? '✕'
@@ -67,32 +68,32 @@ export function RecontactProgressRing({
       title={title}
       aria-label={title}
     >
-      <svg width={size} height={size} viewBox={`0 0 ${SIZE} ${SIZE}`} className="-rotate-90">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
         <circle
-          cx={SIZE / 2}
-          cy={SIZE / 2}
-          r={R}
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
           fill="none"
           stroke={colors.track}
-          strokeWidth={STROKE}
+          strokeWidth={stroke}
         />
         {lane !== 'never_contacted' && lane !== 'blocked' && (
           <circle
-            cx={SIZE / 2}
-            cy={SIZE / 2}
-            r={R}
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
             fill="none"
             stroke={colors.stroke}
-            strokeWidth={STROKE}
+            strokeWidth={stroke}
             strokeLinecap="round"
-            strokeDasharray={C}
+            strokeDasharray={c}
             strokeDashoffset={offset}
           />
         )}
       </svg>
       <span
-        className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums leading-none"
-        style={{ color: colors.text }}
+        className="absolute inset-0 flex items-center justify-center font-semibold tabular-nums leading-none"
+        style={{ color: colors.text, fontSize: size < 28 ? 7 : 9 }}
       >
         {display}
       </span>

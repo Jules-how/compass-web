@@ -40,10 +40,39 @@ function humanizeStatus(raw) {
 function verticalFilterValues(vertical) {
   const aliases = {
     broker: ['broker', 'mortgage-brokers', 'mortgage_brokers', 'mortgage brokers'],
-    'mortgage-brokers': ['mortgage-brokers', 'mortgage_brokers', 'mortgage brokers', 'broker']
+    'mortgage-brokers': ['mortgage-brokers', 'mortgage_brokers', 'mortgage brokers', 'broker'],
+    plumber: ['plumber', 'plumbers', 'plumbing'],
+    agency: ['agency', 'agencies', 'marketing-agencies', 'marketing agencies']
   }
   const key = vertical.trim().toLowerCase()
   return aliases[key] ? Array.from(new Set(aliases[key])) : [vertical.trim()]
+}
+
+function slugifyVerticalKey(raw) {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[&/]+/g, ' ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function normalizeVerticalSlug(raw) {
+  if (raw == null) return null
+  const trimmed = String(raw).trim()
+  if (!trimmed) return null
+  const key = slugifyVerticalKey(trimmed)
+  if (!key) return null
+  const map = {
+    plumber: 'plumber',
+    plumbers: 'plumber',
+    plumbing: 'plumber',
+    'marketing-agencies': 'agency',
+    'marketing-agency': 'agency',
+    agencies: 'agency',
+    agency: 'agency'
+  }
+  return map[key] ?? key
 }
 
 test('lead status labels are human-readable', () => {
@@ -60,6 +89,14 @@ test('vertical taxonomy aliases broker and mortgage-brokers', () => {
   assert.ok(mb.includes('broker'))
 })
 
+test('plumber aliases normalize and filter', () => {
+  assert.equal(normalizeVerticalSlug('Plumbers'), 'plumber')
+  assert.equal(normalizeVerticalSlug('marketing agencies'), 'agency')
+  const vals = verticalFilterValues('plumber')
+  assert.ok(vals.includes('plumbers'))
+  assert.ok(vals.includes('plumbing'))
+})
+
 test('leads list API supports search, sync, and completeness filters', () => {
   const route = read('src/app/api/leads/list/route.ts')
   const query = read('src/lib/leads-query.ts')
@@ -73,6 +110,7 @@ test('leads list API supports search, sync, and completeness filters', () => {
   assert.match(query, /recontact_ready/)
   assert.match(query, /verticalFilterValues/)
   assert.match(query, /replied_or_interested/)
+  assert.match(query, /vertical\.ilike/)
 })
 
 test('leads summary and bulk APIs are operator-gated', () => {
@@ -97,10 +135,17 @@ test('LeadTable surfaces search, segments, bulk actions, and hides UUID by defau
   assert.match(table, /summaryChips/)
   assert.match(table, /onNavigate/)
   assert.match(table, /RecontactProgressRing/)
+  assert.match(table, /LeadColumnPicker/)
+  assert.match(table, /date_added/)
+  assert.match(table, /formatRelativeLeadDate/)
+  assert.match(table, /variant=\"header\"/)
+  assert.match(table, /sticky top-0/)
   assert.doesNotMatch(table, /\{lead\.id\}<\/div>/)
   assert.match(panel, /\/api\/leads\/summary/)
+  assert.match(panel, /\/api\/leads\/facets/)
   assert.match(panel, /onReload/)
   assert.match(panel, /router\.push/)
+  assert.match(panel, /cache:\s*'no-store'/)
 })
 
 test('leads summary is global and cacheable (filters come from list total)', () => {
@@ -127,6 +172,33 @@ test('leads-meta module exports taxonomy and preset segments', () => {
   assert.match(meta, /PRESET_SEGMENTS/)
   assert.match(meta, /VERTICAL_ALIASES/)
   assert.match(meta, /mortgage-brokers/)
+  assert.match(meta, /plumber/)
+  assert.match(meta, /normalizeVerticalSlug/)
+  assert.match(meta, /mergeVerticalOptions/)
+})
+
+test('facets API discovers verticals for filters', () => {
+  const facets = read('src/app/api/leads/facets/route.ts')
+  assert.match(facets, /requirePortalAccess\(\{\s*operator:\s*true\s*\}\)/)
+  assert.match(facets, /normalizeVerticalSlug/)
+  assert.match(facets, /verticals/)
+})
+
+test('upload normalizes vertical and prefers form vertical by default', () => {
+  const upload = read('src/app/api/leads/upload/route.ts')
+  const client = read('src/components/LeadUploadClient.tsx')
+  assert.match(upload, /normalizeVerticalSlug/)
+  assert.match(upload, /preferFormVertical/)
+  assert.match(client, /Custom vertical/)
+  assert.match(client, /preferFormVertical/)
+})
+
+test('lead column registry includes date added and recontact', () => {
+  const cols = read('src/lib/lead-columns.ts')
+  assert.match(cols, /date_added/)
+  assert.match(cols, /last_touch/)
+  assert.match(cols, /cooldown/)
+  assert.match(cols, /LEAD_COLUMN_STORAGE_KEY/)
 })
 
 // Keep require used so createRequire isn't flagged unused in some runners.

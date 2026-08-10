@@ -42,6 +42,7 @@ export const LEAD_VERTICALS = [
   'mortgage-brokers',
   'hvac',
   'electrician',
+  'plumber',
   'broker',
   'recruitment',
   'trades',
@@ -60,16 +61,75 @@ export const LEAD_SOURCES = [
   'hubspot'
 ] as const
 
-/** Map known aliases → canonical vertical for filter matching. */
+/**
+ * Map canonical vertical → known DB spellings for filter matching.
+ * Keep aliases exhaustive — historical uploads stored free-text Industry values.
+ */
 export const VERTICAL_ALIASES: Record<string, string[]> = {
-  broker: ['broker', 'mortgage-brokers', 'mortgage_brokers', 'mortgage brokers'],
-  'mortgage-brokers': ['mortgage-brokers', 'mortgage_brokers', 'mortgage brokers', 'broker'],
-  hvac: ['hvac', 'heating', 'cooling'],
-  electrician: ['electrician', 'electricians'],
-  recruitment: ['recruitment', 'recruiting', 'recruiters'],
-  trades: ['trades', 'trade'],
-  agency: ['agency', 'agencies'],
+  broker: ['broker', 'brokers', 'mortgage-brokers', 'mortgage_brokers', 'mortgage brokers'],
+  'mortgage-brokers': [
+    'mortgage-brokers',
+    'mortgage_brokers',
+    'mortgage brokers',
+    'mortgage broker',
+    'broker',
+    'brokers'
+  ],
+  hvac: ['hvac', 'heating', 'cooling', 'heating and cooling', 'air conditioning'],
+  electrician: ['electrician', 'electricians', 'electrical'],
+  plumber: ['plumber', 'plumbers', 'plumbing'],
+  recruitment: ['recruitment', 'recruiting', 'recruiters', 'recruiter'],
+  trades: ['trades', 'trade', 'tradies', 'tradie'],
+  agency: [
+    'agency',
+    'agencies',
+    'marketing-agencies',
+    'marketing_agencies',
+    'marketing agencies',
+    'marketing agency',
+    'digital agency',
+    'digital agencies'
+  ],
   other: ['other']
+}
+
+/** Lowercase slug key used for alias lookup (spaces/underscores → hyphens). */
+export function slugifyVerticalKey(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[&/]+/g, ' ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+/** Free-text / CSV Industry → canonical slug when we recognize it. */
+const VERTICAL_CANONICAL_BY_ALIAS: Record<string, string> = (() => {
+  const map: Record<string, string> = {}
+  for (const [canonical, aliases] of Object.entries(VERTICAL_ALIASES)) {
+    map[canonical] = canonical
+    for (const alias of aliases) {
+      map[slugifyVerticalKey(alias)] = canonical
+    }
+  }
+  // Extra display forms that show up in consolidated imports.
+  map['marketing-agency'] = 'agency'
+  map['real-estate'] = 'other'
+  map['realestate'] = 'other'
+  return map
+})()
+
+/**
+ * Normalize a vertical for storage. Known aliases collapse to a canonical slug;
+ * unknown values become a stable kebab-case slug so they are immediately filterable.
+ */
+export function normalizeVerticalSlug(raw: string | null | undefined): string | null {
+  if (raw == null) return null
+  const trimmed = String(raw).trim()
+  if (!trimmed) return null
+  const key = slugifyVerticalKey(trimmed)
+  if (!key) return null
+  return VERTICAL_CANONICAL_BY_ALIAS[key] ?? key
 }
 
 const PIPELINE_LABELS: Record<string, string> = {
@@ -97,9 +157,14 @@ const VERTICAL_LABELS: Record<string, string> = {
   broker: 'Broker',
   hvac: 'HVAC',
   electrician: 'Electrician',
+  plumber: 'Plumber',
+  plumbers: 'Plumbers',
+  plumbing: 'Plumbing',
   recruitment: 'Recruitment',
   trades: 'Trades',
   agency: 'Agency',
+  agencies: 'Agencies',
+  'marketing-agencies': 'Marketing agencies',
   other: 'Other'
 }
 
@@ -128,7 +193,15 @@ export function humanizeStatus(raw: string | null | undefined): string {
 export function humanizeVertical(raw: string | null | undefined): string {
   if (!raw) return '—'
   const key = raw.trim()
-  return VERTICAL_LABELS[key] ?? VERTICAL_LABELS[key.toLowerCase()] ?? titleCaseSlug(key)
+  const slug = slugifyVerticalKey(key)
+  const canonical = normalizeVerticalSlug(key) ?? slug
+  return (
+    VERTICAL_LABELS[key] ??
+    VERTICAL_LABELS[key.toLowerCase()] ??
+    VERTICAL_LABELS[slug] ??
+    VERTICAL_LABELS[canonical] ??
+    titleCaseSlug(canonical || key)
+  )
 }
 
 export function humanizeSyncState(state: SyncState): string {
@@ -139,11 +212,49 @@ export function humanizeCompleteness(value: CompletenessFilter): string {
   return COMPLETENESS_LABELS[value]
 }
 
+/**
+ * Expand a filter vertical into every DB value that should match.
+ * Includes slug forms + spaced/underscored variants for historical free-text rows.
+ */
 export function verticalFilterValues(vertical: string): string[] {
-  const key = vertical.trim().toLowerCase()
-  const aliases = VERTICAL_ALIASES[key]
-  if (aliases?.length) return Array.from(new Set(aliases))
-  return [vertical.trim()]
+  const trimmed = vertical.trim()
+  if (!trimmed) return []
+  const canonical = normalizeVerticalSlug(trimmed) ?? slugifyVerticalKey(trimmed)
+  const aliases = VERTICAL_ALIASES[canonical] ?? [canonical, trimmed]
+  const out = new Set<string>()
+  for (const alias of aliases) {
+    const a = alias.trim()
+    if (!a) continue
+    out.add(a)
+    out.add(a.toLowerCase())
+    const slug = slugifyVerticalKey(a)
+    if (slug) {
+      out.add(slug)
+      out.add(slug.replace(/-/g, '_'))
+      out.add(slug.replace(/-/g, ' '))
+      out.add(titleCaseSlug(slug))
+    }
+  }
+  // Always include the raw filter token + its slug.
+  out.add(trimmed)
+  out.add(trimmed.toLowerCase())
+  if (canonical) out.add(canonical)
+  return Array.from(out)
+}
+
+/** Merge canonical taxonomy with live DB facets (newest uploads appear immediately). */
+export function mergeVerticalOptions(discovered: string[] | null | undefined): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  const push = (raw: string) => {
+    const slug = normalizeVerticalSlug(raw) ?? slugifyVerticalKey(raw)
+    if (!slug || seen.has(slug)) return
+    seen.add(slug)
+    out.push(slug)
+  }
+  for (const v of LEAD_VERTICALS) push(v)
+  for (const v of discovered ?? []) push(v)
+  return out
 }
 
 export function outboundBadgeTone(
