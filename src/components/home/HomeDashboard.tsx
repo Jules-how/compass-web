@@ -16,6 +16,11 @@ import {
 } from '@/lib/home-demo-data'
 import type { CompassProject, CompassTask } from '@/lib/types'
 import {
+  HomePriorityCheck,
+  HomePrioritySheet,
+  useHomePriorityActions
+} from '@/components/home/HomePriorityActions'
+import {
   bucketPriorityPlate,
   isOpenTask,
   selectHomePriorities,
@@ -228,6 +233,12 @@ export function HomeDashboard() {
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState<string | null>(null)
   const [applyNote, setApplyNote] = useState<string | null>(null)
+  const {
+    openTask: openPriority,
+    completingId,
+    setOpenTask: setOpenPriority,
+    completeTask
+  } = useHomePriorityActions((force) => tasks.reload(force))
 
   useEffect(() => {
     try {
@@ -502,18 +513,29 @@ export function HomeDashboard() {
                     <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#c2410c]">
                       Focus
                     </div>
-                    <Link
-                      href={tasksHref({ window: 'focus', taskId: focus.id })}
-                      className="mt-1 block truncate text-base font-semibold tracking-tight text-neutral-900 hover:underline"
-                    >
-                      {focus.title}
-                    </Link>
-                    <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-neutral-500">
-                      <span className="capitalize">{focus.status.replace('-', ' ')}</span>
-                      {focus.project_id && projectsById[focus.project_id] ? (
-                        <span>· {projectsById[focus.project_id].name}</span>
-                      ) : null}
-                      {focus.due ? <span>· {focus.due.slice(0, 10)}</span> : null}
+                    <div className="mt-1.5 flex items-start gap-2.5">
+                      <HomePriorityCheck
+                        task={focus}
+                        completing={completingId === focus.id}
+                        onComplete={completeTask}
+                        className="mt-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setOpenPriority(focus)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <span className="block truncate text-base font-semibold tracking-tight text-neutral-900 hover:underline">
+                          {focus.title}
+                        </span>
+                        <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-neutral-500">
+                          <span className="capitalize">{focus.status.replace('-', ' ')}</span>
+                          {focus.project_id && projectsById[focus.project_id] ? (
+                            <span>· {projectsById[focus.project_id].name}</span>
+                          ) : null}
+                          {focus.due ? <span>· {focus.due.slice(0, 10)}</span> : null}
+                        </div>
+                      </button>
                     </div>
                   </motion.div>
                 ) : null}
@@ -540,22 +562,18 @@ export function HomeDashboard() {
                             : null
                           return (
                             <li key={task.id}>
-                              <Link
-                                href={tasksHref({ window: 'focus', taskId: task.id })}
-                                className="flex items-start gap-2.5 px-3 py-2 transition hover:bg-white"
-                              >
-                                <span
-                                  className={cn(
-                                    'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full',
-                                    task.status === 'blocked'
-                                      ? 'bg-amber-500'
-                                      : task.status === 'in-progress'
-                                        ? 'bg-[#e85d2a]'
-                                        : 'bg-stone-300'
-                                  )}
-                                  aria-hidden
+                              <div className="flex items-start gap-2.5 px-3 py-2 transition hover:bg-white">
+                                <HomePriorityCheck
+                                  task={task}
+                                  completing={completingId === task.id}
+                                  onComplete={completeTask}
+                                  className="mt-0.5"
                                 />
-                                <div className="min-w-0 flex-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenPriority(task)}
+                                  className="min-w-0 flex-1 text-left"
+                                >
                                   <div className="truncate text-sm font-medium text-neutral-900">
                                     {task.title}
                                   </div>
@@ -568,8 +586,8 @@ export function HomeDashboard() {
                                       <span>{taskPriorityLabel(task.priority)}</span>
                                     ) : null}
                                   </div>
-                                </div>
-                              </Link>
+                                </button>
+                              </div>
                             </li>
                           )
                         })}
@@ -833,6 +851,18 @@ export function HomeDashboard() {
           </Card>
         </motion.div>
       </motion.div>
+
+      {openPriority ? (
+        <HomePrioritySheet
+          task={openPriority}
+          project={
+            openPriority.project_id ? projectsById[openPriority.project_id] ?? null : null
+          }
+          completing={completingId === openPriority.id}
+          onClose={() => setOpenPriority(null)}
+          onComplete={completeTask}
+        />
+      ) : null}
 
       {/* Brain dump drawer */}
       <AnimatePresence>
