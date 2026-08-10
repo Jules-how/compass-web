@@ -60,6 +60,8 @@ non-obvious bits for working in the Cursor Cloud environment.
 
 ### Tests / lint / build
 - `npm run lint`, `npm run typecheck`, and `npm run build` should pass.
+- Before pushing `main`: run `npm run verify` (deploy guards + typecheck). Guards catch the two Vercel footguns that kept red-deploying: illegal `route.ts` helper exports, and `@/` imports that only resolve to **untracked** local files (local build can pass; Vercel cannot see them).
+- GitHub Action `.github/workflows/deploy-guards.yml` runs verify + production build on push/PR.
 - Prefer operator-console / project-management tests in `test/` for this repo mirror.
 
 ## Learned User Preferences
