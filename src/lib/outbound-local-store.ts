@@ -23,7 +23,7 @@ import {
   seedTemplates
 } from '@/lib/outbound-seed'
 
-const STORAGE_KEY = 'compass.outbound.libraries.v1'
+const STORAGE_KEY = 'compass.outbound.libraries.v2'
 
 type LibraryStore = {
   seeded: boolean
@@ -81,8 +81,7 @@ function writeStore(store: LibraryStore) {
 
 function ensureSeeded(): LibraryStore {
   const store = readRaw()
-  if (store.seeded && store.offers.length > 0) return store
-  const next: LibraryStore = {
+  const baseline: LibraryStore = {
     seeded: true,
     offers: seedOffers(),
     expressions: seedExpressions(),
@@ -91,6 +90,28 @@ function ensureSeeded(): LibraryStore {
     subjects: seedSubjects(),
     openers: seedOpeners(),
     templates: seedTemplates()
+  }
+  if (!store.seeded || store.offers.length === 0) {
+    writeStore(baseline)
+    return baseline
+  }
+  // Merge any new seed ids (source catalogue growth) without wiping local edits
+  const merge = <T extends { id: string }>(local: T[], seed: T[]): T[] => {
+    const map = new Map(local.map((row) => [row.id, row]))
+    for (const row of seed) {
+      if (!map.has(row.id)) map.set(row.id, row)
+    }
+    return Array.from(map.values())
+  }
+  const next: LibraryStore = {
+    seeded: true,
+    offers: merge(store.offers, baseline.offers),
+    expressions: merge(store.expressions, baseline.expressions),
+    structures: merge(store.structures, baseline.structures),
+    ctas: merge(store.ctas, baseline.ctas),
+    subjects: merge(store.subjects, baseline.subjects),
+    openers: merge(store.openers, baseline.openers),
+    templates: merge(store.templates, baseline.templates)
   }
   writeStore(next)
   return next
@@ -235,7 +256,10 @@ export function saveLocalOffer(
     sort_order: typeof input.sort_order === 'number' ? input.sort_order : 100,
     archived: Boolean(input.archived),
     created_at: input.created_at || stamp,
-    updated_at: stamp
+    updated_at: stamp,
+    provenance: input.provenance === 'source' ? 'source' : 'yours',
+    source_creator: input.source_creator ?? null,
+    source_file: input.source_file ?? null
   }
   store.offers = upsert(store.offers, row)
   writeStore(store)
@@ -243,13 +267,13 @@ export function saveLocalOffer(
 }
 
 export function saveLocalExpression(
-  input: Partial<OutboundExpression> & { offer_key: string; label: string; body: string }
+  input: Partial<OutboundExpression> & { label: string; body: string }
 ): OutboundExpression {
   const store = ensureSeeded()
   const stamp = nowIso()
   const row: OutboundExpression = {
     id: input.id || `expr-${crypto.randomUUID()}`,
-    offer_key: input.offer_key.trim(),
+    offer_key: input.offer_key?.trim() || null,
     label: input.label.trim(),
     body: input.body.trim(),
     vertical_tags: normalizeTags(input.vertical_tags),
@@ -258,7 +282,10 @@ export function saveLocalExpression(
     notes: input.notes?.trim() || null,
     archived: Boolean(input.archived),
     created_at: input.created_at || stamp,
-    updated_at: stamp
+    updated_at: stamp,
+    provenance: input.provenance === 'source' ? 'source' : 'yours',
+    source_creator: input.source_creator ?? null,
+    source_file: input.source_file ?? null
   }
   store.expressions = upsert(store.expressions, row)
   writeStore(store)
@@ -280,7 +307,10 @@ export function saveLocalCta(
     is_default: Boolean(input.is_default),
     archived: Boolean(input.archived),
     created_at: input.created_at || stamp,
-    updated_at: stamp
+    updated_at: stamp,
+    provenance: input.provenance === 'source' ? 'source' : 'yours',
+    source_creator: input.source_creator ?? null,
+    source_file: input.source_file ?? null
   }
   store.ctas = upsert(store.ctas, row)
   writeStore(store)
@@ -300,7 +330,10 @@ export function saveLocalSubject(
     vertical_tags: normalizeTags(input.vertical_tags),
     archived: Boolean(input.archived),
     created_at: input.created_at || stamp,
-    updated_at: stamp
+    updated_at: stamp,
+    provenance: input.provenance === 'source' ? 'source' : 'yours',
+    source_creator: input.source_creator ?? null,
+    source_file: input.source_file ?? null
   }
   store.subjects = upsert(store.subjects, row)
   writeStore(store)
@@ -321,7 +354,10 @@ export function saveLocalOpener(
     vertical_tags: normalizeTags(input.vertical_tags),
     archived: Boolean(input.archived),
     created_at: input.created_at || stamp,
-    updated_at: stamp
+    updated_at: stamp,
+    provenance: input.provenance === 'source' ? 'source' : 'yours',
+    source_creator: input.source_creator ?? null,
+    source_file: input.source_file ?? null
   }
   store.openers = upsert(store.openers, row)
   writeStore(store)
@@ -350,7 +386,10 @@ export function saveLocalStructure(
     is_default_candidate: Boolean(input.is_default_candidate),
     archived: Boolean(input.archived),
     created_at: input.created_at || stamp,
-    updated_at: stamp
+    updated_at: stamp,
+    provenance: input.provenance === 'source' ? 'source' : 'yours',
+    source_creator: input.source_creator ?? null,
+    source_file: input.source_file ?? null
   }
   store.structures = upsert(store.structures, row)
   writeStore(store)
@@ -375,7 +414,10 @@ export function saveLocalTemplate(
     sequence: forkSequence(input.sequence, { remintStepIds: true }),
     archived: Boolean(input.archived),
     created_at: input.created_at || stamp,
-    updated_at: stamp
+    updated_at: stamp,
+    provenance: input.provenance === 'source' ? 'source' : 'yours',
+    source_creator: input.source_creator ?? null,
+    source_file: input.source_file ?? null
   }
   store.templates = upsert(store.templates, row)
   writeStore(store)

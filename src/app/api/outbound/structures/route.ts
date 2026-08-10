@@ -24,7 +24,10 @@ export async function POST(request: NextRequest) {
       is_default_candidate: Boolean(body.is_default_candidate),
       archived: false,
       created_at: stamp,
-      updated_at: stamp
+      updated_at: stamp,
+      provenance: 'yours',
+      source_creator: null,
+      source_file: null
     }
   })
 }

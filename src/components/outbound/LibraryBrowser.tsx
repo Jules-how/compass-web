@@ -11,15 +11,19 @@ import {
   isLibraryMutationUnlocked,
   lockLibraryMutations
 } from '@/lib/outbound-library-lock'
-import { scaffoldSequence, structureSlots } from '@/lib/outbound-copy'
-import type {
-  OutboundCta,
-  OutboundExpression,
-  OutboundOffer,
-  OutboundOpener,
-  OutboundStructure,
-  OutboundSubject,
-  OutboundTemplate
+import {
+  scaffoldSequence,
+  structureSlots,
+  provenanceBadgeLabel,
+  normalizeProvenance,
+  type OutboundCta,
+  type OutboundExpression,
+  type OutboundOffer,
+  type OutboundOpener,
+  type OutboundProvenance,
+  type OutboundStructure,
+  type OutboundSubject,
+  type OutboundTemplate
 } from '@/lib/outbound-copy'
 import {
   archiveLibraryItem,
@@ -55,10 +59,14 @@ type RowView = {
   body: string
   tags: string[]
   refKey: string | null
+  provenance: OutboundProvenance
+  provenanceLabel: string
+  sourceFile: string | null
 }
 
 export function LibraryBrowser({ kind }: { kind: Kind }) {
   const [q, setQ] = useState('')
+  const [provenanceFilter, setProvenanceFilter] = useState<'all' | OutboundProvenance>('all')
   const [rows, setRows] = useState<RowView[]>([])
   const [campaigns, setCampaigns] = useState<CompassCampaign[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -77,6 +85,13 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
       setRows(
         items.map((raw) => {
           const r = raw as Record<string, unknown>
+          const provenance = normalizeProvenance(r.provenance)
+          const provenanceLabel = provenanceBadgeLabel({
+            provenance,
+            source_creator: typeof r.source_creator === 'string' ? r.source_creator : null,
+            source_file: typeof r.source_file === 'string' ? r.source_file : null
+          })
+          const sourceFile = typeof r.source_file === 'string' ? r.source_file : null
           if (kind === 'offers') {
             const row = r as unknown as OutboundOffer
             return {
@@ -85,7 +100,10 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
               meta: row.offer_key,
               body: row.pack_summary,
               tags: [...(row.vertical_tags ?? []), ...(row.location_tags ?? [])],
-              refKey: row.offer_key
+              refKey: row.offer_key,
+              provenance,
+              provenanceLabel,
+              sourceFile
             }
           }
           if (kind === 'expressions') {
@@ -93,10 +111,13 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
             return {
               id: row.id,
               title: row.label,
-              meta: `${row.offer_key} · ${row.status}`,
+              meta: `${row.offer_key ?? 'pattern'} · ${row.status}`,
               body: row.body,
               tags: [...(row.vertical_tags ?? []), ...(row.location_tags ?? [])],
-              refKey: row.offer_key
+              refKey: row.offer_key,
+              provenance,
+              provenanceLabel,
+              sourceFile
             }
           }
           if (kind === 'structures') {
@@ -107,7 +128,10 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
               meta: row.structure_id,
               body: row.description ?? '',
               tags: [],
-              refKey: row.structure_id
+              refKey: row.structure_id,
+              provenance,
+              provenanceLabel,
+              sourceFile
             }
           }
           if (kind === 'ctas') {
@@ -118,7 +142,10 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
               meta: row.cta_type,
               body: row.body,
               tags: row.vertical_tags ?? [],
-              refKey: null
+              refKey: null,
+              provenance,
+              provenanceLabel,
+              sourceFile
             }
           }
           if (kind === 'subjects') {
@@ -129,7 +156,10 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
               meta: row.pattern,
               body: row.notes ?? '',
               tags: row.vertical_tags ?? [],
-              refKey: null
+              refKey: null,
+              provenance,
+              provenanceLabel,
+              sourceFile
             }
           }
           if (kind === 'openers') {
@@ -140,7 +170,10 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
               meta: row.opener_mode,
               body: row.body || row.notes || '',
               tags: row.vertical_tags ?? [],
-              refKey: null
+              refKey: null,
+              provenance,
+              provenanceLabel,
+              sourceFile
             }
           }
           const row = r as unknown as OutboundTemplate
@@ -150,7 +183,10 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
             meta: `${row.structure_id}${row.offer_key ? ` · ${row.offer_key}` : ''}`,
             body: `${row.sequence?.steps?.length ?? 0} steps`,
             tags: [...(row.vertical_tags ?? []), ...(row.location_tags ?? [])],
-            refKey: row.offer_key
+            refKey: row.offer_key,
+            provenance,
+            provenanceLabel,
+            sourceFile
           }
         })
       )
@@ -247,7 +283,7 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
         await patchLibraryItem('offers', id, { offer_key, name, pack_summary })
       } else if (kind === 'expressions') {
         const existing = await getLibraryItem<OutboundExpression>('expressions', id)
-        const offer_key = promptRequired('offer_key', existing.offer_key)
+        const offer_key = promptRequired('offer_key', existing.offer_key ?? '')
         const label = promptRequired('Label', existing.label)
         const body = promptRequired('Body', existing.body)
         if (!offer_key || !label || !body) return
@@ -334,6 +370,26 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
             placeholder="Filter…"
             className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-[12px] shadow-soft"
           />
+          <div className="flex rounded-xl border border-stone-200 bg-white p-0.5 shadow-soft">
+            {([
+              ['all', 'All'],
+              ['source', 'Source'],
+              ['yours', 'Yours']
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setProvenanceFilter(value)}
+                className={`rounded-[10px] px-2.5 py-1.5 text-[11px] font-medium ${
+                  provenanceFilter === value
+                    ? 'bg-stone-900 text-white'
+                    : 'text-neutral-600 hover:bg-stone-50'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {unlocked ? (
             <button
               type="button"
@@ -356,15 +412,32 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
     >
       {loadError ? <p className="mb-3 text-sm text-red-600">{loadError}</p> : null}
       <div className="space-y-3">
-        {rows.map((row) => {
+        {rows
+          .filter((row) => provenanceFilter === 'all' || row.provenance === provenanceFilter)
+          .map((row) => {
           const related = campaignsFor(row.refKey)
           return (
             <Card key={row.id}>
               <CardContent className="space-y-2">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <div className="text-[15px] font-semibold text-neutral-900">{row.title}</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-[15px] font-semibold text-neutral-900">{row.title}</div>
+                      <span
+                        className={`rounded-xl px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                          row.provenance === 'source'
+                            ? 'border border-stone-300 bg-stone-100 text-neutral-700'
+                            : 'border border-orange-200 bg-orange-50 text-[#c2410c]'
+                        }`}
+                        title={row.sourceFile ?? undefined}
+                      >
+                        {row.provenanceLabel}
+                      </span>
+                    </div>
                     <div className="text-[12px] text-neutral-500">{row.meta}</div>
+                    {row.sourceFile ? (
+                      <div className="mt-0.5 text-[11px] text-neutral-400">{row.sourceFile}</div>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-3">
                     <button

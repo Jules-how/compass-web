@@ -63,6 +63,10 @@ function trackedFiles() {
 
 function resolveImport(spec) {
   const base = path.join(SRC, spec)
+  // Explicit extension (e.g. .json via resolveJsonModule) — use the path as-is.
+  if (path.extname(spec) && fs.existsSync(base) && fs.statSync(base).isFile()) {
+    return base
+  }
   const candidates = [
     `${base}.ts`,
     `${base}.tsx`,

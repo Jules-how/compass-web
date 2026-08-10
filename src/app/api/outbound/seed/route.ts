@@ -28,8 +28,8 @@ type SeedTable =
   | 'compass_outbound_templates'
 
 /**
- * POST /api/outbound/seed — insert baseline library rows when offers table is empty.
- * Idempotent: no-op if any offer already exists.
+ * POST /api/outbound/seed — upsert baseline + creator-source library rows.
+ * Always upserts by id so new source catalogue rows land on existing DBs.
  */
 export async function POST(request: NextRequest) {
   const originError = requireSameOrigin(request)
@@ -42,16 +42,6 @@ export async function POST(request: NextRequest) {
 
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
-    const existing = await supabase
-      .from('compass_outbound_offers')
-      .select('id')
-      .limit(1)
-    if (existing.error) {
-      return portalJson({ error: 'seed_failed', detail: existing.error.message }, { status: 500 })
-    }
-    if ((existing.data ?? []).length > 0) {
-      return portalJson({ seeded: false, inserted: 0 })
-    }
 
     const batches: Array<{ table: SeedTable; rows: Record<string, unknown>[] }> = [
       { table: 'compass_outbound_offers', rows: seedOffers() as unknown as Record<string, unknown>[] },
@@ -78,20 +68,28 @@ export async function POST(request: NextRequest) {
       }
     ]
 
-    let inserted = 0
+    let upserted = 0
     for (const batch of batches) {
       if (batch.rows.length === 0) continue
-      const { error, data } = await supabase.from(batch.table).insert(batch.rows).select('id')
-      if (error) {
-        return portalJson(
-          { error: 'seed_failed', detail: `${batch.table}: ${error.message}`, inserted },
-          { status: 400 }
-        )
+      // Chunk to stay under payload limits
+      const chunkSize = 40
+      for (let i = 0; i < batch.rows.length; i += chunkSize) {
+        const chunk = batch.rows.slice(i, i + chunkSize)
+        const { error, data } = await supabase
+          .from(batch.table)
+          .upsert(chunk, { onConflict: 'id' })
+          .select('id')
+        if (error) {
+          return portalJson(
+            { error: 'seed_failed', detail: `${batch.table}: ${error.message}`, upserted },
+            { status: 400 }
+          )
+        }
+        upserted += data?.length ?? chunk.length
       }
-      inserted += data?.length ?? batch.rows.length
     }
 
-    return portalJson({ seeded: true, inserted })
+    return portalJson({ seeded: true, inserted: upserted, upserted })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'seed_failed' }, { status: 500 })
   }

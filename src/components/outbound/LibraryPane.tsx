@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 
 export type LibraryDragPayload =
   | { kind: 'offer'; id: string; offer_key: string; name: string }
-  | { kind: 'expression'; id: string; offer_key: string; body: string; label: string }
+  | { kind: 'expression'; id: string; offer_key: string | null; body: string; label: string }
   | { kind: 'structure'; id: string; structure_id: string; name: string }
   | { kind: 'cta'; id: string; body: string; label: string; cta_type: string }
   | { kind: 'subject'; id: string; pattern: string; label: string }
@@ -132,7 +132,7 @@ export function LibraryPane({
             <DraggableCard
               key={row.id}
               title={row.label}
-              meta={`${row.offer_key} · ${row.status}`}
+              meta={`${row.offer_key ?? 'pattern'} · ${row.status}`}
               body={row.body}
               payload={{
                 kind: 'expression',

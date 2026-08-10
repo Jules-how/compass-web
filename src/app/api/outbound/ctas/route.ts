@@ -26,7 +26,10 @@ export async function POST(request: NextRequest) {
       is_default: Boolean(body.is_default),
       archived: false,
       created_at: stamp,
-      updated_at: stamp
+      updated_at: stamp,
+      provenance: 'yours',
+      source_creator: null,
+      source_file: null
     }
   })
 }

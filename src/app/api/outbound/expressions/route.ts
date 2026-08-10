@@ -31,7 +31,10 @@ export async function POST(request: NextRequest) {
       notes: typeof body.notes === 'string' ? body.notes.trim() || null : null,
       archived: false,
       created_at: stamp,
-      updated_at: stamp
+      updated_at: stamp,
+      provenance: 'yours',
+      source_creator: null,
+      source_file: null
     }
   })
 }

@@ -1,9 +1,7 @@
 import {
-  STRUCTURE_DESCRIPTIONS,
   deriveCopyArchiveComponents,
   emptyFollowUpStep,
   scaffoldSequence,
-  structureSlots,
   type CopyArchiveEntry,
   type OutboundCta,
   type OutboundExpression,
@@ -12,15 +10,29 @@ import {
   type OutboundSequence,
   type OutboundStructure,
   type OutboundSubject,
-  type OutboundTemplate
+  type OutboundTemplate,
+  yoursProvenance
 } from '@/lib/outbound-copy'
+import {
+  sourceCtas,
+  sourceExpressions,
+  sourceOpeners,
+  sourceStructures,
+  sourceSubjects,
+  sourceTemplates,
+  sourceInventoryCounts
+} from '@/lib/outbound-source-seed'
 
 const STAMP = '2026-08-07T00:00:00.000Z'
 
-function withFooter(slots: ReturnType<typeof structureSlots>) {
-  // structureSlots already appends compliance footers
-  return slots
+function mergeById<T extends { id: string }>(yours: T[], source: T[]): T[] {
+  const map = new Map<string, T>()
+  for (const row of source) map.set(row.id, row)
+  for (const row of yours) map.set(row.id, row) // yours wins on id collision
+  return Array.from(map.values())
 }
+
+
 
 export function seedOffers(): OutboundOffer[] {
   return [
@@ -36,7 +48,8 @@ export function seedOffers(): OutboundOffer[] {
       sort_order: 10,
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     },
     {
       id: 'offer-ai-enablement',
@@ -50,7 +63,8 @@ export function seedOffers(): OutboundOffer[] {
       sort_order: 20,
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     },
     {
       id: 'offer-ai-receptionist-system',
@@ -63,7 +77,8 @@ export function seedOffers(): OutboundOffer[] {
       sort_order: 30,
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     },
     {
       id: 'offer-agency-ai-reporting',
@@ -76,17 +91,18 @@ export function seedOffers(): OutboundOffer[] {
       sort_order: 40,
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     }
   ]
 }
 
-export function seedExpressions(): OutboundExpression[] {
+function yoursExpressions(): OutboundExpression[] {
   return [
     {
       id: 'expr-ai-enablement-tradies',
       offer_key: 'ai-enablement',
-      label: 'AI Enablement · AU tradies',
+      label: '[Yours] AI Enablement · AU tradies',
       body: 'Within 30 days of access, your marketing, quote follow-up, and review tools are set up and someone on your side can run them, or you get the install fee back.',
       vertical_tags: ['tradies', 'electricians'],
       location_tags: ['au-national', 'nsw'],
@@ -94,12 +110,13 @@ export function seedExpressions(): OutboundExpression[] {
       notes: null,
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     },
     {
       id: 'expr-growth-mortgage',
       offer_key: 'growth-system',
-      label: 'Growth System · AU mortgage brokers',
+      label: '[Yours] Growth System · AU mortgage brokers',
       body: "I'll get you {{bookedN}} booked borrower chats in the first 30 days after access and budget are live, or I refund the setup fee in full.",
       vertical_tags: ['mortgage-brokers'],
       location_tags: ['au-national'],
@@ -107,65 +124,26 @@ export function seedExpressions(): OutboundExpression[] {
       notes: 'No standing volume guarantee; N locked per campaign.',
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     }
   ]
+}
+
+export function seedExpressions(): OutboundExpression[] {
+  return mergeById(yoursExpressions(), sourceExpressions())
 }
 
 export function seedStructures(): OutboundStructure[] {
-  return [
-    {
-      id: 'struct-nick-4step',
-      structure_id: 'nick-4step',
-      name: 'Nick 4-step',
-      description: STRUCTURE_DESCRIPTIONS['nick-4step'],
-      slots: withFooter(structureSlots('nick-4step')),
-      is_default_candidate: true,
-      archived: false,
-      created_at: STAMP,
-      updated_at: STAMP
-    },
-    {
-      id: 'struct-nick-3step',
-      structure_id: 'nick-3step',
-      name: 'Nick 3-step',
-      description: STRUCTURE_DESCRIPTIONS['nick-3step'],
-      slots: withFooter(structureSlots('nick-3step')),
-      is_default_candidate: true,
-      archived: false,
-      created_at: STAMP,
-      updated_at: STAMP
-    },
-    {
-      id: 'struct-platten-aida',
-      structure_id: 'platten-aida',
-      name: 'Platten AIDA',
-      description: STRUCTURE_DESCRIPTIONS['platten-aida'],
-      slots: withFooter(structureSlots('platten-aida')),
-      is_default_candidate: false,
-      archived: false,
-      created_at: STAMP,
-      updated_at: STAMP
-    },
-    {
-      id: 'struct-connor-3para',
-      structure_id: 'connor-3para',
-      name: 'Connor 3-paragraph',
-      description: STRUCTURE_DESCRIPTIONS['connor-3para'],
-      slots: withFooter(structureSlots('connor-3para')),
-      is_default_candidate: false,
-      archived: false,
-      created_at: STAMP,
-      updated_at: STAMP
-    }
-  ]
+  // Creator skeletons (Nick / Platten / Connor) — source of truth
+  return sourceStructures()
 }
 
-export function seedCtas(): OutboundCta[] {
+function yoursCtas(): OutboundCta[] {
   return [
     {
       id: 'cta-permission-default',
-      label: 'Permission default',
+      label: '[Yours] Permission default',
       body: 'Mind if I send over {{asset}}?',
       cta_type: 'permission',
       vertical_tags: [],
@@ -173,11 +151,12 @@ export function seedCtas(): OutboundCta[] {
       is_default: true,
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     },
     {
       id: 'cta-timed-call',
-      label: 'Timed call',
+      label: '[Yours] Timed call',
       body: 'Would you be open to 15 minutes? If so, I can ring at {{t1}} or {{t2}}.',
       cta_type: 'timed_call',
       vertical_tags: [],
@@ -185,11 +164,12 @@ export function seedCtas(): OutboundCta[] {
       is_default: false,
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     },
     {
       id: 'cta-enablement-dream',
-      label: 'Enablement dream ask',
+      label: '[Yours] Enablement dream ask',
       body: 'If I trained you up so you could use AI for ads, the website, invoices, follow-ups, and a chunk of the office work, would that actually help {{companyName}}?',
       cta_type: 'give_first',
       vertical_tags: ['tradies'],
@@ -197,11 +177,12 @@ export function seedCtas(): OutboundCta[] {
       is_default: false,
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     },
     {
       id: 'cta-outline-permission',
-      label: 'Outline permission',
+      label: '[Yours] Outline permission',
       body: "Mind if I send a short outline of how I'd run it for you?",
       cta_type: 'permission',
       vertical_tags: [],
@@ -209,70 +190,62 @@ export function seedCtas(): OutboundCta[] {
       is_default: false,
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     }
   ]
 }
 
-export function seedSubjects(): OutboundSubject[] {
+export function seedCtas(): OutboundCta[] {
+  // Keep Switchflow defaults; mark playbook defaults as yours only for enablement dream.
+  // Permission/timed/outline are also in source catalogues — keep yours copies labelled Yours as standing defaults.
+  return mergeById(yoursCtas(), sourceCtas())
+}
+
+function yoursSubjects(): OutboundSubject[] {
   return [
     {
       id: 'subj-colleague-register',
-      label: 'Colleague register',
+      label: '[Yours] Colleague register',
       pattern: '{{companyName}} / {{firstName}}',
       notes: 'Plausible deniability — looks like an internal forward subject.',
       vertical_tags: [],
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     },
     {
       id: 'subj-outcome-stem',
-      label: 'Outcome stem',
+      label: '[Yours] Outcome stem',
       pattern: '{{outcome}} for {{companyName}}',
       notes: 'Outcome-led without “quick” stems.',
       vertical_tags: [],
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     },
     {
       id: 'subj-passthrough',
-      label: 'Instantly per-lead passthrough',
+      label: '[Yours] Instantly per-lead passthrough',
       pattern: '{{subject}}',
       notes: 'Use when Instantly supplies per-lead subjects.',
       vertical_tags: [],
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     }
   ]
 }
 
-export function seedOpeners(): OutboundOpener[] {
+export function seedSubjects(): OutboundSubject[] {
+  return mergeById(yoursSubjects(), sourceSubjects())
+}
+
+function yoursOpeners(): OutboundOpener[] {
   return [
-    {
-      id: 'opener-nick-tier',
-      label: 'Nick tier (research fact)',
-      opener_mode: 'nick-tier',
-      body: '{{opener}}',
-      notes: 'Research-backed fact; often filled per lead via Instantly vars.',
-      vertical_tags: [],
-      archived: false,
-      created_at: STAMP,
-      updated_at: STAMP
-    },
-    {
-      id: 'opener-platten-hook',
-      label: 'Platten hook',
-      opener_mode: 'platten-hook',
-      body: '{{hook}}',
-      notes: 'Optional hook-style opener.',
-      vertical_tags: [],
-      archived: false,
-      created_at: STAMP,
-      updated_at: STAMP
-    },
     {
       id: 'opener-none',
       label: 'None (greeting + geo)',
@@ -282,12 +255,17 @@ export function seedOpeners(): OutboundOpener[] {
       vertical_tags: ['electricians', 'tradies'],
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     }
   ]
 }
 
-export function seedTemplates(): OutboundTemplate[] {
+export function seedOpeners(): OutboundOpener[] {
+  return mergeById(yoursOpeners(), sourceOpeners())
+}
+
+function yoursTemplates(): OutboundTemplate[] {
   const thin = scaffoldSequence('nick-3step', { withFollowUp: true })
   const emailThin = thin.steps[0]
   const ctaPermission = emailThin.slots.find((s) => s.key === 'cta')
@@ -323,7 +301,7 @@ export function seedTemplates(): OutboundTemplate[] {
   return [
     {
       id: 'tmpl-thin-proof-nick-3',
-      name: 'Thin proof · nick-3step',
+      name: '[Yours] Thin proof · nick-3step',
       offer_key: null,
       structure_id: 'nick-3step',
       vertical_tags: [],
@@ -331,11 +309,12 @@ export function seedTemplates(): OutboundTemplate[] {
       sequence: thin,
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     },
     {
       id: 'tmpl-with-proof-nick-4',
-      name: 'With proof · nick-4step',
+      name: '[Yours] With proof · nick-4step',
       offer_key: null,
       structure_id: 'nick-4step',
       vertical_tags: [],
@@ -343,11 +322,12 @@ export function seedTemplates(): OutboundTemplate[] {
       sequence: withProof,
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     },
     {
       id: 'tmpl-ai-enablement-tradies',
-      name: 'AI Enablement tradies · nick-3step',
+      name: '[Yours] AI Enablement tradies · nick-3step',
       offer_key: 'ai-enablement',
       structure_id: 'nick-3step',
       vertical_tags: ['tradies', 'electricians'],
@@ -355,9 +335,14 @@ export function seedTemplates(): OutboundTemplate[] {
       sequence: enablement,
       archived: false,
       created_at: STAMP,
-      updated_at: STAMP
+      updated_at: STAMP,
+      ...yoursProvenance()
     }
   ]
+}
+
+export function seedTemplates(): OutboundTemplate[] {
+  return mergeById(yoursTemplates(), sourceTemplates())
 }
 
 function fillSequence(
@@ -673,6 +658,7 @@ export function seedCopyArchive(): CopyArchiveEntry[] {
 
 /** Guard used in tests — seed inventory must stay scoped. */
 export function seedInventoryCounts() {
+  const source = sourceInventoryCounts()
   return {
     offers: seedOffers().length,
     expressions: seedExpressions().length,
@@ -681,6 +667,7 @@ export function seedInventoryCounts() {
     subjects: seedSubjects().length,
     openers: seedOpeners().length,
     templates: seedTemplates().length,
-    copyArchive: seedCopyArchive().length
+    copyArchive: seedCopyArchive().length,
+    source
   }
 }

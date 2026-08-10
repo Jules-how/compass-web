@@ -41,6 +41,34 @@ export type OutboundOpenerMode = (typeof OUTBOUND_OPENER_MODES)[number]
 export const OUTBOUND_COPY_STATUSES = ['none', 'draft', 'ready', 'live'] as const
 export type OutboundCopyStatus = (typeof OUTBOUND_COPY_STATUSES)[number]
 
+/** source = creator doctrine (Nick Saraev Cold Email/ACC/Nick/Platten/Connor); yours = Switchflow variation */
+export const OUTBOUND_PROVENANCES = ['source', 'yours'] as const
+export type OutboundProvenance = (typeof OUTBOUND_PROVENANCES)[number]
+
+export type OutboundProvenanceFields = {
+  provenance: OutboundProvenance
+  source_creator: string | null
+  source_file: string | null
+}
+
+export function normalizeProvenance(value: unknown): OutboundProvenance {
+  return value === 'source' ? 'source' : 'yours'
+}
+
+export function yoursProvenance(): OutboundProvenanceFields {
+  return { provenance: 'yours', source_creator: null, source_file: null }
+}
+
+export function provenanceBadgeLabel(row: Partial<OutboundProvenanceFields>): string {
+  if (normalizeProvenance(row.provenance) === 'source') {
+    const who = typeof row.source_creator === 'string' && row.source_creator.trim()
+      ? row.source_creator.trim()
+      : 'Creator'
+    return `Source · ${who}`
+  }
+  return 'Yours'
+}
+
 export const OUTBOUND_SLOT_KEYS = [
   'opener',
   'proof_block',
@@ -93,11 +121,11 @@ export type OutboundOffer = {
   archived: boolean
   created_at: string
   updated_at: string
-}
+} & OutboundProvenanceFields
 
 export type OutboundExpression = {
   id: string
-  offer_key: string
+  offer_key: string | null
   label: string
   body: string
   vertical_tags: string[]
@@ -107,7 +135,7 @@ export type OutboundExpression = {
   archived: boolean
   created_at: string
   updated_at: string
-}
+} & OutboundProvenanceFields
 
 export type OutboundStructure = {
   id: string
@@ -119,7 +147,7 @@ export type OutboundStructure = {
   archived: boolean
   created_at: string
   updated_at: string
-}
+} & OutboundProvenanceFields
 
 export type OutboundCta = {
   id: string
@@ -132,7 +160,7 @@ export type OutboundCta = {
   archived: boolean
   created_at: string
   updated_at: string
-}
+} & OutboundProvenanceFields
 
 export type OutboundSubject = {
   id: string
@@ -143,7 +171,7 @@ export type OutboundSubject = {
   archived: boolean
   created_at: string
   updated_at: string
-}
+} & OutboundProvenanceFields
 
 export type OutboundOpener = {
   id: string
@@ -155,7 +183,7 @@ export type OutboundOpener = {
   archived: boolean
   created_at: string
   updated_at: string
-}
+} & OutboundProvenanceFields
 
 export type OutboundTemplate = {
   id: string
@@ -168,7 +196,7 @@ export type OutboundTemplate = {
   archived: boolean
   created_at: string
   updated_at: string
-}
+} & OutboundProvenanceFields
 
 /** Proven / reusable cold-email sequence snapshots (editor Archive tab). */
 export type CopyArchiveSource = 'saved' | 'template' | 'campaign'

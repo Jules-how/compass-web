@@ -13,20 +13,17 @@ import {
   Type
 } from 'lucide-react'
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from '@/components/ui/accordion'
-import {
   type LibraryDragPayload,
   parseLibraryDrag
 } from '@/components/outbound/LibraryPane'
+import { LibraryItemDetailSheet } from '@/components/outbound/LibraryItemDetailSheet'
 import {
   LOCATION_TAG_HINTS,
   OUTBOUND_CTA_TYPES,
   OUTBOUND_OFFER_KEYS,
-  VERTICAL_TAG_HINTS
+  VERTICAL_TAG_HINTS,
+  provenanceBadgeLabel,
+  type OutboundProvenanceFields
 } from '@/lib/outbound-copy'
 import type {
   OutboundCta,
@@ -39,7 +36,8 @@ import type {
 } from '@/lib/outbound-copy'
 import {
   ensureOutboundLibrarySeeded,
-  listLibraryItems
+  listLibraryItems,
+  type LibraryKind
 } from '@/lib/outbound-library-client'
 import { cn } from '@/lib/utils'
 
@@ -230,17 +228,22 @@ function LibraryRow({
   body,
   chips,
   matchCampaign,
+  provenance,
   payload,
+  onOpen,
   onInsert
 }: {
   title: string
   body?: string
   chips: string[]
   matchCampaign?: boolean
+  provenance?: Partial<OutboundProvenanceFields>
   payload: LibraryDragPayload
+  onOpen: () => void
   onInsert: (payload: LibraryDragPayload) => void
 }) {
   const draggedRef = useRef(false)
+  const provenanceLabel = provenance ? provenanceBadgeLabel(provenance) : null
   return (
     <div
       role="button"
@@ -260,33 +263,62 @@ function LibraryRow({
       }}
       onClick={() => {
         if (draggedRef.current) return
-        onInsert(payload)
+        onOpen()
       }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          onInsert(payload)
+          onOpen()
         }
       }}
       className={cn(
-        'w-full cursor-grab rounded-xl border p-2.5 text-left transition active:cursor-grabbing',
+        'flex h-full w-full cursor-pointer flex-col rounded-2xl border p-3.5 text-left shadow-soft transition active:cursor-grabbing',
         matchCampaign
           ? 'border-[#e85d2a]/35 bg-[#e85d2a]/5 hover:border-[#e85d2a]/50 hover:bg-white'
-          : 'border-stone-200/80 bg-stone-50/50 hover:border-stone-300 hover:bg-white'
+          : 'border-stone-200/80 bg-white hover:border-stone-300 hover:bg-stone-50/80'
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="text-[13px] font-semibold text-neutral-900">{title}</div>
-        {matchCampaign ? (
-          <span className="shrink-0 rounded-lg bg-[#e85d2a]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#c2410c]">
-            Fits campaign
-          </span>
-        ) : null}
+        <div className="text-[14px] font-semibold leading-snug text-neutral-900">{title}</div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {matchCampaign ? (
+            <span className="rounded-lg bg-[#e85d2a]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#c2410c]">
+              Fits campaign
+            </span>
+          ) : null}
+          {provenanceLabel ? (
+            <span
+              className={cn(
+                'rounded-lg px-1.5 py-0.5 text-[10px] font-semibold',
+                provenanceLabel.startsWith('Source')
+                  ? 'bg-stone-900/90 text-white'
+                  : 'bg-stone-100 text-neutral-600'
+              )}
+            >
+              {provenanceLabel}
+            </span>
+          ) : null}
+        </div>
       </div>
       <ApplicabilityChips tags={chips} accent={matchCampaign} />
       {body ? (
-        <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-neutral-600">{body}</p>
+        <p className="mt-2 flex-1 whitespace-pre-wrap text-[13px] leading-relaxed text-neutral-600 line-clamp-6">
+          {body}
+        </p>
       ) : null}
+      <div className="mt-3 flex items-center gap-2">
+        <span className="text-[11px] font-medium text-[#c2410c]">Open</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onInsert(payload)
+          }}
+          className="rounded-lg border border-stone-200 bg-white px-2 py-0.5 text-[11px] font-medium text-neutral-600 hover:border-stone-300 hover:bg-stone-50"
+        >
+          Use
+        </button>
+      </div>
     </div>
   )
 }
@@ -307,17 +339,11 @@ export function EditorComponentsAccordion({
   const [verticalFilter, setVerticalFilter] = useState<string>('')
   const [locationFilter, setLocationFilter] = useState<string>('')
   const [ctaTypeFilter, setCtaTypeFilter] = useState<string>('')
-  const [campaignOnly, setCampaignOnly] = useState(Boolean(campaignContext?.offer_key))
-  const syncedOffer = useRef<string | null>(null)
-
-  useEffect(() => {
-    const offer = campaignContext?.offer_key || ''
-    if (offer && syncedOffer.current !== offer) {
-      syncedOffer.current = offer
-      setOfferFilter(offer)
-      setCampaignOnly(true)
-    }
-  }, [campaignContext?.offer_key])
+  const [campaignOnly, setCampaignOnly] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [activeSection, setActiveSection] = useState<SectionKey>('expressions')
+  const [detail, setDetail] = useState<{ kind: LibraryKind; id: string } | null>(null)
+  const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -347,7 +373,7 @@ export function EditorComponentsAccordion({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [reloadToken])
 
   const ctx: CampaignLibraryContext = campaignContext ?? {}
   const query = q.trim().toLowerCase()
@@ -509,16 +535,22 @@ export function EditorComponentsAccordion({
     setCampaignOnly(false)
   }
 
+  function openDetail(kind: LibraryKind, id: string) {
+    setDetail({ kind, id })
+  }
+
   function renderRows(key: SectionKey) {
     if (key === 'offers') {
       return filtered.offers.map((row) => (
         <LibraryRow
           key={row.id}
           title={row.name}
-          body={row.pack_summary}
+          body={row.pack_summary || row.positioning_line || undefined}
           chips={uniqueTags([row.offer_key, ...(row.vertical_tags ?? []), ...(row.location_tags ?? [])])}
           matchCampaign={matchesCampaign(row, ctx)}
+          provenance={row}
           payload={{ kind: 'offer', id: row.id, offer_key: row.offer_key, name: row.name }}
+          onOpen={() => openDetail('offers', row.id)}
           onInsert={onInsert}
         />
       ))
@@ -530,12 +562,13 @@ export function EditorComponentsAccordion({
           title={row.label}
           body={row.body}
           chips={uniqueTags([
-            row.offer_key,
+            row.offer_key ?? 'pattern',
             row.status,
             ...(row.vertical_tags ?? []),
             ...(row.location_tags ?? [])
           ])}
           matchCampaign={matchesCampaign(row, ctx)}
+          provenance={row}
           payload={{
             kind: 'expression',
             id: row.id,
@@ -543,6 +576,7 @@ export function EditorComponentsAccordion({
             body: row.body,
             label: row.label
           }}
+          onOpen={() => openDetail('expressions', row.id)}
           onInsert={onInsert}
         />
       ))
@@ -553,18 +587,16 @@ export function EditorComponentsAccordion({
           key={row.id}
           title={row.name}
           body={row.description ?? undefined}
-          chips={uniqueTags([
-            row.structure_id,
-            row.is_default_candidate ? 'default pick' : null,
-            ctx.structure_id === row.structure_id ? 'active' : null
-          ])}
-          matchCampaign={Boolean(ctx.structure_id && ctx.structure_id === row.structure_id)}
+          chips={uniqueTags([row.structure_id])}
+          matchCampaign={matchesCampaign(row, ctx)}
+          provenance={row}
           payload={{
             kind: 'structure',
             id: row.id,
             structure_id: row.structure_id,
             name: row.name
           }}
+          onOpen={() => openDetail('structures', row.id)}
           onInsert={onInsert}
         />
       ))
@@ -577,11 +609,11 @@ export function EditorComponentsAccordion({
           body={row.body}
           chips={uniqueTags([
             row.cta_type,
-            row.is_default ? 'default' : null,
             ...(row.vertical_tags ?? []),
             ...(row.location_tags ?? [])
           ])}
           matchCampaign={matchesCampaign(row, ctx)}
+          provenance={row}
           payload={{
             kind: 'cta',
             id: row.id,
@@ -589,6 +621,7 @@ export function EditorComponentsAccordion({
             label: row.label,
             cta_type: row.cta_type
           }}
+          onOpen={() => openDetail('ctas', row.id)}
           onInsert={onInsert}
         />
       ))
@@ -598,10 +631,17 @@ export function EditorComponentsAccordion({
         <LibraryRow
           key={row.id}
           title={row.label}
-          body={row.notes ?? row.pattern}
-          chips={uniqueTags([row.pattern, ...(row.vertical_tags ?? [])])}
+          body={row.pattern}
+          chips={uniqueTags([...(row.vertical_tags ?? [])])}
           matchCampaign={matchesCampaign(row, ctx)}
-          payload={{ kind: 'subject', id: row.id, pattern: row.pattern, label: row.label }}
+          provenance={row}
+          payload={{
+            kind: 'subject',
+            id: row.id,
+            pattern: row.pattern,
+            label: row.label
+          }}
+          onOpen={() => openDetail('subjects', row.id)}
           onInsert={onInsert}
         />
       ))
@@ -611,9 +651,10 @@ export function EditorComponentsAccordion({
         <LibraryRow
           key={row.id}
           title={row.label}
-          body={row.body || row.notes || undefined}
+          body={row.body}
           chips={uniqueTags([row.opener_mode, ...(row.vertical_tags ?? [])])}
           matchCampaign={matchesCampaign(row, ctx)}
+          provenance={row}
           payload={{
             kind: 'opener',
             id: row.id,
@@ -621,6 +662,7 @@ export function EditorComponentsAccordion({
             label: row.label,
             opener_mode: row.opener_mode
           }}
+          onOpen={() => openDetail('openers', row.id)}
           onInsert={onInsert}
         />
       ))
@@ -629,6 +671,7 @@ export function EditorComponentsAccordion({
       <LibraryRow
         key={row.id}
         title={row.name}
+        body={undefined}
         chips={uniqueTags([
           row.structure_id,
           row.offer_key,
@@ -636,18 +679,34 @@ export function EditorComponentsAccordion({
           ...(row.location_tags ?? [])
         ])}
         matchCampaign={matchesCampaign(row, ctx)}
+        provenance={row}
         payload={{ kind: 'template', id: row.id, name: row.name }}
+        onOpen={() => openDetail('templates', row.id)}
         onInsert={onInsert}
       />
     ))
   }
+
+  const activeMeta = SECTIONS.find((s) => s.key === activeSection) ?? SECTIONS[1]
+  const activeRows = renderRows(activeSection)
+  const libraryEmpty =
+    bundle.offers.length +
+      bundle.expressions.length +
+      bundle.structures.length +
+      bundle.ctas.length +
+      bundle.subjects.length +
+      bundle.openers.length +
+      bundle.templates.length ===
+    0
 
   return (
     <div className={cn('flex h-full min-h-0 flex-col', className)}>
       <div className="shrink-0 space-y-2 border-b border-stone-100 px-4 py-3">
         <div>
           <h2 className="text-[15px] font-semibold text-neutral-900">Components</h2>
-          <p className="text-[12px] text-neutral-500">Click or drag into the draft</p>
+          <p className="text-[12px] text-neutral-500">
+            Click to view/edit · Use or drag to insert into the draft
+          </p>
         </div>
         {loadError ? <p className="text-[11px] text-red-600">{loadError}</p> : null}
 
@@ -662,8 +721,30 @@ export function EditorComponentsAccordion({
           <FilterChip
             label={ctx.offer_key ? `This campaign` : 'Campaign match'}
             active={campaignOnly}
-            onClick={() => setCampaignOnly((v) => !v)}
+            onClick={() => {
+              setCampaignOnly((v) => {
+                const next = !v
+                if (next && ctx.offer_key) setOfferFilter(ctx.offer_key)
+                if (!next && offerFilter === ctx.offer_key) setOfferFilter('')
+                return next
+              })
+            }}
           />
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            className={cn(
+              'rounded-lg border px-2 py-0.5 text-[11px] font-medium transition',
+              filtersOpen || offerFilter || verticalFilter || locationFilter || ctaTypeFilter
+                ? 'border-[#e85d2a]/35 bg-[#e85d2a]/10 text-[#c2410c]'
+                : 'border-stone-200 bg-white text-neutral-600 hover:border-stone-300'
+            )}
+          >
+            {filtersOpen ? 'Hide filters' : 'More filters'}
+            {(offerFilter || verticalFilter || locationFilter || ctaTypeFilter) && !filtersOpen
+              ? ` · ${[offerFilter, verticalFilter, locationFilter, ctaTypeFilter].filter(Boolean).length}`
+              : ''}
+          </button>
           {activeFilterCount > 0 ? (
             <button
               type="button"
@@ -675,103 +756,136 @@ export function EditorComponentsAccordion({
           ) : null}
         </div>
 
-        <div className="space-y-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Offer</p>
-          <div className="flex flex-wrap gap-1.5">
-            {offerOptions.map((tag) => (
-              <FilterChip
-                key={tag}
-                label={tag}
-                active={offerFilter === tag}
-                onClick={() => setOfferFilter((v) => (v === tag ? '' : tag))}
-              />
-            ))}
-          </div>
-        </div>
+        {filtersOpen ? (
+          <div className="space-y-2 pt-0.5">
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Offer</p>
+              <div className="flex flex-wrap gap-1.5">
+                {offerOptions.map((tag) => (
+                  <FilterChip
+                    key={tag}
+                    label={tag}
+                    active={offerFilter === tag}
+                    onClick={() => setOfferFilter((v) => (v === tag ? '' : tag))}
+                  />
+                ))}
+              </div>
+            </div>
 
-        <div className="space-y-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
-            Vertical / location
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {verticalOptions.map((tag) => (
-              <FilterChip
-                key={`v-${tag}`}
-                label={tag}
-                active={verticalFilter === tag}
-                onClick={() => setVerticalFilter((v) => (v === tag ? '' : tag))}
-              />
-            ))}
-            {locationOptions.map((tag) => (
-              <FilterChip
-                key={`l-${tag}`}
-                label={tag}
-                active={locationFilter === tag}
-                onClick={() => setLocationFilter((v) => (v === tag ? '' : tag))}
-              />
-            ))}
-          </div>
-        </div>
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+                Vertical / location
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {verticalOptions.map((tag) => (
+                  <FilterChip
+                    key={`v-${tag}`}
+                    label={tag}
+                    active={verticalFilter === tag}
+                    onClick={() => setVerticalFilter((v) => (v === tag ? '' : tag))}
+                  />
+                ))}
+                {locationOptions.map((tag) => (
+                  <FilterChip
+                    key={`l-${tag}`}
+                    label={tag}
+                    active={locationFilter === tag}
+                    onClick={() => setLocationFilter((v) => (v === tag ? '' : tag))}
+                  />
+                ))}
+              </div>
+            </div>
 
-        <div className="space-y-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">CTA type</p>
-          <div className="flex flex-wrap gap-1.5">
-            {OUTBOUND_CTA_TYPES.map((tag) => (
-              <FilterChip
-                key={tag}
-                label={tag.replace(/_/g, ' ')}
-                active={ctaTypeFilter === tag}
-                onClick={() => setCtaTypeFilter((v) => (v === tag ? '' : tag))}
-              />
-            ))}
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">CTA type</p>
+              <div className="flex flex-wrap gap-1.5">
+                {OUTBOUND_CTA_TYPES.map((tag) => (
+                  <FilterChip
+                    key={tag}
+                    label={tag.replace(/_/g, ' ')}
+                    active={ctaTypeFilter === tag}
+                    onClick={() => setCtaTypeFilter((v) => (v === tag ? '' : tag))}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
+        ) : null}
+
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 pt-1">
+          {SECTIONS.map((section) => {
+            const Icon = section.icon
+            const count = filtered[section.key].length
+            const active = activeSection === section.key
+            return (
+              <button
+                key={section.key}
+                type="button"
+                onClick={() => setActiveSection(section.key)}
+                className={cn(
+                  'flex shrink-0 items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left transition',
+                  active
+                    ? 'border-[#e85d2a]/40 bg-[#e85d2a]/10 shadow-soft'
+                    : 'border-stone-200/80 bg-white hover:border-stone-300'
+                )}
+              >
+                <div className={cn('rounded-lg p-1.5', section.bgColor, section.textColor)}>
+                  <Icon className="size-3.5" size={14} />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[12px] font-semibold text-neutral-900">
+                    {section.title}
+                    <span className="ml-1 font-normal text-neutral-400">{count}</span>
+                  </div>
+                </div>
+              </button>
+            )
+          })}
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-        <Accordion className="w-full -space-y-px" defaultValue={['expressions', 'structures']} type="multiple">
-          {SECTIONS.map((section) => {
-            const Icon = section.icon
-            const rows = renderRows(section.key)
-            return (
-              <AccordionItem
-                key={section.key}
-                value={section.key}
-                className="border border-stone-200/80 bg-white px-3 first:rounded-t-2xl last:rounded-b-2xl last:border-b"
+        <div className="mb-3 flex items-end justify-between gap-3 px-0.5">
+          <div>
+            <h3 className="text-[14px] font-semibold text-neutral-900">{activeMeta.title}</h3>
+            <p className="text-[12px] text-neutral-500">{activeMeta.subtitle}</p>
+          </div>
+          <p className="text-[11px] text-neutral-400">{activeRows.length} shown</p>
+        </div>
+
+        {activeRows.length === 0 ? (
+          <div className="flex flex-col items-start gap-2 rounded-2xl border border-dashed border-stone-200 bg-stone-50/60 px-4 py-8">
+            <p className="flex items-center gap-2 text-[13px] text-neutral-500">
+              <FileText className="size-4" />
+              {libraryEmpty ? 'Library is empty — seed hasn’t loaded yet' : 'No matches for these filters'}
+            </p>
+            {!libraryEmpty && activeFilterCount > 0 ? (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-[12px] font-medium text-[#c2410c] hover:underline"
               >
-                <AccordionTrigger className="py-3 hover:no-underline">
-                  <div className="flex items-center gap-2.5">
-                    <div className={cn('rounded-xl p-2', section.bgColor, section.textColor)}>
-                      <Icon className="size-4" size={16} />
-                    </div>
-                    <div className="flex flex-col items-start text-left">
-                      <span className="text-[14px] font-semibold text-neutral-900">
-                        {section.title}
-                        <span className="ml-1.5 text-[12px] font-normal text-neutral-400">
-                          {rows.length}
-                        </span>
-                      </span>
-                      <span className="text-[12px] font-normal text-neutral-500">
-                        {section.subtitle}
-                      </span>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="space-y-2 pb-3">
-                  {rows.length === 0 ? (
-                    <p className="flex items-center gap-2 px-1 text-[11px] text-neutral-400">
-                      <FileText className="size-3.5" />
-                      No matches for these filters
-                    </p>
-                  ) : (
-                    rows
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-            )
-          })}
-        </Accordion>
+                Clear filters to browse all styles
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2.5">{activeRows}</div>
+        )}
       </div>
+
+      {detail ? (
+        <LibraryItemDetailSheet
+          kind={detail.kind}
+          id={detail.id}
+          onClose={() => setDetail(null)}
+          onInsert={(payload) => {
+            onInsert(payload)
+            setDetail(null)
+          }}
+          onSaved={() => setReloadToken((n) => n + 1)}
+        />
+      ) : null}
     </div>
   )
 }

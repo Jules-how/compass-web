@@ -28,7 +28,10 @@ export async function POST(request: NextRequest) {
       sort_order: typeof body.sort_order === 'number' ? body.sort_order : 100,
       archived: false,
       created_at: stamp,
-      updated_at: stamp
+      updated_at: stamp,
+      provenance: 'yours',
+      source_creator: null,
+      source_file: null
     }
   })
 }

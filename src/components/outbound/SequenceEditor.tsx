@@ -39,8 +39,24 @@ import { INSTANTLY_BASE_VARIABLES } from '@/lib/instantly-variables'
 import { cn } from '@/lib/utils'
 
 const UNBOUND_KEY = 'compass.outbound.unbound-draft.v1'
+const COMPONENTS_WIDTH_KEY = 'compass.outbound.components-width.v2'
+const COMPONENTS_WIDTH_DEFAULT = 680
+const COMPONENTS_WIDTH_MIN = 480
+const COMPONENTS_WIDTH_MAX = 960
 
 type EditorTab = 'analytics' | 'editor' | 'archive' | 'leads' | 'settings'
+
+function readComponentsWidth(): number {
+  if (typeof window === 'undefined') return COMPONENTS_WIDTH_DEFAULT
+  try {
+    const raw = window.localStorage.getItem(COMPONENTS_WIDTH_KEY)
+    const n = raw ? Number(raw) : NaN
+    if (!Number.isFinite(n)) return COMPONENTS_WIDTH_DEFAULT
+    return Math.min(COMPONENTS_WIDTH_MAX, Math.max(COMPONENTS_WIDTH_MIN, Math.round(n)))
+  } catch {
+    return COMPONENTS_WIDTH_DEFAULT
+  }
+}
 
 function readUnbound(): { campaign: CompassCampaign; sequence: OutboundSequence } | null {
   if (typeof window === 'undefined') return null
@@ -110,7 +126,44 @@ export function SequenceEditor({
   const [tab, setTab] = useState<EditorTab>('editor')
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [focusField, setFocusField] = useState<'subject' | 'body'>('body')
+  const [componentsWidth, setComponentsWidth] = useState(COMPONENTS_WIDTH_DEFAULT)
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const resizeDrag = useRef<{ startX: number; startWidth: number } | null>(null)
+  const componentsWidthRef = useRef(componentsWidth)
+  componentsWidthRef.current = componentsWidth
+
+  useEffect(() => {
+    setComponentsWidth(readComponentsWidth())
+  }, [])
+
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      const drag = resizeDrag.current
+      if (!drag) return
+      const next = Math.min(
+        COMPONENTS_WIDTH_MAX,
+        Math.max(COMPONENTS_WIDTH_MIN, drag.startWidth + (drag.startX - e.clientX))
+      )
+      setComponentsWidth(next)
+    }
+    function onUp() {
+      if (!resizeDrag.current) return
+      resizeDrag.current = null
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      try {
+        window.localStorage.setItem(COMPONENTS_WIDTH_KEY, String(componentsWidthRef.current))
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [])
 
   const hydrate = useCallback(async () => {
     if (unbound) {
@@ -772,7 +825,22 @@ export function SequenceEditor({
 
         {/* Right accordion rail */}
         {tab === 'editor' ? (
-          <aside className="hidden w-[400px] shrink-0 border-l border-stone-200/80 bg-white lg:flex lg:flex-col">
+          <aside
+            className="relative hidden shrink-0 border-l border-stone-200/80 bg-white lg:flex lg:flex-col"
+            style={{ width: componentsWidth }}
+          >
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize components panel"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                resizeDrag.current = { startX: e.clientX, startWidth: componentsWidthRef.current }
+                document.body.style.cursor = 'col-resize'
+                document.body.style.userSelect = 'none'
+              }}
+              className="absolute inset-y-0 -left-1 z-10 w-2 cursor-col-resize"
+            />
             <EditorComponentsAccordion
               onInsert={(payload) => void applyLibraryPayload(payload)}
               className="min-h-0 flex-1"

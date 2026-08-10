@@ -68,10 +68,14 @@ non-obvious bits for working in the Cursor Cloud environment.
 
 - Keep the Compass ↔ vault ↔ Instantly cold-email loop simple; do not encode elaborate multi-gate ceremony spines.
 - Treat `offer-library.md` as a loose baseline guide; campaign-specific offer variants live in Compass.
+- Prefer creator/source outbound examples as the labeled library baseline; keep Jules variations labeled separately — do not treat fused Switchflow campaign copy as creator source of truth.
 - Cheap lead habits only: Instantly-screen before upload, mark Compass the same turn after upload, and never treat upload as activate (activate only after Jules sign-off).
+- Home priorities should deep-link to the relevant tool (Gmail for replies, Instantly, Prospeo, etc.) and be completable in place.
+- Project/campaign progress percentages must reflect real completion data, not decorative placeholders.
 
 ## Learned Workspace Facts
 
 - Cold-email operating model: Compass = workshop (orient + craft sequences from library components/templates + leads); vault agent = runner (research/openers/personalizations + Instantly screen/upload + mark Compass); Instantly = mail truck (activate after Jules sign-off).
 - Vault outbound `.md` files hold process and per-lead work, not a parallel offer/template warehouse.
 - Compass stores reusable opener formats/examples; per-lead openers stay vault enrich → Instantly merge vars.
+- Outbound library rows carry provenance (`source` | `yours`) plus `source_creator` / `source_file`; source inventory seeds from vault playbooks (Nick Saraev Cold Email / ACC / Nick / Platten / Connor), and newly added UI rows default to yours.

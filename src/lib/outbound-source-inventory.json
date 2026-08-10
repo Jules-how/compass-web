@@ -1,0 +1,1678 @@
+{
+  "meta": {
+    "purpose": "Creator-source cold-email library inventory for Compass seeding",
+    "sources": [
+      "context/playbooks/outbound/structures.md",
+      "context/playbooks/outbound/openers.md",
+      "context/playbooks/outbound/libraries/offer-library.md",
+      "context/playbooks/outbound/libraries/copy-ctas.md",
+      "context/playbooks/outbound/libraries/copy-subjects.md",
+      "context/playbooks/outbound/libraries/copy-followups.md",
+      "context/playbooks/outbound/libraries/copy-teardowns.md",
+      "context/playbooks/outbound/libraries/cold-offer-craft.md"
+    ],
+    "exclusions": [
+      "offer-library.md §3 Switchflow live offers",
+      "Switchflow-specific pack lines"
+    ]
+  },
+  "expressions": [
+    {
+      "id_slug": "expr-pattern-appointments",
+      "label": "Appointments",
+      "body": "N booked appointments in T days or you don't pay",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/offer-library.md",
+      "notes": "offer-library §2 pattern catalogue skeleton. When: Growth / booking outcomes. Adapt X/Y/Z/proof; do not copy claims."
+    },
+    {
+      "id_slug": "expr-pattern-self-liquidating-build",
+      "label": "Self-liquidating build",
+      "body": "Build [asset] free; charge after first N paying clients / result",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/offer-library.md",
+      "notes": "offer-library §2 pattern catalogue skeleton. When: High-trust build offers. Adapt X/Y/Z/proof; do not copy claims."
+    },
+    {
+      "id_slug": "expr-pattern-satisfaction-gate",
+      "label": "Satisfaction gate",
+      "body": "Build [asset] that did $X for [peer]; pay only if you like it; deliver in Th",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/offer-library.md",
+      "notes": "offer-library §2 pattern catalogue skeleton. When: Productised deliverable. Adapt X/Y/Z/proof; do not copy claims."
+    },
+    {
+      "id_slug": "expr-pattern-free-audit-teardown",
+      "label": "Free audit / teardown",
+      "body": "Full audit free; inbox in Th; then optional next step",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/offer-library.md",
+      "notes": "offer-library §2 pattern catalogue skeleton. When: Give-first CTA path. Adapt X/Y/Z/proof; do not copy claims."
+    },
+    {
+      "id_slug": "expr-pattern-ads-lead-gen-guarantee",
+      "label": "Ads / lead gen guarantee",
+      "body": "Campaign → N qualified leads/appointments in T or don't pay",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/offer-library.md",
+      "notes": "offer-library §2 pattern catalogue skeleton. When: Paid acquisition offers. Adapt X/Y/Z/proof; do not copy claims."
+    },
+    {
+      "id_slug": "expr-pattern-free-sample-unit",
+      "label": "Free sample unit",
+      "body": "Send input → free [post/rewrite/mock]; no strings",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/offer-library.md",
+      "notes": "offer-library §2 pattern catalogue skeleton. When: Micro give-first. Adapt X/Y/Z/proof; do not copy claims."
+    },
+    {
+      "id_slug": "expr-pattern-own-it-pilot",
+      "label": "Own-it pilot",
+      "body": "Flat pilot; outcome SLA or refund / free maintenance month",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/offer-library.md",
+      "notes": "offer-library §2 pattern catalogue skeleton. When: AI Receptionist-style pilots. Adapt X/Y/Z/proof; do not copy claims."
+    },
+    {
+      "id_slug": "expr-pattern-rewrite-improve-existing",
+      "label": "Rewrite / improve existing",
+      "body": "Send last N [emails/pages]; rewrite free + why it converts",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/offer-library.md",
+      "notes": "offer-library §2 pattern catalogue skeleton. When: Proof via their assets. Adapt X/Y/Z/proof; do not copy claims."
+    },
+    {
+      "id_slug": "expr-pattern-loss-framed",
+      "label": "Loss-framed",
+      "body": "You're leaving ~$X/mo on the table; I'll [fix] in T or Z",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/offer-library.md",
+      "notes": "offer-library §2 pattern catalogue skeleton. When: Only if loss is true + defensible. Adapt X/Y/Z/proof; do not copy claims."
+    },
+    {
+      "id_slug": "expr-pattern-performance-majority-framing",
+      "label": "Performance-majority framing",
+      "body": "Mostly aligned to results; base + upside — only if commercially true",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/offer-library.md",
+      "notes": "offer-library §2 pattern catalogue skeleton. When: Hybrid pricing honesty. Adapt X/Y/Z/proof; do not copy claims."
+    },
+    {
+      "id_slug": "expr-master-formula",
+      "label": "Master X-in-Y-or-Z formula",
+      "body": "I will [X quantified outcome] in [Y time] or [Z risk reversal].",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/offer-library.md",
+      "notes": "offer-library §1 / cold-offer-craft master template. Systems > frozen lines."
+    },
+    {
+      "id_slug": "expr-v1-10k-60-days-keep-working",
+      "label": "V1 perfect combination",
+      "body": "I will generate you $10,000 in 60 days or I'll keep working for free until I do.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Master-formula variant called 'the perfect combination of an offer'. O:$10k T:60d G:keep working free."
+    },
+    {
+      "id_slug": "expr-v2-20-calls-90-days-money-back",
+      "label": "V2 twenty calls money-back",
+      "body": "I will get you 20 calls in 90 days or I'll give you all of your money back.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Master-formula variant. O:20 calls T:90d G:full money-back."
+    },
+    {
+      "id_slug": "expr-v3-gift-card-guarantee",
+      "label": "V3 gift-card guarantee",
+      "body": "I will do X in Y time or I'll send you a $500 gift card to your favourite steak place — just let me know where that is.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Gift/prize guarantee pattern interrupt; 'just let me know where' is micro-engagement."
+    },
+    {
+      "id_slug": "expr-t1-50k-topline-keep-working",
+      "label": "T1 revenue-scaled commission",
+      "body": "I'd guarantee you at least 50K in added topline revenue — or I'd work for free until I got you this, 100% attributable.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Teardown-proven; ~20% revenue-scaled rule; 100% attributable pre-answers attribution."
+    },
+    {
+      "id_slug": "expr-t2-10k-60-days-or-dont-pay",
+      "label": "T2 10K or don't pay",
+      "body": "I'd be willing to guarantee you 10K in the next 60 days or you don't pay.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Teardown-proven guarantee line."
+    },
+    {
+      "id_slug": "expr-legion-20-appointments",
+      "label": "Legion appointment setting",
+      "body": "I will guarantee you 20 booked sales appointments in the next 60 days or you don't pay, no strings. Just say yes and I'll get started.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "10-offer library #1. Generated $70K+ in one month. Instructor no longer recommends Just-Say-Yes CTA — swap CTA, keep offer shape."
+    },
+    {
+      "id_slug": "expr-live-chat-self-liquidating",
+      "label": "Live chat self-liquidating",
+      "body": "I'll build a world-class live chat widget on your website at no cost. I won't charge you anything until you get your first 10 paying clients.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "10-offer library #2. Self-liquidating; no explicit time bound needed."
+    },
+    {
+      "id_slug": "expr-proposal-satisfaction-gate",
+      "label": "Proposal system satisfaction",
+      "body": "I will build you the same high converting proposal template that's made [company] $5 mil in the last 2 months. I'll do all the work up front. Only if you like it, we'll ask you to work with me. Just say yes and I'll send you yours within 48 hours.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "10-offer library #3. Satisfaction-guarantee variant; [company] must be recognisable in niche."
+    },
+    {
+      "id_slug": "expr-seo-audit-free-24h",
+      "label": "SEO audit free 24h",
+      "body": "I'll run a full SEO audit on your site. Show you exactly which pages are losing you traffic completely free. Just say yes. I'll have it in your inbox within 24 hours.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "10-offer library #4."
+    },
+    {
+      "id_slug": "expr-google-ads-50-leads",
+      "label": "Google Ads 50 leads",
+      "body": "I'll build you a Google Ads campaign that I guarantee will generate 50 qualified leads in 30 days or you don't pay a cent. Just say yes and I'll get it live this week.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "10-offer library #5."
+    },
+    {
+      "id_slug": "expr-1secondcopy-free-blog",
+      "label": "1secondcopy free blog post",
+      "body": "Just send us a title and we'll give you a completely free 500-word blog post on the topic. No strings attached.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "10-offer library #6. Real offer integral to scaling past $92K/month. Time bound ~48h in original."
+    },
+    {
+      "id_slug": "expr-crm-satisfaction",
+      "label": "CRM satisfaction build",
+      "body": "I will build you a world-class industry CRM at no cost. I'll pay for it all myself. Do all the work up front and only if you like it will I ask you to work with me. Just say yes and I'll send you a link within 48 hours.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "10-offer library #7."
+    },
+    {
+      "id_slug": "expr-dental-cme-free-entry",
+      "label": "Dental CME free entry",
+      "body": "I'll give you a completely free entry into [program] which will let you fulfil your 20 CME credit requirement at no cost. Just say yes and we'll send over a private invite link.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "10-offer library #8. Time implicit via industry program window."
+    },
+    {
+      "id_slug": "expr-email-rewrite-last-three",
+      "label": "Email rewrite last three",
+      "body": "Send me your last three email campaigns. I will rewrite them for free. Plus, I'll show you exactly why the new versions will convert better. No strings.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "10-offer library #9."
+    },
+    {
+      "id_slug": "expr-web-redesign-love-it",
+      "label": "Web redesign love-it pay",
+      "body": "I'll redesign your homepage for free. [I'll send you the mockup within 72 hours.] You only pay if you absolutely love it.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "10-offer library #10. Alt G: 'You only pay if you get 5% higher or more CVR'."
+    },
+    {
+      "id_slug": "expr-dental-sizing-proof-contrast",
+      "label": "Dental sizing proof contrast",
+      "body": "By the way, last week we generated 109.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Sizing/proof contrast: promise 10-in-30-days vs prove 109-in-a-week. Not a standalone offer line."
+    },
+    {
+      "id_slug": "expr-mechanism-template",
+      "label": "Unique mechanism template",
+      "body": "We {value prop} for {target niche} so they can {target goal} using our {unique mechanism}. We just {case study}.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Differentiation via named mechanism. Sell vacation not flight."
+    },
+    {
+      "id_slug": "expr-authority-amplifier-filled",
+      "label": "Authority Amplifier filled example",
+      "body": "We help coaches consistently attract high-ticket clients and grow their visibility so they can scale their business and become the go-to authority in their niche using our Authority Amplifier Blueprint. We just helped {coach} double their revenue while becoming a more recognized leader in this space within 3 months.",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Filled unique-mechanism example from cold-offer-craft."
+    },
+    {
+      "id_slug": "expr-rr-performance-or-dont-pay",
+      "label": "RR: performance or don't pay",
+      "body": "…in the next 60 days or you don't pay, no strings.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Risk-reversal catalogue #1 default workhorse."
+    },
+    {
+      "id_slug": "expr-rr-pay-on-result",
+      "label": "RR: pay-on-result",
+      "body": "I won't charge you anything until you get your first 10 paying clients.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Risk-reversal catalogue #2 self-liquidating."
+    },
+    {
+      "id_slug": "expr-rr-satisfaction-unpitched",
+      "label": "RR: satisfaction unpitched",
+      "body": "I'll do all the work up front and only if you like it will I ask you to work with me.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Risk-reversal catalogue #3."
+    },
+    {
+      "id_slug": "expr-rr-free-sample",
+      "label": "RR: free-sample",
+      "body": "completely free, no strings attached.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Risk-reversal catalogue #4."
+    },
+    {
+      "id_slug": "expr-rr-result-threshold-cvr",
+      "label": "RR: result-threshold CVR",
+      "body": "You only pay if you get 5% higher or more CVR.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Risk-reversal catalogue #5."
+    },
+    {
+      "id_slug": "expr-rr-keep-working-until",
+      "label": "RR: keep working until",
+      "body": "or I'll keep working for free until I do.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Risk-reversal catalogue #6."
+    },
+    {
+      "id_slug": "expr-rr-full-money-back",
+      "label": "RR: full money-back",
+      "body": "or I'll give you all of your money back.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Risk-reversal catalogue #7."
+    },
+    {
+      "id_slug": "expr-rr-gift-prize",
+      "label": "RR: gift/prize",
+      "body": "or I'll send you a $500 gift card to your favourite steak place — just let me know where that is.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Risk-reversal catalogue #8. Near-duplicate of V3 Z clause."
+    },
+    {
+      "id_slug": "expr-rr-acc-deliverability-refund",
+      "label": "ACC RR: deliverability refund",
+      "body": "If we don't increase your revenue in 60 days, you'll get a full refund",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Accelerator deliverability-based guarantee taxonomy."
+    },
+    {
+      "id_slug": "expr-rr-acc-deliverability-work-free",
+      "label": "ACC RR: deliverability work free",
+      "body": "…we'll work for no extra charge until we get there.",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Accelerator deliverability-based alternate."
+    },
+    {
+      "id_slug": "expr-rr-acc-asset-website-30d",
+      "label": "ACC RR: asset website 30d",
+      "body": "We guarantee that you'll have a new website in 30 days or you get a full refund.",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Accelerator asset-based."
+    },
+    {
+      "id_slug": "expr-rr-acc-asset-fb-ads-10",
+      "label": "ACC RR: asset FB ads 10",
+      "body": "We guarantee we'll set up your Facebook Ads with at least 10 ads in 30 days or you get a full refund.",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Accelerator asset-based."
+    },
+    {
+      "id_slug": "expr-rr-acc-action-based-course",
+      "label": "ACC RR: action-based course",
+      "body": "If you follow all the steps in the action plan/course and you don't see (result) in (timeframe) you get a full refund.",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Accelerator action-based for DIY/courses."
+    },
+    {
+      "id_slug": "expr-mechanism-client-magnet-funnel",
+      "label": "Mechanism name: Client Magnet Funnel",
+      "body": "Client Magnet Funnel",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Named unique-mechanism example only — not a full offer line. Pair with mechanism template."
+    },
+    {
+      "id_slug": "expr-mechanism-spotlight-strategy-system",
+      "label": "Mechanism name: The Spotlight Strategy System",
+      "body": "The Spotlight Strategy System",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Named unique-mechanism example only — not a full offer line. Pair with mechanism template."
+    },
+    {
+      "id_slug": "expr-mechanism-content-power-play",
+      "label": "Mechanism name: Content Power Play",
+      "body": "Content Power Play",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Named unique-mechanism example only — not a full offer line. Pair with mechanism template."
+    },
+    {
+      "id_slug": "expr-mechanism-ads-to-authority-method",
+      "label": "Mechanism name: Ads to Authority Method",
+      "body": "Ads to Authority Method",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Named unique-mechanism example only — not a full offer line. Pair with mechanism template."
+    },
+    {
+      "id_slug": "expr-mechanism-authority-amplifier-blueprint",
+      "label": "Mechanism name: Authority Amplifier Blueprint",
+      "body": "Authority Amplifier Blueprint",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/cold-offer-craft.md",
+      "notes": "Named unique-mechanism example only — not a full offer line. Pair with mechanism template."
+    }
+  ],
+  "structures": [
+    {
+      "structure_id": "nick-4step",
+      "name": "Nick 4-step (default)",
+      "description": "When brief has approved peer-relevant proof. Order: opener → who/proof (1–2 lines peer+number+time) → offer (X in Y or Z) → CTA (permission default; timed call A/B). Follow-up: one short human ping; new subject; point back to email 1 / restate give.",
+      "creator": "Nick",
+      "source_file": "context/playbooks/outbound/structures.md"
+    },
+    {
+      "structure_id": "nick-3step",
+      "name": "Nick 3-step",
+      "description": "When thin / no niche proof; brevity A/B. Order: opener → offer → CTA. Sender identity in From + signature only (no who-proof body).",
+      "creator": "Nick",
+      "source_file": "context/playbooks/outbound/structures.md"
+    },
+    {
+      "structure_id": "platten-aida",
+      "name": "Platten AIDA",
+      "description": "Optional when strong named proof; Attention→Interest→Desire→Action. Desire must include X in Y or Z (not case-study-only). Slots: opener (often platten-hook), interest_mechanism, proof_block + cold_expression, CTA.",
+      "creator": "Platten",
+      "source_file": "context/playbooks/outbound/structures.md"
+    },
+    {
+      "structure_id": "connor-3para",
+      "name": "Connor 3-paragraph",
+      "description": "Optional enterprise/title×industry. Order: who I am → why (priorities/challenges + how you solve, weave X-in-Y-or-Z) → what I want (assumptive time ask). Assumptive calendar language allowed only on this structure. Not default for AU SMB owners.",
+      "creator": "Connor",
+      "source_file": "context/playbooks/outbound/structures.md"
+    }
+  ],
+  "ctas": [
+    {
+      "id_slug": "cta-vid2-15min-ring-slots",
+      "label": "15-min chat with ring slots",
+      "body": "Would you be open to a 15-minute chat? If so, I can give you a ring at 3:30 p.m. today or before 12:00 p.m. tomorrow.",
+      "cta_type": "timed-call",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-vid2-default-yes-meet",
+      "label": "Default-yes ring or Meet",
+      "body": "How does 3:30 p.m. today sound? I can give you a ring at {number} or I can send you a one-click Google Meet invite.",
+      "cta_type": "timed-call",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-vid2-let-me-fix",
+      "label": "Will you let me fix that",
+      "body": "Will you let me fix that for you?",
+      "cta_type": "permission-give",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-vid2-opposed-15-30",
+      "label": "Opposed to 15-30 chat",
+      "body": "Are you opposed to having a 15 to 30 minute chat in the next few days so we can talk through this? I know you're on ET time. Can give you a ring at 3:30 p.m. today or tomorrow.",
+      "cta_type": "timed-call",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-vid2-send-raw-footage",
+      "label": "Send raw footage Drive",
+      "body": "Just send me the raw footage in a Google Drive link with sharing on.",
+      "cta_type": "micro-input",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-vid2-tell-topic",
+      "label": "Tell me next video topic",
+      "body": "Just tell me the topic of your next video and I'll handle it.",
+      "cta_type": "micro-input",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-vid2-take-me-up",
+      "label": "Take me up I'll shoot over",
+      "body": "Just let me know if you want to take me up on this and I'll shoot it over.",
+      "cta_type": "permission-give",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-vid2-happy-anytime-week",
+      "label": "Happy anytime this week",
+      "body": "Happy to do this for you anytime this week.",
+      "cta_type": "soft-availability",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-vid2-call-noon-or-meet",
+      "label": "Call noon/3:30 or Meet",
+      "body": "Can call today around noon or tomorrow 3:30pm if that's easier, or I can send you a Google Meet link.",
+      "cta_type": "timed-call",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc27-audit-strategy",
+      "label": "ACC27 #1",
+      "body": "On a quick call I can audit your (branding/SEO/FB ads/sales etc.) strategy. Interested?",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-tue-thu",
+      "label": "ACC27 #2",
+      "body": "Would Tuesday or Thursday work for you? If not, let me know (I'm flexible)",
+      "cta_type": "day-options",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-share-examples-5-10",
+      "label": "ACC27 #3",
+      "body": "If you've got 5-10 minutes I'd love to share some examples with you of how we helped other branding agencies/{{niche}} get more clients.",
+      "cta_type": "value-share",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-this-week-or-next",
+      "label": "ACC27 #4",
+      "body": "Do you have time this week for a chat or can we connect next week?",
+      "cta_type": "soft-availability",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-lmk",
+      "label": "ACC27 #5",
+      "body": "Lmk",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-interested",
+      "label": "ACC27 #6",
+      "body": "Interested?",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-mind-send-info",
+      "label": "ACC27 #7",
+      "body": "Mind if I send more info?",
+      "cta_type": "permission",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-10min-chat",
+      "label": "ACC27 #8",
+      "body": "Got a quick 10 min to chat?",
+      "cta_type": "low-time",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-worth-chat-or-email",
+      "label": "ACC27 #9",
+      "body": "Worth a no-obligation chat or no? I can also share more info over email no problem. Let me know.",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-20min-tue-thu",
+      "label": "ACC27 #10",
+      "body": "How about a quick 20 min call next Tuesday or Thursday afternoon to learn more?",
+      "cta_type": "day-options",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-leads-priority",
+      "label": "ACC27 #11",
+      "body": "Getting more leads a priority for you right now or not really?",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-happy-to-share",
+      "label": "ACC27 #12",
+      "body": "Let me know if this interests you, I'd be happy to share more.",
+      "cta_type": "permission",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-interested-or-not",
+      "label": "ACC27 #13",
+      "body": "Interested or not really?",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-share-examples",
+      "label": "ACC27 #14",
+      "body": "Mind if I share some examples of what's possible?",
+      "cta_type": "permission",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-team-10-15",
+      "label": "ACC27 #15",
+      "body": "Can you or someone on your team jump on a quick 10-15 minutes call this week to explore?",
+      "cta_type": "low-time",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-3min-loom",
+      "label": "ACC27 #16",
+      "body": "Do you mind if I share a 3-minute loom video of how that would apply to {{companyName}}?",
+      "cta_type": "async-loom",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-busy-4pm",
+      "label": "ACC27 #17",
+      "body": "You must be busy.. so I promise I won't waste your time. Got a few minutes tomorrow 4pm EST to chat?",
+      "cta_type": "timed-call",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-few-minutes-learn",
+      "label": "ACC27 #18",
+      "body": "Got a few minutes to learn more?",
+      "cta_type": "low-time",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-run-calculations",
+      "label": "ACC27 #19",
+      "body": "Want me to run some calculations to see how much you could save?",
+      "cta_type": "permission-calc",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-mind-explain",
+      "label": "ACC27 #20",
+      "body": "Mind if I explain how?",
+      "cta_type": "permission",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-something-interested",
+      "label": "ACC27 #21",
+      "body": "Is this something you would be interested in?",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-grab-15-calendar",
+      "label": "ACC27 #22",
+      "body": "What's the best way to grab 15 min on your calendar to share some ideas for {{companyName}}?",
+      "cta_type": "calendar-ask",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-tomorrow-or-tue",
+      "label": "ACC27 #23",
+      "body": "Are you free for a call tomorrow or Tuesday?",
+      "cta_type": "day-options",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-hear-more",
+      "label": "ACC27 #24",
+      "body": "Interested to hear more?",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc27-worth-exploring-results",
+      "label": "ACC27 #25",
+      "body": "Let me know if this sounds like something worth exploring for {{companyName}}? Very confident we can get you results.",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "From ACC 27-CTA catalogue (verbatim). Catalogue header says 27; source lists 1–25."
+    },
+    {
+      "id_slug": "cta-acc-ab-respond",
+      "label": "A/B respond info or not fit",
+      "body": "Respond with \"A\" if I can send more info, respond with \"B\" if it's not a fit right now.",
+      "cta_type": "multiple-choice",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-15min-interview",
+      "label": "15-minute interview",
+      "body": "Would you be interested in doing a 15 minute interview with me?",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-permission-first-info",
+      "label": "Permission first before info",
+      "body": "I know you get pitched a lot so I wanted to ask your permission first to see if you mind if I can send you more info?",
+      "cta_type": "permission",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-send-link-explains",
+      "label": "Send link that explains",
+      "body": "Can I send you a link that explains how it works?",
+      "cta_type": "permission",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-send-pdf",
+      "label": "Send PDF that explains",
+      "body": "Can I send you a PDF that explains how we do it?",
+      "cta_type": "permission",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-lets-talk",
+      "label": "Let's talk?",
+      "body": "Let's talk?",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-want-see-how",
+      "label": "Want to see how we do it",
+      "body": "Want to see how we do it?",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-wed-fri-13pm",
+      "label": "Call Wed or Fri 13pm EST",
+      "body": "Can I give you a call on Wednesday or Friday at 13pm Est?",
+      "cta_type": "day-options",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-call-next-tue",
+      "label": "Call next Tuesday busy ack",
+      "body": "I know you're busy but can I call you next Tuesday? I promise I won't waste your time.",
+      "cta_type": "timed-call",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-good-time-15",
+      "label": "When good time 15 min",
+      "body": "When would be a good time for a 15 minute call?",
+      "cta_type": "soft-availability",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-interested-yn",
+      "label": "Interested Y/N",
+      "body": "Interested? Y/N",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-lmk-interested",
+      "label": "Lmk if interested",
+      "body": "Lmk if you'd be interested?",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-jump-call-show-offer",
+      "label": "Jump on call show offer",
+      "body": "Let's jump on a call and I'll show you how you can (your offer)",
+      "cta_type": "assumptive-call",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-burger-ubereats",
+      "label": "UberEats burger for 15 min",
+      "body": "I'll send you a burger with UberEats if you can jump on a quick 15 min call this week.",
+      "cta_type": "gimmick-incentive",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-mind-run-calcs",
+      "label": "Mind run calculations save",
+      "body": "You mind if I run some calculations for you to see how much you could save?",
+      "cta_type": "permission-calc",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-offer-priority-or-not",
+      "label": "Offer priority or not really",
+      "body": "(your offer) priority for you right now or not really?",
+      "cta_type": "interest-check",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-permission-time-slots",
+      "label": "Permission send time slots",
+      "body": "Do I have your permission to send over a few time slots to chat?",
+      "cta_type": "permission",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md"
+    },
+    {
+      "id_slug": "cta-acc-calendar-link-antipattern",
+      "label": "Calendar link (lowest response)",
+      "body": "Choose a time from my Calendar here.",
+      "cta_type": "calendar-link",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-ctas.md",
+      "notes": "anti-pattern / cautionary: lowest response rate in ACC testing"
+    },
+    {
+      "id_slug": "cta-structures-permission-asset",
+      "label": "Permission send asset (default)",
+      "body": "Mind if I send over {{asset}}?",
+      "cta_type": "permission",
+      "creator": "Nick",
+      "source_file": "context/playbooks/outbound/structures.md",
+      "notes": "structures.md standing default A — permission. Source file still copy-ctas sibling doctrine; included as default CTA shape."
+    },
+    {
+      "id_slug": "cta-structures-timed-15",
+      "label": "Timed 15 min ring T1/T2",
+      "body": "Would you be open to 15 minutes? If so, I can ring at {{t1}} or {{t2}}.",
+      "cta_type": "timed-call",
+      "creator": "Nick",
+      "source_file": "context/playbooks/outbound/structures.md",
+      "notes": "structures.md standing default B — timed call."
+    }
+  ],
+  "subjects": [
+    {
+      "id_slug": "subj-vid2-loss-aversion-formula",
+      "label": "Loss-aversion formula",
+      "pattern": "{name_lowercase}, you're wasting {amount} per {period}",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "Formula: recipient name (lowercase) + concrete loss + time frame. Example: nick, you're wasting 2,300 per month"
+    },
+    {
+      "id_slug": "subj-vid2-ex-wasting-2300",
+      "label": "Example: wasting 2,300/mo",
+      "pattern": "nick, you're wasting 2,300 per month",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "VID2 loss-aversion worked example"
+    },
+    {
+      "id_slug": "subj-vid2-claude-formatting",
+      "label": "Claude course formatting thought",
+      "pattern": "your claude code course and a formatting thought",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "lowercase = real person; references something only an actual viewer would know; offers information rather than asking."
+    },
+    {
+      "id_slug": "subj-vid2-2026-capital",
+      "label": "2026 capital",
+      "pattern": "2026 capital",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ambiguous + high-stakes = naturally interesting."
+    },
+    {
+      "id_slug": "subj-vid2-nick-youtube",
+      "label": "Nick + YouTube",
+      "pattern": "Nick + YouTube",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "Good example from VID2 inbox."
+    },
+    {
+      "id_slug": "subj-vid2-nicks-blind-spot",
+      "label": "Nick's blind spot",
+      "pattern": "Nick's blind spot",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "curiosity + implied loss, provided the teaser doesn't give it away."
+    },
+    {
+      "id_slug": "subj-vid2-been-with-you",
+      "label": "been with you from the start",
+      "pattern": "been with you from the start",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "odd, human phrasing nobody would mass-generate."
+    },
+    {
+      "id_slug": "subj-vid2-simple-nick",
+      "label": "Simple: Nick",
+      "pattern": "Nick",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "Triggers who-is-this (friend/family/fan)."
+    },
+    {
+      "id_slug": "subj-vid2-simple-nick-q",
+      "label": "Simple: Nick Q",
+      "pattern": "Nick Q",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "Simple great — who-is-this trigger."
+    },
+    {
+      "id_slug": "subj-vid2-coaching-clients",
+      "label": "Taking coaching clients?",
+      "pattern": "Nick, are you taking coaching clients?",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "Simple great — who-is-this trigger."
+    },
+    {
+      "id_slug": "subj-vid2-hiring",
+      "label": "Are you hiring?",
+      "pattern": "Nick, are you hiring?",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "Simple great — who-is-this trigger."
+    },
+    {
+      "id_slug": "subj-vid2-looked-sad",
+      "label": "Looked sad in last vid",
+      "pattern": "Nick, you looked sad in your last vid",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "Simple great — who-is-this trigger."
+    },
+    {
+      "id_slug": "subj-vid2-rewrite-runnable-money",
+      "label": "Rewrite: Runnable money",
+      "pattern": "Hey Nick, Runnable wants to send you money",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "Subject rewrite from roast: leads with the give (was 'Paid collaboration')."
+    },
+    {
+      "id_slug": "subj-vid2-rewrite-72k-congrats",
+      "label": "Rewrite: 72K month congrats",
+      "pattern": "Nick, great job on the 72K month!!",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "Subject rewrite: congratulates instead of pitches."
+    },
+    {
+      "id_slug": "subj-vid2-rewrite-let-me-collab",
+      "label": "Rewrite: Let me collab",
+      "pattern": "Let me collab with you",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "Subject rewrite: a fair thing a real person says (was 'Collaboration idea')."
+    },
+    {
+      "id_slug": "subj-vid2-rewrite-fix-watch-time",
+      "label": "Rewrite: fix watch time",
+      "pattern": "Let me fix your watch time",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "Subject rewrite from editing teardown."
+    },
+    {
+      "id_slug": "subj-vid2-bad-collaboration-idea",
+      "label": "collaboration idea",
+      "pattern": "collaboration idea",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "anti-pattern / bad example: not how a human talks"
+    },
+    {
+      "id_slug": "subj-vid2-bad-quick-collab",
+      "label": "quick collab?",
+      "pattern": "quick collab?",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "anti-pattern / bad example: 'quick' is the killer; signals template blast"
+    },
+    {
+      "id_slug": "subj-vid2-bad-quick-idea-strategy",
+      "label": "a quick idea on your daily strategy content",
+      "pattern": "a quick idea on your daily strategy content",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "anti-pattern / bad example: gives away the whole thing; too vague to land"
+    },
+    {
+      "id_slug": "subj-vid2-bad-double-this-week",
+      "label": "can you double this week?",
+      "pattern": "can you double this week?",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "anti-pattern / bad example: confusing"
+    },
+    {
+      "id_slug": "subj-vid2-bad-ai-driven-perf",
+      "label": "interested in AI driven performance optimization",
+      "pattern": "interested in AI driven performance optimization",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "anti-pattern / bad example: industry terminology mangled"
+    },
+    {
+      "id_slug": "subj-vid2-bad-video-editor",
+      "label": "video editor",
+      "pattern": "video editor",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "anti-pattern / bad example: generic commodity pitch"
+    },
+    {
+      "id_slug": "subj-vid2-bad-nicki-scaled",
+      "label": "Nicki scaled long pitch",
+      "pattern": "Nicki scaled to 72K a month with automation. Here's the next level",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "anti-pattern / bad example: too long AND blatantly selling"
+    },
+    {
+      "id_slug": "subj-vid2-bad-can-i-send-caps",
+      "label": "CAN I SEND",
+      "pattern": "CAN I SEND",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "anti-pattern / bad example: ALL-CAPS reads as spammy"
+    },
+    {
+      "id_slug": "subj-vid2-bad-no-subject",
+      "label": "(no subject)",
+      "pattern": "(no subject)",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "anti-pattern / bad example: correlates with spam/scams"
+    },
+    {
+      "id_slug": "subj-vid2-bad-paid-collaboration",
+      "label": "Paid collaboration",
+      "pattern": "Paid collaboration",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "anti-pattern / bad example: roast before-state; rewritten to Runnable money subject"
+    },
+    {
+      "id_slug": "subj-vid2-bad-nick-m-scaled",
+      "label": "Nick M scaled pitch",
+      "pattern": "Nick M, you scaled to 72K/month with automation. Here's the next level.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "anti-pattern / bad example: roast before-state; rewritten to congrats subject"
+    },
+    {
+      "id_slug": "subj-acc33-brain-open-book",
+      "label": "Experiment: brain open book",
+      "pattern": "{{firstName}}, my brain is an open book for you",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Experiment"
+    },
+    {
+      "id_slug": "subj-acc33-feeling-emotion",
+      "label": "Experiment: Feeling emotion",
+      "pattern": "Feeling [Emotion]? I can help!",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Experiment"
+    },
+    {
+      "id_slug": "subj-acc33-show-useful",
+      "label": "Experiment: Show you are useful",
+      "pattern": "Show you are useful",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Experiment"
+    },
+    {
+      "id_slug": "subj-acc33-gamify-sales",
+      "label": "Experiment: gamify sales team",
+      "pattern": "Idea to gamify {{companyName}}'s sales team",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Experiment"
+    },
+    {
+      "id_slug": "subj-acc33-tips-new-book",
+      "label": "Experiment: tips new book",
+      "pattern": "{{firstName}}, tips for promoting your new book",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Experiment"
+    },
+    {
+      "id_slug": "subj-acc33-quick-idea-topic",
+      "label": "Experiment: quick idea improve topic",
+      "pattern": "A quick idea to improve {{topic}}",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Experiment — note tension with VID2 avoid-quick rule; catalogue raw material"
+    },
+    {
+      "id_slug": "subj-acc33-good-stuff",
+      "label": "Humorous: good stuff",
+      "pattern": "I got the good stuff. Hit me up anytime.",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Humorous"
+    },
+    {
+      "id_slug": "subj-acc33-are-you-ok",
+      "label": "Humorous: are you ok",
+      "pattern": "{{firstName}}, are you ok?",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Humorous"
+    },
+    {
+      "id_slug": "subj-acc33-like-you-using",
+      "label": "Humorous: We like you using us",
+      "pattern": "We like you using us",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Humorous"
+    },
+    {
+      "id_slug": "subj-acc33-whats-next",
+      "label": "Open: What's next",
+      "pattern": "What's next for {{companyName}}?",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Open-ended questions"
+    },
+    {
+      "id_slug": "subj-acc33-did-you-know",
+      "label": "Open: Did you know doing this",
+      "pattern": "Did you know [company name] was doing this?",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Open-ended questions"
+    },
+    {
+      "id_slug": "subj-acc33-face-challenge",
+      "label": "Open: face this challenge",
+      "pattern": "{{firstName}}, do you face this challenge?",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Open-ended questions"
+    },
+    {
+      "id_slug": "subj-acc33-crush-q4",
+      "label": "Open: crush Q4 goals",
+      "pattern": "The stage is set for {{companyName}} to crush Q4 goals",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Open-ended questions"
+    },
+    {
+      "id_slug": "subj-acc33-noticed-interest",
+      "label": "Open: noticed common interest",
+      "pattern": "Hey {{firstName}}, I noticed you're interested in {{common interest}}",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Open-ended questions"
+    },
+    {
+      "id_slug": "subj-acc33-quick-question",
+      "label": "Short: quick question",
+      "pattern": "{{firstName}}, quick question",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Short — VID2 avoid-quick filter tension; test"
+    },
+    {
+      "id_slug": "subj-acc33-thoughts",
+      "label": "Short: Thoughts?",
+      "pattern": "Thoughts?",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Short"
+    },
+    {
+      "id_slug": "subj-acc33-ready",
+      "label": "Short: ready?",
+      "pattern": "{{firstName}}, ready?",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Short"
+    },
+    {
+      "id_slug": "subj-acc33-weird-question",
+      "label": "Short: weird question",
+      "pattern": "{{firstName}}, weird question",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Short"
+    },
+    {
+      "id_slug": "subj-acc33-steal-sales",
+      "label": "Short: steal sales strategy",
+      "pattern": "{{firstName}}, steal my sales strategy",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Short"
+    },
+    {
+      "id_slug": "subj-acc33-thoughts-on",
+      "label": "Casual: Thoughts on subject",
+      "pattern": "Thoughts on [Subject]?",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Casual"
+    },
+    {
+      "id_slug": "subj-acc33-congrats-on",
+      "label": "Casual: Congrats on event",
+      "pattern": "Congrats on [event/getting funded/promotion]",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Casual"
+    },
+    {
+      "id_slug": "subj-acc33-found-through",
+      "label": "Connection: found through Name",
+      "pattern": "I found you through [Name]",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Establish connection"
+    },
+    {
+      "id_slug": "subj-acc33-liked-event",
+      "label": "Connection: liked attending event",
+      "pattern": "Liked attending {{recent_event}}",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Establish connection"
+    },
+    {
+      "id_slug": "subj-acc33-met-delhi",
+      "label": "Connection: met at conference Delhi",
+      "pattern": "Hi, {{firstName}}! We met at a conference in Delhi",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Establish connection"
+    },
+    {
+      "id_slug": "subj-acc33-saw-comment",
+      "label": "Connection: saw your comment",
+      "pattern": "Saw your comment on [post]",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Establish connection"
+    },
+    {
+      "id_slug": "subj-acc33-btw-mutual",
+      "label": "Connection: BTW mutual asked",
+      "pattern": "BTW, [Name of mutual contact] asked me to contact you",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Establish connection"
+    },
+    {
+      "id_slug": "subj-acc33-stop-wasting",
+      "label": "Segmented: stop wasting money",
+      "pattern": "Stop wasting money on [product_or_service]",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Segmented"
+    },
+    {
+      "id_slug": "subj-acc33-startup-help",
+      "label": "Segmented: startup help issue",
+      "pattern": "Could your startup use some help with [common issue]?",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Segmented"
+    },
+    {
+      "id_slug": "subj-acc33-solve-pain",
+      "label": "Segmented: solve pain with product",
+      "pattern": "{{firstName}}, solve your [pain point] with [your product or service]",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Segmented"
+    },
+    {
+      "id_slug": "subj-acc33-tired-of-pain",
+      "label": "Segmented: tired of pain",
+      "pattern": "{{firstName}}, tired of [pain point]?",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Segmented"
+    },
+    {
+      "id_slug": "subj-acc33-dear-friend",
+      "label": "Segmented: Dear friend",
+      "pattern": "Dear friend",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Segmented"
+    },
+    {
+      "id_slug": "subj-acc33-heard-rumors",
+      "label": "Segmented: Heard rumors",
+      "pattern": "Heard rumors about you",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC 33-ideas catalogue · Segmented"
+    },
+    {
+      "id_slug": "subj-acc-firstname-quick-question",
+      "label": "{{firstName}} - quick question",
+      "pattern": "{{firstName}} - quick question",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC masterclass doc add — VID2 avoid-quick tension"
+    },
+    {
+      "id_slug": "subj-acc-firstname-your-name",
+      "label": "{{firstname}} - (your name)",
+      "pattern": "{{firstname}} - (your name)",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC masterclass doc add"
+    },
+    {
+      "id_slug": "subj-acc-thought-youd-like",
+      "label": "Thought you'd like this",
+      "pattern": "Thought you'd like this {{first name}}",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC masterclass doc add"
+    },
+    {
+      "id_slug": "subj-acc-interview-request",
+      "label": "Interview request",
+      "pattern": "Interview request",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC masterclass doc add"
+    },
+    {
+      "id_slug": "subj-acc-question-about-company",
+      "label": "Question about company",
+      "pattern": "Question about {{companyName}}",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC masterclass doc add"
+    },
+    {
+      "id_slug": "subj-acc-can-you-help",
+      "label": "Can you help firstName",
+      "pattern": "Can you help {{firstName}}?",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC masterclass doc add"
+    },
+    {
+      "id_slug": "subj-acc-love-company",
+      "label": "Love company!",
+      "pattern": "Love {{companyName}}!",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-subjects.md",
+      "notes": "ACC masterclass doc add"
+    }
+  ],
+  "openers": [
+    {
+      "id_slug": "opener-mode-nick-tier",
+      "label": "Mode: nick-tier (default)",
+      "opener_mode": "nick-tier",
+      "body": "Clear the scammer check — who is this / do I know them? Buys ~30s of read. Must not signal selling. Tiers: 0 Segment (one line true of shared list field + light variation) · 1 Cold read (~80% ICP-true, unfalsifiable, casual) · 2 AI-woven (human frame + one scraped fact in a slot) · 3 Bespoke (hand research, ~50-lead high-value). Rules: 1 sentence ideal / 2 max · true facts only · casualize entities · no city-only mail-merge as woven · no Beaver Corp fluff.",
+      "creator": "Nick",
+      "source_file": "context/playbooks/outbound/openers.md",
+      "notes": "Default mode. Ops: /enrich-first-line (+ Origami skip when list already has opener/subject)."
+    },
+    {
+      "id_slug": "opener-nick-tier-0-segment",
+      "label": "Nick tier 0 — Segment",
+      "opener_mode": "nick-tier",
+      "body": "[One line true of a shared list field + light variation]",
+      "creator": "Nick",
+      "source_file": "context/playbooks/outbound/openers.md",
+      "notes": "When: thin data / big lists. Cheapest tier that works."
+    },
+    {
+      "id_slug": "opener-nick-tier-1-cold-read",
+      "label": "Nick tier 1 — Cold read",
+      "opener_mode": "nick-tier",
+      "body": "[~80% ICP-true, unfalsifiable, casual observation]",
+      "creator": "Nick",
+      "source_file": "context/playbooks/outbound/openers.md",
+      "notes": "Default when facts thin. No verbatim demo line in openers.md — shape only."
+    },
+    {
+      "id_slug": "opener-nick-tier-2-ai-woven",
+      "label": "Nick tier 2 — AI-woven",
+      "opener_mode": "nick-tier",
+      "body": "[Human frame + one scraped fact slotted in]",
+      "creator": "Nick",
+      "source_file": "context/playbooks/outbound/openers.md",
+      "notes": "When reliable fact exists. No city-only mail-merge as 'woven'."
+    },
+    {
+      "id_slug": "opener-nick-tier-3-bespoke",
+      "label": "Nick tier 3 — Bespoke",
+      "opener_mode": "nick-tier",
+      "body": "[Hand-researched personalisation line]",
+      "creator": "Nick",
+      "source_file": "context/playbooks/outbound/openers.md",
+      "notes": "~50-lead high-value lists."
+    },
+    {
+      "id_slug": "opener-mode-platten-hook",
+      "label": "Mode: platten-hook",
+      "opener_mode": "platten-hook",
+      "body": "Write a really short personalized open line for a cold email. Bear in mind that we're about to suggest {{upcoming_angle}} — so this opening line needs to be relevant to that but without mentioning it.",
+      "creator": "Platten",
+      "source_file": "context/playbooks/outbound/openers.md",
+      "notes": "Attention job — prefetch offer theme without naming the offer. AI enrich prompt pattern."
+    },
+    {
+      "id_slug": "opener-platten-demo-energy-demand",
+      "label": "Platten demo: energy demand look",
+      "opener_mode": "platten-hook",
+      "body": "…has been growing in the energy space. I had a quick look at how you're currently generating demand online.",
+      "creator": "Platten",
+      "source_file": "context/playbooks/outbound/openers.md",
+      "notes": "Demo example — ads/audit angle, offer not named."
+    },
+    {
+      "id_slug": "opener-platten-demo-overlooked-channel",
+      "label": "Platten demo: overlooked channel",
+      "opener_mode": "platten-hook",
+      "body": "…one of the channels that often gets overlooked when it comes to driving more consistent leads.",
+      "creator": "Platten",
+      "source_file": "context/playbooks/outbound/openers.md",
+      "notes": "Demo example — ads/audit angle, offer not named."
+    },
+    {
+      "id_slug": "opener-platten-weak-reject",
+      "label": "Platten weak (reject)",
+      "opener_mode": "platten-hook",
+      "body": "as a business owner you're balancing day-to-day operations…",
+      "creator": "Platten",
+      "source_file": "context/playbooks/outbound/openers.md",
+      "notes": "anti-pattern / bad example: long fluff — reject."
+    },
+    {
+      "id_slug": "opener-mode-connor-intel",
+      "label": "Mode: connor-intel",
+      "opener_mode": "connor-intel",
+      "body": "I spoke with {{name}} and understand {{priority}} is a focus…",
+      "creator": "Connor",
+      "source_file": "context/playbooks/outbound/openers.md",
+      "notes": "Only if true. Requires multi-channel / strategic bucket — not volume Maps lists."
+    }
+  ],
+  "templates": [
+    {
+      "id_slug": "tpl-teardown-charlie-ai-coach-after",
+      "name": "Charlie — custom AI coach (AFTER)",
+      "structure_id": "nick-4step",
+      "subject": null,
+      "email_body": "Hi Nick, huge work on the 290K month solo, man. School games, we're\nlucky to have you. I build custom AI coaches for school communities. I\nwork with a few of the top 20 right now, collectively over 500k month in\nrev, and train them specifically in your resources and unique voice.\nThrough this, we managed to save over 20 hours per week of coach time,\nwhich I'm sure you can imagine stacks up quite a bit. I'm confident I\ncould save you a tremendous amount of time working on your school. Your\ngroup is basically perfect for this, and there's undoubtedly a lot of\nheavy lifting you're doing right now that I think you don't have to be.\nI want to put my money where my mouth is. Will you let me build you a\nhigh-quality AI coach in the next 7 days, 100% your tone of voice? If it\ndoesn't save you 5 hours per week or more, you wouldn't pay a cent. You\nwouldn't have to do anything to get started other than just send me an\ninvite to your school. I'll handle all the rest in the background. Let\nme know if this is worth your time. If so, could show you how it works\nover a casual 15-minute video call — can ring you 10 a.m. today or\nThursday. Thanks man.",
+      "followup_body": null,
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-teardowns.md",
+      "notes": "Teardown #1 AFTER rewrite. Offer: free AI coach build in 7 days or don't pay if <5 hrs/wk saved."
+    },
+    {
+      "id_slug": "tpl-teardown-imran-thumbnail-after",
+      "name": "Imran — free thumbnail (AFTER)",
+      "structure_id": "nick-3step",
+      "subject": null,
+      "email_body": "Hi Nick, I love your channel, man. I've watched so many of your vids.\nMy GF says I listen to you more than I listen to her. Lol. I make\nthumbnails for a few creators, one or two mill subs right now\ncollectively. I'm not here to pitch you on paying me or anything. Just\nnoticed your thumbs were leaving some money on the table. I don't know\nhow much, but IMO, your CTRs probably aren't consistently hitting 7–8%\nbecause of minor placement issues and stuff like that. I really like\nyour stuff as mentioned. Putting it on the table here. I'd love to make\nyou a 100% free thumb for a pre-existing or new video. I do this in 48\nhours. You just send me over some titles and bullets and I give it to\nyou at no cost. Why? Because I want to show you some value up front. I\nthink I can realistically help you in many ways, this just being one.\nBut I know I should bring food to the table if I want to eat. No\npressure at all. Just let me know if you want to take me up on this and\nI'll shoot it over. Respectfully, Imran",
+      "followup_body": null,
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-teardowns.md",
+      "notes": "Teardown #2 AFTER. Free sample unit + micro-input (titles/bullets) in 48h."
+    },
+    {
+      "id_slug": "tpl-teardown-kashif-editing-after",
+      "name": "Kashif — editing samples give (AFTER)",
+      "structure_id": "nick-4step",
+      "subject": null,
+      "email_body": "Hey Nick. Congrats on 35K, man — that's awesome, bro. Been with you since\nthe OG days and it's great to see you get some traction. Much deserved\ntraction. I watched your last Claude Code video and loved it. Extremely\nvaluable. But to make a long story short, I think you could get much more\nwatch time if you made the first 60 seconds more engaging. I work with a\nbunch of YouTubers right now — one of my clients just went from 29K to 61K\nsubs in 4 months. We tested different styles and used the one that kept\npeople watching longer. I know you haven't heard of me — willing to prove\nit. Can I send you: a couple of thumbnail examples for you, an idea for your\nnext vid (I scraped a bunch of other Claude Code YouTubers and have a couple\nof cool takes for you), and two to three editing samples of my work? Let me\nknow.\n\nThanks, Kashif.",
+      "followup_body": null,
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-teardowns.md",
+      "notes": "Teardown #3 AFTER. Note: 'Been with you since the OG days' is unverifiable — excluded from doctrine; use a true claim. Custom items first, templated samples last."
+    },
+    {
+      "id_slug": "tpl-teardown-grove-agent-os-after",
+      "name": "Grove — agent OS white-label (AFTER)",
+      "structure_id": "nick-4step",
+      "subject": "Nick, great job on the 72K month!!",
+      "email_body": "Hey Nick. I know you guys are crushing it at LeftClick — huge work on the\n72K. Big role model of mine. I get you clearly understand what systems can\ndo. As somebody who has been scaling outbound teams with AI agents recently\n— biggest one being 250K a month — I believe there is some value you're\nleaving on the table. TL;DR: agent operating systems are extremely high ROI.\nI don't believe you talk about or probably use them right now, as they're\nfairly new. In short, there are agent OSes out there that spawn a whole org\nchart that does things autonomously for you: research, sales, marketing,\nfinance, content, engineering, ops, strategy, etc. I want to build you a\nwhite-label offer where we roll these out for your clients. I'd work mostly\non commission. As mentioned, very high ROI, and I'm so confident this would\ncrush, I'd guarantee you at least 50K in added topline revenue — or I'd work\nfor free until I got you this, 100% attributable. Any interest? Could show\nyou in around 15 minutes. Can call today around noon or tomorrow 3:30pm if\nthat's easier, or I can send you a Google Meet link.\n\nThanks, Grove.",
+      "followup_body": null,
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-teardowns.md",
+      "notes": "Teardown #4 AFTER. Commission-aligned + ~20% revenue-scaled guarantee."
+    },
+    {
+      "id_slug": "tpl-teardown-ivan-product-test-after",
+      "name": "Ivan — product test + credits (AFTER)",
+      "structure_id": "nick-3step",
+      "subject": null,
+      "email_body": "Hey Nick. Love your channel, man — I've watched so many of your vids. My GF\nsays I listen to you more than I listen to her. Lol. I'm interviewing with\na 10M+ AI team in San Fran. They're building a really out-of-the-box\nautomation platform for non/low-technical folks — lower barrier to entry\nthan n8n, but just as powerful — and I think I have something that would\nimprove the lives of many of your followers. I look up to you and just\ncommissioned you $50 in credits. Would you be interested at all to test the\nproduct for around 5 minutes and let me know what you think? You'd a) be\ngetting something potentially useful for your YouTube channel, since it's\ninteresting and novel, and b) potentially helping me get hired. $50 in\ncredits expires end of week. Let me know — it's called XYZ and I'm linking\nit here.\n\nThanks for the time, Ivan.",
+      "followup_body": null,
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-teardowns.md",
+      "notes": "Teardown #5 AFTER. Feedback/opinion ask angle. Credit expiry was manufactured for roast — only use real deadlines."
+    },
+    {
+      "id_slug": "tpl-teardown-runnable-sponsorship-after",
+      "name": "Runnable — sponsorship (AFTER)",
+      "structure_id": "nick-4step",
+      "subject": "Hey Nick, Runnable wants to send you money",
+      "email_body": "Hi Nick. We absolutely love your channel — so, no BS and straight to the\npoint: you're a common topic over lunch at the Runnable HQ. Lol. Cutting to\nthe chase, I would love to partner with you on a TikTok/Reel/Short. Would\nbe willing to offer generous rates. If you don't know us already, we're an\nAI platform that turns a single prompt into fully finished slides, websites,\nand videos in seconds — have raised 10 mil. Basically an all-in-one\nmarketing tool that stops you from having to jump around 10 tools. And in\nmy earnest opinion, we'd be extremely valuable for your audience. Would you\nlet me know your pricing for a three-video deal? If you're interested and\nkeen, I can send you $250 in Runnable credits today, and we can sort out a\ncollaboration before the end of the week.\n\nBest, Peter at Runnable.",
+      "followup_body": null,
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-teardowns.md",
+      "notes": "Teardown #6 AFTER. Subject leads with give; signed as person."
+    },
+    {
+      "id_slug": "tpl-teardown-peter-funnel-after",
+      "name": "Peter/Morningside — funnel guarantee (AFTER)",
+      "structure_id": "nick-4step",
+      "subject": null,
+      "email_body": "Hi Nick, are you in charge of marketing/growth at 1 Second Copy? Love your\ndesign, BTW. Reaching out because I help a very similar company right now —\nXYZ Marketing, 5 mil a year — with their funnel. In the last 3 weeks we've\ngenerated around $50,000. I do this primarily via simple funnel attribution.\nBasically, I help you figure out your CAC, LTV, conversion drop offs, then\nfix the leaks. Given how similar you are to our past clientele, I'm very\nconfident we could help you guys — so much so that I'd be willing to\nguarantee you 10K in the next 60 days or you don't pay. I know this is the\nfirst you're hearing of me and I'm cognizant you may not be entirely\ncomfortable with the prospect of working with a stranger, but I've done\nenough research to know when there's an opportunity, and given the size of\nyour funnel, I think I could crush it for you. Totally hands off, no\nstrings. We'd only need to talk once for around 15-30 minutes and I'd take\ncare of everything else in the background. Let me know if this makes any\nsense at all and I'll give you a ring whenever is convenient — today or\ntomorrow 3:30pm.\n\nThanks, Peter.",
+      "followup_body": null,
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-teardowns.md",
+      "notes": "Teardown #7 AFTER. Longer OK when selling something complicated with concrete offer."
+    },
+    {
+      "id_slug": "tpl-teardown-readon-sample-edit-after",
+      "name": "Read-on — free sample edit (AFTER + follow-up)",
+      "structure_id": "nick-3step",
+      "subject": "Let me fix your watch time",
+      "email_body": "Nick, you're losing a tremendous number of viewers in the first 60 seconds\nright now. Not because your content is bad — it's not, it rocks — but\nbecause your pacing is off. Will you let me fix that for you? I edit for\n[big name] at 5 mil subs and can one-shot deliver a tightly edited 60-second\nsequence for you that is as good or even better. No strings, but I'd be\nhappy to give you a free sample edit in around 48 hours. Just send me the\nraw footage in a Google Drive link with sharing on. Happy to do this for\nyou anytime this week.\n\nBest, Read-on.",
+      "followup_body": "Nick, slow pacing kills retention before your best content even lands. Still\nhappy to show you what a tighter cut looks like — free on your next video.\nInterested?\n\nBest, Read-on.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-teardowns.md",
+      "notes": "Teardown #8 AFTER email + original follow-up shape (working: restate give + time-box). Short punchy email gold standard."
+    },
+    {
+      "id_slug": "tpl-teardown-podcast-growth-after",
+      "name": "Podcast growth agency (AFTER)",
+      "structure_id": "nick-4step",
+      "subject": null,
+      "email_body": "Hi Nick, just watched your vid on the AI crisis. Felt like I had to send this to you.\nLong story short: we got 1 million followers on multiple platforms and I work with\npodcasts like you very often. Your stuff is fantastic. I want to give you 15 to 30k\nfollowers plus 10 to 20k a month. I do this for you on an entirely results basis.\nI'm extremely confident I and my team could help do this by a) marketing your pod more\neffectively and b) growing an online community program group. I know it's a bold claim\nbut we got proven results: many millions of followers and around seven figs from social\nmedia ourselves in the last year. My co-founder personally made you a short vid to\nreview stacks a bit and say hello — linking it here for convenience. Are you opposed to\nhaving a 15 to 30 minute chat in the next few days so we can talk through this?\nI know you're on ET time. Can give you a ring at 3:30 p.m. today or tomorrow.\n\nThanks, Peter",
+      "followup_body": null,
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-teardowns.md",
+      "notes": "Teardown #9 AFTER. Offer at top when email is long; one identity; concrete timed CTA."
+    },
+    {
+      "id_slug": "tpl-vid2-fu-tldr-checkin",
+      "name": "VID2 follow-up — TLDR check-in",
+      "structure_id": "nick-4step",
+      "subject": null,
+      "email_body": "{{email_1_body}}",
+      "followup_body": "Hey {firstName}, checking in on {topic}.\nTLDR if this is the first time you're seeing this: {email body, rewritten differently}.\nThanks, Nick",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-followups.md",
+      "notes": "VID2 follow-up template. Use different subject on follow-up. Simple human ping, not campaign."
+    },
+    {
+      "id_slug": "tpl-vid2-fu-checking-xyz",
+      "name": "VID2 follow-up — checking X Y Z",
+      "structure_id": "nick-3step",
+      "subject": null,
+      "email_body": null,
+      "followup_body": "Hey Pete, just checking in on X, Y and Z. Let me know if you have any questions.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-followups.md",
+      "notes": "VID2 follow-up template (verbatim spirit)."
+    },
+    {
+      "id_slug": "tpl-vid2-fu-lost-in-mailbox",
+      "name": "VID2 follow-up — lost in mailbox",
+      "structure_id": "nick-3step",
+      "subject": null,
+      "email_body": null,
+      "followup_body": "Hey Pete, let me know if this got lost in your mailbox.",
+      "creator": "Nick Saraev Cold Email",
+      "source_file": "context/playbooks/outbound/libraries/copy-followups.md",
+      "notes": "VID2 follow-up template (verbatim spirit)."
+    },
+    {
+      "id_slug": "tpl-acc-sequence-4touch",
+      "name": "ACC 4-touch sequence (bump/value/breakup)",
+      "structure_id": "nick-4step",
+      "subject": null,
+      "email_body": "{{email_1}}",
+      "followup_body": "2. Quick Bump (2 days later):\nHey, I know you're busy, just making sure this email didn't get buried.\nHey, is there anyone else at {{companyName}} I should be sending this to?\n\n3. Value (2 days later):\n[Different angle or case study from your homework, a free audit offer, or a video.]\n\n4. Break-Up / Something funny (3 days later):\nAt this point I'll assume (your offer) isn't a priority right now. Feel free to reach out when it changes.",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-followups.md",
+      "notes": "ACC proven full shape = 4 emails. Cadence: bump 2d → value 2d → breakup 3d. Earn steps with performance (VID2)."
+    },
+    {
+      "id_slug": "tpl-acc-breakup-multiple-choice",
+      "name": "ACC multiple-choice breakup",
+      "structure_id": "nick-4step",
+      "subject": null,
+      "email_body": null,
+      "followup_body": "Hi {first name}, haven't heard from you about your coaching business. Let me know where you're at with it:\n\nA) I'm interested, send me more info\nB) I have enough premium clients in my coaching business\nC) I am not the right person to reach out to about this\nD) I retired and sold my business",
+      "creator": "ACC",
+      "source_file": "context/playbooks/outbound/libraries/copy-followups.md",
+      "notes": "ACC-style multiple-choice breakup (final touch)."
+    },
+    {
+      "id_slug": "tpl-platten-aida-illustrative",
+      "name": "Platten AIDA illustrative shape",
+      "structure_id": "platten-aida",
+      "subject": null,
+      "email_body": "Hey {{firstName}},\n\n{{opener}}\n\nWe build a local ad path that brings quote-ready enquiries for {{niche}} businesses.\n\n{{peer}} went from A to B in T using that path.\n{{cold_expression}}\n\nMind if I send a short outline of how I'd run it for you?",
+      "followup_body": null,
+      "creator": "Platten",
+      "source_file": "context/playbooks/outbound/structures.md",
+      "notes": "Illustrative — replace with real proof/expression. From structures.md platten-aida example shape."
+    }
+  ]
+}
