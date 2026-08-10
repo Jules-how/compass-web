@@ -268,15 +268,7 @@ export function SequenceEditor({
         }
         next = { ...next, offer_key: payload.offer_key }
       } else if (payload.kind === 'structure') {
-        const hasBodies = sequence.steps.some(
-          (s) => s.slots.some((slot) => slot.body.trim()) || s.subject.trim()
-        )
-        if (hasBodies) {
-          const ok = window.confirm(
-            'Replace the current sequence scaffold with this structure? Existing slot bodies can be preserved where keys match.'
-          )
-          if (!ok) return
-        }
+        // Click applies immediately; matching slot bodies are preserved.
         next = applyStructureScaffold(sequence, payload.structure_id, {
           offerKey: campaign.offer_key,
           preserveBodies: true
@@ -292,8 +284,6 @@ export function SequenceEditor({
           return
         }
         if (!forked) return
-        const ok = window.confirm(`Fork template “${payload.name}” into this campaign draft?`)
-        if (!ok) return
         next = forked
         patch = {
           offer_key: forked.offer_key ?? campaign.offer_key,
