@@ -464,6 +464,8 @@ export interface LeadListFilters {
    * a new cold campaign (not suppressed / not hot pipeline stages).
    */
   recontact_ready?: '1' | '0'
+  /** People list tab: cold/unreplied Leads vs interested Prospects. */
+  bucket?: 'leads' | 'prospects'
 }
 
 export interface LeadSummaryCounts {

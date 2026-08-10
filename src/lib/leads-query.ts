@@ -1,4 +1,5 @@
 import type { LeadListFilters } from '@/lib/types'
+import { PROSPECT_OUTBOUND_STATUSES, parseLeadBucket } from '@/lib/lead-buckets'
 import { verticalFilterValues, type CompletenessFilter } from '@/lib/leads-meta'
 import { recontactCutoffIso } from '@/lib/recontact-eligibility'
 
@@ -31,7 +32,8 @@ export function parseLeadListFilters(searchParams: URLSearchParams): LeadListFil
     recontact_ok: recontact === '1' || recontact === '0' ? recontact : undefined,
     suppressed: suppressed === '1' || suppressed === '0' ? suppressed : undefined,
     recontact_ready:
-      recontactReady === '1' || recontactReady === '0' ? recontactReady : undefined
+      recontactReady === '1' || recontactReady === '0' ? recontactReady : undefined,
+    bucket: parseLeadBucket(searchParams.get('bucket'))
   }
 }
 
@@ -142,6 +144,17 @@ export function applyLeadFilters<T extends LeadFilterQuery>(query: T, filters: L
     ) as T
   }
 
+  // Leads vs Prospects tabs. Explicit outbound_status still wins when set.
+  if (!filters.outbound_status) {
+    const prospectList = PROSPECT_OUTBOUND_STATUSES.join(',')
+    if (filters.bucket === 'prospects') {
+      q = q.in('outbound_status', [...PROSPECT_OUTBOUND_STATUSES]) as T
+    } else {
+      // Default / leads tab: keep null, Instantly, unreplied, not-interested, etc.
+      q = q.or(`outbound_status.is.null,outbound_status.not.in.(${prospectList})`) as T
+    }
+  }
+
   return q
 }
 
@@ -214,6 +227,7 @@ export function leadFiltersToSearchParams(filters: LeadListFilters, page?: numbe
   if (filters.recontact_ok) params.set('recontact_ok', filters.recontact_ok)
   if (filters.suppressed) params.set('suppressed', filters.suppressed)
   if (filters.recontact_ready) params.set('recontact_ready', filters.recontact_ready)
+  if (filters.bucket === 'prospects') params.set('bucket', 'prospects')
   if (page && page > 1) params.set('page', String(page))
   return params
 }

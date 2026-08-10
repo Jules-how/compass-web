@@ -32,6 +32,8 @@ import { computeRecontactEligibility } from '@/lib/recontact-eligibility'
 import { RecontactProgressRing } from '@/components/RecontactProgressRing'
 import { LeadRecontactPanel } from '@/components/LeadRecontactPanel'
 import { LeadColumnPicker, useLeadColumnVisibility } from '@/components/LeadColumnPicker'
+import type { LeadBucket } from '@/lib/lead-buckets'
+import { LeadSidecar } from '@/components/LeadSidecar'
 
 interface LeadTableProps {
   leads: LeadContact[]
@@ -124,6 +126,7 @@ export default function LeadTable({
   onReload
 }: LeadTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draftFilters, setDraftFilters] = useState<LeadListFilters>(filters)
   const [exporting, setExporting] = useState(false)
   const [exportNote, setExportNote] = useState<string | null>(null)
@@ -136,14 +139,30 @@ export default function LeadTable({
   const [segmentName, setSegmentName] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
+  const bucket: LeadBucket = filters.bucket === 'prospects' ? 'prospects' : 'leads'
+  const selectedLead = useMemo(
+    () => leads.find((l) => l.id === selectedId) ?? null,
+    [leads, selectedId]
+  )
+
   useEffect(() => {
     setDraftFilters(filters)
     setSelected(new Set())
+    setSelectedId(null)
   }, [filters])
 
   useEffect(() => {
     setSavedSegments(loadSavedSegments())
   }, [])
+
+  function switchBucket(next: LeadBucket) {
+    if (next === bucket) return
+    onNavigate({ ...filters, bucket: next }, 1)
+  }
+
+  function withBucket(next: LeadListFilters): LeadListFilters {
+    return { ...next, bucket }
+  }
 
   const phoneSparse = useMemo(() => {
     if (!leads.length) return true
@@ -162,12 +181,12 @@ export default function LeadTable({
   const allSelected = leads.length > 0 && leads.every((l) => selected.has(l.id))
 
   function applyFilters(next: LeadListFilters = draftFilters) {
-    onNavigate(next, 1)
+    onNavigate(withBucket(next), 1)
   }
 
   function patchFilters(patch: Partial<LeadListFilters>) {
     setDraftFilters((f) => {
-      const next = { ...f, ...patch }
+      const next = withBucket({ ...f, ...patch })
       // Selects apply immediately so filter chips match the table (Attio-style).
       onNavigate(next, 1)
       return next
@@ -175,12 +194,12 @@ export default function LeadTable({
   }
 
   function resetFilters() {
-    onNavigate({}, 1)
+    onNavigate({ bucket }, 1)
   }
 
   function goToPage(next: number) {
     if (next < 1) return
-    onNavigate(filters, next)
+    onNavigate(withBucket(filters), next)
   }
 
   function toggleSelect(id: string) {
@@ -405,7 +424,34 @@ export default function LeadTable({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="flex gap-5">
+      <div className="min-w-0 flex-1 space-y-5">
+      {/* Leads / Prospects tabs */}
+      <div className="inline-flex items-center rounded-xl bg-stone-100/90 p-0.5 shadow-soft">
+        <button
+          type="button"
+          onClick={() => switchBucket('leads')}
+          className={`rounded-[10px] px-3.5 py-1.5 text-sm font-medium transition ${
+            bucket === 'leads'
+              ? 'bg-white text-neutral-900 shadow-soft'
+              : 'text-neutral-600 hover:text-neutral-900'
+          }`}
+        >
+          Leads
+        </button>
+        <button
+          type="button"
+          onClick={() => switchBucket('prospects')}
+          className={`rounded-[10px] px-3.5 py-1.5 text-sm font-medium transition ${
+            bucket === 'prospects'
+              ? 'bg-white text-neutral-900 shadow-soft'
+              : 'text-neutral-600 hover:text-neutral-900'
+          }`}
+        >
+          Prospects
+        </button>
+      </div>
+
       {/* Summary chips */}
       {summary && (
         <div className="flex flex-wrap gap-2">
@@ -415,7 +461,7 @@ export default function LeadTable({
               <button
                 key={chip.key}
                 type="button"
-                onClick={() => onNavigate(chip.filters, 1)}
+                onClick={() => onNavigate(withBucket(chip.filters), 1)}
                 className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm transition ${
                   active
                     ? 'border-sf-orange/40 bg-orange-50 text-neutral-900 shadow-soft'
@@ -442,7 +488,7 @@ export default function LeadTable({
             <button
               key={preset.name}
               type="button"
-              onClick={() => onNavigate(preset.filters, 1)}
+              onClick={() => onNavigate(withBucket(preset.filters), 1)}
               className="rounded-xl border border-stone-200/80 px-2.5 py-1 text-xs text-neutral-600 transition hover:bg-stone-50"
             >
               {preset.name}
@@ -453,7 +499,11 @@ export default function LeadTable({
               key={seg.id}
               className="inline-flex items-center gap-1 rounded-xl border border-stone-200/80 bg-stone-50 px-2.5 py-1 text-xs text-neutral-700"
             >
-              <button type="button" onClick={() => onNavigate(seg.filters, 1)} className="hover:underline">
+              <button
+                type="button"
+                onClick={() => onNavigate(withBucket(seg.filters), 1)}
+                className="hover:underline"
+              >
                 {seg.name}
               </button>
               <button
@@ -757,7 +807,7 @@ export default function LeadTable({
                   colSpan={visibleColumns.length + 2}
                   className="px-3 py-8 text-center text-neutral-500"
                 >
-                  No leads match these filters.
+                  No {bucket === 'prospects' ? 'prospects' : 'leads'} match these filters.
                 </td>
               </tr>
             )}
@@ -770,9 +820,12 @@ export default function LeadTable({
               return (
                 <Fragment key={lead.id}>
                   <tr
-                    className={`transition hover:bg-stone-50/80 ${
+                    className={`cursor-pointer transition hover:bg-stone-50/80 ${
                       selected.has(lead.id) ? 'bg-orange-50/40' : ''
-                    } ${recontact.lane === 'ready' ? 'bg-emerald-50/25' : ''}`}
+                    } ${selectedId === lead.id ? 'bg-orange-50/60 ring-1 ring-inset ring-sf-orange/20' : ''} ${
+                      recontact.lane === 'ready' ? 'bg-emerald-50/25' : ''
+                    }`}
+                    onClick={() => setSelectedId(selectedId === lead.id ? null : lead.id)}
                   >
                     <td className="px-2.5 py-1">
                       <input
@@ -792,7 +845,11 @@ export default function LeadTable({
                         sync={sync}
                         recontact={recontact}
                         showVerticalUnderName={false}
-                        onToggleExpand={() => setExpandedId(expanded ? null : lead.id)}
+                        onToggleExpand={() => {
+                          const next = expanded ? null : lead.id
+                          setExpandedId(next)
+                          setSelectedId(next)
+                        }}
                       />
                     ))}
                     <td className="px-2 py-1" />
@@ -820,7 +877,7 @@ export default function LeadTable({
       <div className="flex items-center justify-between text-sm text-neutral-500">
         <span>
           Showing {totalShown === 0 ? 0 : (page - 1) * pageSize + 1}–{totalShown} of{' '}
-          {total.toLocaleString()} leads
+          {total.toLocaleString()} {bucket === 'prospects' ? 'prospects' : 'leads'}
           {summary && summary.filtered !== summary.total
             ? ` (${summary.filtered.toLocaleString()} match filters)`
             : ''}
@@ -845,6 +902,19 @@ export default function LeadTable({
           </button>
         </div>
       </div>
+      </div>
+
+      {selectedLead ? (
+        <div className="sticky top-4 h-[min(80vh,720px)] w-full max-w-[400px] shrink-0 overflow-hidden rounded-2xl border border-stone-200/70 bg-white shadow-soft">
+          <LeadSidecar
+            lead={selectedLead}
+            onClose={() => {
+              setSelectedId(null)
+              setExpandedId(null)
+            }}
+          />
+        </div>
+      ) : null}
     </div>
   )
 }
