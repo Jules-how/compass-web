@@ -22,3 +22,7 @@ next-env.d.ts
 *.pem
 .vercel
 artifacts/
+.env*
+
+# local Cursor hook runtime state (machine paths; not product)
+.cursor/hooks/state/
