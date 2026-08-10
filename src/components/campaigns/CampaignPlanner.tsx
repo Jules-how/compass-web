@@ -17,7 +17,7 @@ import {
   createCampaign as createCampaignRemote,
   deleteCampaign as deleteCampaignRemote,
   listCampaigns,
-  patchCampaign
+  updateCampaign
 } from '@/lib/campaigns-client'
 import {
   CAMPAIGN_HEALTHS,
@@ -300,12 +300,12 @@ export function CampaignPlanner() {
   }
 
   function moveCampaignStatus(id: string, status: CampaignStatus) {
-    void patchCampaign(id, { status }).then(refresh).catch(refresh)
+    void updateCampaign(id, { status }).then(refresh).catch(refresh)
   }
 
   function persistDates(id: string, start: string, end: string) {
     const orderedDates = clampDateOrder(start, end)
-    void patchCampaign(id, {
+    void updateCampaign(id, {
       start_date: orderedDates.start,
       end_date: orderedDates.end
     })
@@ -1231,7 +1231,7 @@ export function CampaignPlanner() {
                 <div className="my-1 border-t border-neutral-100" />
                 <MenuItem
                   onClick={() => {
-                    void patchCampaign(menuCampaign.id, { status: 'active' }).then(refresh).catch(refresh)
+                    void updateCampaign(menuCampaign.id, { status: 'active' }).then(refresh).catch(refresh)
                     setRowMenu(null)
                   }}
                 >
@@ -1239,7 +1239,7 @@ export function CampaignPlanner() {
                 </MenuItem>
                 <MenuItem
                   onClick={() => {
-                    void patchCampaign(menuCampaign.id, { priority: 2 }).then(refresh).catch(refresh)
+                    void updateCampaign(menuCampaign.id, { priority: 2 }).then(refresh).catch(refresh)
                     setRowMenu(null)
                   }}
                 >
@@ -1279,7 +1279,7 @@ export function CampaignPlanner() {
                 <MenuItem
                   key={value}
                   onClick={() => {
-                    void patchCampaign(menuCampaign.id, { status: value }).then(refresh).catch(refresh)
+                    void updateCampaign(menuCampaign.id, { status: value }).then(refresh).catch(refresh)
                     setRowMenu(null)
                   }}
                 >
@@ -1304,7 +1304,7 @@ export function CampaignPlanner() {
                 <MenuItem
                   key={value}
                   onClick={() => {
-                    void patchCampaign(menuCampaign.id, { priority: value }).then(refresh).catch(refresh)
+                    void updateCampaign(menuCampaign.id, { priority: value }).then(refresh).catch(refresh)
                     setRowMenu(null)
                   }}
                 >
@@ -1329,7 +1329,7 @@ export function CampaignPlanner() {
                 <MenuItem
                   key={value}
                   onClick={() => {
-                    void patchCampaign(menuCampaign.id, { health: value }).then(refresh).catch(refresh)
+                    void updateCampaign(menuCampaign.id, { health: value }).then(refresh).catch(refresh)
                     setRowMenu(null)
                   }}
                 >

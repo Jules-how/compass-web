@@ -12,7 +12,6 @@ import {
   parseInboxChannel,
   parseInboxTriage,
   parseLeadLifecycle,
-  type InboxChannel,
   type InboxTriageState,
   type LeadLifecycleStatus
 } from '@/lib/inbox-triage'
@@ -148,5 +147,3 @@ export async function PATCH(request: NextRequest) {
 export async function POST(request: NextRequest) {
   return PATCH(request)
 }
-
-export type { InboxChannel, InboxTriageState }

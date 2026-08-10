@@ -6,9 +6,9 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   deleteCampaign,
   getCampaignDetail,
-  patchCampaign,
   replaceCampaignMilestones,
-  type CampaignCopyPatch
+  updateCampaign,
+  type CampaignPatch
 } from '@/lib/campaigns-client'
 import {
   CAMPAIGN_COLORS,
@@ -74,6 +74,11 @@ export function CampaignSidecar({
   async function hydrate(id: string) {
     try {
       const detail = await getCampaignDetail(id)
+      if (!detail) {
+        setError('not_found')
+        setCampaign(null)
+        return
+      }
       setError(null)
       setCampaign(detail.campaign)
       setActivity(detail.activity)
@@ -115,9 +120,9 @@ export function CampaignSidecar({
     return { scope, started, completed }
   }, [milestones])
 
-  function saveCampaign(patch: CampaignCopyPatch) {
-    void patchCampaign(campaignId, patch)
-      .then((updated) => {
+  function saveCampaign(patch: CampaignPatch) {
+    void updateCampaign(campaignId, patch)
+      .then((updated: CompassCampaign) => {
         void hydrate(campaignId)
         onUpdated(updated)
       })
