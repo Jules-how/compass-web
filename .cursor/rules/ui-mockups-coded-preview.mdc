@@ -1,0 +1,27 @@
+---
+description: UI mockups must be coded local previews (Next/HTML), never Miro/Canva/Figma unless explicitly named
+alwaysApply: true
+---
+
+# UI mockups = coded local preview
+
+When the user asks for a **mockup**, **mock**, **wireframe**, **UI preview**, or “what it would look like” for Compass / this repo:
+
+## Do this
+
+1. Build it as **real code** in the app (preferred: Next.js page under a clear `/…/mock` route using existing Compass components/`Card`/tokens) **or** a static HTML file served locally.
+2. **Start the local/dev server** and give them the URL (e.g. `http://127.0.0.1:3100/...`).
+3. Match the locked Compass UI language (see `compass-ui-lock.mdc`) unless they asked for a visual change.
+
+## Do not do this (unless they explicitly name the tool)
+
+- Miro boards / Miro prototypes
+- Canva designs
+- Figma, Excalidraw, docs-canvas, or other external “design tool” surfaces
+- Image-only mockups when a coded page would show the real chrome
+
+“Edit using the design tool” does **not** mean Miro or Canva. It means they want something they can open and iterate on — default to **code + browser**.
+
+## Exception
+
+Only use Miro, Canva, Figma, etc. when the user **explicitly** asks for that product by name (e.g. “put this in Canva”, “make a Miro board”).

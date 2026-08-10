@@ -19,3 +19,7 @@ The operator UI depth effect, rounded corners, card separation, and **sidebar (s
 - Sidebar motion & chrome: `src/components/ui/sidebar.tsx` (72↔248 hover expand, active pill + orange rail, mobile slide-in)
 
 Do **not** restyle shadows, radii, spacing, wash background, Geist Sans typography, accent treatment, or sidebar expand/collapse motion unless the user explicitly requests a visual change. New UI should match Sales / Home / current shell patterns.
+
+## UI mockups
+
+Mockups / “what it would look like” → **coded local preview** (Next `/…/mock` page or static HTML + `npm run dev`), never Miro/Canva/Figma unless the user names that tool. Rule: [`.cursor/rules/ui-mockups-coded-preview.mdc`](.cursor/rules/ui-mockups-coded-preview.mdc).

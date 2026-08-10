@@ -43,7 +43,12 @@ function statusBadge(status: OutboundBoardCampaign['status']) {
 }
 
 function LiveCampaignCard({ campaign }: { campaign: OutboundBoardCampaign }) {
-  const metaBits = [campaign.offer, campaign.vertical, campaign.location].filter(Boolean)
+  const metaBits = [
+    campaign.offer,
+    campaign.ctaType?.replace(/_/g, ' ') || campaign.cta,
+    campaign.lengthBand,
+    campaign.audience || [campaign.vertical, campaign.location].filter(Boolean).join(' · ')
+  ].filter(Boolean)
   return (
     <div className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
