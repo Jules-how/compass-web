@@ -323,6 +323,35 @@ export function saveLocalOpener(
   return row
 }
 
+export function saveLocalStructure(
+  input: Partial<OutboundStructure> & { structure_id: string; name: string }
+): OutboundStructure {
+  const store = ensureSeeded()
+  const stamp = nowIso()
+  const slots = Array.isArray(input.slots)
+    ? input.slots.map((slot) => ({
+        key: String(slot.key ?? '').trim() || 'custom',
+        label: String(slot.label ?? slot.key ?? 'Custom').trim() || 'Custom',
+        required: Boolean(slot.required),
+        body: typeof slot.body === 'string' ? slot.body : ''
+      }))
+    : []
+  const row: OutboundStructure = {
+    id: input.id || `struct-${crypto.randomUUID()}`,
+    structure_id: input.structure_id.trim(),
+    name: input.name.trim(),
+    description: input.description?.trim() || null,
+    slots,
+    is_default_candidate: Boolean(input.is_default_candidate),
+    archived: Boolean(input.archived),
+    created_at: input.created_at || stamp,
+    updated_at: stamp
+  }
+  store.structures = upsert(store.structures, row)
+  writeStore(store)
+  return row
+}
+
 export function saveLocalTemplate(
   input: Partial<OutboundTemplate> & { name: string; structure_id: string; sequence: OutboundSequence }
 ): OutboundTemplate {

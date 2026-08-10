@@ -106,6 +106,35 @@ test('outbound APIs are operator-gated with same-origin writes', () => {
   assert.match(campaignPatch, /cold_expression/)
 })
 
+test('library browser allows free add for all kinds; edit/archive require lock', () => {
+  const browser = read('src/components/outbound/LibraryBrowser.tsx')
+  assert.doesNotMatch(browser, /Structures and templates are seeded/)
+  assert.match(browser, /saveLocalStructure/)
+  assert.match(browser, /saveLocalTemplate/)
+  assert.match(browser, /scaffoldSequence/)
+  assert.match(browser, /ensureLibraryMutationUnlocked\('edit'\)/)
+  assert.match(browser, /ensureLibraryMutationUnlocked\('archive'\)/)
+  assert.match(browser, /editItem/)
+  assert.match(browser, /archiveItem/)
+  assert.match(browser, />\s*Edit\s*</)
+  assert.match(browser, /lockLibraryMutations/)
+
+  const store = read('src/lib/outbound-local-store.ts')
+  assert.match(store, /export function saveLocalStructure/)
+
+  const lock = read('src/lib/outbound-library-lock.ts')
+  assert.match(lock, /LIBRARY_LOCK_SESSION_KEY/)
+  assert.match(lock, /\/api\/outbound\/library-lock/)
+
+  const lockApi = read('src/app/api/outbound/library-lock/route.ts')
+  assert.match(lockApi, /COMPASS_LIBRARY_LOCK_PASSWORD/)
+  assert.match(lockApi, /requireSameOrigin/)
+  assert.match(lockApi, /compass-library/)
+
+  const envExample = read('.env.example')
+  assert.match(envExample, /COMPASS_LIBRARY_LOCK_PASSWORD/)
+})
+
 test('planner sidecar exposes copy tab and editor deep link', () => {
   const sidecar = read('src/components/campaigns/CampaignSidecar.tsx')
   assert.match(sidecar, /title="Copy"/)

@@ -6,7 +6,20 @@ import { LibraryPageShell } from '@/components/outbound/OutboundHub'
 import { Card, CardContent } from '@/components/ui/card'
 import { listLocalCampaigns } from '@/lib/campaign-local-store'
 import {
+  ensureLibraryMutationUnlocked,
+  isLibraryMutationUnlocked,
+  lockLibraryMutations
+} from '@/lib/outbound-library-lock'
+import { scaffoldSequence, structureSlots } from '@/lib/outbound-copy'
+import {
   archiveLocalLibraryItem,
+  getLocalCta,
+  getLocalExpression,
+  getLocalOffer,
+  getLocalOpener,
+  getLocalStructure,
+  getLocalSubject,
+  getLocalTemplate,
   listLocalCtas,
   listLocalExpressions,
   listLocalOffers,
@@ -18,7 +31,9 @@ import {
   saveLocalExpression,
   saveLocalOffer,
   saveLocalOpener,
-  saveLocalSubject
+  saveLocalStructure,
+  saveLocalSubject,
+  saveLocalTemplate
 } from '@/lib/outbound-local-store'
 
 type Kind = 'offers' | 'expressions' | 'structures' | 'ctas' | 'subjects' | 'openers' | 'templates'
@@ -33,9 +48,15 @@ const META: Record<Kind, { title: string; subtitle: string }> = {
   templates: { title: 'Templates', subtitle: 'Forkable multi-step sequence scaffolds' }
 }
 
+function promptRequired(label: string, initial = ''): string | null {
+  const value = window.prompt(label, initial)?.trim()
+  return value || null
+}
+
 export function LibraryBrowser({ kind }: { kind: Kind }) {
   const [q, setQ] = useState('')
   const [tick, setTick] = useState(0)
+  const [unlocked, setUnlocked] = useState(() => isLibraryMutationUnlocked())
   const meta = META[kind]
   const campaigns = listLocalCampaigns()
 
@@ -117,40 +138,154 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
     return campaigns.filter((c) => c.offer_key === refKey)
   }
 
+  function bump() {
+    setTick((n) => n + 1)
+  }
+
+  /** Add is always free — no library lock. */
   function createItem() {
     if (kind === 'offers') {
-      const offer_key = window.prompt('offer_key')?.trim()
-      const name = window.prompt('Name')?.trim()
-      const pack_summary = window.prompt('Pack summary')?.trim()
+      const offer_key = promptRequired('offer_key')
+      const name = promptRequired('Name')
+      const pack_summary = promptRequired('Pack summary')
       if (!offer_key || !name || !pack_summary) return
       saveLocalOffer({ offer_key, name, pack_summary })
     } else if (kind === 'expressions') {
-      const offer_key = window.prompt('offer_key')?.trim()
-      const label = window.prompt('Label')?.trim()
-      const body = window.prompt('Body')?.trim()
+      const offer_key = promptRequired('offer_key')
+      const label = promptRequired('Label')
+      const body = promptRequired('Body')
       if (!offer_key || !label || !body) return
       saveLocalExpression({ offer_key, label, body, status: 'draft' })
+    } else if (kind === 'structures') {
+      const structure_id = promptRequired('structure_id (e.g. nick-3step or custom-key)')
+      const name = promptRequired('Name')
+      if (!structure_id || !name) return
+      const description = window.prompt('Description (optional)')?.trim() || null
+      saveLocalStructure({
+        structure_id,
+        name,
+        description,
+        slots: structureSlots(structure_id)
+      })
     } else if (kind === 'ctas') {
-      const label = window.prompt('Label')?.trim()
-      const body = window.prompt('Body')?.trim()
+      const label = promptRequired('Label')
+      const body = promptRequired('Body')
       if (!label || !body) return
       saveLocalCta({ label, body, cta_type: 'permission' })
     } else if (kind === 'subjects') {
-      const label = window.prompt('Label')?.trim()
-      const pattern = window.prompt('Pattern')?.trim()
+      const label = promptRequired('Label')
+      const pattern = promptRequired('Pattern')
       if (!label || !pattern) return
       saveLocalSubject({ label, pattern })
     } else if (kind === 'openers') {
-      const label = window.prompt('Label')?.trim()
+      const label = promptRequired('Label')
       const opener_mode = window.prompt('opener_mode', 'custom')?.trim() || 'custom'
       const body = window.prompt('Body') ?? ''
       if (!label) return
       saveLocalOpener({ label, opener_mode, body })
-    } else {
-      window.alert('Structures and templates are seeded; edit via sequence editor Save to library / fork.')
-      return
+    } else if (kind === 'templates') {
+      const name = promptRequired('Name')
+      if (!name) return
+      const structure_id =
+        window.prompt('structure_id', 'nick-3step')?.trim() || 'nick-3step'
+      const offerRaw = window.prompt('offer_key (optional)')?.trim() || ''
+      const offer_key = offerRaw || null
+      saveLocalTemplate({
+        name,
+        structure_id,
+        offer_key,
+        sequence: scaffoldSequence(structure_id, { offerKey: offer_key })
+      })
     }
-    setTick((n) => n + 1)
+    bump()
+  }
+
+  async function editItem(id: string) {
+    if (!(await ensureLibraryMutationUnlocked('edit'))) return
+    setUnlocked(true)
+
+    if (kind === 'offers') {
+      const existing = getLocalOffer(id)
+      if (!existing) return
+      const offer_key = promptRequired('offer_key', existing.offer_key)
+      const name = promptRequired('Name', existing.name)
+      const pack_summary = promptRequired('Pack summary', existing.pack_summary)
+      if (!offer_key || !name || !pack_summary) return
+      saveLocalOffer({ ...existing, offer_key, name, pack_summary })
+    } else if (kind === 'expressions') {
+      const existing = getLocalExpression(id)
+      if (!existing) return
+      const offer_key = promptRequired('offer_key', existing.offer_key)
+      const label = promptRequired('Label', existing.label)
+      const body = promptRequired('Body', existing.body)
+      if (!offer_key || !label || !body) return
+      saveLocalExpression({ ...existing, offer_key, label, body })
+    } else if (kind === 'structures') {
+      const existing = getLocalStructure(id)
+      if (!existing) return
+      const structure_id = promptRequired('structure_id', existing.structure_id)
+      const name = promptRequired('Name', existing.name)
+      if (!structure_id || !name) return
+      const description =
+        window.prompt('Description (optional)', existing.description ?? '')?.trim() || null
+      const slots =
+        structure_id === existing.structure_id && existing.slots.length
+          ? existing.slots
+          : structureSlots(structure_id)
+      saveLocalStructure({ ...existing, structure_id, name, description, slots })
+    } else if (kind === 'ctas') {
+      const existing = getLocalCta(id)
+      if (!existing) return
+      const label = promptRequired('Label', existing.label)
+      const body = promptRequired('Body', existing.body)
+      if (!label || !body) return
+      const cta_type = window.prompt('cta_type', existing.cta_type)?.trim() || existing.cta_type
+      saveLocalCta({ ...existing, label, body, cta_type })
+    } else if (kind === 'subjects') {
+      const existing = getLocalSubject(id)
+      if (!existing) return
+      const label = promptRequired('Label', existing.label)
+      const pattern = promptRequired('Pattern', existing.pattern)
+      if (!label || !pattern) return
+      saveLocalSubject({ ...existing, label, pattern })
+    } else if (kind === 'openers') {
+      const existing = getLocalOpener(id)
+      if (!existing) return
+      const label = promptRequired('Label', existing.label)
+      if (!label) return
+      const opener_mode =
+        window.prompt('opener_mode', existing.opener_mode)?.trim() || existing.opener_mode
+      const body = window.prompt('Body', existing.body) ?? existing.body
+      saveLocalOpener({ ...existing, label, opener_mode, body })
+    } else if (kind === 'templates') {
+      const existing = getLocalTemplate(id)
+      if (!existing) return
+      const name = promptRequired('Name', existing.name)
+      if (!name) return
+      const structure_id =
+        window.prompt('structure_id', existing.structure_id)?.trim() || existing.structure_id
+      const offerRaw =
+        window.prompt('offer_key (optional)', existing.offer_key ?? '')?.trim() || ''
+      const offer_key = offerRaw || null
+      const sequence =
+        structure_id === existing.structure_id
+          ? existing.sequence
+          : scaffoldSequence(structure_id, { offerKey: offer_key })
+      saveLocalTemplate({ ...existing, name, structure_id, offer_key, sequence })
+    }
+    bump()
+  }
+
+  async function archiveItem(id: string) {
+    if (!(await ensureLibraryMutationUnlocked('archive'))) return
+    setUnlocked(true)
+    archiveLocalLibraryItem(kind, id, true)
+    bump()
+  }
+
+  function relock() {
+    lockLibraryMutations()
+    setUnlocked(false)
   }
 
   return (
@@ -158,13 +293,23 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
       title={meta.title}
       subtitle={meta.subtitle}
       actions={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Filter…"
             className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-[12px] shadow-soft"
           />
+          {unlocked ? (
+            <button
+              type="button"
+              onClick={relock}
+              className="rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-[12px] font-medium text-neutral-600 shadow-soft hover:bg-stone-50"
+              title="Require password again for edit/archive"
+            >
+              Lock
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={createItem}
@@ -186,16 +331,22 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
                     <div className="text-[15px] font-semibold text-neutral-900">{row.title}</div>
                     <div className="text-[12px] text-neutral-500">{row.meta}</div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      archiveLocalLibraryItem(kind, row.id, true)
-                      setTick((n) => n + 1)
-                    }}
-                    className="text-[12px] text-neutral-500 hover:text-red-600"
-                  >
-                    Archive
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => void editItem(row.id)}
+                      className="text-[12px] text-neutral-500 hover:text-[#c2410c]"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void archiveItem(row.id)}
+                      className="text-[12px] text-neutral-500 hover:text-red-600"
+                    >
+                      Archive
+                    </button>
+                  </div>
                 </div>
                 {row.body ? <p className="text-sm leading-relaxed text-neutral-700">{row.body}</p> : null}
                 {row.tags.length ? (
