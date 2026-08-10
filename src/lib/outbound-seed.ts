@@ -1,12 +1,15 @@
 import {
-  COMPLIANCE_FOOTER_SLOTS,
   STRUCTURE_DESCRIPTIONS,
+  deriveCopyArchiveComponents,
+  emptyFollowUpStep,
   scaffoldSequence,
   structureSlots,
+  type CopyArchiveEntry,
   type OutboundCta,
   type OutboundExpression,
   type OutboundOpener,
   type OutboundOffer,
+  type OutboundSequence,
   type OutboundStructure,
   type OutboundSubject,
   type OutboundTemplate
@@ -357,6 +360,317 @@ export function seedTemplates(): OutboundTemplate[] {
   ]
 }
 
+function fillSequence(
+  structureId: string,
+  offerKey: string | null,
+  fields: {
+    subject: string
+    opener?: string
+    proof?: string
+    expression: string
+    cta: string
+    followUp?: { subject?: string; bump: string; cta: string }
+  }
+): OutboundSequence {
+  const seq = scaffoldSequence(structureId, { offerKey, withFollowUp: Boolean(fields.followUp) })
+  const email = seq.steps[0]
+  if (!email) return seq
+  email.subject = fields.subject
+  const set = (key: string, body?: string) => {
+    if (body === undefined) return
+    const slot = email.slots.find((s) => s.key === key)
+    if (slot) slot.body = body
+  }
+  set('opener', fields.opener)
+  set('proof_block', fields.proof)
+  set('cold_expression', fields.expression)
+  set('cta', fields.cta)
+  set('availability_ask', fields.cta)
+  if (fields.followUp) {
+    const fu = seq.steps[1] ?? emptyFollowUpStep(1, 3)
+    if (!seq.steps[1]) seq.steps.push(fu)
+    fu.subject = fields.followUp.subject ?? ''
+    const bump = fu.slots.find((s) => s.key === 'opener')
+    if (bump) bump.body = fields.followUp.bump
+    const cta = fu.slots.find((s) => s.key === 'cta')
+    if (cta) cta.body = fields.followUp.cta
+  }
+  return seq
+}
+
+function archiveEntry(
+  partial: Omit<CopyArchiveEntry, 'components' | 'archived'> & { archived?: boolean }
+): CopyArchiveEntry {
+  const offer = seedOffers().find((o) => o.offer_key === partial.offer_key)
+  return {
+    ...partial,
+    archived: partial.archived ?? false,
+    components: deriveCopyArchiveComponents(partial.sequence, {
+      offer_key: partial.offer_key,
+      offer_label: offer?.name ?? null,
+      opener_mode: partial.opener_mode
+    })
+  }
+}
+
+/** Seeded Archive rows — full sequences with demo Instantly-style performance. */
+export function seedCopyArchive(): CopyArchiveEntry[] {
+  const nswElectricians = fillSequence('nick-3step', 'growth-system', {
+    subject: '{{companyName}} / {{firstName}}',
+    opener: '{{opener}}',
+    expression:
+      "I'll get you {{bookedN}} booked chats with homeowners in the first 30 days after access and budget are live, or I refund the setup fee in full.",
+    cta: 'Mind if I send over {{asset}}?',
+    followUp: {
+      bump: 'Circling back in case this landed under the pile — happy to send the short outline if useful.',
+      cta: 'Mind if I send over {{asset}}?'
+    }
+  })
+
+  const qldTradies = fillSequence('platten-aida', 'ai-receptionist-system', {
+    subject: '{{outcome}} for {{companyName}}',
+    opener: '{{hook}}',
+    proof: 'Teams like yours keep the phone line covered after hours without hiring another receptionist.',
+    expression:
+      'Missed calls after 5pm turn into booked jobs the next morning — answered, qualified, and SMS’d on your number.',
+    cta: 'Would you be open to 15 minutes? If so, I can ring at {{t1}} or {{t2}}.',
+    followUp: {
+      bump: 'Quick bump — still happy to walk through a missed-call example for {{companyName}}.',
+      cta: 'Would {{t1}} or {{t2}} work for a short call?'
+    }
+  })
+
+  const brokersEnablement = fillSequence('connor-3para', 'ai-enablement', {
+    subject: '{{companyName}} / {{firstName}}',
+    opener: '',
+    expression:
+      'Within 30 days of access, your marketing, quote follow-up, and review tools are set up and someone on your side can run them, or you get the install fee back.',
+    cta: 'If I trained you up so you could use AI for ads, the website, invoices, follow-ups, and a chunk of the office work, would that actually help {{companyName}}?',
+    followUp: {
+      bump: 'Still relevant if you’re looking to pull more of the marketing stack in-house this quarter.',
+      cta: 'Worth a quick look for {{companyName}}?'
+    }
+  })
+  // Connor uses who_line / why / availability_ask — remap for realism
+  {
+    const email = brokersEnablement.steps[0]
+    if (email) {
+      const who = email.slots.find((s) => s.key === 'who_line')
+      if (who) {
+        who.body =
+          'I help mortgage brokers install marketing and follow-up tools in-house so the team can run them without another agency retainer.'
+      }
+      const why = email.slots.find((s) => s.key === 'why_priorities_and_outcomes')
+      if (why) {
+        why.body =
+          'Most brokerages we work with want more borrower chats without adding headcount — we set up the stack and train someone on your side in under 30 days.'
+      }
+      const ask = email.slots.find((s) => s.key === 'availability_ask')
+      if (ask) {
+        ask.body =
+          'If that sounds useful for {{companyName}}, I can show a short walkthrough — does {{t1}} or {{t2}} work?'
+      }
+    }
+  }
+
+  const agenciesReporting = fillSequence('nick-4step', 'agency-ai-reporting', {
+    subject: '{{outcome}} for {{companyName}}',
+    opener: '{{opener}}',
+    proof: 'Agencies using the reporting pack cut client-report build time from hours to minutes.',
+    expression:
+      'Client reporting packs assemble themselves from the sources you already use — ready to send without a late-night scramble.',
+    cta: "Mind if I send a short outline of how I'd run it for you?",
+    followUp: {
+      bump: 'Sharing in case reporting still eats evenings before client check-ins.',
+      cta: "Mind if I send a short outline of how I'd run it for you?"
+    }
+  })
+
+  const juneClosed = fillSequence('nick-3step', 'growth-system', {
+    subject: '{{companyName}} / {{firstName}}',
+    opener: '{{opener}}',
+    expression:
+      "I'll get you {{bookedN}} booked chats with homeowners in the first 30 days after access and budget are live, or I refund the setup fee in full.",
+    cta: 'Mind if I send over {{asset}}?',
+    followUp: {
+      bump: 'Last note from me — happy to send the outline if the timing is better now.',
+      cta: 'Mind if I send over {{asset}}?'
+    }
+  })
+
+  const aprilTradies = fillSequence('platten-aida', 'ai-receptionist-system', {
+    subject: '{{outcome}} for {{companyName}}',
+    opener: '{{hook}}',
+    proof: 'QLD trade teams keep after-hours coverage without a second hire.',
+    expression:
+      'Missed calls after hours become booked jobs overnight — answered and qualified on your number.',
+    cta: 'Would you be open to 15 minutes? If so, I can ring at {{t1}} or {{t2}}.',
+    followUp: {
+      bump: 'Seasonal bump — still relevant if after-hours calls are slipping.',
+      cta: 'Would {{t1}} or {{t2}} work?'
+    }
+  })
+
+  return [
+    archiveEntry({
+      id: 'archive-nsw-elec-growth',
+      name: 'NSW Electricians — Growth System',
+      source: 'saved',
+      source_id: 'ob-live-1',
+      vertical_tags: ['electricians'],
+      location_tags: ['nsw'],
+      offer_key: 'growth-system',
+      structure_id: 'nick-3step',
+      opener_mode: 'nick-tier',
+      sequence: nswElectricians,
+      performance: {
+        sendCount: 1680,
+        replyCount: 64,
+        replyRate: 3.8,
+        positiveReplies: 42,
+        meetings: 11,
+        leadCount: 2400,
+        campaignCount: 2
+      },
+      last_used_at: '2026-08-07T04:12:00.000Z',
+      first_used_at: '2026-07-28T00:00:00.000Z',
+      notes: 'Nick 3-step · permission CTA · au-national opener tier',
+      created_at: '2026-07-28T00:00:00.000Z',
+      updated_at: '2026-08-07T04:12:00.000Z'
+    }),
+    archiveEntry({
+      id: 'archive-qld-tradies-receptionist',
+      name: 'QLD Tradies — AI Receptionist',
+      source: 'saved',
+      source_id: 'ob-live-2',
+      vertical_tags: ['tradies'],
+      location_tags: ['qld'],
+      offer_key: 'ai-receptionist-system',
+      structure_id: 'platten-aida',
+      opener_mode: 'platten-hook',
+      sequence: qldTradies,
+      performance: {
+        sendCount: 980,
+        replyCount: 40,
+        replyRate: 4.1,
+        positiveReplies: 31,
+        meetings: 8,
+        leadCount: 1850,
+        campaignCount: 1
+      },
+      last_used_at: '2026-08-07T03:40:00.000Z',
+      first_used_at: '2026-07-30T00:00:00.000Z',
+      notes: 'Platten AIDA · missed-call hook · timed call CTA',
+      created_at: '2026-07-30T00:00:00.000Z',
+      updated_at: '2026-08-07T03:40:00.000Z'
+    }),
+    archiveEntry({
+      id: 'archive-brokers-enablement',
+      name: 'Mortgage Brokers AU — Enablement',
+      source: 'saved',
+      source_id: 'ob-live-3',
+      vertical_tags: ['mortgage-brokers'],
+      location_tags: ['au-national'],
+      offer_key: 'ai-enablement',
+      structure_id: 'connor-3para',
+      opener_mode: 'connor-intel',
+      sequence: brokersEnablement,
+      performance: {
+        sendCount: 2100,
+        replyCount: 61,
+        replyRate: 2.9,
+        positiveReplies: 38,
+        meetings: 9,
+        leadCount: 3200,
+        campaignCount: 2
+      },
+      last_used_at: '2026-08-06T22:10:00.000Z',
+      first_used_at: '2026-07-22T00:00:00.000Z',
+      notes: 'Connor 3-para · interest-check / availability ask',
+      created_at: '2026-07-22T00:00:00.000Z',
+      updated_at: '2026-08-06T22:10:00.000Z'
+    }),
+    archiveEntry({
+      id: 'archive-agencies-reporting',
+      name: 'Agency Owners — Reporting Pack',
+      source: 'saved',
+      source_id: 'ob-live-4',
+      vertical_tags: ['agencies'],
+      location_tags: ['au-national'],
+      offer_key: 'agency-ai-reporting',
+      structure_id: 'nick-4step',
+      opener_mode: 'nick-tier',
+      sequence: agenciesReporting,
+      performance: {
+        sendCount: 420,
+        replyCount: 22,
+        replyRate: 5.2,
+        positiveReplies: 18,
+        meetings: 5,
+        leadCount: 1100,
+        campaignCount: 1
+      },
+      last_used_at: '2026-08-06T18:00:00.000Z',
+      first_used_at: '2026-08-01T00:00:00.000Z',
+      notes: 'Nick 4-step · give-first outline CTA · soft proof',
+      created_at: '2026-08-01T00:00:00.000Z',
+      updated_at: '2026-08-06T18:00:00.000Z'
+    }),
+    archiveEntry({
+      id: 'archive-june-elec-closed',
+      name: 'June Electricians Closed',
+      source: 'saved',
+      source_id: 'ob-hist-1',
+      vertical_tags: ['electricians'],
+      location_tags: ['nsw'],
+      offer_key: 'growth-system',
+      structure_id: 'nick-3step',
+      opener_mode: 'nick-tier',
+      sequence: juneClosed,
+      performance: {
+        sendCount: 2000,
+        replyCount: 72,
+        replyRate: 3.6,
+        positiveReplies: 51,
+        meetings: 14,
+        leadCount: 2000,
+        campaignCount: 1
+      },
+      last_used_at: '2026-06-28T00:00:00.000Z',
+      first_used_at: '2026-06-01T00:00:00.000Z',
+      notes: 'Completed · archived sequence fork',
+      created_at: '2026-06-01T00:00:00.000Z',
+      updated_at: '2026-06-28T00:00:00.000Z'
+    }),
+    archiveEntry({
+      id: 'archive-april-tradies-qld',
+      name: 'April Tradies QLD',
+      source: 'saved',
+      source_id: 'ob-hist-3',
+      vertical_tags: ['tradies'],
+      location_tags: ['qld'],
+      offer_key: 'ai-receptionist-system',
+      structure_id: 'platten-aida',
+      opener_mode: 'platten-hook',
+      sequence: aprilTradies,
+      performance: {
+        sendCount: 1200,
+        replyCount: 48,
+        replyRate: 4.0,
+        positiveReplies: 33,
+        meetings: 7,
+        leadCount: 1200,
+        campaignCount: 1
+      },
+      last_used_at: '2026-04-26T00:00:00.000Z',
+      first_used_at: '2026-04-02T00:00:00.000Z',
+      notes: 'Completed · AIDA · seasonal list exhaust',
+      created_at: '2026-04-02T00:00:00.000Z',
+      updated_at: '2026-04-26T00:00:00.000Z'
+    })
+  ]
+}
+
 /** Guard used in tests — seed inventory must stay scoped. */
 export function seedInventoryCounts() {
   return {
@@ -366,6 +680,7 @@ export function seedInventoryCounts() {
     ctas: seedCtas().length,
     subjects: seedSubjects().length,
     openers: seedOpeners().length,
-    templates: seedTemplates().length
+    templates: seedTemplates().length,
+    copyArchive: seedCopyArchive().length
   }
 }

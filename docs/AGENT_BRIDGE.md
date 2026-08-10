@@ -14,6 +14,9 @@ Cursor **local** and **cloud** agents connect to Compass-Web over a secret-authe
 Apply migrations:
 - `0034_compass_outbound_copy.sql` — outbound libraries + campaign copy columns
 - `0035_compass_agent_sync.sql` — `compass_sync_snapshots`
+- `0037_compass_outbound_copy_archive.sql` — editor Copy Archive (`compass_outbound_copy_archive`)
+
+Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/DELETE) for saved sequences with vertical tags, component breakdown, Instantly-style performance, and `last_used_at`.
 
 ## Endpoints
 

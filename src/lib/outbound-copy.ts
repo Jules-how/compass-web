@@ -170,6 +170,143 @@ export type OutboundTemplate = {
   updated_at: string
 }
 
+/** Proven / reusable cold-email sequence snapshots (editor Archive tab). */
+export type CopyArchiveSource = 'saved' | 'template' | 'campaign'
+
+export type CopyArchiveComponents = {
+  offer_key: string | null
+  offer_label: string | null
+  structure_id: string
+  structure_label: string
+  opener_mode: string | null
+  opener_preview: string | null
+  expression_preview: string | null
+  cta_preview: string | null
+  subject: string | null
+  step_count: number
+  slot_keys: string[]
+}
+
+export type CopyArchivePerformance = {
+  sendCount: number
+  replyCount: number
+  replyRate: number
+  positiveReplies: number
+  meetings: number
+  leadCount: number
+  campaignCount: number
+}
+
+export type CopyArchiveEntry = {
+  id: string
+  name: string
+  source: CopyArchiveSource
+  source_id: string | null
+  vertical_tags: string[]
+  location_tags: string[]
+  offer_key: string | null
+  structure_id: string
+  opener_mode: string | null
+  sequence: OutboundSequence
+  components: CopyArchiveComponents
+  performance: CopyArchivePerformance
+  last_used_at: string | null
+  first_used_at: string | null
+  notes: string | null
+  archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+export const COPY_ARCHIVE_SORT_KEYS = ['reply', 'last_used', 'sent', 'name'] as const
+export type CopyArchiveSortKey = (typeof COPY_ARCHIVE_SORT_KEYS)[number]
+
+export const STRUCTURE_LABELS: Record<string, string> = {
+  'nick-4step': 'Nick 4-step',
+  'nick-3step': 'Nick 3-step',
+  'platten-aida': 'Platten AIDA',
+  'connor-3para': 'Connor 3-para'
+}
+
+const ARCHIVE_BODY_SLOT_SKIP = new Set(['accountSignature', 'spam_act_opt_out', 'subject'])
+
+function truncatePreview(text: string, max = 72): string | null {
+  const t = text.trim().replace(/\s+/g, ' ')
+  if (!t) return null
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
+/** Derive scannable component labels from a forked sequence + campaign meta. */
+export function deriveCopyArchiveComponents(
+  sequence: OutboundSequence,
+  meta?: {
+    offer_key?: string | null
+    offer_label?: string | null
+    opener_mode?: string | null
+  }
+): CopyArchiveComponents {
+  const email = sequence.steps.find((s) => s.kind === 'email') ?? sequence.steps[0]
+  const slotMap = new Map((email?.slots ?? []).map((s) => [s.key, s.body]))
+  const slotKeys = (email?.slots ?? [])
+    .filter((s) => !ARCHIVE_BODY_SLOT_SKIP.has(s.key) && s.body.trim())
+    .map((s) => s.key)
+  const structureId = sequence.structure_id || 'nick-3step'
+  const offerKey = meta?.offer_key ?? sequence.offer_key ?? null
+  return {
+    offer_key: offerKey,
+    offer_label: meta?.offer_label ?? null,
+    structure_id: structureId,
+    structure_label: STRUCTURE_LABELS[structureId] ?? structureId,
+    opener_mode: meta?.opener_mode ?? null,
+    opener_preview: truncatePreview(slotMap.get('opener') ?? ''),
+    expression_preview: truncatePreview(slotMap.get('cold_expression') ?? ''),
+    cta_preview: truncatePreview(
+      slotMap.get('cta') ?? slotMap.get('availability_ask') ?? ''
+    ),
+    subject: truncatePreview(email?.subject ?? '', 64),
+    step_count: sequence.steps.length,
+    slot_keys: slotKeys
+  }
+}
+
+export function emptyCopyArchivePerformance(): CopyArchivePerformance {
+  return {
+    sendCount: 0,
+    replyCount: 0,
+    replyRate: 0,
+    positiveReplies: 0,
+    meetings: 0,
+    leadCount: 0,
+    campaignCount: 0
+  }
+}
+
+export function formatRelativeUsedAt(iso: string | null | undefined, now = Date.now()): string {
+  if (!iso) return 'Never used'
+  const then = Date.parse(iso)
+  if (!Number.isFinite(then)) return 'Never used'
+  const diffMs = Math.max(0, now - then)
+  const mins = Math.floor(diffMs / 60_000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 48) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 45) return `${days}d ago`
+  const months = Math.floor(days / 30)
+  return `${months}mo ago`
+}
+
+/** Flatten email step body for preview / insert-into-step. */
+export function sequenceEmailBodyText(sequence: OutboundSequence, stepIndex = 0): string {
+  const step = sequence.steps[stepIndex]
+  if (!step) return ''
+  return step.slots
+    .filter((s) => !ARCHIVE_BODY_SLOT_SKIP.has(s.key) && s.body.trim())
+    .map((s) => s.body.trim())
+    .join('\n\n')
+}
+
 export const VERTICAL_TAG_HINTS = [
   'electricians',
   'tradies',

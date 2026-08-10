@@ -34,13 +34,14 @@ import {
   type LibraryDragPayload
 } from '@/components/outbound/EditorComponentsAccordion'
 import { CampaignCopyMeta } from '@/components/outbound/CampaignCopyMeta'
+import { CopyArchivePanel } from '@/components/outbound/CopyArchivePanel'
 import { SequenceAnalyticsPanel } from '@/components/outbound/SequenceAnalyticsPanel'
 import { INSTANTLY_BASE_VARIABLES } from '@/lib/instantly-variables'
 import { cn } from '@/lib/utils'
 
 const UNBOUND_KEY = 'compass.outbound.unbound-draft.v1'
 
-type EditorTab = 'analytics' | 'editor' | 'leads' | 'settings'
+type EditorTab = 'analytics' | 'editor' | 'archive' | 'leads' | 'settings'
 
 function readUnbound(): { campaign: CompassCampaign; sequence: OutboundSequence } | null {
   if (typeof window === 'undefined') return null
@@ -404,6 +405,7 @@ export function SequenceEditor({
   const tabs: { id: EditorTab; label: string }[] = [
     { id: 'analytics', label: 'Analytics' },
     { id: 'editor', label: 'Editor' },
+    { id: 'archive', label: 'Archive' },
     { id: 'leads', label: 'Leads' },
     { id: 'settings', label: 'Settings' }
   ]
@@ -436,14 +438,14 @@ export function SequenceEditor({
           />
         </div>
 
-        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 md:flex">
+        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-0.5 sm:flex">
           {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
               className={cn(
-                'relative px-3 py-1.5 text-[13px] font-medium transition',
+                'relative px-2.5 py-1.5 text-[13px] font-medium transition md:px-3',
                 tab === t.id ? 'text-neutral-900' : 'text-neutral-500 hover:text-neutral-800'
               )}
             >
@@ -492,6 +494,30 @@ export function SequenceEditor({
       <div className="flex min-h-0 flex-1">
         {/* Canvas */}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          {tab === 'archive' ? (
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <CopyArchivePanel
+                campaign={campaign}
+                sequence={sequence}
+                onForkSequence={(next, meta) => {
+                  updateSequence(next, meta)
+                  setActiveStepId(next.steps[0]?.id ?? null)
+                  setTab('editor')
+                }}
+                onInsertIntoStep={(subject, body) => {
+                  const stepId = activeStepId || sequence.steps[0]?.id
+                  if (!stepId) return
+                  let next = setStepSubject(sequence, stepId, subject)
+                  next = writeStepBody(next, stepId, body)
+                  const patch: Partial<CompassCampaign> = {}
+                  const stepIndex = next.steps.findIndex((s) => s.id === stepId)
+                  if (stepIndex === 0) patch.cold_expression = body
+                  updateSequence(next, patch)
+                  setTab('editor')
+                }}
+              />
+            </div>
+          ) : (
           <div className="min-h-0 flex-1 overflow-y-auto">
           {tab === 'editor' ? (
             <div
@@ -677,6 +703,7 @@ export function SequenceEditor({
             </div>
           ) : null}
           </div>
+          )}
 
           {tab === 'editor' ? (
             <div className="shrink-0 border-t border-stone-200/80 bg-white px-4 py-3 shadow-soft">
