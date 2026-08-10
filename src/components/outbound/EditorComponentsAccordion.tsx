@@ -314,6 +314,12 @@ export function EditorComponentsAccordion({
             )
           })}
         </div>
+        {offerKeyFilter ? (
+          <p className="text-[11px] text-neutral-500">
+            Offer-scoped items filtered to{' '}
+            <span className="font-medium text-neutral-700">{offerKeyFilter}</span>
+          </p>
+        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">

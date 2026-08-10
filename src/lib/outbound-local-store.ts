@@ -108,7 +108,12 @@ function matchesFilters(
   searchText?: string
 ): boolean {
   if (!filters?.includeArchived && row.archived) return false
-  if (filters?.offer_key && row.offer_key !== filters.offer_key) return false
+  // Offer filter only excludes offer-scoped rows. CTAs / subjects / openers /
+  // structures (and null-key templates) have no offer_key and must stay visible.
+  if (filters?.offer_key) {
+    const scoped = row.offer_key
+    if (typeof scoped === 'string' && scoped && scoped !== filters.offer_key) return false
+  }
   if (filters?.vertical && !(row.vertical_tags ?? []).includes(filters.vertical)) return false
   if (filters?.location && !(row.location_tags ?? []).includes(filters.location)) return false
   if (filters?.q?.trim()) {

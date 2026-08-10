@@ -52,7 +52,11 @@ export function filterLibraryRows<T extends Record<string, unknown>>(
 ): T[] {
   return rows.filter((row) => {
     if (!filters.includeArchived && row.archived === true) return false
-    if (filters.offer_key && row.offer_key !== filters.offer_key) return false
+    // Only exclude rows scoped to a different offer; unscoped library items stay visible.
+    if (filters.offer_key) {
+      const scoped = row.offer_key
+      if (typeof scoped === 'string' && scoped && scoped !== filters.offer_key) return false
+    }
     const verticals = Array.isArray(row.vertical_tags) ? (row.vertical_tags as string[]) : []
     const locations = Array.isArray(row.location_tags) ? (row.location_tags as string[]) : []
     if (filters.vertical && !verticals.includes(filters.vertical)) return false
