@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { LibraryPageShell } from '@/components/outbound/OutboundHub'
 import { Card, CardContent } from '@/components/ui/card'
-import { listLocalCampaigns } from '@/lib/campaign-local-store'
+import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
+import type { CompassCampaign } from '@/lib/campaigns'
 import {
   ensureLibraryMutationUnlocked,
   isLibraryMutationUnlocked,
@@ -35,6 +36,7 @@ import {
   saveLocalSubject,
   saveLocalTemplate
 } from '@/lib/outbound-local-store'
+import { useCachedJson } from '@/lib/use-cached-json'
 
 type Kind = 'offers' | 'expressions' | 'structures' | 'ctas' | 'subjects' | 'openers' | 'templates'
 
@@ -58,7 +60,12 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
   const [tick, setTick] = useState(0)
   const [unlocked, setUnlocked] = useState(() => isLibraryMutationUnlocked())
   const meta = META[kind]
-  const campaigns = listLocalCampaigns()
+  const campaignsQuery = useCachedJson<{ campaigns: CompassCampaign[] }>(
+    CAMPAIGNS_QUERY_KEY,
+    '/api/campaigns',
+    { staleMs: 30_000 }
+  )
+  const campaigns = campaignsQuery.data?.campaigns ?? []
 
   const rows = useMemo(() => {
     void tick

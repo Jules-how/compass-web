@@ -2,9 +2,11 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { listLocalCampaigns } from '@/lib/campaign-local-store'
+import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
+import type { CompassCampaign } from '@/lib/campaigns'
 import { copyStatusLabel, LOCATION_TAG_HINTS, VERTICAL_TAG_HINTS } from '@/lib/outbound-copy'
 import { listLocalOffers } from '@/lib/outbound-local-store'
+import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
 export function CampaignCopyMatrix({
@@ -21,9 +23,14 @@ export function CampaignCopyMatrix({
   const [locationFilter, setLocationFilter] = useState(location || 'all')
   const [copyFilter, setCopyFilter] = useState('all')
   const offers = listLocalOffers()
-  const campaigns = listLocalCampaigns()
+  const campaignsQuery = useCachedJson<{ campaigns: CompassCampaign[] }>(
+    CAMPAIGNS_QUERY_KEY,
+    '/api/campaigns',
+    { staleMs: 30_000 }
+  )
 
   const rows = useMemo(() => {
+    const campaigns = campaignsQuery.data?.campaigns ?? []
     return campaigns.filter((c) => {
       if (offerFilter !== 'all' && c.offer_key !== offerFilter) return false
       if (verticalFilter !== 'all' && !(c.vertical_tags ?? []).includes(verticalFilter)) return false
@@ -31,7 +38,7 @@ export function CampaignCopyMatrix({
       if (copyFilter !== 'all' && (c.copy_status || 'none') !== copyFilter) return false
       return true
     })
-  }, [campaigns, offerFilter, verticalFilter, locationFilter, copyFilter])
+  }, [campaignsQuery.data?.campaigns, offerFilter, verticalFilter, locationFilter, copyFilter])
 
   return (
     <div className="rounded-2xl border border-stone-200/70 bg-white shadow-soft">

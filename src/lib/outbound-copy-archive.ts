@@ -1,6 +1,6 @@
 /** Local Copy Archive store + list helpers for the Sequence Editor Archive tab. */
 
-import { listLocalCampaigns } from '@/lib/campaign-local-store'
+import type { CompassCampaign } from '@/lib/campaigns'
 import {
   deriveCopyArchiveComponents,
   emptyCopyArchivePerformance,
@@ -32,6 +32,8 @@ export type CopyArchiveListFilters = {
   includeArchived?: boolean
   /** When false, skip auto-derived template/campaign rows (saved archive only). Default true. */
   includeDerived?: boolean
+  /** Pipeline campaigns from Supabase (used to derive archive rows). */
+  pipelineCampaigns?: CompassCampaign[]
 }
 
 function nowIso(): string {
@@ -284,7 +286,7 @@ export function listCopyArchive(filters?: CopyArchiveListFilters): CopyArchiveEn
       derived.push(templateAsArchive(tmpl))
     }
 
-    for (const campaign of listLocalCampaigns()) {
+    for (const campaign of filters?.pipelineCampaigns ?? []) {
       if (claimedSources.has(`campaign:${campaign.id}`)) continue
       if (!campaign.sequence_draft || campaign.copy_status === 'none') continue
       const row = campaignAsArchive(campaign)
