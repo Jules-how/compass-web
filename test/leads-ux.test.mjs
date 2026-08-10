@@ -138,6 +138,8 @@ test('LeadTable surfaces search, segments, bulk actions, and hides UUID by defau
   assert.match(table, /LeadColumnPicker/)
   assert.match(table, /date_added/)
   assert.match(table, /formatRelativeLeadDate/)
+  assert.match(table, /variant=\"header\"/)
+  assert.match(table, /sticky top-0/)
   assert.doesNotMatch(table, /\{lead\.id\}<\/div>/)
   assert.match(panel, /\/api\/leads\/summary/)
   assert.match(panel, /\/api\/leads\/facets/)

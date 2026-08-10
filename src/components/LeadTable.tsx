@@ -715,11 +715,11 @@ export default function LeadTable({
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-2xl border border-stone-200/70 bg-white shadow-soft">
-        <table className="w-full min-w-[980px] text-left text-[13px] leading-snug">
-          <thead className="bg-stone-50/80 text-[10px] uppercase tracking-wide text-neutral-500">
+      <div className="max-h-[70vh] overflow-auto rounded-2xl border border-stone-200/70 bg-white shadow-soft">
+        <table className="w-full min-w-[980px] border-collapse text-left text-[13px] leading-tight">
+          <thead className="sticky top-0 z-10 border-b border-stone-200 bg-stone-50/95 text-[11px] font-medium text-neutral-500 backdrop-blur-sm">
             <tr>
-              <th className="w-9 px-3 py-2">
+              <th className="w-9 px-2.5 py-1.5">
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -732,7 +732,7 @@ export default function LeadTable({
                 return (
                   <th
                     key={colId}
-                    className={`px-3 py-2 font-medium ${
+                    className={`whitespace-nowrap px-2.5 py-1.5 font-medium ${
                       colId === 'campaign' ? 'min-w-[160px]' : ''
                     }`}
                   >
@@ -740,13 +740,21 @@ export default function LeadTable({
                   </th>
                 )
               })}
+              <th className="w-10 px-2 py-1.5 text-right">
+                <LeadColumnPicker
+                  phoneSparse={phoneSparse}
+                  visible={visibleColumns}
+                  onChange={setVisibleColumns}
+                  variant="header"
+                />
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
             {leads.length === 0 && (
               <tr>
                 <td
-                  colSpan={visibleColumns.length + 1}
+                  colSpan={visibleColumns.length + 2}
                   className="px-3 py-8 text-center text-neutral-500"
                 >
                   No leads match these filters.
@@ -759,15 +767,14 @@ export default function LeadTable({
               const campaign =
                 lead.instantly_campaign_name || lead.instantly_campaign || null
               const recontact = computeRecontactEligibility(lead)
-              const showVerticalUnderName = !visibleColumns.includes('vertical')
               return (
                 <Fragment key={lead.id}>
                   <tr
-                    className={`transition hover:bg-stone-50/70 ${
+                    className={`transition hover:bg-stone-50/80 ${
                       selected.has(lead.id) ? 'bg-orange-50/40' : ''
-                    } ${recontact.lane === 'ready' ? 'bg-emerald-50/30' : ''}`}
+                    } ${recontact.lane === 'ready' ? 'bg-emerald-50/25' : ''}`}
                   >
-                    <td className="px-3 py-1.5">
+                    <td className="px-2.5 py-1">
                       <input
                         type="checkbox"
                         checked={selected.has(lead.id)}
@@ -784,14 +791,15 @@ export default function LeadTable({
                         campaign={campaign}
                         sync={sync}
                         recontact={recontact}
-                        showVerticalUnderName={showVerticalUnderName}
+                        showVerticalUnderName={false}
                         onToggleExpand={() => setExpandedId(expanded ? null : lead.id)}
                       />
                     ))}
+                    <td className="px-2 py-1" />
                   </tr>
                   {expanded && (
                     <tr key={`${lead.id}-detail`} className="bg-stone-50/60">
-                      <td colSpan={visibleColumns.length + 1} className="px-4 py-4">
+                      <td colSpan={visibleColumns.length + 2} className="px-4 py-4">
                         <LeadDetail
                           lead={lead}
                           sync={sync}
@@ -858,7 +866,7 @@ function LeadCell({
   showVerticalUnderName: boolean
   onToggleExpand: () => void
 }) {
-  const cellPad = 'px-3 py-1.5'
+  const cellPad = 'px-2.5 py-1'
   switch (colId) {
     case 'name':
       return (
@@ -866,20 +874,19 @@ function LeadCell({
           className={`cursor-pointer ${cellPad} font-medium text-neutral-900`}
           onClick={onToggleExpand}
         >
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 items-center gap-1.5">
             <span className="truncate">{lead.name || '—'}</span>
             {lead.interest_label && (
               <span className="shrink-0 rounded bg-emerald-50 px-1 py-px text-[9px] font-medium uppercase tracking-wide text-emerald-700">
                 {lead.interest_label}
               </span>
             )}
+            {showVerticalUnderName ? (
+              <span className="truncate text-[11px] font-normal text-neutral-400">
+                · {humanizeVertical(lead.vertical)}
+              </span>
+            ) : null}
           </div>
-          {showVerticalUnderName ? (
-            <div className="truncate text-[11px] font-normal text-neutral-400">
-              {humanizeVertical(lead.vertical)}
-              {lead.source ? ` · ${lead.source}` : ''}
-            </div>
-          ) : null}
         </td>
       )
     case 'email':
@@ -933,7 +940,7 @@ function LeadCell({
       return (
         <td className={`cursor-pointer ${cellPad}`} onClick={onToggleExpand} title={recontact.detail}>
           <div className="flex items-center gap-1.5">
-            <RecontactProgressRing eligibility={recontact} size={22} />
+            <RecontactProgressRing eligibility={recontact} size={18} />
             <span
               className={`whitespace-nowrap text-[11px] leading-tight ${
                 recontact.lane === 'ready'
@@ -958,7 +965,12 @@ function LeadCell({
       )
     case 'last_touch':
       return (
-        <td className={`${cellPad} whitespace-nowrap text-neutral-500`} title={formatDate(lead.last_outbound_at)}>
+        <td
+          className={`${cellPad} whitespace-nowrap ${
+            lead.last_outbound_at ? 'text-neutral-600' : 'text-neutral-400'
+          }`}
+          title={formatDate(lead.last_outbound_at)}
+        >
           {formatRelativeLeadDate(lead.last_outbound_at)}
         </td>
       )

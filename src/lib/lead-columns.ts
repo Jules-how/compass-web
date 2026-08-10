@@ -3,7 +3,7 @@
  * Defaults stay lean; optional columns can be toggled (Attio-style).
  */
 
-export const LEAD_COLUMN_STORAGE_KEY = 'compass.leadColumns.v1'
+export const LEAD_COLUMN_STORAGE_KEY = 'compass.leadColumns.v2'
 
 export type LeadColumnId =
   | 'name'
@@ -33,11 +33,11 @@ export type LeadColumnDef = {
 export const LEAD_COLUMN_DEFS: LeadColumnDef[] = [
   { id: 'name', label: 'Name', required: true, defaultVisible: true },
   { id: 'email', label: 'Email', defaultVisible: true },
-  { id: 'phone', label: 'Phone', defaultVisible: true },
+  { id: 'phone', label: 'Phone', defaultVisible: false },
   { id: 'company', label: 'Company', defaultVisible: true },
-  { id: 'location', label: 'Location', defaultVisible: true },
-  { id: 'vertical', label: 'Vertical', defaultVisible: false },
-  { id: 'campaign', label: 'Campaign', defaultVisible: true },
+  { id: 'location', label: 'Location', defaultVisible: false },
+  { id: 'vertical', label: 'Vertical', defaultVisible: true },
+  { id: 'campaign', label: 'Campaign', defaultVisible: false },
   { id: 'stage', label: 'Stage', defaultVisible: true },
   { id: 'cooldown', label: 'Recontact', defaultVisible: true },
   { id: 'last_touch', label: 'Last interaction', defaultVisible: true },
@@ -82,12 +82,13 @@ export function persistVisibleLeadColumns(ids: LeadColumnId[]) {
   window.localStorage.setItem(LEAD_COLUMN_STORAGE_KEY, JSON.stringify(next))
 }
 
-/** Relative / compact timestamps for dense CRM rows. */
+/** Relative / compact timestamps for dense CRM rows (Attio-style phrasing). */
 export function formatRelativeLeadDate(
   value: string | null | undefined,
-  now = new Date()
+  now = new Date(),
+  emptyLabel = 'No contact'
 ): string {
-  if (!value) return '—'
+  if (!value) return emptyLabel
   const ms = Date.parse(value)
   if (Number.isNaN(ms)) return value
   const diff = now.getTime() - ms
@@ -95,18 +96,29 @@ export function formatRelativeLeadDate(
   const minute = 60_000
   const hour = 60 * minute
   const day = 24 * hour
+  const month = 30 * day
   if (abs < minute) return 'just now'
   if (abs < hour) {
     const n = Math.floor(abs / minute)
-    return diff >= 0 ? `${n}m ago` : `in ${n}m`
+    return diff >= 0
+      ? `${n} minute${n === 1 ? '' : 's'} ago`
+      : `in ${n} minute${n === 1 ? '' : 's'}`
   }
   if (abs < day) {
     const n = Math.floor(abs / hour)
-    return diff >= 0 ? `${n}h ago` : `in ${n}h`
+    return diff >= 0
+      ? `about ${n} hour${n === 1 ? '' : 's'} ago`
+      : `in about ${n} hour${n === 1 ? '' : 's'}`
   }
-  if (abs < 30 * day) {
+  if (abs < month) {
     const n = Math.floor(abs / day)
-    return diff >= 0 ? `${n}d ago` : `in ${n}d`
+    return diff >= 0 ? `${n} day${n === 1 ? '' : 's'} ago` : `in ${n} day${n === 1 ? '' : 's'}`
+  }
+  const n = Math.max(1, Math.floor(abs / month))
+  if (n < 12) {
+    return diff >= 0
+      ? `about ${n} month${n === 1 ? '' : 's'} ago`
+      : `in about ${n} month${n === 1 ? '' : 's'}`
   }
   const d = new Date(ms)
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
