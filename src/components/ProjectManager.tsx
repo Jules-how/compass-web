@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import type { CompassBusinessFunction, CompassProjectWithStats } from '@/lib/types'
 import { emptyProjectStats, formatPercentComplete } from '@/lib/project-stats'
 import {
@@ -32,10 +32,53 @@ type GroupBy = 'none' | 'status' | 'function' | 'health'
 type OrderBy = 'name' | 'priority' | 'target_date' | 'updated_at'
 type InsightsTab = 'health' | 'leads'
 
+type BoardDragState = {
+  projectId: string
+  fromStatus: ProjectBoardStatus
+  pointerId: number
+  startX: number
+  startY: number
+  x: number
+  y: number
+  width: number
+  height: number
+  offsetX: number
+  offsetY: number
+  active: boolean
+  overStatus: ProjectBoardStatus | null
+}
+
 const PROJECTS_VIEW_STORAGE_KEY = 'compass.projects.view'
+const BOARD_DRAG_THRESHOLD_PX = 6
+const BOARD_COLUMN_ATTR = 'data-project-board-column'
 
 function isPendingProjectId(id: string) {
   return id.startsWith('project-temp-')
+}
+
+function isBoardColumnStatus(value: string | null | undefined): value is ProjectBoardStatus {
+  return Boolean(value && (PROJECT_BOARD_STATUSES as readonly string[]).includes(value))
+}
+
+function boardColumnFromPoint(clientX: number, clientY: number): ProjectBoardStatus | null {
+  if (typeof document === 'undefined') return null
+  const stack = document.elementsFromPoint(clientX, clientY)
+  for (const node of stack) {
+    if (!(node instanceof Element)) continue
+    const column = node.closest(`[${BOARD_COLUMN_ATTR}]`)
+    const status = column?.getAttribute(BOARD_COLUMN_ATTR)
+    if (isBoardColumnStatus(status)) return status
+  }
+  return null
+}
+
+function isBoardDragIgnoreTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false
+  return Boolean(
+    target.closest(
+      'button, a, input, textarea, select, [data-board-no-drag], [role="menu"], [role="menuitem"]'
+    )
+  )
 }
 
 function ProjectTitleLink({
@@ -336,10 +379,29 @@ export function ProjectManager({
   const [displayOpen, setDisplayOpen] = useState(false)
   const [cardMenuId, setCardMenuId] = useState<string | null>(null)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [boardDrag, setBoardDrag] = useState<BoardDragState | null>(null)
   const filterRef = useRef<HTMLDivElement>(null)
   const displayRef = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<ProjectTimelineHandle>(null)
   const createTitleRef = useRef<HTMLInputElement>(null)
+  const boardDragRef = useRef<BoardDragState | null>(null)
+  const boardDragFrameRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    boardDragRef.current = boardDrag
+  }, [boardDrag])
+
+  useEffect(() => {
+    if (!boardDrag?.active) return
+    const previousCursor = document.body.style.cursor
+    const previousUserSelect = document.body.style.userSelect
+    document.body.style.cursor = 'grabbing'
+    document.body.style.userSelect = 'none'
+    return () => {
+      document.body.style.cursor = previousCursor
+      document.body.style.userSelect = previousUserSelect
+    }
+  }, [boardDrag?.active])
 
   function openProject(projectId: string) {
     if (isPendingProjectId(projectId)) return
@@ -464,6 +526,10 @@ export function ProjectManager({
         setFilterOpen(false)
         setDisplayOpen(false)
         setCardMenuId(null)
+        if (boardDragRef.current) {
+          boardDragRef.current = null
+          setBoardDrag(null)
+        }
       }
     }
     document.addEventListener('mousedown', onPointerDown)
@@ -682,6 +748,116 @@ export function ProjectManager({
       setError(err instanceof Error ? err.message : String(err))
     }
   }
+
+  function beginBoardCardDrag(
+    event: ReactPointerEvent<HTMLElement>,
+    project: CompassProjectWithStats
+  ) {
+    if (event.button !== 0) return
+    if (isPendingProjectId(project.id)) return
+    if (isBoardDragIgnoreTarget(event.target)) return
+    if (boardDragRef.current) return
+
+    const card = event.currentTarget
+    const rect = card.getBoundingClientRect()
+    const next: BoardDragState = {
+      projectId: project.id,
+      fromStatus: normalizeProjectStatus(project.status),
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      x: event.clientX,
+      y: event.clientY,
+      width: rect.width,
+      height: rect.height,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+      active: false,
+      overStatus: normalizeProjectStatus(project.status)
+    }
+    boardDragRef.current = next
+    setBoardDrag(next)
+    setCardMenuId(null)
+    card.setPointerCapture(event.pointerId)
+  }
+
+  function moveBoardCardDrag(event: ReactPointerEvent<HTMLElement>) {
+    const current = boardDragRef.current
+    if (!current || current.pointerId !== event.pointerId) return
+
+    const dx = event.clientX - current.startX
+    const dy = event.clientY - current.startY
+    const distance = Math.hypot(dx, dy)
+    const active = current.active || distance >= BOARD_DRAG_THRESHOLD_PX
+    const overStatus = active
+      ? boardColumnFromPoint(event.clientX, event.clientY)
+      : current.fromStatus
+
+    const next: BoardDragState = {
+      ...current,
+      x: event.clientX,
+      y: event.clientY,
+      active,
+      overStatus
+    }
+    boardDragRef.current = next
+
+    if (boardDragFrameRef.current != null) {
+      window.cancelAnimationFrame(boardDragFrameRef.current)
+    }
+    boardDragFrameRef.current = window.requestAnimationFrame(() => {
+      boardDragFrameRef.current = null
+      setBoardDrag(boardDragRef.current)
+    })
+
+    if (active) {
+      event.preventDefault()
+    }
+  }
+
+  function endBoardCardDrag(event: ReactPointerEvent<HTMLElement>) {
+    const current = boardDragRef.current
+    if (!current || current.pointerId !== event.pointerId) return
+
+    if (boardDragFrameRef.current != null) {
+      window.cancelAnimationFrame(boardDragFrameRef.current)
+      boardDragFrameRef.current = null
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+
+    boardDragRef.current = null
+    setBoardDrag(null)
+
+    if (!current.active) {
+      openProject(current.projectId)
+      return
+    }
+
+    const nextStatus = current.overStatus
+    if (!nextStatus || nextStatus === current.fromStatus) return
+    void patchProjectStatus(current.projectId, nextStatus)
+  }
+
+  function cancelBoardCardDrag(event: ReactPointerEvent<HTMLElement>) {
+    const current = boardDragRef.current
+    if (!current || current.pointerId !== event.pointerId) return
+    if (boardDragFrameRef.current != null) {
+      window.cancelAnimationFrame(boardDragFrameRef.current)
+      boardDragFrameRef.current = null
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    boardDragRef.current = null
+    setBoardDrag(null)
+  }
+
+  const draggingProject = boardDrag
+    ? projects.find((project) => project.id === boardDrag.projectId) ?? null
+    : null
 
   return (
     <div className="space-y-2">
@@ -1254,10 +1430,16 @@ export function ProjectManager({
                   const items = visibleProjects.filter(
                     (project) => normalizeProjectStatus(project.status) === column
                   )
+                  const isDropTarget =
+                    Boolean(boardDrag?.active) && boardDrag?.overStatus === column
                   return (
                     <section
                       key={column}
-                      className="flex w-[260px] shrink-0 flex-col rounded-xl bg-[#f4f5f7]/80"
+                      data-project-board-column={column}
+                      className={cn(
+                        'flex w-[260px] shrink-0 flex-col rounded-xl bg-[#f4f5f7]/80 transition-[box-shadow,background-color] duration-150',
+                        isDropTarget && 'bg-[#eef1f5] shadow-[inset_0_0_0_1.5px_rgba(229,87,10,0.35)]'
+                      )}
                     >
                       <header className="flex items-center gap-1.5 px-2.5 pb-1.5 pt-2.5">
                         <StatusGlyph status={column} />
@@ -1285,10 +1467,10 @@ export function ProjectManager({
                           </button>
                         </div>
                       </header>
-                      <ul className="flex flex-1 flex-col gap-2.5 px-2 pb-2">
+                      <ul className="flex min-h-[120px] flex-1 flex-col gap-2.5 px-2 pb-2">
                         {items.length === 0 ? (
                           <li className="rounded-lg border border-dashed border-neutral-200/80 px-3 py-6 text-center text-[12px] text-neutral-400">
-                            No projects
+                            {boardDrag?.active ? 'Drop here' : 'No projects'}
                           </li>
                         ) : (
                           items.map((project) => {
@@ -1299,10 +1481,24 @@ export function ProjectManager({
                               ? functionById[project.business_function_id]?.name
                               : null
                             const menuOpen = cardMenuId === project.id
+                            const isDraggingCard =
+                              boardDrag?.active && boardDrag.projectId === project.id
                             return (
                               <li
                                 key={project.id}
-                                className="group relative rounded-[8px] border border-neutral-200/90 bg-white p-2.5 shadow-[0_1px_1px_rgba(16,24,40,0.04)] transition hover:border-neutral-300"
+                                onPointerDown={(event) => beginBoardCardDrag(event, project)}
+                                onPointerMove={moveBoardCardDrag}
+                                onPointerUp={endBoardCardDrag}
+                                onPointerCancel={cancelBoardCardDrag}
+                                className={cn(
+                                  'group relative touch-none select-none rounded-[8px] border border-neutral-200/90 bg-white p-2.5 shadow-[0_1px_1px_rgba(16,24,40,0.04)] transition-[border-color,box-shadow,opacity,transform] duration-150',
+                                  isPendingProjectId(project.id)
+                                    ? 'cursor-default'
+                                    : 'cursor-grab active:cursor-grabbing',
+                                  isDraggingCard
+                                    ? 'opacity-40 shadow-none'
+                                    : 'hover:border-neutral-300 hover:shadow-[0_2px_8px_rgba(16,24,40,0.08)]'
+                                )}
                               >
                                 <div className="mb-1.5 flex items-center gap-1.5">
                                   <ProjectGlyph
@@ -1319,27 +1515,26 @@ export function ProjectManager({
                                     <LeadAvatar label={teamLabel || clientLabel} />
                                     <button
                                       type="button"
+                                      data-board-no-drag
                                       className={cn(
                                         'flex h-5 w-5 items-center justify-center rounded text-[11px] text-neutral-400 opacity-0 transition hover:bg-neutral-100 hover:text-neutral-700 group-hover:opacity-100',
                                         menuOpen && 'opacity-100'
                                       )}
                                       aria-label="Project actions"
-                                      onClick={() =>
+                                      onClick={(event) => {
+                                        event.stopPropagation()
                                         setCardMenuId((id) => (id === project.id ? null : project.id))
-                                      }
+                                      }}
+                                      onPointerDown={(event) => event.stopPropagation()}
                                     >
                                       ···
                                     </button>
                                   </div>
                                 </div>
 
-                                <ProjectTitleLink
-                                  projectId={project.id}
-                                  onOpen={openProject}
-                                  className="block text-[13px] font-medium leading-snug text-neutral-900 hover:text-neutral-700"
-                                >
+                                <div className="block text-[13px] font-medium leading-snug text-neutral-900">
                                   {project.name}
-                                </ProjectTitleLink>
+                                </div>
 
                                 {(project.summary || clientLabel) && (
                                   <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-500">
@@ -1365,7 +1560,11 @@ export function ProjectManager({
                                 </div>
 
                                 {menuOpen ? (
-                                  <div className="absolute right-2 top-8 z-30 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 text-[13px] shadow-lg">
+                                  <div
+                                    data-board-no-drag
+                                    className="absolute right-2 top-8 z-30 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 text-[13px] shadow-lg"
+                                    onPointerDown={(event) => event.stopPropagation()}
+                                  >
                                     {isPendingProjectId(project.id) ? (
                                       <span className="block px-3 py-1.5 text-neutral-400">Saving…</span>
                                     ) : (
@@ -1423,6 +1622,52 @@ export function ProjectManager({
                   )
                 })}
               </div>
+
+              {boardDrag?.active && draggingProject ? (
+                <div
+                  aria-hidden
+                  className="pointer-events-none fixed z-[80] rounded-[8px] border border-neutral-200 bg-white p-2.5 shadow-[0_12px_28px_rgba(16,24,40,0.18)] will-change-transform"
+                  style={{
+                    width: boardDrag.width,
+                    left: boardDrag.x - boardDrag.offsetX,
+                    top: boardDrag.y - boardDrag.offsetY,
+                    transform: 'translate3d(0,0,0) rotate(1.5deg) scale(1.02)'
+                  }}
+                >
+                  <div className="mb-1.5 flex items-center gap-1.5">
+                    <ProjectGlyph
+                      color={projectColorForFunction(
+                        draggingProject.business_function_id
+                          ? functionById[draggingProject.business_function_id]
+                          : null
+                      )}
+                    />
+                    <div className="ml-auto flex items-center gap-1">
+                      <HealthGlyph health={draggingProject.health || 'no_updates'} />
+                      <LeadAvatar
+                        label={
+                          draggingProject.client_name ||
+                          (draggingProject.business_function_id
+                            ? functionById[draggingProject.business_function_id]?.name
+                            : null)
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="block text-[13px] font-medium leading-snug text-neutral-900">
+                    {draggingProject.name}
+                  </div>
+                  {(draggingProject.summary || draggingProject.client_name) && (
+                    <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-500">
+                      {draggingProject.summary || draggingProject.client_name}
+                    </p>
+                  )}
+                  <div className="mt-2 text-[11px] tabular-nums text-neutral-400">
+                    {draggingProject.stats.issueCount}{' '}
+                    {draggingProject.stats.issueCount === 1 ? 'issue' : 'issues'}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 

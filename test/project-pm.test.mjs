@@ -136,6 +136,21 @@ test('project management migration and API cover Linear board fields', () => {
   assert.match(taskCreate, /Task output/)
 })
 
+test('project board cards support full-card pointer drag between columns', () => {
+  const manager = read('src/components/ProjectManager.tsx')
+
+  assert.match(manager, /BOARD_DRAG_THRESHOLD_PX/)
+  assert.match(manager, /beginBoardCardDrag/)
+  assert.match(manager, /moveBoardCardDrag/)
+  assert.match(manager, /endBoardCardDrag/)
+  assert.match(manager, /data-project-board-column/)
+  assert.match(manager, /patchProjectStatus\(current\.projectId, nextStatus\)/)
+  assert.match(manager, /cursor-grab/)
+  assert.match(manager, /touch-none/)
+  assert.match(manager, /boardColumnFromPoint/)
+  assert.match(manager, /data-board-no-drag/)
+})
+
 test('project timeline supports Linear-like date create and trackpad zoom', () => {
   const timeline = read('src/components/ProjectTimeline.tsx')
   const manager = read('src/components/ProjectManager.tsx')
