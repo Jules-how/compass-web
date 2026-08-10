@@ -776,6 +776,12 @@ export function SequenceEditor({
             <EditorComponentsAccordion
               onInsert={(payload) => void applyLibraryPayload(payload)}
               className="min-h-0 flex-1"
+              campaignContext={{
+                offer_key: campaign?.offer_key ?? null,
+                vertical_tags: campaign?.vertical_tags ?? [],
+                location_tags: campaign?.location_tags ?? [],
+                structure_id: campaign?.structure_id ?? sequence?.structure_id ?? null
+              }}
             />
           </aside>
         ) : null}
