@@ -129,6 +129,7 @@ export const ProjectTimeline = forwardRef<
     zoom: TimelineZoom
     onZoomChange: (zoom: TimelineZoom) => void
     onDatesChange?: (projectId: string, start: string, end: string) => Promise<void> | void
+    onOpenProject?: (projectId: string) => void
     showToolbar?: boolean
   }
 >(function ProjectTimeline(
@@ -139,6 +140,7 @@ export const ProjectTimeline = forwardRef<
     zoom,
     onZoomChange,
     onDatesChange,
+    onOpenProject,
     showToolbar = false
   },
   ref
@@ -637,16 +639,30 @@ export const ProjectTimeline = forwardRef<
                     className="sticky left-0 z-20 flex items-center gap-2 border-r border-neutral-200/80 bg-inherit px-3"
                     style={{ width: LABEL_WIDTH }}
                   >
-                    <Link
-                      href={`/projects/${project.id}`}
-                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                      title={project.name}
-                    >
-                      <ProjectIcon color={accent} />
-                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-neutral-800">
-                        {project.name}
-                      </span>
-                    </Link>
+                    {onOpenProject ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenProject(project.id)}
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        title={project.name}
+                      >
+                        <ProjectIcon color={accent} />
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-neutral-800">
+                          {project.name}
+                        </span>
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/projects/${project.id}`}
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        title={project.name}
+                      >
+                        <ProjectIcon color={accent} />
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-neutral-800">
+                          {project.name}
+                        </span>
+                      </Link>
+                    )}
                     <div className="flex shrink-0 items-center gap-1.5 text-neutral-400">
                       <span
                         className={`h-3 w-3 rounded-full border-2 ${statusDotClass(project.status)}`}
@@ -759,12 +775,14 @@ export const ProjectTimeline = forwardRef<
                                 suppressBarClickRef.current = false
                                 return
                               }
-                              router.push(`/projects/${project.id}`)
+                              if (onOpenProject) onOpenProject(project.id)
+                              else router.push(`/projects/${project.id}`)
                             }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault()
-                                router.push(`/projects/${project.id}`)
+                                if (onOpenProject) onOpenProject(project.id)
+                                else router.push(`/projects/${project.id}`)
                               }
                             }}
                           >

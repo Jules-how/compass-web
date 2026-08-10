@@ -24,6 +24,7 @@ import {
 } from '@/lib/project-pm'
 import type { TimelineZoom } from '@/lib/campaign-timeline'
 import { ProjectTimeline, TimelineZoomControls, type ProjectTimelineHandle } from '@/components/ProjectTimeline'
+import { ProjectDetailPanel } from '@/components/ProjectDetailPanel'
 import { cn } from '@/lib/utils'
 
 type ViewMode = 'list' | 'board' | 'timeline'
@@ -40,14 +41,27 @@ function isPendingProjectId(id: string) {
 function ProjectTitleLink({
   projectId,
   className,
-  children
+  children,
+  onOpen
 }: {
   projectId: string
   className?: string
   children: ReactNode
+  onOpen?: (projectId: string) => void
 }) {
   if (isPendingProjectId(projectId)) {
     return <span className={className}>{children}</span>
+  }
+  if (onOpen) {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpen(projectId)}
+        className={cn(className, 'w-full text-left')}
+      >
+        {children}
+      </button>
+    )
   }
   return (
     <Link href={`/projects/${projectId}`} className={className}>
@@ -321,10 +335,20 @@ export function ProjectManager({
   const [filterOpen, setFilterOpen] = useState(false)
   const [displayOpen, setDisplayOpen] = useState(false)
   const [cardMenuId, setCardMenuId] = useState<string | null>(null)
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const filterRef = useRef<HTMLDivElement>(null)
   const displayRef = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<ProjectTimelineHandle>(null)
   const createTitleRef = useRef<HTMLInputElement>(null)
+
+  function openProject(projectId: string) {
+    if (isPendingProjectId(projectId)) return
+    setCardMenuId(null)
+    setFilterOpen(false)
+    setDisplayOpen(false)
+    setCreating(false)
+    setSelectedProjectId(projectId)
+  }
 
   const [name, setName] = useState('')
   const [summary, setSummary] = useState('')
@@ -1147,6 +1171,7 @@ export function ProjectManager({
                           <div className="min-w-0">
                             <ProjectTitleLink
                               projectId={project.id}
+                              onOpen={openProject}
                               className="block truncate text-sm font-medium text-neutral-900 hover:text-sf-orange-dark"
                             >
                               {project.name}
@@ -1197,12 +1222,13 @@ export function ProjectManager({
                                 Saving…
                               </span>
                             ) : (
-                              <Link
-                                href={`/projects/${project.id}`}
+                              <button
+                                type="button"
+                                onClick={() => openProject(project.id)}
                                 className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600"
                               >
                                 Open
-                              </Link>
+                              </button>
                             )}
                             <button
                               type="button"
@@ -1309,6 +1335,7 @@ export function ProjectManager({
 
                                 <ProjectTitleLink
                                   projectId={project.id}
+                                  onOpen={openProject}
                                   className="block text-[13px] font-medium leading-snug text-neutral-900 hover:text-neutral-700"
                                 >
                                   {project.name}
@@ -1342,13 +1369,13 @@ export function ProjectManager({
                                     {isPendingProjectId(project.id) ? (
                                       <span className="block px-3 py-1.5 text-neutral-400">Saving…</span>
                                     ) : (
-                                      <Link
-                                        href={`/projects/${project.id}`}
-                                        className="block px-3 py-1.5 text-neutral-700 hover:bg-neutral-50"
-                                        onClick={() => setCardMenuId(null)}
+                                      <button
+                                        type="button"
+                                        className="block w-full px-3 py-1.5 text-left text-neutral-700 hover:bg-neutral-50"
+                                        onClick={() => openProject(project.id)}
                                       >
                                         Open project
-                                      </Link>
+                                      </button>
                                     )}
                                     <div className="my-1 border-t border-neutral-100" />
                                     <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
@@ -1408,6 +1435,7 @@ export function ProjectManager({
               zoom={timelineZoom}
               onZoomChange={setTimelineZoom}
               onDatesChange={patchProjectDates}
+              onOpenProject={openProject}
               showToolbar={false}
             />
           ) : null}
@@ -1461,6 +1489,18 @@ export function ProjectManager({
           </aside>
         ) : null}
       </div>
+
+      {selectedProjectId ? (
+        <ProjectDetailPanel
+          projectId={selectedProjectId}
+          variant="modal"
+          projects={projects}
+          onClose={() => setSelectedProjectId(null)}
+          onChanged={async () => {
+            await onRefresh?.()
+          }}
+        />
+      ) : null}
     </div>
   )
 }
