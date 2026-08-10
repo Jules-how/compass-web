@@ -52,6 +52,13 @@ export type OutboundBoardCampaign = {
   copyNotes: string
   vertical: string
   location: string
+  /** First-email CTA body when known (pipeline sequence or demo). */
+  cta?: string
+  ctaType?: string
+  /** Short / Medium / Long — from structure or sequence length. */
+  lengthBand?: string
+  /** vertical · location display for factor rollups. */
+  audience?: string
   leadCount: number
   sendCount: number
   remaining: number
