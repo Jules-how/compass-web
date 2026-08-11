@@ -1,4 +1,5 @@
 import { forkSequence, type OutboundSequence, type OutboundTemplate } from '@/lib/outbound-copy'
+import { OUTBOUND_LIBRARY_SEED_VERSION } from '@/lib/outbound-library-seed-version'
 
 export type LibraryKind =
   | 'offers'
@@ -16,6 +17,20 @@ export type LibraryFilters = {
   q?: string
   includeArchived?: boolean
 }
+
+export type LibraryBundle = {
+  offers: unknown[]
+  expressions: unknown[]
+  structures: unknown[]
+  ctas: unknown[]
+  subjects: unknown[]
+  openers: unknown[]
+  templates: unknown[]
+}
+
+const SEED_SESSION_KEY = `compass.outbound.library.seeded.${OUTBOUND_LIBRARY_SEED_VERSION}`
+
+let seedInFlight: Promise<{ seeded: boolean; inserted: number; skipped?: boolean }> | null = null
 
 async function readJson<T>(res: Response): Promise<T> {
   const data = (await res.json().catch(() => ({}))) as T & { error?: string; detail?: string }
@@ -39,17 +54,57 @@ function queryString(filters?: LibraryFilters): string {
   return q ? `?${q}` : ''
 }
 
+function markSeedComplete() {
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(SEED_SESSION_KEY, '1')
+    }
+  } catch {
+    /* private mode */
+  }
+}
+
+function seedAlreadyComplete(): boolean {
+  try {
+    return typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SEED_SESSION_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 export async function listLibraryItems<T>(
   kind: LibraryKind,
   filters?: LibraryFilters
 ): Promise<T[]> {
-  const res = await fetch(`/api/outbound/${kind}${queryString(filters)}`, { cache: 'no-store' })
+  const res = await fetch(`/api/outbound/${kind}${queryString(filters)}`, {
+    headers: { Accept: 'application/json' }
+  })
   const data = await readJson<{ items: T[] }>(res)
   return data.items ?? []
 }
 
+export async function listLibraryBundle<T extends LibraryBundle = LibraryBundle>(
+  filters?: LibraryFilters
+): Promise<T> {
+  const res = await fetch(`/api/outbound/library${queryString(filters)}`, {
+    headers: { Accept: 'application/json' }
+  })
+  const data = await readJson<Partial<T>>(res)
+  return {
+    offers: data.offers ?? [],
+    expressions: data.expressions ?? [],
+    structures: data.structures ?? [],
+    ctas: data.ctas ?? [],
+    subjects: data.subjects ?? [],
+    openers: data.openers ?? [],
+    templates: data.templates ?? []
+  } as T
+}
+
 export async function getLibraryItem<T>(kind: LibraryKind, id: string): Promise<T> {
-  const res = await fetch(`/api/outbound/${kind}/${encodeURIComponent(id)}`, { cache: 'no-store' })
+  const res = await fetch(`/api/outbound/${kind}/${encodeURIComponent(id)}`, {
+    headers: { Accept: 'application/json' }
+  })
   return readJson<T>(res)
 }
 
@@ -80,14 +135,36 @@ export async function archiveLibraryItem(kind: LibraryKind, id: string): Promise
   await readJson<{ ok?: boolean } | Record<string, unknown>>(res)
 }
 
-/** Ensure seed rows exist in Supabase (no-op if already seeded). */
-export async function ensureOutboundLibrarySeeded(): Promise<{ seeded: boolean; inserted: number }> {
-  const res = await fetch('/api/outbound/seed', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: '{}'
-  })
-  return readJson<{ seeded: boolean; inserted: number }>(res)
+/**
+ * Ensure seed rows exist in Supabase.
+ * Skips the network call for the rest of the browser session once a seed
+ * check succeeds for the current catalogue version.
+ */
+export async function ensureOutboundLibrarySeeded(options?: {
+  force?: boolean
+}): Promise<{ seeded: boolean; inserted: number; skipped?: boolean }> {
+  if (!options?.force && seedAlreadyComplete()) {
+    return { seeded: false, inserted: 0, skipped: true }
+  }
+  if (!options?.force && seedInFlight) return seedInFlight
+
+  const run = (async () => {
+    const res = await fetch('/api/outbound/seed', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(options?.force ? { force: true } : {})
+    })
+    const data = await readJson<{ seeded: boolean; inserted: number; skipped?: boolean }>(res)
+    markSeedComplete()
+    return data
+  })()
+
+  if (!options?.force) seedInFlight = run
+  try {
+    return await run
+  } finally {
+    if (seedInFlight === run) seedInFlight = null
+  }
 }
 
 export async function forkTemplateIntoSequence(templateId: string): Promise<OutboundSequence | null> {

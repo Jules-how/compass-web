@@ -22,7 +22,9 @@ import {
   OUTBOUND_CTA_TYPES,
   OUTBOUND_OFFER_KEYS,
   VERTICAL_TAG_HINTS,
+  normalizeProvenance,
   provenanceBadgeLabel,
+  type OutboundProvenance,
   type OutboundProvenanceFields
 } from '@/lib/outbound-copy'
 import type {
@@ -36,7 +38,7 @@ import type {
 } from '@/lib/outbound-copy'
 import {
   ensureOutboundLibrarySeeded,
-  listLibraryItems,
+  listLibraryBundle,
   type LibraryKind
 } from '@/lib/outbound-library-client'
 import { cn } from '@/lib/utils'
@@ -340,6 +342,7 @@ export function EditorComponentsAccordion({
   const [locationFilter, setLocationFilter] = useState<string>('')
   const [ctaTypeFilter, setCtaTypeFilter] = useState<string>('')
   const [campaignOnly, setCampaignOnly] = useState(false)
+  const [provenanceFilter, setProvenanceFilter] = useState<'all' | OutboundProvenance>('all')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [activeSection, setActiveSection] = useState<SectionKey>('expressions')
   const [detail, setDetail] = useState<{ kind: LibraryKind; id: string } | null>(null)
@@ -349,20 +352,20 @@ export function EditorComponentsAccordion({
     let cancelled = false
     async function load() {
       try {
+        // Seed check is cheap once rows exist; session cache skips repeat POSTs.
         await ensureOutboundLibrarySeeded()
-        const [offers, expressions, structures, ctas, subjects, openers, templates] =
-          await Promise.all([
-            listLibraryItems<OutboundOffer>('offers'),
-            listLibraryItems<OutboundExpression>('expressions'),
-            listLibraryItems<OutboundStructure>('structures'),
-            listLibraryItems<OutboundCta>('ctas'),
-            listLibraryItems<OutboundSubject>('subjects'),
-            listLibraryItems<OutboundOpener>('openers'),
-            listLibraryItems<OutboundTemplate>('templates')
-          ])
+        const next = await listLibraryBundle<{
+          offers: OutboundOffer[]
+          expressions: OutboundExpression[]
+          structures: OutboundStructure[]
+          ctas: OutboundCta[]
+          subjects: OutboundSubject[]
+          openers: OutboundOpener[]
+          templates: OutboundTemplate[]
+        }>()
         if (cancelled) return
         setLoadError(null)
-        setBundle({ offers, expressions, structures, ctas, subjects, openers, templates })
+        setBundle(next)
       } catch (err) {
         if (!cancelled) {
           setLoadError(err instanceof Error ? err.message : 'Failed to load library')
@@ -411,6 +414,7 @@ export function EditorComponentsAccordion({
       vertical_tags?: string[]
       location_tags?: string[]
       structure_id?: string | null
+      provenance?: OutboundProvenance | string | null
     }
 
     function hasScope(row: Scoped) {
@@ -419,7 +423,13 @@ export function EditorComponentsAccordion({
       )
     }
 
+    function passProvenance(row: Scoped) {
+      if (provenanceFilter === 'all') return true
+      return normalizeProvenance(row.provenance) === provenanceFilter
+    }
+
     function passScope(row: Scoped, opts?: { requireOffer?: boolean }) {
+      if (!passProvenance(row)) return false
       if (opts?.requireOffer && offerFilter && row.offer_key !== offerFilter) return false
       if (!opts?.requireOffer && offerFilter && row.offer_key && row.offer_key !== offerFilter) {
         return false
@@ -434,11 +444,17 @@ export function EditorComponentsAccordion({
       return true
     }
 
-    const sortMatch = <T extends Scoped>(rows: T[]) =>
-      [...rows].sort((a, b) => Number(matchesCampaign(b, ctx)) - Number(matchesCampaign(a, ctx)))
+    // Source examples first; campaign fit is only a tie-breaker within the same provenance.
+    const sortRows = <T extends Scoped>(rows: T[]) =>
+      [...rows].sort((a, b) => {
+        const provA = normalizeProvenance(a.provenance)
+        const provB = normalizeProvenance(b.provenance)
+        if (provA !== provB) return provA === 'source' ? -1 : 1
+        return Number(matchesCampaign(b, ctx)) - Number(matchesCampaign(a, ctx))
+      })
 
     return {
-      offers: sortMatch(
+      offers: sortRows(
         bundle.offers.filter(
           (row) =>
             passScope(row, { requireOffer: true }) &&
@@ -448,7 +464,7 @@ export function EditorComponentsAccordion({
               ))
         )
       ),
-      expressions: sortMatch(
+      expressions: sortRows(
         bundle.expressions.filter(
           (row) =>
             passScope(row, { requireOffer: true }) &&
@@ -463,13 +479,14 @@ export function EditorComponentsAccordion({
               ).includes(query))
         )
       ),
-      structures: sortMatch(
+      structures: sortRows(
         bundle.structures.filter(
           (row) =>
-            !query || haystack(row.name, row.structure_id, row.description).includes(query)
+            passProvenance(row) &&
+            (!query || haystack(row.name, row.structure_id, row.description).includes(query))
         )
       ),
-      ctas: sortMatch(
+      ctas: sortRows(
         bundle.ctas.filter(
           (row) =>
             (!ctaTypeFilter || row.cta_type === ctaTypeFilter) &&
@@ -480,14 +497,14 @@ export function EditorComponentsAccordion({
               ))
         )
       ),
-      subjects: sortMatch(
+      subjects: sortRows(
         bundle.subjects.filter(
           (row) =>
             passScope(row) &&
             (!query || haystack(row.label, row.pattern, row.notes, row.vertical_tags).includes(query))
         )
       ),
-      openers: sortMatch(
+      openers: sortRows(
         bundle.openers.filter(
           (row) =>
             passScope(row) &&
@@ -495,7 +512,7 @@ export function EditorComponentsAccordion({
               haystack(row.label, row.opener_mode, row.body, row.notes, row.vertical_tags).includes(query))
         )
       ),
-      templates: sortMatch(
+      templates: sortRows(
         bundle.templates.filter(
           (row) =>
             passScope(row) &&
@@ -513,6 +530,7 @@ export function EditorComponentsAccordion({
     ctx,
     locationFilter,
     offerFilter,
+    provenanceFilter,
     query,
     verticalFilter
   ])
@@ -523,6 +541,7 @@ export function EditorComponentsAccordion({
     locationFilter,
     ctaTypeFilter,
     campaignOnly ? 'campaign' : '',
+    provenanceFilter !== 'all' ? provenanceFilter : '',
     q.trim()
   ].filter(Boolean).length
 
@@ -533,6 +552,7 @@ export function EditorComponentsAccordion({
     setLocationFilter('')
     setCtaTypeFilter('')
     setCampaignOnly(false)
+    setProvenanceFilter('all')
   }
 
   function openDetail(kind: LibraryKind, id: string) {
@@ -718,6 +738,29 @@ export function EditorComponentsAccordion({
         />
 
         <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex rounded-xl border border-stone-200 bg-white p-0.5">
+            {(
+              [
+                ['all', 'All'],
+                ['source', 'Source'],
+                ['yours', 'Yours']
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setProvenanceFilter(value)}
+                className={cn(
+                  'rounded-[10px] px-2 py-0.5 text-[11px] font-medium transition',
+                  provenanceFilter === value
+                    ? 'bg-stone-900 text-white'
+                    : 'text-neutral-600 hover:bg-stone-50'
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <FilterChip
             label={ctx.offer_key ? `This campaign` : 'Campaign match'}
             active={campaignOnly}

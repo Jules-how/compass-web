@@ -72,6 +72,7 @@ non-obvious bits for working in the Cursor Cloud environment.
 - Cheap lead habits only: Instantly-screen before upload, mark Compass the same turn after upload, and never treat upload as activate (activate only after Jules sign-off).
 - Home priorities should deep-link to the relevant tool (Gmail for replies, Instantly, Prospeo, etc.) and be completable in place.
 - Project/campaign progress percentages must reflect real completion data, not decorative placeholders.
+- Outbound craft Components should stay roomy for comparing styles (wide gallery / type tabs); click opens full view + edit (slide-over), while drag/Use still inserts into the draft.
 
 ## Learned Workspace Facts
 
@@ -79,3 +80,4 @@ non-obvious bits for working in the Cursor Cloud environment.
 - Vault outbound `.md` files hold process and per-lead work, not a parallel offer/template warehouse.
 - Compass stores reusable opener formats/examples; per-lead openers stay vault enrich → Instantly merge vars.
 - Outbound library rows carry provenance (`source` | `yours`) plus `source_creator` / `source_file`; source inventory seeds from vault playbooks (Nick Saraev Cold Email / ACC / Nick / Platten / Connor), and newly added UI rows default to yours.
+- Outbound library warm path skips full re-seed when the catalogue is already present (count/sentinel + session cache); craft UI loads kinds via a single `/api/outbound/library` bundle rather than per-kind fetches.

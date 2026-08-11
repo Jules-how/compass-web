@@ -189,6 +189,16 @@ test('scoped seed inventory counts and strings', async () => {
   assert.doesNotMatch(seed, /quick question/i)
   assert.equal((seed.match(/offer_key: '/g) || []).length >= 4, true)
 
+  // Seed route must stay cheap on warm DBs (missing-id only unless force).
+  const seedRoute = read('src/app/api/outbound/seed/route.ts')
+  assert.match(seedRoute, /only insert missing ids|missing ids/i)
+  assert.match(seedRoute, /force/)
+  assert.match(seedRoute, /OUTBOUND_LIBRARY_SEED_VERSION/)
+  assert.match(read('src/lib/outbound-library-client.ts'), /SEED_SESSION_KEY|seedAlreadyComplete/)
+  assert.match(read('src/lib/outbound-library-client.ts'), /listLibraryBundle/)
+  assert.match(read('src/app/api/outbound/library/route.ts'), /compass_outbound_subjects/)
+  assert.match(read('src/components/outbound/EditorComponentsAccordion.tsx'), /listLibraryBundle/)
+
   // Lightweight runtime: recreate scaffold logic inline for structure keys
   const STRUCTURES = {
     'nick-4step': ['opener', 'proof_block', 'cold_expression', 'cta'],
