@@ -21,6 +21,7 @@ import {
 import { ensureLibraryMutationUnlocked } from '@/lib/outbound-library-lock'
 import {
   getLibraryItem,
+  listLibraryItems,
   patchLibraryItem,
   type LibraryKind
 } from '@/lib/outbound-library-client'
@@ -415,6 +416,8 @@ export function LibraryItemDetailSheet({
   const [draft, setDraft] = useState<DraftState>({})
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [structureExamples, setStructureExamples] = useState<OutboundTemplate[]>([])
+  const [examplesLoading, setExamplesLoading] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -447,6 +450,7 @@ export function LibraryItemDetailSheet({
     setEditing(false)
     setSaveError(null)
     setLoadError(null)
+    setStructureExamples([])
     void (async () => {
       try {
         const row = await getLibraryItem<AnyItem>(kind, id)
@@ -463,6 +467,41 @@ export function LibraryItemDetailSheet({
       cancelled = true
     }
   }, [kind, id])
+
+  useEffect(() => {
+    if (kind !== 'structures' || !item) {
+      setStructureExamples([])
+      setExamplesLoading(false)
+      return
+    }
+    const structureId = (item as OutboundStructure).structure_id
+    if (!structureId) return
+
+    let cancelled = false
+    setExamplesLoading(true)
+    void (async () => {
+      try {
+        const templates = await listLibraryItems<OutboundTemplate>('templates')
+        if (cancelled) return
+        const matched = templates
+          .filter((tmpl) => tmpl.structure_id === structureId && !tmpl.archived)
+          .filter((tmpl) =>
+            tmpl.sequence?.steps?.some((step) =>
+              step.slots.some((slot) => (slot.body || '').trim().length > 0)
+            )
+          )
+          .slice(0, 4)
+        setStructureExamples(matched)
+      } catch {
+        if (!cancelled) setStructureExamples([])
+      } finally {
+        if (!cancelled) setExamplesLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [kind, item])
 
   function setDraftField(key: string, value: unknown) {
     setDraft((prev) => ({ ...prev, [key]: value }))
@@ -509,11 +548,13 @@ export function LibraryItemDetailSheet({
   const title = item ? itemTitle(kind, item) : KIND_TITLE[kind]
   const provenanceLabel = item ? provenanceBadgeLabel(item) : null
 
+  const wideSheet = kind === 'structures' || kind === 'templates'
+
   return createPortal(
     <AnimatePresence>
       <motion.div
         key={`${kind}-${id}`}
-        className="fixed inset-0 z-[80] flex justify-end"
+        className="fixed inset-0 z-[120] flex justify-end"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -529,7 +570,10 @@ export function LibraryItemDetailSheet({
           role="dialog"
           aria-modal="true"
           aria-labelledby="library-item-detail-title"
-          className="relative z-10 flex h-full w-full max-w-xl flex-col border-l border-stone-200/80 bg-white shadow-soft"
+          className={cn(
+            'relative z-10 flex h-full w-full flex-col border-l border-stone-200/80 bg-white shadow-soft',
+            wideSheet ? 'max-w-2xl' : 'max-w-xl'
+          )}
           initial={{ x: '100%' }}
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
@@ -574,7 +618,14 @@ export function LibraryItemDetailSheet({
               <p className="text-[13px] text-neutral-500">Loading…</p>
             ) : null}
 
-            {item && !editing ? <ViewBody kind={kind} item={item} /> : null}
+            {item && !editing ? (
+              <ViewBody
+                kind={kind}
+                item={item}
+                examples={structureExamples}
+                examplesLoading={examplesLoading}
+              />
+            ) : null}
 
             {item && editing ? (
               <EditBody kind={kind} draft={draft} setDraftField={setDraftField} />
@@ -631,7 +682,17 @@ export function LibraryItemDetailSheet({
   )
 }
 
-function ViewBody({ kind, item }: { kind: LibraryKind; item: AnyItem }) {
+function ViewBody({
+  kind,
+  item,
+  examples = [],
+  examplesLoading = false
+}: {
+  kind: LibraryKind
+  item: AnyItem
+  examples?: OutboundTemplate[]
+  examplesLoading?: boolean
+}) {
   if (kind === 'offers') {
     const row = item as OutboundOffer
     return (
@@ -665,6 +726,36 @@ function ViewBody({ kind, item }: { kind: LibraryKind; item: AnyItem }) {
         <div>
           <FieldLabel>Slots</FieldLabel>
           <SlotsView slots={row.slots} />
+        </div>
+        <div>
+          <FieldLabel>Example emails</FieldLabel>
+          {examplesLoading ? (
+            <p className="text-[13px] text-neutral-500">Loading examples…</p>
+          ) : examples.length === 0 ? (
+            <p className="text-[13px] text-neutral-500">
+              No templates use this structure yet. Open Templates for full sequences, or Use this
+              skeleton in the draft.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {examples.map((tmpl) => (
+                <div key={tmpl.id} className="space-y-2">
+                  <div className="text-[13px] font-semibold text-neutral-900">{tmpl.name}</div>
+                  {tmpl.source_file || tmpl.source_creator ? (
+                    <p className="text-[11px] text-neutral-500">
+                      {[
+                        tmpl.source_creator ? `Source · ${tmpl.source_creator}` : null,
+                        tmpl.source_file
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  ) : null}
+                  <SequenceView sequence={tmpl.sequence} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         {row.source_file ? <MetaLine label="Source file" value={row.source_file} /> : null}
       </div>

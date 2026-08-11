@@ -309,7 +309,16 @@ function LibraryRow({
         </p>
       ) : null}
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-[11px] font-medium text-[#c2410c]">Open</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onOpen()
+          }}
+          className="rounded-lg border border-[#e85d2a]/30 bg-[#e85d2a]/10 px-2 py-0.5 text-[11px] font-medium text-[#c2410c] hover:bg-[#e85d2a]/15"
+        >
+          Open
+        </button>
         <button
           type="button"
           onClick={(e) => {
