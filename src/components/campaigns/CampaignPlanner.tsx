@@ -1578,12 +1578,20 @@ function LeadGlyph({ label }: { label: string | null }) {
 }
 
 function copyMetaBits(campaign: CompassCampaign): string[] {
-  return [
+  const bits = [
     campaign.offer_key,
     campaign.structure_id,
     ...(campaign.vertical_tags ?? []).slice(0, 1),
     ...(campaign.location_tags ?? []).slice(0, 1)
   ].filter(Boolean) as string[]
+  if (campaign.experiment_status && campaign.experiment_status !== 'none') {
+    const factor =
+      campaign.experiment_factor && campaign.experiment_factor !== 'none'
+        ? campaign.experiment_factor.toUpperCase()
+        : 'EXP'
+    bits.unshift(`${factor} · ${campaign.experiment_status}`)
+  }
+  return bits
 }
 
 function timelineRowTitle(campaign: CompassCampaign): string {

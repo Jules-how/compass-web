@@ -1,17 +1,27 @@
-/** Roll Instantly outbound metrics up by campaign copy factors (offer / CTA / length / audience). */
+/** Roll Instantly outbound metrics up by campaign copy factors. */
 
 import type { CompassCampaign } from '@/lib/campaigns'
 import type { OutboundBoardCampaign, OutboundBoard } from '@/lib/instantly'
 import type { OutboundSequence } from '@/lib/outbound-copy'
 import { splitCampaignMeta } from '@/lib/sales-overview'
 
-export type OutboundFactorKey = 'offer' | 'cta' | 'length' | 'audience'
+export type OutboundFactorKey =
+  | 'offer'
+  | 'cta'
+  | 'cta_type'
+  | 'expression'
+  | 'structure'
+  | 'length'
+  | 'audience'
 
 export type OutboundFactorCampaign = OutboundBoardCampaign & {
   cta: string
   ctaType: string
   lengthBand: string
   audience: string
+  expression: string
+  structure: string
+  pipelineCampaignId?: string
 }
 
 export type OutboundFactorRow = {
@@ -86,6 +96,18 @@ export function audienceFromTags(
   return parts.join(' · ')
 }
 
+/** Stable expression label for rollup (prefer expression_key). */
+export function expressionLabel(
+  expressionKey: string | null | undefined,
+  coldExpression: string | null | undefined
+): string {
+  const key = (expressionKey || '').trim()
+  if (key) return key
+  const body = (coldExpression || '').replace(/\s+/g, ' ').trim()
+  if (!body) return '—'
+  return body.length > 64 ? `${body.slice(0, 61)}…` : body
+}
+
 function parseCopyNotes(notes: string): {
   lengthBand: string
   ctaType: string
@@ -118,6 +140,7 @@ function parseCopyNotes(notes: string): {
 }
 
 type BindSource = {
+  id?: string
   offer_key?: string | null
   offerName?: string | null
   structure_id?: string | null
@@ -125,6 +148,8 @@ type BindSource = {
   location_tags?: string[] | null
   sequence_draft?: OutboundSequence | null
   cold_expression?: string | null
+  expression_key?: string | null
+  cta_type?: string | null
 }
 
 function findBind(
@@ -166,7 +191,9 @@ export function enrichOutboundCampaignFactors(
     '—'
 
   const cta = fromSeq.label || campaign.cta || fromNotes.cta || '—'
-  const ctaType = fromSeq.type || campaign.ctaType || fromNotes.ctaType || ''
+  const explicitCtaType = (bind?.cta_type || '').trim()
+  const ctaType =
+    explicitCtaType || fromSeq.type || campaign.ctaType || fromNotes.ctaType || ''
 
   const audience =
     audienceFromTags(
@@ -175,6 +202,9 @@ export function enrichOutboundCampaignFactors(
     ) ||
     campaign.audience ||
     '—'
+
+  const structure = (bind?.structure_id || '').trim() || '—'
+  const expression = expressionLabel(bind?.expression_key, bind?.cold_expression)
 
   return {
     ...campaign,
@@ -187,7 +217,10 @@ export function enrichOutboundCampaignFactors(
     cta,
     ctaType,
     lengthBand,
-    audience
+    audience,
+    expression,
+    structure,
+    pipelineCampaignId: bind?.id
   }
 }
 
@@ -205,6 +238,9 @@ export function enrichOutboundBoardFactors(
 export function factorValue(campaign: OutboundFactorCampaign, key: OutboundFactorKey): string {
   if (key === 'offer') return campaign.offer || campaign.offerKey || '—'
   if (key === 'cta') return campaign.cta || '—'
+  if (key === 'cta_type') return campaign.ctaType || '—'
+  if (key === 'expression') return campaign.expression || '—'
+  if (key === 'structure') return campaign.structure || '—'
   if (key === 'length') return campaign.lengthBand || '—'
   return campaign.audience || '—'
 }
@@ -242,4 +278,17 @@ export function rollupOutboundByFactor(
       replyRate: row.sent ? Math.round((row.replies / row.sent) * 1000) / 10 : 0
     }))
     .sort((a, b) => b.replyRate - a.replyRate || b.sent - a.sent)
+}
+
+/** Count how many locked factors differ between two enriched campaigns. */
+export function countFactorDifferences(
+  a: OutboundFactorCampaign,
+  b: OutboundFactorCampaign
+): number {
+  const keys: OutboundFactorKey[] = ['offer', 'cta_type', 'expression', 'structure', 'audience']
+  let n = 0
+  for (const key of keys) {
+    if (factorValue(a, key) !== factorValue(b, key)) n += 1
+  }
+  return n
 }

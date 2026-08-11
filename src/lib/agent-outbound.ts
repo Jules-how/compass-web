@@ -425,6 +425,15 @@ export function campaignCopyCompact(
     location_tags: row.location_tags ?? [],
     cold_expression: row.cold_expression ?? null,
     copy_status: row.copy_status ?? 'none',
+    hypothesis: row.hypothesis ?? null,
+    experiment_factor: row.experiment_factor ?? 'none',
+    experiment_role: row.experiment_role ?? 'none',
+    parent_campaign_id: row.parent_campaign_id ?? null,
+    experiment_status: row.experiment_status ?? 'none',
+    sample_size_target: row.sample_size_target ?? null,
+    experiment_decision: row.experiment_decision ?? null,
+    expression_key: row.expression_key ?? null,
+    cta_type: row.cta_type ?? null,
     updated_at: row.updated_at ?? null
   }
   if (full) base.sequence_draft = row.sequence_draft ?? null
@@ -466,6 +475,50 @@ export function buildCampaignCopyPatch(
     } else {
       patch.sequence_draft = body.sequence_draft
     }
+  }
+  if (body.hypothesis !== undefined) {
+    patch.hypothesis =
+      typeof body.hypothesis === 'string' ? body.hypothesis.trim() || null : null
+  }
+  if (body.experiment_factor !== undefined) {
+    patch.experiment_factor =
+      typeof body.experiment_factor === 'string' ? body.experiment_factor.trim() || 'none' : 'none'
+  }
+  if (body.experiment_role !== undefined) {
+    patch.experiment_role =
+      typeof body.experiment_role === 'string' ? body.experiment_role.trim() || 'none' : 'none'
+  }
+  if (body.parent_campaign_id !== undefined) {
+    patch.parent_campaign_id =
+      typeof body.parent_campaign_id === 'string'
+        ? body.parent_campaign_id.trim() || null
+        : null
+  }
+  if (body.experiment_status !== undefined) {
+    patch.experiment_status =
+      typeof body.experiment_status === 'string'
+        ? body.experiment_status.trim() || 'none'
+        : 'none'
+  }
+  if (body.sample_size_target !== undefined) {
+    if (body.sample_size_target === null) patch.sample_size_target = null
+    else if (typeof body.sample_size_target === 'number' && Number.isFinite(body.sample_size_target)) {
+      patch.sample_size_target = Math.max(0, Math.floor(body.sample_size_target))
+    }
+  }
+  if (body.experiment_decision !== undefined) {
+    patch.experiment_decision =
+      typeof body.experiment_decision === 'string'
+        ? body.experiment_decision.trim() || null
+        : null
+  }
+  if (body.expression_key !== undefined) {
+    patch.expression_key =
+      typeof body.expression_key === 'string' ? body.expression_key.trim() || null : null
+  }
+  if (body.cta_type !== undefined) {
+    patch.cta_type =
+      typeof body.cta_type === 'string' ? body.cta_type.trim() || null : null
   }
   return { ok: true, row: patch }
 }

@@ -34,6 +34,15 @@ export type CampaignPatch = Partial<{
   cold_expression: string | null
   sequence_draft: OutboundSequence | null
   copy_status: string
+  hypothesis: string | null
+  experiment_factor: string
+  experiment_role: string
+  parent_campaign_id: string | null
+  experiment_status: string
+  sample_size_target: number | null
+  experiment_decision: string | null
+  expression_key: string | null
+  cta_type: string | null
 }>
 
 export type CampaignDetail = {
@@ -164,6 +173,35 @@ export async function updateCampaign(id: string, patch: CampaignPatch): Promise<
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(patch)
+  })
+  const campaign = project(await readJson<CompassCampaign>(res))
+  upsertInCache(campaign)
+  return campaign
+}
+
+export type SpawnChallengerInput = {
+  name?: string
+  factor: string
+  hypothesis?: string | null
+  sample_size_target?: number | null
+  cta_type?: string | null
+  cold_expression?: string | null
+  expression_key?: string | null
+  structure_id?: string | null
+  offer_key?: string | null
+  vertical_tags?: string[]
+  location_tags?: string[]
+  sequence_draft?: OutboundSequence | null
+}
+
+export async function spawnChallenger(
+  parentId: string,
+  input: SpawnChallengerInput
+): Promise<CompassCampaign> {
+  const res = await fetch(`/api/campaigns/${encodeURIComponent(parentId)}/challenger`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(input)
   })
   const campaign = project(await readJson<CompassCampaign>(res))
   upsertInCache(campaign)

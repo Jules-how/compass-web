@@ -33,6 +33,7 @@ import {
   type LibraryDragPayload
 } from '@/components/outbound/EditorComponentsAccordion'
 import { CampaignCopyMeta } from '@/components/outbound/CampaignCopyMeta'
+import { CampaignExperimentPanel } from '@/components/outbound/CampaignExperimentPanel'
 import { CopyArchivePanel } from '@/components/outbound/CopyArchivePanel'
 import { SequenceAnalyticsPanel } from '@/components/outbound/SequenceAnalyticsPanel'
 import { INSTANTLY_BASE_VARIABLES } from '@/lib/instantly-variables'
@@ -44,7 +45,7 @@ const COMPONENTS_WIDTH_DEFAULT = 680
 const COMPONENTS_WIDTH_MIN = 480
 const COMPONENTS_WIDTH_MAX = 960
 
-type EditorTab = 'analytics' | 'editor' | 'archive' | 'leads' | 'settings'
+type EditorTab = 'analytics' | 'editor' | 'experiment' | 'archive' | 'leads' | 'settings'
 
 function readComponentsWidth(): number {
   if (typeof window === 'undefined') return COMPONENTS_WIDTH_DEFAULT
@@ -111,19 +112,23 @@ export function SequenceEditor({
   campaignId,
   unbound = false,
   variant = 'page',
-  onClose
+  initialTab = 'editor',
+  onClose,
+  onChallengerSpawned
 }: {
   campaignId?: string
   unbound?: boolean
   variant?: 'page' | 'overlay'
+  initialTab?: EditorTab
   onClose?: () => void
+  onChallengerSpawned?: (campaignId: string) => void
 }) {
   const [campaign, setCampaign] = useState<CompassCampaign | null>(null)
   const [sequence, setSequence] = useState<OutboundSequence | null>(null)
   const [activeStepId, setActiveStepId] = useState<string | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<EditorTab>('editor')
+  const [tab, setTab] = useState<EditorTab>(initialTab)
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [focusField, setFocusField] = useState<'subject' | 'body'>('body')
   const [componentsWidth, setComponentsWidth] = useState(COMPONENTS_WIDTH_DEFAULT)
@@ -131,6 +136,10 @@ export function SequenceEditor({
   const resizeDrag = useRef<{ startX: number; startWidth: number } | null>(null)
   const componentsWidthRef = useRef(componentsWidth)
   componentsWidthRef.current = componentsWidth
+
+  useEffect(() => {
+    setTab(initialTab)
+  }, [initialTab, campaignId])
 
   useEffect(() => {
     setComponentsWidth(readComponentsWidth())
@@ -261,7 +270,16 @@ export function SequenceEditor({
             sequence_draft: stamped,
             copy_status: (nextCampaign.copy_status as string) || 'draft',
             instantly_campaign_id: nextCampaign.instantly_campaign_id ?? null,
-            name: nextCampaign.name
+            name: nextCampaign.name,
+            hypothesis: nextCampaign.hypothesis ?? null,
+            experiment_factor: (nextCampaign.experiment_factor as string) || 'none',
+            experiment_role: (nextCampaign.experiment_role as string) || 'none',
+            parent_campaign_id: nextCampaign.parent_campaign_id ?? null,
+            experiment_status: (nextCampaign.experiment_status as string) || 'none',
+            sample_size_target: nextCampaign.sample_size_target ?? null,
+            experiment_decision: nextCampaign.experiment_decision ?? null,
+            expression_key: nextCampaign.expression_key ?? null,
+            cta_type: nextCampaign.cta_type ?? null
           })
           setCampaign(updated)
           setSequence(updated.sequence_draft ?? stamped)
@@ -429,13 +447,35 @@ export function SequenceEditor({
       return createPortal(
         <AnimatePresence>
           <motion.div
-            className="fixed inset-0 z-[110] flex flex-col bg-[var(--compass-wash)]"
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            key="sequence-editor-overlay"
+            className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-5 md:p-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
-            {children}
+            <motion.button
+              type="button"
+              aria-label="Close editor backdrop"
+              className="absolute inset-0 bg-neutral-950/45 backdrop-blur-[2px]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => onClose?.()}
+            />
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Sequence editor"
+              className="relative flex h-[min(920px,calc(100dvh-2.5rem))] w-full max-w-[1480px] flex-col overflow-hidden rounded-2xl border border-stone-200/80 bg-[var(--compass-wash)] shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
+              initial={{ opacity: 0, y: 28, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.98 }}
+              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {children}
+            </motion.div>
           </motion.div>
         </AnimatePresence>,
         document.body
@@ -449,16 +489,27 @@ export function SequenceEditor({
   }
 
   if (error) {
-    return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-        {error}
+    return shell(
+      <div className="flex flex-1 items-center justify-center p-8">
+        <div className="max-w-md rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+          <p>{error}</p>
+          {variant === 'overlay' ? (
+            <button
+              type="button"
+              onClick={() => onClose?.()}
+              className="mt-3 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-red-800"
+            >
+              Close
+            </button>
+          ) : null}
+        </div>
       </div>
     )
   }
 
   if (!campaign || !sequence) {
-    return (
-      <div className="rounded-2xl border border-stone-200/70 bg-white p-5 text-sm text-neutral-500 shadow-soft">
+    return shell(
+      <div className="flex flex-1 items-center justify-center p-8 text-sm text-neutral-500">
         Loading editor…
       </div>
     )
@@ -467,6 +518,7 @@ export function SequenceEditor({
   const tabs: { id: EditorTab; label: string }[] = [
     { id: 'analytics', label: 'Analytics' },
     { id: 'editor', label: 'Editor' },
+    { id: 'experiment', label: 'Experiment' },
     { id: 'archive', label: 'Archive' },
     { id: 'leads', label: 'Leads' },
     { id: 'settings', label: 'Settings' }
@@ -747,6 +799,24 @@ export function SequenceEditor({
                 }}
               />
             </div>
+          ) : null}
+
+          {tab === 'experiment' ? (
+            <CampaignExperimentPanel
+              campaign={campaign}
+              unbound={unbound}
+              onChange={(patch) => {
+                const nextCampaign = { ...campaign, ...patch }
+                setCampaign(nextCampaign)
+                if (sequence) scheduleAutosave(nextCampaign, sequence)
+              }}
+              onChallengerSpawned={(id) => {
+                if (onChallengerSpawned) onChallengerSpawned(id)
+                else if (typeof window !== 'undefined') {
+                  window.location.href = `/sales/pipeline/${id}`
+                }
+              }}
+            />
           ) : null}
 
           {tab === 'analytics' ? (

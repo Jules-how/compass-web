@@ -75,17 +75,62 @@ test('factor performance module + hub wiring exist', () => {
   assert.match(lib, /export function rollupOutboundByFactor/)
   assert.match(lib, /export function enrichOutboundCampaignFactors/)
   assert.match(lib, /lengthBandFromStructure/)
+  assert.match(lib, /expressionLabel/)
+  assert.match(lib, /countFactorDifferences/)
+  assert.match(lib, /'cta_type'/)
+  assert.match(lib, /'expression'/)
+  assert.match(lib, /'structure'/)
 
   const section = read('src/components/outbound/OutboundFactorSection.tsx')
   assert.match(section, /Performance by factor/)
   assert.match(section, /Group by/)
+  assert.match(section, /CTA type/)
+  assert.match(section, /Expression/)
 
   const hub = read('src/components/outbound/OutboundHub.tsx')
   assert.match(hub, /OutboundFactorSection/)
+  assert.match(hub, /OutboundExperimentCompare/)
 
   const api = read('src/app/api/instantly/outbound-campaigns/route.ts')
   assert.match(api, /enrichOutboundBoardFactors/)
   assert.match(api, /compass_pipeline_campaigns/)
+})
+
+test('expression label prefers expression_key; CTA type explicit beats guess', () => {
+  // Mirror production helpers for unit coverage without TS compile.
+  function expressionLabel(expressionKey, coldExpression) {
+    const key = (expressionKey || '').trim()
+    if (key) return key
+    const body = (coldExpression || '').replace(/\s+/g, ' ').trim()
+    if (!body) return '—'
+    return body.length > 64 ? `${body.slice(0, 61)}…` : body
+  }
+  assert.equal(expressionLabel('expr-growth', 'long body text'), 'expr-growth')
+  assert.equal(expressionLabel('', 'Hello world'), 'Hello world')
+
+  function preferCtaType(explicit, guessed) {
+    return (explicit || '').trim() || guessed || ''
+  }
+  assert.equal(preferCtaType('permission', 'timed_call'), 'permission')
+  assert.equal(preferCtaType('', 'timed_call'), 'timed_call')
+})
+
+test('experiment campaign columns + challenger route exist', () => {
+  const campaigns = read('src/lib/campaigns.ts')
+  assert.match(campaigns, /normalizeExperimentFactor/)
+  assert.match(campaigns, /validateExperimentWrite/)
+  assert.match(campaigns, /experiment_status/)
+
+  const challenger = read('src/app/api/campaigns/[id]/challenger/route.ts')
+  assert.match(challenger, /Spawn a one-factor challenger/)
+  assert.match(challenger, /experiment_role: 'challenger'/)
+
+  const inventory = read('src/app/api/agent/leads/inventory/route.ts')
+  assert.match(inventory, /buildLeadInventory/)
+
+  const mark = read('src/app/api/agent/leads/mark/route.ts')
+  assert.match(mark, /enrich_status/)
+  assert.match(mark, /pipeline_campaign_id/)
 })
 
 test('length / CTA helpers match Compass structures and CTA phrasing', () => {

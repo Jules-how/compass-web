@@ -388,6 +388,9 @@ export interface LeadContact {
   last_outbound_at: string | null
   lead_context_status: string | null
   lead_context_updated_at: string | null
+  pipeline_campaign_id?: string | null
+  cohort_tag?: string | null
+  enrich_status?: string | null
   created_at: string | null
   updated_at: string | null
   mirrored_at: string
@@ -466,6 +469,11 @@ export interface LeadListFilters {
   recontact_ready?: '1' | '0'
   /** People list tab: cold/unreplied Leads vs interested Prospects. */
   bucket?: 'leads' | 'prospects'
+  /** Compass pipeline campaign cohort. */
+  pipeline_campaign_id?: string
+  cohort_tag?: string
+  /** Enrichment readiness: none|queued|enriched|thin|opener_ready|uploaded */
+  enrich_status?: string
 }
 
 export interface LeadSummaryCounts {

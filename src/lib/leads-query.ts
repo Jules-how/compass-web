@@ -33,7 +33,10 @@ export function parseLeadListFilters(searchParams: URLSearchParams): LeadListFil
     suppressed: suppressed === '1' || suppressed === '0' ? suppressed : undefined,
     recontact_ready:
       recontactReady === '1' || recontactReady === '0' ? recontactReady : undefined,
-    bucket: parseLeadBucket(searchParams.get('bucket'))
+    bucket: parseLeadBucket(searchParams.get('bucket')),
+    pipeline_campaign_id: emptyToUndef(searchParams.get('pipeline_campaign_id')),
+    cohort_tag: emptyToUndef(searchParams.get('cohort_tag')),
+    enrich_status: emptyToUndef(searchParams.get('enrich_status'))
   }
 }
 
@@ -94,6 +97,15 @@ export function applyLeadFilters<T extends LeadFilterQuery>(query: T, filters: L
     }
   }
   if (filters.source) q = q.eq('source', filters.source) as T
+  if (filters.pipeline_campaign_id) {
+    q = q.eq('pipeline_campaign_id', filters.pipeline_campaign_id) as T
+  }
+  if (filters.cohort_tag) {
+    q = q.eq('cohort_tag', filters.cohort_tag) as T
+  }
+  if (filters.enrich_status) {
+    q = q.eq('enrich_status', filters.enrich_status) as T
+  }
   if (filters.outbound_status) {
     // Pipeline filter: exact match on outbound_status.
     // Also accept replied|interested via multi for preset "hot" if needed later.
@@ -227,6 +239,11 @@ export function leadFiltersToSearchParams(filters: LeadListFilters, page?: numbe
   if (filters.recontact_ok) params.set('recontact_ok', filters.recontact_ok)
   if (filters.suppressed) params.set('suppressed', filters.suppressed)
   if (filters.recontact_ready) params.set('recontact_ready', filters.recontact_ready)
+  if (filters.pipeline_campaign_id) {
+    params.set('pipeline_campaign_id', filters.pipeline_campaign_id)
+  }
+  if (filters.cohort_tag) params.set('cohort_tag', filters.cohort_tag)
+  if (filters.enrich_status) params.set('enrich_status', filters.enrich_status)
   if (filters.bucket === 'prospects') params.set('bucket', 'prospects')
   if (page && page > 1) params.set('page', String(page))
   return params

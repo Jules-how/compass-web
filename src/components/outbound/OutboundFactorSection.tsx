@@ -131,7 +131,7 @@ export function OutboundFactorSection() {
         <div>
           <CardTitle>Performance by factor</CardTitle>
           <CardDescription>
-            Instantly metrics rolled up by campaign bind — offer, CTA, length, audience
+            Instantly metrics rolled up by campaign bind — offer, CTA, expression, structure, audience
           </CardDescription>
         </div>
         <span
@@ -150,11 +150,14 @@ export function OutboundFactorSection() {
             <span className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
               Group by
             </span>
-            <div className="inline-flex gap-1 rounded-xl border border-stone-200 bg-stone-50 p-1">
+            <div className="inline-flex flex-wrap gap-1 rounded-xl border border-stone-200 bg-stone-50 p-1">
               {(
                 [
                   ['offer', 'Offer'],
                   ['cta', 'CTA'],
+                  ['cta_type', 'CTA type'],
+                  ['expression', 'Expression'],
+                  ['structure', 'Structure'],
                   ['length', 'Length'],
                   ['audience', 'Audience']
                 ] as const

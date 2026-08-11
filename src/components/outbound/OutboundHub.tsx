@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { OutboundExperimentCompare } from '@/components/outbound/OutboundExperimentCompare'
 import { OutboundFactorSection } from '@/components/outbound/OutboundFactorSection'
 import { OutboundHistorySection } from '@/components/outbound/OutboundHistorySection'
 import { OutboundLibraryAccordion } from '@/components/outbound/OutboundLibraryAccordion'
@@ -12,6 +13,7 @@ export function OutboundHub(_props: { onOpenEditor?: () => void } = {}) {
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)]">
       <div className="min-w-0 space-y-6">
         <OutboundLiveSection />
+        <OutboundExperimentCompare />
         <OutboundFactorSection />
         <OutboundHistorySection />
       </div>

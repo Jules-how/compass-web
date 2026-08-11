@@ -592,6 +592,19 @@ export default function LeadTable({
               label: humanizeCompleteness(c)
             }))}
           />
+          <FilterSelect
+            label="Enrich status"
+            value={draftFilters.enrich_status ?? ''}
+            onChange={(v) => patchFilters({ enrich_status: v || undefined })}
+            options={[
+              { value: 'none', label: 'None' },
+              { value: 'queued', label: 'Queued' },
+              { value: 'enriched', label: 'Enriched' },
+              { value: 'thin', label: 'Thin' },
+              { value: 'opener_ready', label: 'Opener ready' },
+              { value: 'uploaded', label: 'Uploaded' }
+            ]}
+          />
           <label className="block">
             <span className="mb-1.5 block text-xs font-medium text-neutral-500">City</span>
             <input
@@ -600,6 +613,43 @@ export default function LeadTable({
               value={draftFilters.city ?? ''}
               onChange={(e) =>
                 setDraftFilters((f) => ({ ...f, city: e.target.value || undefined }))
+              }
+              onBlur={() => applyFilters()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') applyFilters()
+              }}
+              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-medium text-neutral-500">Cohort tag</span>
+            <input
+              type="text"
+              placeholder="wave-1-nsw"
+              value={draftFilters.cohort_tag ?? ''}
+              onChange={(e) =>
+                setDraftFilters((f) => ({ ...f, cohort_tag: e.target.value || undefined }))
+              }
+              onBlur={() => applyFilters()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') applyFilters()
+              }}
+              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+              Pipeline campaign id
+            </span>
+            <input
+              type="text"
+              placeholder="campaign-…"
+              value={draftFilters.pipeline_campaign_id ?? ''}
+              onChange={(e) =>
+                setDraftFilters((f) => ({
+                  ...f,
+                  pipeline_campaign_id: e.target.value || undefined
+                }))
               }
               onBlur={() => applyFilters()}
               onKeyDown={(e) => {

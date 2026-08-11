@@ -2,7 +2,15 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode
+} from 'react'
 import {
   deleteCampaign,
   getCampaignDetail,
@@ -16,6 +24,8 @@ import {
   CAMPAIGN_STATUSES,
   campaignHealthLabel,
   campaignStatusLabel,
+  experimentFactorLabel,
+  experimentStatusLabel,
   formatCampaignDate,
   type CompassCampaign,
   type CompassCampaignActivity,
@@ -27,6 +37,27 @@ import {
   listLibraryItems
 } from '@/lib/outbound-library-client'
 import type { OutboundTemplate } from '@/lib/outbound-copy'
+import { SequenceEditor } from '@/components/outbound/SequenceEditor'
+
+const SIDECAR_WIDTH_KEY = 'compass.pipeline.sidecarWidth.v1'
+const SIDECAR_WIDTH_DEFAULT = 440
+const SIDECAR_WIDTH_MIN = 360
+const SIDECAR_WIDTH_MAX = 720
+
+function clampSidecarWidth(value: number): number {
+  return Math.min(SIDECAR_WIDTH_MAX, Math.max(SIDECAR_WIDTH_MIN, Math.round(value)))
+}
+
+function readStoredSidecarWidth(): number {
+  if (typeof window === 'undefined') return SIDECAR_WIDTH_DEFAULT
+  try {
+    const raw = window.localStorage.getItem(SIDECAR_WIDTH_KEY)
+    const n = raw ? Number(raw) : NaN
+    return Number.isFinite(n) ? clampSidecarWidth(n) : SIDECAR_WIDTH_DEFAULT
+  } catch {
+    return SIDECAR_WIDTH_DEFAULT
+  }
+}
 
 export function CampaignSidecar({
   campaignId,
@@ -44,6 +75,9 @@ export function CampaignSidecar({
   const router = useRouter()
   const isPage = variant === 'page'
   const detailHref = `/sales/pipeline/${campaignId}`
+  const [width, setWidth] = useState(SIDECAR_WIDTH_DEFAULT)
+  const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null)
+  const [resizing, setResizing] = useState(false)
   const [campaign, setCampaign] = useState<CompassCampaign | null>(null)
   const [activity, setActivity] = useState<CompassCampaignActivity[]>([])
   const [favorited, setFavorited] = useState(false)
@@ -52,10 +86,15 @@ export function CampaignSidecar({
   const [openSections, setOpenSections] = useState({
     properties: true,
     copy: true,
+    experiment: true,
     milestones: true,
     progress: true,
     activity: true
   })
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editorTab, setEditorTab] = useState<
+    'analytics' | 'editor' | 'experiment' | 'archive' | 'leads' | 'settings'
+  >('editor')
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [status, setStatus] = useState('planned')
@@ -111,7 +150,52 @@ export function CampaignSidecar({
     void hydrate(campaignId)
     setShowAllActivity(false)
     setMenuOpen(false)
+    setEditorOpen(false)
+    setEditorTab('editor')
   }, [campaignId])
+
+  useEffect(() => {
+    if (isPage) return
+    setWidth(readStoredSidecarWidth())
+  }, [isPage])
+
+  const onResizePointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (isPage) return
+      e.preventDefault()
+      e.currentTarget.setPointerCapture(e.pointerId)
+      resizeRef.current = { startX: e.clientX, startWidth: width }
+      setResizing(true)
+    },
+    [isPage, width]
+  )
+
+  const onResizePointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = resizeRef.current
+    if (!drag) return
+    // Dragging the left edge: move left = wider.
+    const next = clampSidecarWidth(drag.startWidth + (drag.startX - e.clientX))
+    setWidth(next)
+  }, [])
+
+  const onResizePointerUp = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!resizeRef.current) return
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {
+      // already released
+    }
+    resizeRef.current = null
+    setResizing(false)
+    setWidth((current) => {
+      try {
+        window.localStorage.setItem(SIDECAR_WIDTH_KEY, String(current))
+      } catch {
+        // ignore quota / private mode
+      }
+      return current
+    })
+  }, [])
 
   const progress = useMemo(() => {
     const scope = milestones.length
@@ -166,13 +250,46 @@ export function CampaignSidecar({
   const visibleActivity = showAllActivity ? activity : activity.slice(0, 5)
 
   return (
+    <>
     <aside
       className={
         isPage
-          ? 'flex min-h-0 w-full flex-1 flex-col bg-[#f7f8f9]'
-          : 'flex h-full w-full max-w-[380px] shrink-0 flex-col border-l border-neutral-200 bg-[#f7f8f9]'
+          ? 'relative flex min-h-0 w-full flex-1 flex-col bg-[#f7f8f9]'
+          : `relative flex h-full shrink-0 flex-col border-l border-neutral-200 bg-[#f7f8f9] ${
+              resizing ? 'select-none' : ''
+            }`
       }
+      style={isPage ? undefined : { width, maxWidth: width }}
     >
+      {!isPage ? (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize campaign panel"
+          aria-valuemin={SIDECAR_WIDTH_MIN}
+          aria-valuemax={SIDECAR_WIDTH_MAX}
+          aria-valuenow={width}
+          title="Drag to resize"
+          onPointerDown={onResizePointerDown}
+          onPointerMove={onResizePointerMove}
+          onPointerUp={onResizePointerUp}
+          onPointerCancel={onResizePointerUp}
+          className="group absolute inset-y-0 -left-1 z-20 w-2.5 cursor-col-resize touch-none"
+        >
+          <span
+            className={`absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition ${
+              resizing ? 'bg-[#e85d2a]' : 'bg-transparent group-hover:bg-neutral-300'
+            }`}
+          />
+          <span
+            className={`absolute top-1/2 left-1/2 h-8 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full transition ${
+              resizing
+                ? 'bg-[#e85d2a]'
+                : 'bg-neutral-300/90 group-hover:bg-neutral-400'
+            }`}
+          />
+        </div>
+      ) : null}
       <div className="flex items-start gap-2 border-b border-neutral-200 bg-white px-4 py-3">
         {isPage ? (
           <Link
@@ -296,7 +413,7 @@ export function CampaignSidecar({
         className={
           isPage
             ? 'min-h-0 flex-1 space-y-3 overflow-y-auto p-4 md:p-6'
-            : 'min-h-0 flex-1 space-y-3 overflow-y-auto p-3'
+            : 'min-h-0 flex-1 space-y-3 overflow-y-auto p-3.5'
         }
       >
         {error ? (
@@ -520,12 +637,16 @@ export function CampaignSidecar({
                     </p>
                   ) : null}
                   <div className="flex flex-wrap gap-2 pt-1">
-                    <Link
-                      href={`/sales/outbound/editor/${campaignId}`}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditorTab('editor')
+                        setEditorOpen(true)
+                      }}
                       className="rounded-md bg-[#e85d2a] px-2.5 py-1.5 text-[12px] font-semibold text-white"
                     >
                       Open editor
-                    </Link>
+                    </button>
                     <button
                       type="button"
                       className="rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700"
@@ -565,12 +686,16 @@ export function CampaignSidecar({
                 <div className="space-y-2 text-xs text-neutral-500">
                   <p>No copy attached yet. Compose a sequence or attach a template.</p>
                   <div className="flex flex-wrap gap-2">
-                    <Link
-                      href={`/sales/outbound/editor/${campaignId}`}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditorTab('editor')
+                        setEditorOpen(true)
+                      }}
                       className="rounded-md bg-[#e85d2a] px-2.5 py-1.5 text-[12px] font-semibold text-white"
                     >
                       Add copy
-                    </Link>
+                    </button>
                     <button
                       type="button"
                       className="rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700"
@@ -607,6 +732,54 @@ export function CampaignSidecar({
                   </div>
                 </div>
               )}
+            </Section>
+
+            <Section
+              title="Experiment"
+              open={openSections.experiment}
+              onToggle={() =>
+                setOpenSections((prev) => ({ ...prev, experiment: !prev.experiment }))
+              }
+            >
+              <div className="space-y-3 text-sm">
+                {campaign.experiment_status && campaign.experiment_status !== 'none' ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-[#c2410c]">
+                      {experimentStatusLabel(campaign.experiment_status)}
+                    </span>
+                    {campaign.experiment_role && campaign.experiment_role !== 'none' ? (
+                      <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">
+                        {campaign.experiment_role}
+                      </span>
+                    ) : null}
+                    {campaign.experiment_factor && campaign.experiment_factor !== 'none' ? (
+                      <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">
+                        {experimentFactorLabel(campaign.experiment_factor)}
+                      </span>
+                    ) : null}
+                    {campaign.cta_type ? (
+                      <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">
+                        {String(campaign.cta_type).replaceAll('_', ' ')}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-xs text-neutral-500">No experiment set yet.</p>
+                )}
+                <p className="text-xs leading-relaxed text-neutral-600">
+                  {campaign.hypothesis || 'Open the editor Experiment tab to set a hypothesis and spawn a challenger.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditorTab('experiment')
+                    setEditorOpen(true)
+                  }}
+                  className="rounded-md bg-[#e85d2a] px-2.5 py-1.5 text-[12px] font-semibold text-white"
+                >
+                  Open experiment
+                </button>
+              </div>
             </Section>
 
             <Section
@@ -766,6 +939,24 @@ export function CampaignSidecar({
         )}
       </div>
     </aside>
+      {editorOpen ? (
+        <SequenceEditor
+          campaignId={campaignId}
+          variant="overlay"
+          initialTab={editorTab}
+          onClose={() => {
+            setEditorOpen(false)
+            setEditorTab('editor')
+            void hydrate(campaignId).then(() => onUpdated())
+          }}
+          onChallengerSpawned={(id) => {
+            setEditorOpen(false)
+            onUpdated()
+            router.push(`/sales/pipeline/${id}`)
+          }}
+        />
+      ) : null}
+    </>
   )
 }
 
@@ -783,8 +974,8 @@ function Section({
   action?: ReactNode
 }) {
   return (
-    <section className="rounded-xl border border-neutral-200 bg-white p-3">
-      <div className="mb-2 flex items-center gap-2">
+    <section className="rounded-xl border border-neutral-200 bg-white p-3.5">
+      <div className="mb-2.5 flex items-center gap-2">
         <button
           type="button"
           onClick={onToggle}
@@ -800,11 +991,27 @@ function Section({
   )
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({
+  label,
+  children,
+  layout = 'inline'
+}: {
+  label: string
+  children: ReactNode
+  layout?: 'inline' | 'stack'
+}) {
+  if (layout === 'stack') {
+    return (
+      <label className="flex flex-col gap-1.5">
+        <span className="text-[11px] font-medium text-neutral-500">{label}</span>
+        {children}
+      </label>
+    )
+  }
   return (
-    <div className="grid grid-cols-[72px_minmax(0,1fr)] items-start gap-2">
-      <dt className="pt-1.5 text-xs text-neutral-500">{label}</dt>
-      <dd>{children}</dd>
+    <div className="grid grid-cols-[88px_minmax(0,1fr)] items-start gap-2.5">
+      <dt className="pt-2 text-xs text-neutral-500">{label}</dt>
+      <dd className="min-w-0">{children}</dd>
     </div>
   )
 }

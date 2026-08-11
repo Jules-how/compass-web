@@ -15,6 +15,9 @@ Apply migrations:
 - `0034_compass_outbound_copy.sql` — outbound libraries + campaign copy columns
 - `0035_compass_agent_sync.sql` — `compass_sync_snapshots`
 - `0037_compass_outbound_copy_archive.sql` — editor Copy Archive (`compass_outbound_copy_archive`)
+- `0039_campaign_experiments.sql` — experiment hypothesis / one-factor A/B fields on pipeline campaigns
+- `0040_lead_campaign_cohort.sql` — `pipeline_campaign_id` + `cohort_tag` on `lead_contacts`
+- `0041_lead_enrich_readiness.sql` — `enrich_status` on `lead_contacts`
 
 Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/DELETE) for saved sequences with vertical tags, component breakdown, Instantly-style performance, and `last_used_at`.
 
@@ -25,6 +28,8 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 | `GET` | `/api/agent/brief` | Compact daily brief (~1–2KB). Cached snapshot unless `x-compass-fresh: 1` |
 | `POST` | `/api/agent/sync` | `{ sources?: ['ads','instantly','instantly_leads'] }` |
 | `GET` | `/api/agent/leads` | Lean Instantly-hot leads (`status`, `limit`, `q`) |
+| `GET` | `/api/agent/leads/inventory` | Uncontacted counts by vertical × state (orient) |
+| `PATCH` | `/api/agent/leads/mark` | Bulk set `pipeline_campaign_id` / `cohort_tag` / `enrich_status` (`ids[]`, max 500) |
 | `GET` | `/api/agent/campaigns` | Pipeline + Instantly campaign glance |
 | `GET` | `/api/agent/outbound/summary` | Library counts + offer keys (~1–2KB) |
 | `GET` | `/api/agent/outbound/:kind` | Compact list (`limit` default 40 max 100; `full=1` for bodies/sequences) |
@@ -32,12 +37,37 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 | `GET` | `/api/agent/outbound/:kind/:id` | Full row |
 | `PATCH` | `/api/agent/outbound/:kind/:id` | Partial update (`Prefer: return=minimal` for lean ack) |
 | `DELETE` | `/api/agent/outbound/:kind/:id` | Soft-archive |
-| `GET/PATCH` | `/api/agent/outbound/campaigns/:campaignId/copy` | Campaign copy bind fields (`full=1` includes `sequence_draft`) |
+| `GET/PATCH` | `/api/agent/outbound/campaigns/:campaignId/copy` | Campaign copy + experiment fields (`full=1` includes `sequence_draft`) |
+| `POST` | `/api/campaigns/:id/challenger` | Operator: spawn one-factor challenger (cookie auth) |
 | `GET/POST` | `/api/cron/daily-sync` | Vercel Cron daily runner |
 
 Kinds: `offers` | `expressions` | `structures` | `ctas` | `subjects` | `openers` | `templates`.
 
 List filters: `offer_key`, `vertical`, `location`, `q`, `archived=1`, `limit`, `full=1`.
+
+### Experiment fields (campaign copy)
+
+`hypothesis`, `experiment_factor` (`none|cta|expression|structure|offer|audience`), `experiment_role` (`none|control|challenger|solo`), `parent_campaign_id`, `experiment_status` (`none|queued|running|ready_to_call|won|lost|killed|inconclusive`), `sample_size_target`, `experiment_decision`, `expression_key`, `cta_type`.
+
+One factor per challenger card. A/B = two Instantly campaigns (not Step variants).
+
+Example:
+
+```bash
+curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/campaigns/campaign-au-brokers-growth-2026-08/copy" \
+  "${AUTH[@]}" -H "Content-Type: application/json" -H "Prefer: return=minimal" \
+  -d '{"hypothesis":"Permission CTA beats timed ask","experiment_role":"control","experiment_status":"queued","cta_type":"permission"}'
+```
+
+```bash
+curl -sS "$COMPASS_BASE_URL/api/agent/leads/inventory?vertical=mortgage-brokers" "${AUTH[@]}"
+```
+
+```bash
+curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
+  "${AUTH[@]}" -H "Content-Type: application/json" \
+  -d '{"ids":["…"],"pipeline_campaign_id":"campaign-au-brokers-growth-2026-08","cohort_tag":"wave-1-nsw","enrich_status":"queued"}'
+```
 
 ## Instantly ↔ Leads
 

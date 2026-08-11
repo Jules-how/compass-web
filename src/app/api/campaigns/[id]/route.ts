@@ -14,9 +14,14 @@ import {
   emptyCampaignCopyFields,
   normalizeCampaignHealth,
   normalizeCampaignStatus,
+  normalizeCtaType,
+  normalizeExperimentFactor,
+  normalizeExperimentRole,
+  normalizeExperimentStatus,
   normalizeLabels,
   normalizeOutboundTagList,
   projectCampaignCopy,
+  validateExperimentWrite,
   type CompassCampaign,
   type CompassCampaignActivity,
   type CompassCampaignMilestone
@@ -109,6 +114,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     cold_expression?: string | null
     sequence_draft?: OutboundSequence | null
     copy_status?: string
+    hypothesis?: string | null
+    experiment_factor?: string
+    experiment_role?: string
+    parent_campaign_id?: string | null
+    experiment_status?: string
+    sample_size_target?: number | null
+    experiment_decision?: string | null
+    expression_key?: string | null
+    cta_type?: string | null
   }
   try {
     body = (await readBoundedJson(request, 256 * 1024)) as typeof body
@@ -226,6 +240,74 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       patch.copy_status = normalizeCopyStatus(body.copy_status)
     } else if (body.sequence_draft !== undefined && (existing.copy_status ?? 'none') === 'none') {
       patch.copy_status = 'draft'
+    }
+
+    if (body.hypothesis !== undefined) {
+      patch.hypothesis = body.hypothesis?.trim() || null
+      if (patch.hypothesis !== existing.hypothesis) {
+        activity.push({ action: 'hypothesis_set', body: 'Updated experiment hypothesis' })
+      }
+    }
+    if (body.experiment_factor !== undefined) {
+      patch.experiment_factor = normalizeExperimentFactor(body.experiment_factor)
+    }
+    if (body.experiment_role !== undefined) {
+      patch.experiment_role = normalizeExperimentRole(body.experiment_role)
+    }
+    if (body.parent_campaign_id !== undefined) {
+      patch.parent_campaign_id = body.parent_campaign_id?.trim() || null
+    }
+    if (body.experiment_status !== undefined) {
+      const nextStatus = normalizeExperimentStatus(body.experiment_status)
+      if (nextStatus !== existing.experiment_status) {
+        patch.experiment_status = nextStatus
+        activity.push({
+          action: 'experiment_status',
+          body: `Experiment status → ${nextStatus}`
+        })
+      }
+    }
+    if (body.sample_size_target !== undefined) {
+      if (body.sample_size_target === null) {
+        patch.sample_size_target = null
+      } else if (typeof body.sample_size_target === 'number' && Number.isFinite(body.sample_size_target)) {
+        patch.sample_size_target = Math.max(0, Math.floor(body.sample_size_target))
+      }
+    }
+    if (body.experiment_decision !== undefined) {
+      patch.experiment_decision = body.experiment_decision?.trim() || null
+    }
+    if (body.expression_key !== undefined) {
+      patch.expression_key = body.expression_key?.trim() || null
+    }
+    if (body.cta_type !== undefined) {
+      patch.cta_type = normalizeCtaType(body.cta_type)
+    }
+
+    const mergedRole = normalizeExperimentRole(
+      (patch.experiment_role as string | undefined) ?? existing.experiment_role
+    )
+    const mergedFactor = normalizeExperimentFactor(
+      (patch.experiment_factor as string | undefined) ?? existing.experiment_factor
+    )
+    const mergedStatus = normalizeExperimentStatus(
+      (patch.experiment_status as string | undefined) ?? existing.experiment_status
+    )
+    const mergedParent =
+      patch.parent_campaign_id !== undefined
+        ? (patch.parent_campaign_id as string | null)
+        : existing.parent_campaign_id
+    const mergedHypothesis =
+      patch.hypothesis !== undefined ? (patch.hypothesis as string | null) : existing.hypothesis
+    const experimentError = validateExperimentWrite({
+      experiment_role: mergedRole,
+      experiment_factor: mergedFactor,
+      experiment_status: mergedStatus,
+      parent_campaign_id: mergedParent,
+      hypothesis: mergedHypothesis
+    })
+    if (experimentError) {
+      return portalJson({ error: experimentError }, { status: 400 })
     }
 
     // Keep end >= start when both present after patch.

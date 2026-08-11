@@ -16,7 +16,7 @@ interface Ctx {
 }
 
 const COPY_SELECT =
-  'id,name,offer_key,structure_id,opener_mode,vertical_tags,location_tags,cold_expression,copy_status,sequence_draft,updated_at'
+  'id,name,offer_key,structure_id,opener_mode,vertical_tags,location_tags,cold_expression,copy_status,sequence_draft,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,updated_at'
 
 export async function GET(request: Request, context: Ctx) {
   const authError = requireAgentAuth(request)
