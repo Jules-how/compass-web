@@ -79,6 +79,8 @@ Sources:
 | `instantly` | Refresh Instantly cold-email glance snapshot |
 | `instantly_leads` | Pull replied / interested / meeting / not interested / OOO / wrong-person Instantly leads into `lead_contacts` (Inbox Instantly) |
 
+**Real-time Instantly:** `POST /api/webhooks/instantly` (Bearer `INSTANTLY_WEBHOOK_SECRET` or `COMPASS_AGENT_SECRET`). Nightly pull remains the backstop.
+
 4. **Drill Instantly / pipeline only when needed**:
 
 ```bash

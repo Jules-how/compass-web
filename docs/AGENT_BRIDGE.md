@@ -71,7 +71,11 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
 
 ## Instantly ↔ Leads
 
-Daily `instantly_leads` sync lists Instantly reply filters (replied / interested / meeting / not interested / OOO / wrong person / closed) and upserts `lead_contacts` by `instantly_lead_id` or email. Inbox Instantly reads those outbound statuses (plus legacy `replied_positive` / `replied_negative`) so positive, negative, and OOO replies all triage in one place.
+**Real-time:** Instantly POSTs to `POST /api/webhooks/instantly` on reply + interest status changes (`reply_received`, `lead_interested`, `lead_meeting_booked`, `lead_not_interested`, `lead_closed`, OOO / wrong person / bounce / unsub). Auth: `Authorization: Bearer <INSTANTLY_WEBHOOK_SECRET || COMPASS_AGENT_SECRET>` (or `x-instantly-webhook-secret`). Upserts `lead_contacts` for Inbox Instantly.
+
+**Nightly backstop:** Daily `instantly_leads` sync (cron + `POST /api/agent/sync`) lists Instantly reply filters (replied / interested / meeting / not interested / OOO / wrong person / closed) and upserts by `instantly_lead_id` or email. Inbox Instantly also reads legacy `replied_positive` / `replied_negative`.
+
+**Operator rule:** Meeting booked is not automatic from calendar. Mark Instantly interest `meeting_booked` when you book — webhook then updates Compass.
 
 ## Agent skill
 

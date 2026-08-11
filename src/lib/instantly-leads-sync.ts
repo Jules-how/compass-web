@@ -449,7 +449,7 @@ export async function syncInstantlyLeadsIntoCompass(
   }
 }
 
-function interestSuppressionReason(
+export function interestSuppressionReason(
   interest: number | null | undefined,
   status: number | null | undefined
 ): string {
@@ -494,7 +494,7 @@ const OUTBOUND_RANK: Record<string, number> = {
   suppressed: 7
 }
 
-function shouldOverwriteOutbound(
+export function shouldOverwriteOutbound(
   existing: string | null | undefined,
   incoming: string
 ): boolean {
