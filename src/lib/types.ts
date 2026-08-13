@@ -391,6 +391,8 @@ export interface LeadContact {
   pipeline_campaign_id?: string | null
   cohort_tag?: string | null
   enrich_status?: string | null
+  opener?: string | null
+  lead_facts?: unknown | null
   created_at: string | null
   updated_at: string | null
   mirrored_at: string

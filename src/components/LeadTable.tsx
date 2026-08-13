@@ -271,6 +271,13 @@ export default function LeadTable({
           recontact_days_remaining: rc.daysRemaining ?? '',
           recontact_ready: rc.recommendNewCampaign ? '1' : '0',
           instantly_campaign: l.instantly_campaign_name || l.instantly_campaign || '',
+          opener: l.opener ?? '',
+          lead_facts:
+            l.lead_facts == null
+              ? ''
+              : typeof l.lead_facts === 'string'
+                ? l.lead_facts
+                : JSON.stringify(l.lead_facts),
           created_at: l.created_at ?? '',
           mirrored_at: l.mirrored_at ?? ''
         }
@@ -1104,6 +1111,25 @@ function LeadCell({
       return <td className={`${cellPad} text-neutral-600`}>{lead.source || '—'}</td>
     case 'role':
       return <td className={`${cellPad} text-neutral-600`}>{lead.role || '—'}</td>
+    case 'opener':
+      return (
+        <td className={`${cellPad} max-w-[280px] truncate text-neutral-600`} title={lead.opener ?? ''}>
+          {lead.opener || '—'}
+        </td>
+      )
+    case 'lead_facts': {
+      const factsText =
+        lead.lead_facts == null
+          ? ''
+          : typeof lead.lead_facts === 'string'
+            ? lead.lead_facts
+            : JSON.stringify(lead.lead_facts)
+      return (
+        <td className={`${cellPad} max-w-[280px] truncate text-neutral-600`} title={factsText}>
+          {factsText || '—'}
+        </td>
+      )
+    }
     case 'linkedin':
       return (
         <td className={`${cellPad} max-w-[140px] truncate text-neutral-600`}>
@@ -1215,6 +1241,17 @@ function LeadDetail({
           Outreach
         </h3>
         <dl className="grid grid-cols-1 gap-2 text-sm">
+          <DetailRow label="Opener" value={lead.opener} />
+          <DetailRow
+            label="Lead facts"
+            value={
+              lead.lead_facts == null
+                ? null
+                : typeof lead.lead_facts === 'string'
+                  ? lead.lead_facts
+                  : JSON.stringify(lead.lead_facts, null, 2)
+            }
+          />
           <DetailRow label="Stage" value={humanizeStatus(lead.outbound_status)} />
           <DetailRow label="Sync" value={sync ? humanizeSyncState(sync) : '—'} />
           <DetailRow label="Interest" value={lead.interest_label} />

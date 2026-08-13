@@ -3,7 +3,7 @@
  * Defaults stay lean; optional columns can be toggled (Attio-style).
  */
 
-export const LEAD_COLUMN_STORAGE_KEY = 'compass.leadColumns.v2'
+export const LEAD_COLUMN_STORAGE_KEY = 'compass.leadColumns.v3'
 
 export type LeadColumnId =
   | 'name'
@@ -20,6 +20,8 @@ export type LeadColumnId =
   | 'source'
   | 'role'
   | 'linkedin'
+  | 'opener'
+  | 'lead_facts'
 
 export type LeadColumnDef = {
   id: LeadColumnId
@@ -44,7 +46,9 @@ export const LEAD_COLUMN_DEFS: LeadColumnDef[] = [
   { id: 'date_added', label: 'Date added', defaultVisible: true },
   { id: 'source', label: 'Source', defaultVisible: false },
   { id: 'role', label: 'Role', defaultVisible: false },
-  { id: 'linkedin', label: 'LinkedIn', defaultVisible: false }
+  { id: 'linkedin', label: 'LinkedIn', defaultVisible: false },
+  { id: 'opener', label: 'Opener', defaultVisible: false },
+  { id: 'lead_facts', label: 'Lead facts', defaultVisible: false }
 ]
 
 export const DEFAULT_VISIBLE_LEAD_COLUMNS: LeadColumnId[] = LEAD_COLUMN_DEFS.filter(
