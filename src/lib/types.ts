@@ -1,3 +1,5 @@
+import type { LeadFact } from '@/lib/lead-facts'
+
 // TypeScript types mirroring the Supabase `compass_*` tables
 // (supabase/migrations/0006_compass_web_tasks.sql).
 
@@ -392,7 +394,7 @@ export interface LeadContact {
   cohort_tag?: string | null
   enrich_status?: string | null
   opener?: string | null
-  lead_facts?: unknown | null
+  lead_facts?: LeadFact[] | unknown | null
   created_at: string | null
   updated_at: string | null
   mirrored_at: string

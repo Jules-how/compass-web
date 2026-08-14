@@ -18,6 +18,8 @@ Apply migrations:
 - `0039_campaign_experiments.sql` — experiment hypothesis / one-factor A/B fields on pipeline campaigns
 - `0040_lead_campaign_cohort.sql` — `pipeline_campaign_id` + `cohort_tag` on `lead_contacts`
 - `0041_lead_enrich_readiness.sql` — `enrich_status` on `lead_contacts`
+- `0043_lead_facts.sql` — `lead_facts` jsonb on `lead_contacts`
+- `0044_lead_facts_shape.sql` — engager-fact array comment (`kind` / `claim` / `url`)
 
 Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/DELETE) for saved sequences with vertical tags, component breakdown, Instantly-style performance, and `last_used_at`.
 
@@ -29,7 +31,8 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 | `POST` | `/api/agent/sync` | `{ sources?: ['ads','instantly','instantly_leads'] }` |
 | `GET` | `/api/agent/leads` | Lean Instantly-hot leads (`status`, `limit`, `q`) |
 | `GET` | `/api/agent/leads/inventory` | Uncontacted counts by vertical × state (orient) |
-| `PATCH` | `/api/agent/leads/mark` | Bulk set `pipeline_campaign_id` / `cohort_tag` / `enrich_status` (`ids[]`, max 500) |
+| `GET` | `/api/agent/leads/cohort` | Harvest input: contacts on a pipeline campaign (`pipeline_campaign_id` required; `enrich_status`, `limit`, `offset`) |
+| `PATCH` | `/api/agent/leads/mark` | Bulk `ids[]` for campaign/cohort/`enrich_status` (max 500). Per-row `rows[]` for `lead_facts` / `opener` / status (max 50). Facts are `[{kind, claim, url}]`. |
 | `GET` | `/api/agent/campaigns` | Pipeline + Instantly campaign glance |
 | `GET` | `/api/agent/outbound/summary` | Library counts + offer keys (~1–2KB) |
 | `GET` | `/api/agent/outbound/:kind` | Compact list (`limit` default 40 max 100; `full=1` for bodies/sequences) |
@@ -64,9 +67,16 @@ curl -sS "$COMPASS_BASE_URL/api/agent/leads/inventory?vertical=mortgage-brokers"
 ```
 
 ```bash
+curl -sS "$COMPASS_BASE_URL/api/agent/leads/cohort?pipeline_campaign_id=campaign-au-brokers-growth-2026-08&enrich_status=none,queued&limit=50" \
+  "${AUTH[@]}"
+
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   "${AUTH[@]}" -H "Content-Type: application/json" \
   -d '{"ids":["…"],"pipeline_campaign_id":"campaign-au-brokers-growth-2026-08","cohort_tag":"wave-1-nsw","enrich_status":"queued"}'
+
+curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
+  "${AUTH[@]}" -H "Content-Type: application/json" \
+  -d '{"rows":[{"id":"…","enrich_status":"enriched","lead_facts":[{"kind":"specialty","claim":"SMSF property loans for SMSF trustees","url":"https://example.com.au/services"}]}]}'
 ```
 
 ## Instantly ↔ Leads

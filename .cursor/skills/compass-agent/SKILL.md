@@ -87,6 +87,14 @@ Sources:
 curl -sS "$COMPASS_BASE_URL/api/agent/leads?limit=40" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 
+curl -sS "$COMPASS_BASE_URL/api/agent/leads/cohort?pipeline_campaign_id=campaign-au-brokers-growth-2026-08&enrich_status=none,queued&limit=50" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
+
+curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"rows":[{"id":"…","enrich_status":"enriched","lead_facts":[{"kind":"policy","claim":"No application fee on home loans","url":"https://example.com.au/about"}]}]}'
+
 curl -sS "$COMPASS_BASE_URL/api/agent/campaigns" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 ```

@@ -131,6 +131,7 @@ test('experiment campaign columns + challenger route exist', () => {
   const mark = read('src/app/api/agent/leads/mark/route.ts')
   assert.match(mark, /enrich_status/)
   assert.match(mark, /pipeline_campaign_id/)
+  assert.match(mark, /parseLeadFacts/)
 })
 
 test('length / CTA helpers match Compass structures and CTA phrasing', () => {

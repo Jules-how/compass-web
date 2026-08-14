@@ -124,6 +124,23 @@ test('agent bridge routes and cron are wired', () => {
   assert.match(vercel, /15 20 \* \* \*/)
 })
 
+test('lead facts parser and per-row mark path are wired', () => {
+  const facts = read('src/lib/lead-facts.ts')
+  assert.match(facts, /export const LEAD_FACT_KINDS/)
+  assert.match(facts, /specialty/)
+  assert.match(facts, /parseLeadFacts/)
+  const mark = read('src/app/api/agent/leads/mark/route.ts')
+  assert.match(mark, /parseLeadFacts/)
+  assert.match(mark, /use_rows_for_facts/)
+  assert.match(mark, /rows/)
+  const cohort = read('src/app/api/agent/leads/cohort/route.ts')
+  assert.match(cohort, /pipeline_campaign_id/)
+  assert.match(cohort, /lead_facts/)
+  const skill = read('.cursor/skills/compass-agent/SKILL.md')
+  assert.match(skill, /leads\/cohort/)
+  assert.match(skill, /lead_facts/)
+})
+
 test('instantly leads sync targets inbox-relevant filters', () => {
   const src = read('src/lib/instantly-leads-sync.ts')
   assert.match(src, /FILTER_VAL_REPLIED/)
