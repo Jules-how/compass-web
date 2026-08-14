@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { LeadContact, LeadListFilters, LeadSummaryCounts } from '@/lib/types'
 import { exportToCsv } from '@/lib/csv'
 import { leadFiltersToSearchParams } from '@/lib/leads-query'
@@ -11,29 +11,19 @@ import {
   PIPELINE_STATUSES,
   PRESET_SEGMENTS,
   SYNC_STATES,
-  formatLeadLocation,
   humanizeCompleteness,
   humanizeStatus,
   humanizeSyncState,
   humanizeVertical,
-  inferSyncState,
   mergeVerticalOptions,
-  outboundBadgeTone,
   type CompletenessFilter,
   type SavedLeadSegment
 } from '@/lib/leads-meta'
-import {
-  LEAD_COLUMN_DEFS,
-  formatRelativeLeadDate,
-  formatShortLeadDate,
-  type LeadColumnId
-} from '@/lib/lead-columns'
 import { computeRecontactEligibility } from '@/lib/recontact-eligibility'
-import { RecontactProgressRing } from '@/components/RecontactProgressRing'
-import { LeadRecontactPanel } from '@/components/LeadRecontactPanel'
-import { LeadColumnPicker, useLeadColumnVisibility } from '@/components/LeadColumnPicker'
+import { leadToRecordsRow } from '@/lib/lead-records'
 import type { LeadBucket } from '@/lib/lead-buckets'
 import { LeadSidecar } from '@/components/LeadSidecar'
+import RecordsTable from '@/components/ui/records-table'
 
 interface LeadTableProps {
   leads: LeadContact[]
@@ -47,53 +37,6 @@ interface LeadTableProps {
   discoveredVerticals?: string[]
   onNavigate: (filters: LeadListFilters, page?: number) => void
   onReload: () => void
-}
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return '—'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return value
-  return d.toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-function badgeClass(status: string | null | undefined): string {
-  switch (outboundBadgeTone(status)) {
-    case 'positive':
-      return 'bg-emerald-100 text-emerald-800'
-    case 'negative':
-      return 'bg-neutral-200 text-neutral-700'
-    case 'active':
-      return 'bg-amber-100 text-amber-800'
-    case 'sync':
-      return 'bg-sky-100 text-sky-800'
-    default:
-      return 'bg-neutral-100 text-neutral-600'
-  }
-}
-
-function emailCampaignCount(raw: string | null | undefined, latestId?: string | null): number {
-  if (raw) {
-    try {
-      const v = JSON.parse(raw)
-      if (Array.isArray(v)) {
-        const seen = new Set<string>()
-        for (const item of v) {
-          const id = String(item ?? '').trim()
-          if (id) seen.add(id)
-        }
-        if (seen.size > 0) return seen.size
-      }
-    } catch {
-      // fall through
-    }
-  }
-  return latestId?.trim() ? 1 : 0
 }
 
 function loadSavedSegments(): SavedLeadSegment[] {
@@ -125,7 +68,6 @@ export default function LeadTable({
   onNavigate,
   onReload
 }: LeadTableProps) {
-  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draftFilters, setDraftFilters] = useState<LeadListFilters>(filters)
   const [exporting, setExporting] = useState(false)
@@ -137,7 +79,6 @@ export default function LeadTable({
   const [bulkTag, setBulkTag] = useState('')
   const [savedSegments, setSavedSegments] = useState<SavedLeadSegment[]>([])
   const [segmentName, setSegmentName] = useState('')
-  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const bucket: LeadBucket = filters.bucket === 'prospects' ? 'prospects' : 'leads'
   const selectedLead = useMemo(
@@ -164,14 +105,7 @@ export default function LeadTable({
     return { ...next, bucket }
   }
 
-  const phoneSparse = useMemo(() => {
-    if (!leads.length) return true
-    const withPhone = leads.filter((l) => l.phone?.trim()).length
-    return withPhone / leads.length < 0.15
-  }, [leads])
-
-  const { visible: visibleColumns, setVisible: setVisibleColumns } =
-    useLeadColumnVisibility(phoneSparse)
+  const recordRows = useMemo(() => leads.map((lead) => leadToRecordsRow(lead)), [leads])
 
   const verticalOptions = useMemo(
     () => mergeVerticalOptions(discoveredVerticals),
@@ -217,16 +151,6 @@ export default function LeadTable({
       return
     }
     setSelected(new Set(leads.map((l) => l.id)))
-  }
-
-  async function copyId(id: string) {
-    try {
-      await navigator.clipboard.writeText(id)
-      setCopiedId(id)
-      window.setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500)
-    } catch {
-      // ignore
-    }
   }
 
   async function handleExport(selectedOnly = false) {
@@ -728,11 +652,6 @@ export default function LeadTable({
           </button>
           <div className="ml-auto flex flex-wrap items-center gap-3">
             {exportNote && <span className="text-xs text-neutral-500">{exportNote}</span>}
-            <LeadColumnPicker
-              phoneSparse={phoneSparse}
-              visible={visibleColumns}
-              onChange={setVisibleColumns}
-            />
             <button
               type="button"
               onClick={() => void handleExport(false)}
@@ -822,113 +741,16 @@ export default function LeadTable({
       )}
 
       {/* Table */}
-      <div className="max-h-[70vh] overflow-auto rounded-2xl border border-stone-200/70 bg-white shadow-soft">
-        <table className="w-full min-w-[980px] border-collapse text-left text-[13px] leading-tight">
-          <thead className="sticky top-0 z-10 border-b border-stone-200 bg-stone-50/95 text-[11px] font-medium text-neutral-500 backdrop-blur-sm">
-            <tr>
-              <th className="w-9 px-2.5 py-1.5">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleSelectAll}
-                  aria-label="Select all on page"
-                />
-              </th>
-              {visibleColumns.map((colId) => {
-                const def = LEAD_COLUMN_DEFS.find((c) => c.id === colId)
-                return (
-                  <th
-                    key={colId}
-                    className={`whitespace-nowrap px-2.5 py-1.5 font-medium ${
-                      colId === 'campaign' ? 'min-w-[160px]' : ''
-                    }`}
-                  >
-                    {def?.label ?? colId}
-                  </th>
-                )
-              })}
-              <th className="w-10 px-2 py-1.5 text-right">
-                <LeadColumnPicker
-                  phoneSparse={phoneSparse}
-                  visible={visibleColumns}
-                  onChange={setVisibleColumns}
-                  variant="header"
-                />
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-stone-100">
-            {leads.length === 0 && (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length + 2}
-                  className="px-3 py-8 text-center text-neutral-500"
-                >
-                  No {bucket === 'prospects' ? 'prospects' : 'leads'} match these filters.
-                </td>
-              </tr>
-            )}
-            {leads.map((lead) => {
-              const expanded = expandedId === lead.id
-              const sync = inferSyncState(lead)
-              const campaign =
-                lead.instantly_campaign_name || lead.instantly_campaign || null
-              const recontact = computeRecontactEligibility(lead)
-              return (
-                <Fragment key={lead.id}>
-                  <tr
-                    className={`cursor-pointer transition hover:bg-stone-50/80 ${
-                      selected.has(lead.id) ? 'bg-orange-50/40' : ''
-                    } ${selectedId === lead.id ? 'bg-orange-50/60 ring-1 ring-inset ring-sf-orange/20' : ''} ${
-                      recontact.lane === 'ready' ? 'bg-emerald-50/25' : ''
-                    }`}
-                    onClick={() => setSelectedId(selectedId === lead.id ? null : lead.id)}
-                  >
-                    <td className="px-2.5 py-1">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(lead.id)}
-                        onChange={() => toggleSelect(lead.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={`Select ${lead.name || lead.email || lead.id}`}
-                      />
-                    </td>
-                    {visibleColumns.map((colId) => (
-                      <LeadCell
-                        key={colId}
-                        colId={colId}
-                        lead={lead}
-                        campaign={campaign}
-                        sync={sync}
-                        recontact={recontact}
-                        showVerticalUnderName={false}
-                        onToggleExpand={() => {
-                          const next = expanded ? null : lead.id
-                          setExpandedId(next)
-                          setSelectedId(next)
-                        }}
-                      />
-                    ))}
-                    <td className="px-2 py-1" />
-                  </tr>
-                  {expanded && (
-                    <tr key={`${lead.id}-detail`} className="bg-stone-50/60">
-                      <td colSpan={visibleColumns.length + 2} className="px-4 py-4">
-                        <LeadDetail
-                          lead={lead}
-                          sync={sync}
-                          copiedId={copiedId}
-                          onCopyId={() => void copyId(lead.id)}
-                        />
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      <RecordsTable
+        rows={recordRows}
+        selected={selected}
+        onToggleRow={toggleSelect}
+        onToggleAll={toggleSelectAll}
+        onRowActivate={(id) => setSelectedId(selectedId === id ? null : id)}
+        activeId={selectedId}
+        emptyMessage={`No ${bucket === 'prospects' ? 'prospects' : 'leads'} match these filters.`}
+        entityLabel={bucket === 'prospects' ? 'prospects' : 'leads'}
+      />
 
       {/* Pagination */}
       <div className="flex items-center justify-between text-sm text-neutral-500">
@@ -967,7 +789,6 @@ export default function LeadTable({
             lead={selectedLead}
             onClose={() => {
               setSelectedId(null)
-              setExpandedId(null)
             }}
           />
         </div>
@@ -976,182 +797,6 @@ export default function LeadTable({
   )
 }
 
-function LeadCell({
-  colId,
-  lead,
-  campaign,
-  sync,
-  recontact,
-  showVerticalUnderName,
-  onToggleExpand
-}: {
-  colId: LeadColumnId
-  lead: LeadContact
-  campaign: string | null
-  sync: ReturnType<typeof inferSyncState>
-  recontact: ReturnType<typeof computeRecontactEligibility>
-  showVerticalUnderName: boolean
-  onToggleExpand: () => void
-}) {
-  const cellPad = 'px-2.5 py-1'
-  switch (colId) {
-    case 'name':
-      return (
-        <td
-          className={`cursor-pointer ${cellPad} font-medium text-neutral-900`}
-          onClick={onToggleExpand}
-        >
-          <div className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate">{lead.name || '—'}</span>
-            {lead.interest_label && (
-              <span className="shrink-0 rounded bg-emerald-50 px-1 py-px text-[9px] font-medium uppercase tracking-wide text-emerald-700">
-                {lead.interest_label}
-              </span>
-            )}
-            {showVerticalUnderName ? (
-              <span className="truncate text-[11px] font-normal text-neutral-400">
-                · {humanizeVertical(lead.vertical)}
-              </span>
-            ) : null}
-          </div>
-        </td>
-      )
-    case 'email':
-      return (
-        <td className={`cursor-pointer ${cellPad} text-neutral-700`} onClick={onToggleExpand}>
-          <span className="truncate">{lead.email || '—'}</span>
-        </td>
-      )
-    case 'phone':
-      return <td className={`${cellPad} text-neutral-700`}>{lead.phone || '—'}</td>
-    case 'company':
-      return (
-        <td className={`cursor-pointer ${cellPad} text-neutral-700`} onClick={onToggleExpand}>
-          <span className="truncate">{lead.company || '—'}</span>
-        </td>
-      )
-    case 'location':
-      return (
-        <td className={`${cellPad} text-neutral-600`}>
-          {formatLeadLocation(lead.city, lead.state)}
-        </td>
-      )
-    case 'vertical':
-      return (
-        <td className={`${cellPad} text-neutral-600`}>{humanizeVertical(lead.vertical)}</td>
-      )
-    case 'campaign':
-      return (
-        <td className={`max-w-[220px] truncate ${cellPad} text-neutral-600`} title={campaign ?? ''}>
-          {campaign || '—'}
-        </td>
-      )
-    case 'stage':
-      return (
-        <td className={cellPad}>
-          <div className="flex flex-col items-start gap-0.5">
-            <span
-              className={`inline-block rounded-md px-1.5 py-px text-[11px] font-medium ${badgeClass(
-                lead.outbound_status
-              )}`}
-            >
-              {humanizeStatus(lead.outbound_status)}
-            </span>
-            {sync && sync !== 'in_instantly' && lead.outbound_status !== sync && (
-              <span className="text-[10px] text-neutral-400">{humanizeSyncState(sync)}</span>
-            )}
-          </div>
-        </td>
-      )
-    case 'cooldown':
-      return (
-        <td className={`cursor-pointer ${cellPad}`} onClick={onToggleExpand} title={recontact.detail}>
-          <div className="flex items-center gap-1.5">
-            <RecontactProgressRing eligibility={recontact} size={18} />
-            <span
-              className={`whitespace-nowrap text-[11px] leading-tight ${
-                recontact.lane === 'ready'
-                  ? 'font-medium text-emerald-700'
-                  : 'text-neutral-500'
-              }`}
-            >
-              {recontact.lane === 'ready'
-                ? 'Ready'
-                : recontact.lane === 'cooling' && recontact.daysRemaining != null
-                  ? `${recontact.daysRemaining}d left`
-                  : recontact.lane === 'blocked'
-                    ? 'Blocked'
-                    : recontact.lane === 'never_contacted'
-                      ? 'New'
-                      : recontact.progressPercent != null
-                        ? `${recontact.progressPercent}%`
-                        : '—'}
-            </span>
-          </div>
-        </td>
-      )
-    case 'last_touch':
-      return (
-        <td
-          className={`${cellPad} whitespace-nowrap ${
-            lead.last_outbound_at ? 'text-neutral-600' : 'text-neutral-400'
-          }`}
-          title={formatDate(lead.last_outbound_at)}
-        >
-          {formatRelativeLeadDate(lead.last_outbound_at)}
-        </td>
-      )
-    case 'date_added':
-      return (
-        <td className={`${cellPad} whitespace-nowrap text-neutral-500`} title={formatDate(lead.created_at)}>
-          {formatShortLeadDate(lead.created_at)}
-        </td>
-      )
-    case 'source':
-      return <td className={`${cellPad} text-neutral-600`}>{lead.source || '—'}</td>
-    case 'role':
-      return <td className={`${cellPad} text-neutral-600`}>{lead.role || '—'}</td>
-    case 'opener':
-      return (
-        <td className={`${cellPad} max-w-[280px] truncate text-neutral-600`} title={lead.opener ?? ''}>
-          {lead.opener || '—'}
-        </td>
-      )
-    case 'lead_facts': {
-      const factsText =
-        lead.lead_facts == null
-          ? ''
-          : typeof lead.lead_facts === 'string'
-            ? lead.lead_facts
-            : JSON.stringify(lead.lead_facts)
-      return (
-        <td className={`${cellPad} max-w-[280px] truncate text-neutral-600`} title={factsText}>
-          {factsText || '—'}
-        </td>
-      )
-    }
-    case 'linkedin':
-      return (
-        <td className={`${cellPad} max-w-[140px] truncate text-neutral-600`}>
-          {lead.linkedin ? (
-            <a
-              href={lead.linkedin.startsWith('http') ? lead.linkedin : `https://${lead.linkedin}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-sf-orange hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              Profile
-            </a>
-          ) : (
-            '—'
-          )}
-        </td>
-      )
-    default:
-      return <td className={cellPad}>—</td>
-  }
-}
 
 function FilterSelect({
   label,
@@ -1190,189 +835,3 @@ function FilterSelect({
   )
 }
 
-function LeadDetail({
-  lead,
-  sync,
-  copiedId,
-  onCopyId
-}: {
-  lead: LeadContact
-  sync: ReturnType<typeof inferSyncState>
-  copiedId: string | null
-  onCopyId: () => void
-}) {
-  const nextAction = suggestNextAction(lead, sync)
-
-  return (
-    <div className="space-y-5">
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr]">
-      <section>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-          Identity
-        </h3>
-        <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-          <DetailRow label="Role" value={lead.role} />
-          <DetailRow label="Company" value={lead.company} />
-          <DetailRow label="Location" value={formatLeadLocation(lead.city, lead.state)} />
-          <DetailRow label="Phone" value={lead.phone} />
-          <DetailRow
-            label="LinkedIn"
-            value={lead.linkedin}
-            href={lead.linkedin?.startsWith('http') ? lead.linkedin : undefined}
-          />
-          <DetailRow label="Vertical" value={humanizeVertical(lead.vertical)} />
-          <DetailRow label="Source" value={lead.source} />
-          <DetailRow label="Tags" value={lead.tags} />
-        </dl>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
-          <button
-            type="button"
-            onClick={onCopyId}
-            className="rounded border border-neutral-200 bg-white px-2 py-1 hover:bg-neutral-50"
-          >
-            {copiedId === lead.id ? 'Copied ID' : 'Copy lead ID'}
-          </button>
-          <span className="font-mono text-[11px] text-neutral-400">{lead.id}</span>
-        </div>
-      </section>
-
-      <section>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-          Outreach
-        </h3>
-        <dl className="grid grid-cols-1 gap-2 text-sm">
-          <DetailRow label="Opener" value={lead.opener} />
-          <DetailRow
-            label="Lead facts"
-            value={
-              lead.lead_facts == null
-                ? null
-                : typeof lead.lead_facts === 'string'
-                  ? lead.lead_facts
-                  : JSON.stringify(lead.lead_facts, null, 2)
-            }
-          />
-          <DetailRow label="Stage" value={humanizeStatus(lead.outbound_status)} />
-          <DetailRow label="Sync" value={sync ? humanizeSyncState(sync) : '—'} />
-          <DetailRow label="Interest" value={lead.interest_label} />
-          <DetailRow
-            label="Campaign"
-            value={lead.instantly_campaign_name || lead.instantly_campaign}
-          />
-          <DetailRow
-            label="Email campaigns"
-            value={String(
-              emailCampaignCount(lead.instantly_campaign_ids, lead.instantly_campaign_id)
-            )}
-          />
-          <DetailRow label="Last interaction" value={formatDate(lead.last_outbound_at)} />
-          <DetailRow label="Status source" value={lead.lead_status_source} />
-          <DetailRow
-            label="Recontact OK"
-            value={
-              lead.recontact_ok == null ? '—' : lead.recontact_ok ? 'Allowed' : 'Blocked'
-            }
-          />
-          <DetailRow label="Suppression" value={lead.suppression_reason} />
-        </dl>
-        <p className="mt-3 rounded-lg border border-sf-orange/30 bg-orange-50 px-3 py-2 text-sm text-neutral-800">
-          <span className="font-medium text-sf-orange">Next: </span>
-          {nextAction}
-        </p>
-      </section>
-
-      <section>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-          Sync & import
-        </h3>
-        <dl className="grid grid-cols-1 gap-2 text-sm">
-          <DetailRow label="Sync ID" value={lead.instantly_lead_id} />
-          <DetailRow label="Uploaded" value={formatDate(lead.instantly_uploaded_at)} />
-          <DetailRow label="Last synced" value={formatDate(lead.instantly_synced_at)} />
-          <DetailRow label="Mirrored" value={formatDate(lead.mirrored_at)} />
-          <DetailRow label="Context" value={lead.lead_context_status} />
-          <DetailRow label="Context updated" value={formatDate(lead.lead_context_updated_at)} />
-          <DetailRow label="Import batch" value={lead.import_batch_id} />
-          <DetailRow label="Date added" value={formatDate(lead.created_at)} />
-          <DetailRow label="Updated" value={formatDate(lead.updated_at)} />
-        </dl>
-      </section>
-      </div>
-
-      <section className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-          Recontact cooldown
-        </h3>
-        <LeadRecontactPanel lead={lead} />
-      </section>
-    </div>
-  )
-}
-
-function suggestNextAction(
-  lead: LeadContact,
-  sync: ReturnType<typeof inferSyncState>
-): string {
-  const recontact = computeRecontactEligibility(lead)
-
-  if (recontact.lane === 'blocked') {
-    return 'Keep suppressed unless recontact is explicitly allowed.'
-  }
-  if (lead.outbound_status === 'interested' || lead.outbound_status === 'replied') {
-    return 'Follow up personally — book a call or move to pipeline.'
-  }
-  if (lead.outbound_status === 'booked' || lead.outbound_status === 'meeting_booked') {
-    return 'Confirm the meeting and prep the brief.'
-  }
-  if (lead.outbound_status === 'converted') return 'Hand off to delivery / CRM win path.'
-  if (!lead.email) return 'Enrich email before any outbound.'
-  if (recontact.recommendNewCampaign) {
-    return 'Ready to recontact — export and pull into a new Instantly campaign.'
-  }
-  if (recontact.lane === 'cooling' && recontact.daysRemaining != null) {
-    return `In ${recontact.daysRemaining}-day cooldown (${recontact.progressPercent ?? 0}% of 90 days). Wait before cold re-outreach.`
-  }
-  if (sync === 'not_uploaded') {
-    return lead.phone
-      ? 'Export CSV for Instantly, or start a call/SMS sequence.'
-      : 'Add a phone or export email-only for Instantly.'
-  }
-  if (sync === 'stale_sync') return 'Refresh campaign sync — status may be outdated.'
-  if (sync === 'missing_context') return 'Add lead context / category before scaling send.'
-  if (sync === 'needs_review') return 'Review category fit, then approve or suppress.'
-  if (lead.outbound_status === 'contacted' || sync === 'in_instantly') {
-    return 'Wait for a reply or check campaign analytics.'
-  }
-  return 'Apply a segment and push the next outbound batch.'
-}
-
-function DetailRow({
-  label,
-  value,
-  href
-}: {
-  label: string
-  value: string | null | undefined
-  href?: string
-}) {
-  const display = value?.trim() ? value : '—'
-  return (
-    <div className="flex flex-col">
-      <dt className="text-[11px] uppercase tracking-wide text-neutral-400">{label}</dt>
-      <dd className="text-neutral-800">
-        {href && display !== '—' ? (
-          <a
-            href={href}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sf-orange hover:underline"
-          >
-            {display}
-          </a>
-        ) : (
-          display
-        )}
-      </dd>
-    </div>
-  )
-}

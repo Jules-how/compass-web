@@ -139,3 +139,290 @@ body {
     @apply mt-1.5 max-w-2xl text-sm leading-relaxed text-neutral-500;
   }
 }
+
+/* Lead database CRM grid — scoped so Compass tokens stay locked. */
+.records-shell {
+  --records-green: #189a4d;
+  --records-orange: var(--compass-accent);
+  --records-red: #e3474c;
+  --records-ink: var(--compass-ink);
+  --records-ink-2: var(--compass-ink-soft);
+  --records-ink-3: var(--compass-faint);
+  --records-line: var(--compass-line);
+  --records-line-strong: var(--compass-line-strong);
+  --records-hover: #f7f5f2;
+  --records-selected: color-mix(in srgb, var(--compass-accent) 8%, white);
+  --records-active: color-mix(in srgb, var(--compass-accent) 12%, white);
+  --green: var(--records-green);
+  --orange: var(--records-orange);
+  --red: var(--records-red);
+  --ink-3: var(--records-ink-3);
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--compass-line) 90%, transparent);
+  background: white;
+  box-shadow: var(--compass-shadow-sm);
+}
+
+.records-scroll {
+  max-height: 70vh;
+  overflow: auto;
+  outline: none;
+}
+
+.records-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--records-ink);
+}
+
+.records-company-col { width: 28%; }
+.records-category-col { width: 24%; }
+.records-last-col { width: 16%; }
+.records-strength-col { width: 18%; }
+.records-link-col { width: 14%; }
+
+.records-header-cell,
+.records-cell {
+  border-bottom: 1px solid var(--records-line);
+  border-right: 1px solid var(--records-line);
+  padding: 0.55rem 0.75rem;
+  vertical-align: middle;
+  background: white;
+}
+
+.records-header-cell {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #faf9f7;
+  color: var(--compass-muted);
+  font-size: 11px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.records-header-cell:last-child,
+.records-cell:last-child {
+  border-right: none;
+}
+
+.records-sticky-cell {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  box-shadow: 8px 0 12px -10px rgba(15, 18, 23, 0.18);
+}
+
+.records-header-cell.records-sticky-cell {
+  z-index: 4;
+}
+
+.records-header-button {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.4rem;
+  color: inherit;
+}
+
+.records-header-icon {
+  display: inline-flex;
+  color: var(--records-ink-3);
+}
+
+.records-sort {
+  display: inline-flex;
+  opacity: 0;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.records-header-button:hover .records-sort,
+.records-sort.is-visible {
+  opacity: 1;
+}
+
+.records-company-header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.records-row {
+  cursor: pointer;
+}
+
+.records-row:hover .records-cell {
+  background: var(--records-hover);
+}
+
+.records-row.is-selected .records-cell {
+  background: var(--records-selected);
+}
+
+.records-row.is-active .records-cell {
+  background: var(--records-active);
+}
+
+.records-company-cell {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.records-company-mark {
+  display: inline-flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.4rem;
+  background: var(--compass-wash);
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--compass-ink-soft);
+}
+
+.records-company-name {
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 550;
+  color: var(--records-ink);
+}
+
+.records-company-name.has-link:hover {
+  color: var(--compass-accent);
+}
+
+.records-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.records-tag {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.28rem;
+  overflow: hidden;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--tag-color) 12%, white);
+  padding: 0.12rem 0.4rem;
+  font-size: 11px;
+  font-weight: 550;
+  color: color-mix(in srgb, var(--tag-color) 55%, #1f2124);
+}
+
+.records-tag-dot {
+  height: 0.4rem;
+  width: 0.4rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+}
+
+.records-more-tag {
+  border-radius: 6px;
+  background: var(--compass-wash);
+  padding: 0.12rem 0.4rem;
+  font-size: 11px;
+  color: var(--compass-muted);
+}
+
+.records-muted {
+  color: var(--records-ink-3);
+}
+
+.records-strength,
+.records-average {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.records-strength-dot {
+  height: 0.45rem;
+  width: 0.45rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+}
+
+.records-link {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.3rem;
+  overflow: hidden;
+  color: var(--compass-accent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.records-link:hover {
+  text-decoration: underline;
+}
+
+.records-checkbox {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.records-checkbox input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.records-checkbox-box {
+  display: inline-flex;
+  height: 1rem;
+  width: 1rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--records-line-strong);
+  border-radius: 5px;
+  background: white;
+  color: white;
+}
+
+.records-checkbox-box.is-active {
+  border-color: var(--compass-accent);
+  background: var(--compass-accent);
+}
+
+.records-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--compass-muted);
+}
+
+.records-calculation-row .records-cell {
+  background: #faf9f7;
+  color: var(--compass-muted);
+  font-size: 12px;
+}
+
+.records-calculation-label {
+  font-weight: 550;
+}
+
+.records-calculation-number {
+  color: var(--records-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.records-add-calculation {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
