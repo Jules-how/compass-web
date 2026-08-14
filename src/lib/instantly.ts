@@ -74,6 +74,8 @@ export type OutboundBoardCampaign = {
   meetings: number
   startedAt: string
   updatedAt: string
+  /** Compass pipeline campaign id when `instantly_campaign_id` is bound. */
+  pipelineCampaignId?: string
 }
 
 export type OutboundBoard = {

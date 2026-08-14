@@ -475,6 +475,8 @@ export interface LeadListFilters {
   bucket?: 'leads' | 'prospects'
   /** Compass pipeline campaign cohort. */
   pipeline_campaign_id?: string
+  /** Instantly campaign membership (uploaded leads). */
+  instantly_campaign_id?: string
   cohort_tag?: string
   /** Enrichment readiness: none|queued|enriched|thin|opener_ready|uploaded */
   enrich_status?: string

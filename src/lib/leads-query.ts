@@ -35,9 +35,21 @@ export function parseLeadListFilters(searchParams: URLSearchParams): LeadListFil
       recontactReady === '1' || recontactReady === '0' ? recontactReady : undefined,
     bucket: parseLeadBucket(searchParams.get('bucket')),
     pipeline_campaign_id: emptyToUndef(searchParams.get('pipeline_campaign_id')),
+    instantly_campaign_id: emptyToUndef(searchParams.get('instantly_campaign_id')),
     cohort_tag: emptyToUndef(searchParams.get('cohort_tag')),
     enrich_status: emptyToUndef(searchParams.get('enrich_status'))
   }
+}
+
+/** OR membership when a lead may be tagged on the Compass campaign, Instantly, or both. */
+export function campaignMembershipOrClause(
+  pipelineCampaignId?: string,
+  instantlyCampaignId?: string
+): string | null {
+  const pipeline = pipelineCampaignId?.trim()
+  const instantly = instantlyCampaignId?.trim()
+  if (!pipeline || !instantly || pipeline === instantly) return null
+  return `pipeline_campaign_id.eq.${escapePostgrestOrValue(pipeline)},instantly_campaign_id.eq.${escapePostgrestOrValue(instantly)}`
 }
 
 function emptyToUndef(value: string | null): string | undefined {
@@ -97,8 +109,16 @@ export function applyLeadFilters<T extends LeadFilterQuery>(query: T, filters: L
     }
   }
   if (filters.source) q = q.eq('source', filters.source) as T
-  if (filters.pipeline_campaign_id) {
+  const membershipOr = campaignMembershipOrClause(
+    filters.pipeline_campaign_id,
+    filters.instantly_campaign_id
+  )
+  if (membershipOr) {
+    q = q.or(membershipOr) as T
+  } else if (filters.pipeline_campaign_id) {
     q = q.eq('pipeline_campaign_id', filters.pipeline_campaign_id) as T
+  } else if (filters.instantly_campaign_id) {
+    q = q.eq('instantly_campaign_id', filters.instantly_campaign_id) as T
   }
   if (filters.cohort_tag) {
     q = q.eq('cohort_tag', filters.cohort_tag) as T
@@ -241,6 +261,9 @@ export function leadFiltersToSearchParams(filters: LeadListFilters, page?: numbe
   if (filters.recontact_ready) params.set('recontact_ready', filters.recontact_ready)
   if (filters.pipeline_campaign_id) {
     params.set('pipeline_campaign_id', filters.pipeline_campaign_id)
+  }
+  if (filters.instantly_campaign_id) {
+    params.set('instantly_campaign_id', filters.instantly_campaign_id)
   }
   if (filters.cohort_tag) params.set('cohort_tag', filters.cohort_tag)
   if (filters.enrich_status) params.set('enrich_status', filters.enrich_status)

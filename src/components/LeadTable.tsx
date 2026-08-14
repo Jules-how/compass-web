@@ -37,6 +37,8 @@ interface LeadTableProps {
   discoveredVerticals?: string[]
   onNavigate: (filters: LeadListFilters, page?: number) => void
   onReload: () => void
+  variant?: 'page' | 'embed'
+  onLeadSelect?: (lead: LeadContact | null) => void
 }
 
 function loadSavedSegments(): SavedLeadSegment[] {
@@ -66,7 +68,9 @@ export default function LeadTable({
   summary,
   discoveredVerticals = [],
   onNavigate,
-  onReload
+  onReload,
+  variant = 'page',
+  onLeadSelect
 }: LeadTableProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draftFilters, setDraftFilters] = useState<LeadListFilters>(filters)
@@ -80,6 +84,7 @@ export default function LeadTable({
   const [savedSegments, setSavedSegments] = useState<SavedLeadSegment[]>([])
   const [segmentName, setSegmentName] = useState('')
 
+  const embed = variant === 'embed'
   const bucket: LeadBucket = filters.bucket === 'prospects' ? 'prospects' : 'leads'
   const selectedLead = useMemo(
     () => leads.find((l) => l.id === selectedId) ?? null,
@@ -90,6 +95,7 @@ export default function LeadTable({
     setDraftFilters(filters)
     setSelected(new Set())
     setSelectedId(null)
+    onLeadSelect?.(null)
   }, [filters])
 
   useEffect(() => {
@@ -355,8 +361,8 @@ export default function LeadTable({
   }
 
   return (
-    <div className="flex gap-5">
-      <div className="min-w-0 flex-1 space-y-5">
+    <div className={embed ? 'flex h-full min-h-0 gap-3' : 'flex gap-5'}>
+      <div className={embed ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-2' : 'min-w-0 flex-1 space-y-5'}>
       {/* Leads / Prospects tabs */}
       <div className="inline-flex items-center rounded-xl bg-stone-100/90 p-0.5 shadow-soft">
         <button
@@ -384,7 +390,7 @@ export default function LeadTable({
       </div>
 
       {/* Summary chips */}
-      {summary && (
+      {summary && !embed && (
         <div className="flex flex-wrap gap-2">
           {summaryChips.map((chip) => {
             const active = chipActive(chip.filters)
@@ -410,6 +416,7 @@ export default function LeadTable({
       )}
 
       {/* Segments */}
+      {!embed ? (
       <div className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
@@ -465,12 +472,21 @@ export default function LeadTable({
           </button>
         </div>
       </div>
+      ) : null}
 
       {/* Filter bar */}
-      <div className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
-        <div className="mb-4">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-neutral-500">Search</span>
+      <div
+        className={
+          embed
+            ? 'shrink-0 rounded-xl border border-stone-200/70 bg-white p-2.5 shadow-soft'
+            : 'rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft'
+        }
+      >
+        <div className={embed ? 'flex flex-wrap items-end gap-2' : 'mb-4'}>
+          <label className={embed ? 'min-w-[12rem] flex-1' : 'block'}>
+            <span className={embed ? 'sr-only' : 'mb-1.5 block text-xs font-medium text-neutral-500'}>
+              Search
+            </span>
             <input
               type="search"
               placeholder="Name, email, company, or phone"
@@ -481,10 +497,37 @@ export default function LeadTable({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') applyFilters()
               }}
-              className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm focus:border-sf-orange focus:outline-none"
+              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
             />
           </label>
+          {embed ? (
+            <>
+              <FilterSelect
+                label="Enrich"
+                value={draftFilters.enrich_status ?? ''}
+                onChange={(v) => patchFilters({ enrich_status: v || undefined })}
+                options={[
+                  { value: 'none', label: 'None' },
+                  { value: 'queued', label: 'Queued' },
+                  { value: 'enriched', label: 'Enriched' },
+                  { value: 'thin', label: 'Thin' },
+                  { value: 'opener_ready', label: 'Opener ready' },
+                  { value: 'uploaded', label: 'Uploaded' }
+                ]}
+                className="w-40"
+              />
+              <button
+                type="button"
+                onClick={() => applyFilters()}
+                className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 hover:bg-stone-50"
+              >
+                Search
+              </button>
+            </>
+          ) : null}
         </div>
+        {!embed ? (
+        <>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <FilterSelect
             label="Vertical"
@@ -662,6 +705,8 @@ export default function LeadTable({
             </button>
           </div>
         </div>
+        </>
+        ) : null}
       </div>
 
       {/* Bulk actions */}
@@ -741,16 +786,22 @@ export default function LeadTable({
       )}
 
       {/* Table */}
+      <div className={embed ? 'min-h-0 flex-1 overflow-auto' : ''}>
       <RecordsTable
         rows={recordRows}
         selected={selected}
         onToggleRow={toggleSelect}
         onToggleAll={toggleSelectAll}
-        onRowActivate={(id) => setSelectedId(selectedId === id ? null : id)}
+        onRowActivate={(id) => {
+          const lead = leads.find((row) => row.id === id) ?? null
+          onLeadSelect?.(lead)
+          setSelectedId(selectedId === id ? null : id)
+        }}
         activeId={selectedId}
         emptyMessage={`No ${bucket === 'prospects' ? 'prospects' : 'leads'} match these filters.`}
         entityLabel={bucket === 'prospects' ? 'prospects' : 'leads'}
       />
+      </div>
 
       {/* Pagination */}
       <div className="flex items-center justify-between text-sm text-neutral-500">
@@ -784,7 +835,13 @@ export default function LeadTable({
       </div>
 
       {selectedLead ? (
-        <div className="sticky top-4 h-[min(80vh,720px)] w-full max-w-[400px] shrink-0 overflow-hidden rounded-2xl border border-stone-200/70 bg-white shadow-soft">
+        <div
+          className={
+            embed
+              ? 'h-full w-[min(100%,320px)] shrink-0 overflow-hidden rounded-xl border border-stone-200/70 bg-white'
+              : 'sticky top-4 h-[min(80vh,720px)] w-full max-w-[400px] shrink-0 overflow-hidden rounded-2xl border border-stone-200/70 bg-white shadow-soft'
+          }
+        >
           <LeadSidecar
             lead={selectedLead}
             onClose={() => {

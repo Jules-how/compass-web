@@ -2,7 +2,7 @@
 
 import type { CompassCampaign } from '@/lib/campaigns'
 import type { OutboundBoardCampaign, OutboundBoard } from '@/lib/instantly'
-import type { OutboundSequence } from '@/lib/outbound-copy'
+import { normalizeCopyStatus, type OutboundSequence } from '@/lib/outbound-copy'
 import { splitCampaignMeta } from '@/lib/sales-overview'
 
 export type OutboundFactorKey =
@@ -139,30 +139,29 @@ function parseCopyNotes(notes: string): {
   }
 }
 
-type BindSource = {
-  id?: string
-  offer_key?: string | null
-  offerName?: string | null
-  structure_id?: string | null
-  vertical_tags?: string[] | null
-  location_tags?: string[] | null
-  sequence_draft?: OutboundSequence | null
-  cold_expression?: string | null
-  expression_key?: string | null
-  cta_type?: string | null
-}
-
-function findBind(
-  campaign: OutboundBoardCampaign,
+export function findBind(
+  campaign: { id: string },
   pipeline: CompassCampaign[]
-): BindSource | null {
+): CompassCampaign | null {
   const byInstantly = pipeline.find(
     (p) => p.instantly_campaign_id && p.instantly_campaign_id === campaign.id
   )
   if (byInstantly) return byInstantly
-  const byId = pipeline.find((p) => p.id === campaign.id)
-  if (byId) return byId
-  return null
+  return pipeline.find((p) => p.id === campaign.id) ?? null
+}
+
+/** Compass campaigns still in workshop — not live/paused on Instantly. */
+export function isWorkshopCampaign(
+  campaign: CompassCampaign,
+  liveInstantlyIds: Set<string>
+): boolean {
+  const status = String(campaign.status || '')
+  if (status === 'completed' || status === 'cancelled') return false
+  const copy = normalizeCopyStatus(campaign.copy_status)
+  if (copy === 'live') return false
+  const instantlyId = campaign.instantly_campaign_id?.trim()
+  if (instantlyId && liveInstantlyIds.has(instantlyId)) return false
+  return copy === 'none' || copy === 'draft' || copy === 'ready'
 }
 
 /** Attach offer / CTA / length / audience onto a board campaign using pipeline binds + fallbacks. */

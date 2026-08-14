@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Monitor, Plus, Rocket, Smartphone, X, Zap } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Eye, EyeOff, Monitor, Plus, Rocket, Smartphone, X, Zap } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import {
   createCampaign,
   getCampaignDetail,
+  listCampaigns,
   updateCampaign
 } from '@/lib/campaigns-client'
 import type { CompassCampaign } from '@/lib/campaigns'
@@ -37,7 +39,12 @@ import { CampaignExperimentPanel } from '@/components/outbound/CampaignExperimen
 import { CopyArchivePanel } from '@/components/outbound/CopyArchivePanel'
 import { SequenceAnalyticsPanel } from '@/components/outbound/SequenceAnalyticsPanel'
 import { INSTANTLY_BASE_VARIABLES } from '@/lib/instantly-variables'
+import { findBind } from '@/lib/outbound-factor-performance'
+import type { LeadContact } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { CampaignLeadsPane } from '@/components/outbound/CampaignLeadsPane'
+import { InstantlyBindPrompt } from '@/components/outbound/InstantlyBindPrompt'
+import { SequencePreviewText } from '@/components/outbound/SequencePreviewBody'
 
 const UNBOUND_KEY = 'compass.outbound.unbound-draft.v1'
 const COMPONENTS_WIDTH_KEY = 'compass.outbound.components-width.v2'
@@ -45,7 +52,24 @@ const COMPONENTS_WIDTH_DEFAULT = 680
 const COMPONENTS_WIDTH_MIN = 480
 const COMPONENTS_WIDTH_MAX = 960
 
-type EditorTab = 'analytics' | 'editor' | 'experiment' | 'archive' | 'leads' | 'settings'
+type EditorTab = 'analytics' | 'editor' | 'experiment' | 'archive' | 'settings'
+
+const LEADS_HEIGHT_KEY = 'compass.outbound.editor-leads-height.v1'
+const LEADS_HEIGHT_DEFAULT = 36
+const LEADS_HEIGHT_MIN = 28
+const LEADS_HEIGHT_MAX = 70
+
+function readLeadsHeight(): number {
+  if (typeof window === 'undefined') return LEADS_HEIGHT_DEFAULT
+  try {
+    const raw = window.localStorage.getItem(LEADS_HEIGHT_KEY)
+    const n = raw ? Number(raw) : NaN
+    if (!Number.isFinite(n)) return LEADS_HEIGHT_DEFAULT
+    return Math.min(LEADS_HEIGHT_MAX, Math.max(LEADS_HEIGHT_MIN, Math.round(n)))
+  } catch {
+    return LEADS_HEIGHT_DEFAULT
+  }
+}
 
 function readComponentsWidth(): number {
   if (typeof window === 'undefined') return COMPONENTS_WIDTH_DEFAULT
@@ -110,6 +134,7 @@ function writeStepBody(sequence: OutboundSequence, stepId: string, body: string)
 
 export function SequenceEditor({
   campaignId,
+  instantlyCampaignId,
   unbound = false,
   variant = 'page',
   initialTab = 'editor',
@@ -117,12 +142,14 @@ export function SequenceEditor({
   onChallengerSpawned
 }: {
   campaignId?: string
+  instantlyCampaignId?: string
   unbound?: boolean
   variant?: 'page' | 'overlay'
   initialTab?: EditorTab
   onClose?: () => void
   onChallengerSpawned?: (campaignId: string) => void
 }) {
+  const router = useRouter()
   const [campaign, setCampaign] = useState<CompassCampaign | null>(null)
   const [sequence, setSequence] = useState<OutboundSequence | null>(null)
   const [activeStepId, setActiveStepId] = useState<string | null>(null)
@@ -130,41 +157,70 @@ export function SequenceEditor({
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<EditorTab>(initialTab)
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop')
+  const [previewOn, setPreviewOn] = useState(false)
+  const [previewLead, setPreviewLead] = useState<LeadContact | null>(null)
+  const [leadsHeightVh, setLeadsHeightVh] = useState(LEADS_HEIGHT_DEFAULT)
+  const [leadsCollapsed, setLeadsCollapsed] = useState(false)
+  const [instantlyUnbound, setInstantlyUnbound] = useState(false)
   const [focusField, setFocusField] = useState<'subject' | 'body'>('body')
   const [componentsWidth, setComponentsWidth] = useState(COMPONENTS_WIDTH_DEFAULT)
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resizeDrag = useRef<{ startX: number; startWidth: number } | null>(null)
+  const leadsResize = useRef<{ startY: number; startVh: number } | null>(null)
+  const loadedLeadsRef = useRef<LeadContact[]>([])
   const componentsWidthRef = useRef(componentsWidth)
+  const leadsHeightRef = useRef(leadsHeightVh)
   componentsWidthRef.current = componentsWidth
+  leadsHeightRef.current = leadsHeightVh
 
   useEffect(() => {
     setTab(initialTab)
-  }, [initialTab, campaignId])
+  }, [initialTab, campaignId, instantlyCampaignId])
 
   useEffect(() => {
     setComponentsWidth(readComponentsWidth())
+    setLeadsHeightVh(readLeadsHeight())
   }, [])
 
   useEffect(() => {
     function onMove(e: MouseEvent) {
       const drag = resizeDrag.current
-      if (!drag) return
-      const next = Math.min(
-        COMPONENTS_WIDTH_MAX,
-        Math.max(COMPONENTS_WIDTH_MIN, drag.startWidth + (drag.startX - e.clientX))
-      )
-      setComponentsWidth(next)
+      if (drag) {
+        const next = Math.min(
+          COMPONENTS_WIDTH_MAX,
+          Math.max(COMPONENTS_WIDTH_MIN, drag.startWidth + (drag.startX - e.clientX))
+        )
+        setComponentsWidth(next)
+      }
+      const leadsDrag = leadsResize.current
+      if (leadsDrag) {
+        const deltaVh = ((e.clientY - leadsDrag.startY) / window.innerHeight) * 100
+        const next = Math.min(
+          LEADS_HEIGHT_MAX,
+          Math.max(LEADS_HEIGHT_MIN, leadsDrag.startVh - deltaVh)
+        )
+        setLeadsHeightVh(next)
+      }
     }
     function onUp() {
-      if (!resizeDrag.current) return
-      resizeDrag.current = null
+      if (resizeDrag.current) {
+        resizeDrag.current = null
+        try {
+          window.localStorage.setItem(COMPONENTS_WIDTH_KEY, String(componentsWidthRef.current))
+        } catch {
+          /* ignore */
+        }
+      }
+      if (leadsResize.current) {
+        leadsResize.current = null
+        try {
+          window.localStorage.setItem(LEADS_HEIGHT_KEY, String(Math.round(leadsHeightRef.current)))
+        } catch {
+          /* ignore */
+        }
+      }
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
-      try {
-        window.localStorage.setItem(COMPONENTS_WIDTH_KEY, String(componentsWidthRef.current))
-      } catch {
-        /* ignore */
-      }
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
@@ -181,6 +237,7 @@ export function SequenceEditor({
         setCampaign(existing.campaign)
         setSequence(existing.sequence)
         setActiveStepId(existing.sequence.steps[0]?.id ?? null)
+        setInstantlyUnbound(false)
         return
       }
       const seq = scaffoldSequence('nick-3step')
@@ -207,6 +264,51 @@ export function SequenceEditor({
       setCampaign(draft)
       setSequence(seq)
       setActiveStepId(seq.steps[0]?.id ?? null)
+      setInstantlyUnbound(false)
+      return
+    }
+    if (instantlyCampaignId && !campaignId) {
+      try {
+        setError(null)
+        const pipeline = await listCampaigns()
+        const bind = findBind({ id: instantlyCampaignId }, pipeline)
+        if (bind) {
+          router.replace(`/sales/outbound/editor/${encodeURIComponent(bind.id)}`)
+          return
+        }
+        const boardRes = await fetch('/api/instantly/outbound-campaigns', {
+          headers: { Accept: 'application/json' }
+        })
+        const board = (await boardRes.json().catch(() => ({}))) as {
+          live?: Array<{ id: string; name: string }>
+          history?: Array<{ id: string; name: string }>
+        }
+        const row = [...(board.live ?? []), ...(board.history ?? [])].find(
+          (item) => item.id === instantlyCampaignId
+        )
+        setCampaign({
+          id: `instantly-${instantlyCampaignId}`,
+          name: row?.name || 'Instantly campaign',
+          status: 'active',
+          priority: 0,
+          health: 'no_updates',
+          start_date: null,
+          end_date: null,
+          color: '#94a3b8',
+          summary: null,
+          labels: [],
+          owner_label: null,
+          ...emptyCampaignCopyFields(),
+          instantly_campaign_id: instantlyCampaignId,
+          copy_status: 'live',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        setSequence(null)
+        setInstantlyUnbound(true)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Campaign not found')
+      }
       return
     }
     if (!campaignId) return
@@ -222,10 +324,11 @@ export function SequenceEditor({
       setCampaign(detail.campaign)
       setSequence(seq)
       setActiveStepId(seq.steps[0]?.id ?? null)
+      setInstantlyUnbound(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Campaign not found')
     }
-  }, [campaignId, unbound])
+  }, [campaignId, instantlyCampaignId, router, unbound])
 
   useEffect(() => {
     void hydrate()
@@ -247,6 +350,7 @@ export function SequenceEditor({
 
   const persist = useCallback(
     async (nextCampaign: CompassCampaign, nextSequence: OutboundSequence) => {
+      if (instantlyUnbound) return
       setSaveState('saving')
       const stamped = {
         ...nextSequence,
@@ -291,7 +395,7 @@ export function SequenceEditor({
         setError(err instanceof Error ? err.message : 'Save failed')
       }
     },
-    [campaignId, unbound]
+    [campaignId, instantlyUnbound, unbound]
   )
 
   const scheduleAutosave = useCallback(
@@ -507,7 +611,7 @@ export function SequenceEditor({
     )
   }
 
-  if (!campaign || !sequence) {
+  if (!campaign || (!sequence && !instantlyUnbound)) {
     return shell(
       <div className="flex flex-1 items-center justify-center p-8 text-sm text-neutral-500">
         Loading editor…
@@ -520,9 +624,11 @@ export function SequenceEditor({
     { id: 'editor', label: 'Editor' },
     { id: 'experiment', label: 'Experiment' },
     { id: 'archive', label: 'Archive' },
-    { id: 'leads', label: 'Leads' },
     { id: 'settings', label: 'Settings' }
   ]
+
+  const showLeadsPane = !unbound && Boolean(campaignId || instantlyCampaignId)
+  const previewingName = previewLead?.name || previewLead?.company || previewLead?.email
 
   return shell(
     <>
@@ -543,9 +649,13 @@ export function SequenceEditor({
           <input
             value={campaign.name}
             onChange={(e) => {
+              if (instantlyUnbound || !sequence) {
+                setCampaign({ ...campaign, name: e.target.value })
+                return
+              }
               const next = { ...campaign, name: e.target.value }
               setCampaign(next)
-              if (sequence) scheduleAutosave(next, sequence)
+              scheduleAutosave(next, sequence)
             }}
             className="min-w-0 flex-1 truncate border-0 bg-transparent text-[15px] font-semibold text-neutral-900 outline-none placeholder:text-neutral-400"
             placeholder="Untitled Campaign"
@@ -576,6 +686,11 @@ export function SequenceEditor({
             <span className="size-1.5 rounded-full bg-stone-300" />
             {campaign.copy_status === 'live' ? 'Live' : 'Draft'}
           </span>
+          {previewOn && previewingName ? (
+            <span className="hidden max-w-[10rem] truncate text-[11px] text-neutral-400 md:inline">
+              Previewing {previewingName}
+            </span>
+          ) : null}
           <span className="text-[11px] text-neutral-400">
             {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Autosave on'}
           </span>
@@ -605,10 +720,11 @@ export function SequenceEditor({
         </div>
       </header>
 
+      <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1">
         {/* Canvas */}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          {tab === 'archive' ? (
+          {tab === 'archive' && sequence ? (
             <div className="min-h-0 flex-1 overflow-hidden">
               <CopyArchivePanel
                 campaign={campaign}
@@ -631,12 +747,25 @@ export function SequenceEditor({
                 }}
               />
             </div>
+          ) : tab === 'archive' ? (
+            <div className="flex flex-1 items-center justify-center p-8 text-sm text-neutral-500">
+              Link a Compass campaign to use the copy archive.
+            </div>
           ) : (
           <div className="min-h-0 flex-1 overflow-y-auto">
-          {tab === 'editor' ? (
+          {tab === 'editor' && instantlyUnbound ? (
+            <div className="px-4 py-10">
+              <InstantlyBindPrompt
+                instantlyCampaignId={instantlyCampaignId || campaign.instantly_campaign_id || ''}
+                instantlyName={campaign.name}
+                onBound={(id) => router.replace(`/sales/outbound/editor/${encodeURIComponent(id)}`)}
+              />
+            </div>
+          ) : null}
+          {tab === 'editor' && sequence ? (
             <div
               className={cn(
-                'mx-auto w-full px-4 pb-8 pt-8',
+                'mx-auto w-full px-4 pb-4 pt-4',
                 previewDevice === 'mobile' ? 'max-w-md' : 'max-w-2xl'
               )}
               onDragOver={(e) => {
@@ -649,6 +778,11 @@ export function SequenceEditor({
                 if (payload) void applyLibraryPayload(payload)
               }}
             >
+              {campaign.copy_status === 'live' ? (
+                <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                  Compass copy. Instantly may differ. Launch does not push.
+                </p>
+              ) : null}
               {sequence.steps.map((step, index) => (
                 <div key={step.id}>
                   {index > 0 ? (
@@ -718,6 +852,11 @@ export function SequenceEditor({
                     </div>
 
                     <div className="relative">
+                      {previewOn ? (
+                        <div className="rounded-xl border border-stone-200 bg-stone-50/60 px-3.5 py-2.5">
+                          <SequencePreviewText text={step.subject || '(no subject)'} lead={previewLead} />
+                        </div>
+                      ) : (
                       <input
                         value={step.subject}
                         onFocus={() => {
@@ -739,7 +878,10 @@ export function SequenceEditor({
                             : 'border-stone-200 focus:border-[#e85d2a]/45'
                         )}
                       />
+                      )}
+                      {previewOn ? null : (
                       <Zap className="pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-neutral-300" />
+                      )}
                     </div>
                     {subjectLooksBanned(step.subject) ? (
                       <p className="mt-1 text-[11px] text-amber-700">
@@ -747,6 +889,11 @@ export function SequenceEditor({
                       </p>
                     ) : null}
 
+                    {previewOn ? (
+                      <div className="mt-3 min-h-[8rem] rounded-xl border border-stone-200 bg-stone-50/60 px-3.5 py-3">
+                        <SequencePreviewText text={stepBodyText(step)} lead={previewLead} />
+                      </div>
+                    ) : (
                     <textarea
                       value={stepBodyText(step)}
                       onFocus={() => {
@@ -759,10 +906,11 @@ export function SequenceEditor({
                         if (index === 0) patch.cold_expression = e.target.value
                         updateSequence(next, patch)
                       }}
-                      rows={previewDevice === 'mobile' ? 10 : 12}
+                      rows={previewDevice === 'mobile' ? 8 : 9}
                       placeholder="Write your email body…"
                       className="mt-3 w-full resize-none rounded-xl border border-stone-200 bg-white px-3.5 py-3 text-[14px] leading-relaxed text-neutral-800 outline-none focus:border-[#e85d2a]/45"
                     />
+                    )}
                   </div>
                 </div>
               ))}
@@ -825,19 +973,10 @@ export function SequenceEditor({
               onOpenSettings={() => setTab('settings')}
             />
           ) : null}
-
-          {tab === 'leads' ? (
-            <div className="mx-auto max-w-lg px-4 py-16 text-center">
-              <p className="text-[15px] font-semibold text-neutral-900">Leads</p>
-              <p className="mt-2 text-sm text-neutral-500">
-                Lead membership and suppression for this campaign will appear here after launch.
-              </p>
-            </div>
-          ) : null}
           </div>
           )}
 
-          {tab === 'editor' ? (
+          {tab === 'editor' && sequence ? (
             <div className="shrink-0 border-t border-stone-200/80 bg-white px-4 py-3 shadow-soft">
               <div className="mx-auto flex max-w-2xl flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
@@ -849,6 +988,31 @@ export function SequenceEditor({
                     </span>
                   </div>
                   <div className="flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      title={previewOn ? 'Edit tokens' : 'Preview delivered email'}
+                      aria-label={previewOn ? 'Edit tokens' : 'Preview delivered email'}
+                      aria-pressed={previewOn}
+                      onClick={() => {
+                        setPreviewOn((v) => {
+                          const next = !v
+                          if (next) {
+                            setPreviewLead((current) => {
+                              if (current) return current
+                              const leads = loadedLeadsRef.current
+                              return leads.find((row) => row.opener?.trim()) || leads[0] || null
+                            })
+                          }
+                          return next
+                        })
+                      }}
+                      className={cn(
+                        'rounded-xl p-1.5 text-neutral-400 transition hover:bg-stone-50 hover:text-neutral-700',
+                        previewOn && 'bg-[#e85d2a]/10 text-[#c2410c]'
+                      )}
+                    >
+                      {previewOn ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                    </button>
                     <button
                       type="button"
                       title="Desktop width"
@@ -894,7 +1058,7 @@ export function SequenceEditor({
         </div>
 
         {/* Right accordion rail */}
-        {tab === 'editor' ? (
+        {tab === 'editor' && sequence ? (
           <aside
             className="relative hidden shrink-0 border-l border-stone-200/80 bg-white lg:flex lg:flex-col"
             style={{ width: componentsWidth }}
@@ -923,6 +1087,70 @@ export function SequenceEditor({
             />
           </aside>
         ) : null}
+      </div>
+
+      {tab === 'editor' && showLeadsPane ? (
+        <div
+          className="flex shrink-0 flex-col border-t border-stone-200/80 bg-white"
+          style={{ height: leadsCollapsed ? 40 : `${leadsHeightVh}vh` }}
+        >
+          <div className="flex shrink-0 items-center gap-2 border-b border-stone-100 px-3 py-1.5">
+            <button
+              type="button"
+              aria-label="Resize leads list"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                leadsResize.current = { startY: e.clientY, startVh: leadsHeightRef.current }
+                document.body.style.cursor = 'row-resize'
+                document.body.style.userSelect = 'none'
+                setLeadsCollapsed(false)
+              }}
+              className="h-4 w-8 shrink-0 cursor-row-resize rounded-full hover:bg-stone-100"
+            >
+              <span className="mx-auto block h-1 w-8 rounded-full bg-stone-300" />
+            </button>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+              Campaign leads
+            </span>
+            <div className="ml-auto flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setLeadsCollapsed(false)
+                  setLeadsHeightVh(58)
+                }}
+                className="rounded-lg px-2 py-1 text-[11px] font-medium text-neutral-500 hover:bg-stone-50 hover:text-neutral-800"
+              >
+                Expand
+              </button>
+              <button
+                type="button"
+                aria-label={leadsCollapsed ? 'Show leads' : 'Collapse leads'}
+                onClick={() => setLeadsCollapsed((v) => !v)}
+                className="rounded-lg p-1 text-neutral-400 hover:bg-stone-50 hover:text-neutral-700"
+              >
+                <ChevronDown className={cn('size-4 transition', leadsCollapsed && 'rotate-180')} />
+              </button>
+            </div>
+          </div>
+          {leadsCollapsed ? null : (
+            <CampaignLeadsPane
+              className="min-h-0 flex-1 overflow-hidden"
+              pipelineCampaignId={instantlyUnbound ? null : campaignId || campaign.id}
+              instantlyCampaignId={campaign.instantly_campaign_id || instantlyCampaignId}
+              onLeadSelect={setPreviewLead}
+              onLeadsLoaded={(leads) => {
+                loadedLeadsRef.current = leads
+                if (!previewOn) return
+                setPreviewLead((current) => {
+                  if (current && leads.some((row) => row.id === current.id)) return current
+                  return leads.find((row) => row.opener?.trim()) || leads[0] || null
+                })
+              }}
+            />
+          )}
+        </div>
+      ) : null}
       </div>
     </>
   )

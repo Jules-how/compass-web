@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,8 +9,8 @@ import type { OutboundBoardCampaign } from '@/lib/instantly'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
-const VISIBLE = 3
-const DROPDOWN_WINDOW = 6
+const VISIBLE = 8
+const DROPDOWN_WINDOW = 12
 
 type OutboundBoardPayload = {
   live: OutboundBoardCampaign[]
@@ -23,7 +24,7 @@ function statusBadge(status: OutboundBoardCampaign['status']) {
   if (status === 'live') {
     return (
       <Badge variant="success" appearance="light" size="sm">
-        Live
+        Active
       </Badge>
     )
   }
@@ -41,73 +42,60 @@ function statusBadge(status: OutboundBoardCampaign['status']) {
   )
 }
 
-function LiveCampaignCard({ campaign }: { campaign: OutboundBoardCampaign }) {
-  const metaBits = [
-    campaign.offer,
-    campaign.ctaType?.replace(/_/g, ' ') || campaign.cta,
-    campaign.lengthBand,
-    campaign.audience || [campaign.vertical, campaign.location].filter(Boolean).join(' · ')
-  ].filter(Boolean)
+function liveHref(campaign: OutboundBoardCampaign): string {
+  if (campaign.pipelineCampaignId) {
+    return `/sales/outbound/editor/${encodeURIComponent(campaign.pipelineCampaignId)}`
+  }
+  return `/sales/outbound/editor/live/${encodeURIComponent(campaign.id)}`
+}
+
+function LiveRow({ campaign }: { campaign: OutboundBoardCampaign }) {
   return (
-    <div className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[15px] font-semibold text-neutral-900">{campaign.name}</h3>
-            {statusBadge(campaign.status)}
+    <Link
+      href={liveHref(campaign)}
+      className="grid grid-cols-[minmax(0,1.6fr)_auto_minmax(4.5rem,0.7fr)_minmax(4rem,0.55fr)_minmax(4rem,0.55fr)_minmax(4.5rem,0.6fr)_minmax(4.5rem,0.7fr)] items-center gap-2 border-b border-stone-100 px-3 py-2 text-[13px] transition last:border-b-0 hover:bg-orange-50/50"
+    >
+      <div className="min-w-0">
+        <div className="truncate font-medium text-neutral-900">{campaign.name}</div>
+        {campaign.offer ? (
+          <div className="truncate text-[11px] text-neutral-500">{campaign.offer}</div>
+        ) : null}
+      </div>
+      <div>{statusBadge(campaign.status)}</div>
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-stone-100">
+            <div
+              className="h-full rounded-full bg-[#e85d2a]"
+              style={{ width: `${Math.min(100, Math.max(0, campaign.progress))}%` }}
+            />
           </div>
-          {metaBits.length > 0 ? (
-            <p className="mt-1 text-[13px] text-neutral-600">
-              {metaBits.map((bit, i) => (
-                <span key={`${bit}-${i}`}>
-                  {i > 0 ? <span className="text-neutral-400"> · </span> : null}
-                  {i === 0 && campaign.offer ? (
-                    <span className="font-medium text-neutral-800">{bit}</span>
-                  ) : (
-                    bit
-                  )}
-                </span>
-              ))}
-            </p>
-          ) : null}
-          {campaign.copyNotes ? (
-            <p className="mt-2 text-[12px] leading-relaxed text-neutral-500">{campaign.copyNotes}</p>
-          ) : null}
-        </div>
-        <div className="text-right">
-          <div className="text-[22px] font-semibold tabular-nums tracking-tight text-neutral-900">
+          <span className="w-8 shrink-0 text-right tabular-nums text-[11px] text-neutral-500">
             {campaign.progress}%
-          </div>
-          <div className="text-[11px] uppercase tracking-wide text-neutral-400">complete</div>
+          </span>
         </div>
       </div>
-
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-stone-100">
-        <div
-          className="h-full rounded-full bg-[#e85d2a] transition-[width] duration-500 ease-out"
-          style={{ width: `${campaign.progress}%` }}
-        />
+      <div className="tabular-nums text-neutral-700">{campaign.sendCount.toLocaleString()}</div>
+      <div className="tabular-nums text-neutral-700">{campaign.remaining.toLocaleString()}</div>
+      <div className="tabular-nums text-neutral-700">
+        {campaign.replyCount.toLocaleString()}
+        <span className="ml-1 text-[11px] text-neutral-400">{campaign.replyRate}%</span>
       </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Metric label="Leads" value={campaign.leadCount.toLocaleString()} />
-        <Metric label="Sent" value={campaign.sendCount.toLocaleString()} />
-        <Metric label="Left" value={campaign.remaining.toLocaleString()} />
-        <Metric label="Replies" value={campaign.replyCount.toLocaleString()} />
-        <Metric label="Reply rate" value={`${campaign.replyRate}%`} />
-        <Metric label="Opportunities" value={campaign.opportunities.toLocaleString()} />
-      </div>
-    </div>
+      <div className="tabular-nums text-neutral-700">{campaign.opportunities.toLocaleString()}</div>
+    </Link>
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function TableHead() {
   return (
-    <div className="rounded-xl border border-stone-200/60 bg-stone-50/60 px-3 py-2.5">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
-        {label}
-      </div>
-      <div className="mt-0.5 text-[13px] font-medium tabular-nums text-neutral-800">{value}</div>
+    <div className="grid grid-cols-[minmax(0,1.6fr)_auto_minmax(4.5rem,0.7fr)_minmax(4rem,0.55fr)_minmax(4rem,0.55fr)_minmax(4.5rem,0.6fr)_minmax(4.5rem,0.7fr)] items-center gap-2 border-b border-stone-200 bg-stone-50/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+      <div>Name</div>
+      <div>Status</div>
+      <div>Progress</div>
+      <div>Sent</div>
+      <div>Left</div>
+      <div>Reply rate</div>
+      <div>Opportunities</div>
     </div>
   )
 }
@@ -133,7 +121,7 @@ export function OutboundLiveSection() {
         <div>
           <CardTitle>Live</CardTitle>
           <CardDescription>
-            Active Instantly campaigns — leads contacted, send volume, replies, and opportunities
+            Active Instantly campaigns — compact send volume, replies, and opportunities
           </CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -159,7 +147,7 @@ export function OutboundLiveSection() {
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {fromError ? (
           <p className="text-sm text-amber-800">
             Instantly is unavailable right now — live metrics will show when it reconnects.
@@ -178,24 +166,27 @@ export function OutboundLiveSection() {
           </p>
         ) : null}
 
-        {top.map((c) => (
-          <LiveCampaignCard key={c.id} campaign={c} />
-        ))}
+        {top.length > 0 ? (
+          <div className="overflow-hidden rounded-xl border border-stone-200/80">
+            <TableHead />
+            {top.map((c) => (
+              <LiveRow key={c.id} campaign={c} />
+            ))}
+          </div>
+        ) : null}
 
         {rest.length > 0 ? (
-          <div className="rounded-2xl border border-stone-200/70 bg-stone-50/40">
+          <div className="overflow-hidden rounded-xl border border-stone-200/70 bg-stone-50/40">
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
-              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
               aria-expanded={open}
             >
               <div>
-                <div className="text-[13px] font-semibold text-neutral-900">
-                  More live campaigns
-                </div>
+                <div className="text-[13px] font-semibold text-neutral-900">More live campaigns</div>
                 <div className="text-[12px] text-neutral-500">
-                  {rest.length} more · dropdown shows the next {DROPDOWN_WINDOW}; scroll for older
+                  {rest.length} more · shows the next {DROPDOWN_WINDOW}; scroll for older
                 </div>
               </div>
               <ChevronDown
@@ -206,9 +197,9 @@ export function OutboundLiveSection() {
               />
             </button>
             {open ? (
-              <div className="max-h-[min(28rem,55vh)] space-y-3 overflow-y-auto border-t border-stone-200/70 px-4 py-4">
+              <div className="max-h-[min(22rem,45vh)] overflow-y-auto border-t border-stone-200/70">
                 {rest.map((c) => (
-                  <LiveCampaignCard key={c.id} campaign={c} />
+                  <LiveRow key={c.id} campaign={c} />
                 ))}
               </div>
             ) : null}

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import type { LeadContact } from '@/lib/types'
+import { formatLeadFactsDetail, parseLeadFacts } from '@/lib/lead-facts'
 
 function humanizeStatus(status: string | null | undefined): string {
   if (!status) return 'Uncontacted'
@@ -115,11 +116,59 @@ export function LeadSidecar({
           <Field label="Updated">{formatWhen(lead.updated_at || lead.mirrored_at)}</Field>
         </dl>
 
-        <p className="mt-4 rounded-md border border-dashed border-neutral-200 bg-neutral-50 px-3 py-2 text-[12px] text-neutral-500">
-          Sidecar sections are ready — tell me what else you want here (activity, notes, Instantly
-          reply thread, actions, etc.).
-        </p>
+        <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+          Opener
+        </h3>
+        {lead.opener?.trim() ? (
+          <p className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-[13px] leading-relaxed text-neutral-800">
+            {lead.opener.trim()}
+          </p>
+        ) : (
+          <p className="text-[13px] text-neutral-400">No opener yet.</p>
+        )}
+
+        <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+          Research facts
+        </h3>
+        <FactsList lead={lead} />
       </div>
     </aside>
+  )
+}
+
+function FactsList({ lead }: { lead: LeadContact }) {
+  const parsed = parseLeadFacts(lead.lead_facts)
+  const facts = parsed.ok ? parsed.facts : []
+  if (facts.length === 0) {
+    const fallback = formatLeadFactsDetail(lead.lead_facts)
+    if (fallback) {
+      return <pre className="whitespace-pre-wrap text-[13px] text-neutral-700">{fallback}</pre>
+    }
+    return <p className="text-[13px] text-neutral-400">No research facts.</p>
+  }
+  return (
+    <ul className="space-y-2">
+      {facts.map((fact, index) => (
+        <li
+          key={`${fact.kind}-${index}`}
+          className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2"
+        >
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+            {fact.kind}
+          </div>
+          <div className="mt-0.5 text-[13px] text-neutral-800">{fact.claim}</div>
+          {fact.url ? (
+            <a
+              href={fact.url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 block truncate text-[12px] text-[#3b6ef5] hover:underline"
+            >
+              {fact.url}
+            </a>
+          ) : null}
+        </li>
+      ))}
+    </ul>
   )
 }

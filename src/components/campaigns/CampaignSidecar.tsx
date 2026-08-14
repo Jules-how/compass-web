@@ -93,7 +93,7 @@ export function CampaignSidecar({
   })
   const [editorOpen, setEditorOpen] = useState(false)
   const [editorTab, setEditorTab] = useState<
-    'analytics' | 'editor' | 'experiment' | 'archive' | 'leads' | 'settings'
+    'analytics' | 'editor' | 'experiment' | 'archive' | 'settings'
   >('editor')
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
