@@ -54,7 +54,7 @@ test('campaign planner files and migration are wired', () => {
   assert.match(planner, /CampaignSidecar/)
   assert.match(planner, /Today/)
   assert.match(planner, /resize-start/)
-  assert.match(planner, /createLocalCampaign/)
+  assert.match(planner, /createCampaignRemote/)
   assert.match(planner, /EMPTY_ROWS/)
   assert.match(planner, /Filter/)
   assert.match(planner, /Display options/)
@@ -65,11 +65,14 @@ test('campaign planner files and migration are wired', () => {
   assert.match(planner, /GlyphButton/)
   assert.match(planner, /Open campaign page/)
   assert.match(planner, /sales\/pipeline\/\$\{/)
-  assert.match(planner, /type ViewMode = 'list' \| 'board' \| 'timeline'/)
+  assert.match(planner, /type ViewMode = 'list' \| 'board' \| 'timeline' \| 'calendar'/)
   assert.match(planner, /setView\(mode\)/)
   assert.match(planner, /view === 'list'/)
   assert.match(planner, /view === 'board'/)
   assert.match(planner, /view === 'timeline'/)
+  assert.match(planner, /view === 'calendar'/)
+  assert.match(planner, /CampaignCalendar/)
+  assert.match(planner, /calendarGrain/)
   assert.match(planner, /CAMPAIGN_STATUSES\.map/)
   assert.match(planner, /moveCampaignStatus/)
 
@@ -109,12 +112,21 @@ test('campaign planner files and migration are wired', () => {
   assert.match(planner, /zoomFromPxPerDay/)
   assert.match(planner, /density/)
 
-  const store = read('src/lib/campaign-local-store.ts')
-  assert.match(store, /localStorage/)
+  const client = read('src/lib/campaigns-client.ts')
+  assert.match(client, /listCampaigns/)
 
   const labels = read('src/lib/campaigns.ts')
   assert.match(labels, /campaignPriorityLabel/)
   assert.match(labels, /campaignHealthLabel/)
+
+  const calendar = read('src/lib/campaign-calendar.ts')
+  assert.match(calendar, /export type CalendarGrain = 'day' \| 'week' \| 'month'/)
+  assert.match(calendar, /layoutWeekBars/)
+  assert.match(calendar, /monthWeeks/)
+  const calendarView = read('src/components/campaigns/CampaignCalendar.tsx')
+  assert.match(calendarView, /MonthGrid/)
+  assert.match(calendarView, /WeekGrid/)
+  assert.match(calendarView, /DayList/)
 })
 
 test('timeline zoom helpers move between macro and micro scales', () => {

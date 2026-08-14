@@ -11,7 +11,13 @@ import {
   type ReactNode
 } from 'react'
 import { useRouter } from 'next/navigation'
+import { CampaignCalendar } from '@/components/campaigns/CampaignCalendar'
 import { CampaignSidecar } from '@/components/campaigns/CampaignSidecar'
+import {
+  CALENDAR_GRAINS,
+  shiftCursor,
+  type CalendarGrain
+} from '@/lib/campaign-calendar'
 import { useTimelineWheelZoom } from '@/hooks/useTimelineWheelZoom'
 import {
   createCampaign as createCampaignRemote,
@@ -39,6 +45,7 @@ import {
   formatHoverDate,
   parseDateOnly,
   pxPerDay,
+  startOfDay,
   toDateOnly,
   xToDate,
   zoomFromPxPerDay,
@@ -59,7 +66,7 @@ type DragState = {
   end: string
 }
 
-type ViewMode = 'list' | 'board' | 'timeline'
+type ViewMode = 'list' | 'board' | 'timeline' | 'calendar'
 
 type DisplayProps = {
   showStatus: boolean
@@ -109,6 +116,8 @@ export function CampaignPlanner() {
   const [displayOpen, setDisplayOpen] = useState(false)
   const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null)
   const [view, setView] = useState<ViewMode>('timeline')
+  const [calendarGrain, setCalendarGrain] = useState<CalendarGrain>('month')
+  const [calendarCursor, setCalendarCursor] = useState(() => startOfDay(new Date()))
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [query, setQuery] = useState('')
@@ -225,13 +234,20 @@ export function CampaignPlanner() {
         setFilterOpen(false)
         setDisplayOpen(false)
       }
-      if (key === 'y' || key === 'q' || key === 'm' || key === 'w') {
+      if (view === 'timeline' && (key === 'y' || key === 'q' || key === 'm' || key === 'w')) {
         setZoomLevel(key === 'y' ? 'year' : key === 'q' ? 'quarter' : key === 'm' ? 'month' : 'week')
+      }
+      if (view === 'calendar') {
+        if (key === 'd') setCalendarGrain('day')
+        if (key === 'w') setCalendarGrain('week')
+        if (key === 'm') setCalendarGrain('month')
+        if (e.key === 'ArrowLeft') setCalendarCursor((cur) => shiftCursor(cur, calendarGrain, -1))
+        if (e.key === 'ArrowRight') setCalendarCursor((cur) => shiftCursor(cur, calendarGrain, 1))
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setZoomLevel])
+  }, [setZoomLevel, view, calendarGrain])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -427,33 +443,73 @@ export function CampaignPlanner() {
             <PanelIcon />
           </ToolbarIconButton>
 
-          {view === 'timeline' ? (
+          {view === 'timeline' || view === 'calendar' ? (
             <>
               <button
                 type="button"
-                onClick={() => scrollToToday('smooth')}
+                onClick={() => {
+                  if (view === 'calendar') setCalendarCursor(startOfDay(new Date()))
+                  else scrollToToday('smooth')
+                }}
                 className="ml-1 h-7 rounded-md border border-neutral-200 bg-white px-2.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
               >
                 Today
               </button>
-              <label className="relative">
-                <select
-                  value={zoom}
-                  onChange={(e) => {
-                    setZoomLevel(e.target.value as TimelineZoom)
-                  }}
-                  className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
-                >
-                  {ZOOM_OPTIONS.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400">
-                  ▾
-                </span>
-              </label>
+              {view === 'calendar' ? (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Previous period"
+                    onClick={() => setCalendarCursor((cur) => shiftCursor(cur, calendarGrain, -1))}
+                    className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Next period"
+                    onClick={() => setCalendarCursor((cur) => shiftCursor(cur, calendarGrain, 1))}
+                    className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
+                  >
+                    ›
+                  </button>
+                  <label className="relative">
+                    <select
+                      value={calendarGrain}
+                      onChange={(e) => setCalendarGrain(e.target.value as CalendarGrain)}
+                      className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
+                    >
+                      {CALENDAR_GRAINS.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400">
+                      ▾
+                    </span>
+                  </label>
+                </>
+              ) : (
+                <label className="relative">
+                  <select
+                    value={zoom}
+                    onChange={(e) => {
+                      setZoomLevel(e.target.value as TimelineZoom)
+                    }}
+                    className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
+                  >
+                    {ZOOM_OPTIONS.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400">
+                    ▾
+                  </span>
+                </label>
+              )}
             </>
           ) : null}
           <button
@@ -536,12 +592,13 @@ export function CampaignPlanner() {
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
               Display
             </div>
-            <div className="mb-3 flex rounded-lg border border-neutral-200 p-0.5 text-xs">
+            <div className="mb-3 grid grid-cols-2 gap-0.5 rounded-lg border border-neutral-200 p-0.5 text-xs">
               {(
                 [
                   ['list', 'List'],
                   ['board', 'Board'],
-                  ['timeline', 'Timeline']
+                  ['timeline', 'Timeline'],
+                  ['calendar', 'Calendar']
                 ] as const
               ).map(([mode, label]) => (
                 <button
@@ -551,8 +608,9 @@ export function CampaignPlanner() {
                     setView(mode)
                     setRowMenu(null)
                     if (mode === 'timeline') didCenterToday.current = false
+                    if (mode === 'calendar') setCalendarCursor(startOfDay(new Date()))
                   }}
-                  className={`flex-1 rounded-md px-2 py-1.5 text-center font-medium ${
+                  className={`rounded-md px-2 py-1.5 text-center font-medium ${
                     view === mode
                       ? 'bg-neutral-900 text-white'
                       : 'text-neutral-500 hover:text-neutral-800'
@@ -594,7 +652,9 @@ export function CampaignPlanner() {
               <p className="text-xs leading-relaxed text-neutral-500">
                 {view === 'list'
                   ? 'List shows every campaign in a sortable table. Open a row to edit details.'
-                  : 'Board groups campaigns by status. Use the card menu to move between columns.'}
+                  : view === 'board'
+                    ? 'Board groups campaigns by status. Use the card menu to move between columns.'
+                    : 'Calendar places the same dated campaigns on a day, week, or month grid.'}
               </p>
             )}
           </Popover>
@@ -1120,6 +1180,25 @@ export function CampaignPlanner() {
                 </div>
               </div>
             </div>
+          ) : null}
+
+          {view === 'calendar' ? (
+            <CampaignCalendar
+              campaigns={ordered.map((campaign) => ({
+                ...campaign,
+                start_date: draftDates[campaign.id]?.start ?? campaign.start_date,
+                end_date: draftDates[campaign.id]?.end ?? campaign.end_date
+              }))}
+              grain={calendarGrain}
+              cursor={calendarCursor}
+              selectedId={selectedId}
+              onSelect={(id) => {
+                setSelectedId(id)
+                setSidecarOpen(true)
+                setRowMenu(null)
+              }}
+              onOpenPage={openCampaignPage}
+            />
           ) : null}
         </div>
 
