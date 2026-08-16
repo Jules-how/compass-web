@@ -10,6 +10,7 @@ Before changing any operator UI chrome or sidebar motion, read `.cursor/rules/co
 ## Checklist
 
 - [ ] Using `Card` / `compass-panel` (or equivalent `rounded-2xl` + `shadow-soft` + soft border)?
+- [ ] Controls use `compass-input` / `compass-btn-*` (`rounded-xl`), not sharp `rounded-md` boxes?
 - [ ] Keeping generous gaps between sections (not densifying)?
 - [ ] Leaving `--compass-*` tokens, `shadow-soft`/`lift`, and Geist Sans typography alone?
 - [ ] Accent orange only for emphasis/CTAs/active nav?

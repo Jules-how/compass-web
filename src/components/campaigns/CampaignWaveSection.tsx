@@ -21,9 +21,9 @@ export function CampaignWaveSection({
   const failing = wave.checks.filter((check) => check.blocking && !check.ok)
 
   return (
-    <div className="space-y-3 text-sm">
-      <div className="grid grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1">
+    <div className="space-y-4 text-sm">
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1.5">
           <span className="text-[11px] font-medium text-neutral-500">Cap</span>
           <input
             type="number"
@@ -36,12 +36,12 @@ export function CampaignWaveSection({
               const next = raw === '' ? null : Math.max(0, Math.floor(Number(raw)))
               if (next !== (wave.cap ?? null)) onSave({ wave_cap: next })
             }}
-            className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
+            className="compass-input py-2"
           />
         </label>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           <span className="text-[11px] font-medium text-neutral-500">Cohort</span>
-          <p className="rounded-md border border-neutral-100 bg-neutral-50 px-2 py-1.5 text-sm text-neutral-800">
+          <p className="rounded-xl border border-stone-200/80 bg-stone-50 px-3.5 py-2 text-sm text-neutral-800">
             {wave.cohort}
             {wave.cap != null ? ` / ${wave.cap}` : ''}
           </p>
@@ -76,7 +76,7 @@ export function CampaignWaveSection({
         ))}
       </ul>
 
-      <label className="flex items-center gap-2 text-[12px] text-neutral-700">
+      <label className="flex items-center gap-2.5 text-[12px] text-neutral-700">
         <input
           type="checkbox"
           checked={reviewed}
@@ -85,6 +85,7 @@ export function CampaignWaveSection({
               opener_reviewed_at: e.target.checked ? new Date().toISOString() : null
             })
           }
+          className="h-4 w-4 rounded-md border-stone-300 text-[#e85d2a] accent-[#e85d2a]"
         />
         I read every opener
       </label>
@@ -101,7 +102,7 @@ export function CampaignWaveSection({
         <button
           type="button"
           onClick={() => onSave({ copy_confirmed_at: new Date().toISOString() })}
-          className="rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700"
+          className="compass-btn-secondary text-[12px]"
         >
           Compass copy matches Instantly
         </button>
@@ -110,11 +111,11 @@ export function CampaignWaveSection({
       )}
 
       {wave.readyToActivate ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[12px] font-medium text-emerald-900">
+        <p className="rounded-xl border border-emerald-200/80 bg-emerald-50 px-3.5 py-2.5 text-[12px] font-medium text-emerald-900">
           Ready for you to activate in Instantly
         </p>
       ) : (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[12px] text-amber-950">
+        <p className="rounded-xl border border-amber-200/80 bg-amber-50 px-3.5 py-2.5 text-[12px] text-amber-950">
           Blocked
           {failing.length > 0
             ? ` — ${failing.map((check) => check.label.toLowerCase()).join(', ')}`

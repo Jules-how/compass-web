@@ -264,8 +264,8 @@ export function CampaignSidecar({
     <aside
       className={
         isPage
-          ? 'relative flex min-h-0 w-full flex-1 flex-col bg-[#f7f8f9]'
-          : `relative flex h-full shrink-0 flex-col border-l border-neutral-200 bg-[#f7f8f9] ${
+          ? 'relative flex min-h-0 w-full flex-1 flex-col'
+          : `relative flex h-full shrink-0 flex-col border-l border-stone-200/70 ${
               resizing ? 'select-none' : ''
             }`
       }
@@ -300,11 +300,12 @@ export function CampaignSidecar({
           />
         </div>
       ) : null}
-      <div className="flex items-start gap-2 border-b border-neutral-200 bg-white px-4 py-3">
+      <div className={isPage ? 'compass-panel flex min-h-0 flex-1 flex-col overflow-hidden' : 'm-3 ml-2 flex min-h-0 flex-1 flex-col overflow-hidden compass-panel'}>
+      <div className="flex items-start gap-2 border-b border-stone-100 px-5 py-4">
         {isPage ? (
           <Link
             href="/sales/pipeline"
-            className="mt-0.5 rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+            className="mt-0.5 rounded-xl p-1.5 text-neutral-500 hover:bg-stone-50 hover:text-neutral-800"
             aria-label="Back to Campaign Planner"
             title="Back to planner"
           >
@@ -337,7 +338,7 @@ export function CampaignSidecar({
         <button
           type="button"
           onClick={() => setFavorited((v) => !v)}
-          className={`rounded-md p-1.5 hover:bg-neutral-100 ${
+          className={`rounded-xl p-1.5 hover:bg-stone-50 ${
             favorited ? 'text-amber-500' : 'text-neutral-400'
           }`}
           aria-label="Favorite"
@@ -349,13 +350,13 @@ export function CampaignSidecar({
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
-            className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100"
+            className="rounded-xl p-1.5 text-neutral-500 hover:bg-stone-50"
             aria-label="More"
           >
             ···
           </button>
           {menuOpen ? (
-            <div className="absolute right-0 top-8 z-50 w-44 rounded-lg border border-neutral-200 bg-white py-1 text-sm shadow-lg">
+            <div className="compass-panel absolute right-0 top-8 z-50 w-44 py-1 text-sm">
               {!isPage ? (
                 <Link
                   href={detailHref}
@@ -394,7 +395,7 @@ export function CampaignSidecar({
           <>
             <Link
               href={detailHref}
-              className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+              className="rounded-xl p-1.5 text-neutral-500 hover:bg-stone-50 hover:text-neutral-800"
               aria-label="Open campaign page"
               title="Open campaign page"
             >
@@ -405,7 +406,7 @@ export function CampaignSidecar({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+              className="rounded-xl p-1.5 text-neutral-500 hover:bg-stone-50 hover:text-neutral-800"
               aria-label="Close details"
               title="Close"
             >
@@ -417,21 +418,15 @@ export function CampaignSidecar({
         ) : null}
       </div>
 
-      <div
-        className={
-          isPage
-            ? 'min-h-0 flex-1 space-y-3 overflow-y-auto p-4 md:p-6'
-            : 'min-h-0 flex-1 space-y-3 overflow-y-auto p-3.5'
-        }
-      >
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
         {error ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">
             {error}
           </div>
         ) : null}
 
         {!campaign ? (
-          <div className="rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-500">
+          <div className="rounded-xl border border-stone-200/80 bg-stone-50 p-4 text-sm text-neutral-500">
             Loading…
           </div>
         ) : (
@@ -459,7 +454,7 @@ export function CampaignSidecar({
                       setStatus(e.target.value)
                       saveCampaign({ status: e.target.value })
                     }}
-                    className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
+                    className="compass-input py-2"
                   >
                     {CAMPAIGN_STATUSES.map((value) => (
                       <option key={value} value={value}>
@@ -476,7 +471,7 @@ export function CampaignSidecar({
                       setPriority(next)
                       saveCampaign({ priority: next })
                     }}
-                    className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
+                    className="compass-input py-2"
                   >
                     <option value={0}>No priority</option>
                     <option value={1}>Urgent</option>
@@ -492,7 +487,7 @@ export function CampaignSidecar({
                       setHealth(e.target.value)
                       saveCampaign({ health: e.target.value })
                     }}
-                    className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
+                    className="compass-input py-2"
                   >
                     {CAMPAIGN_HEALTHS.map((value) => (
                       <option key={value} value={value}>
@@ -507,11 +502,11 @@ export function CampaignSidecar({
                     onChange={(e) => setOwnerLabel(e.target.value)}
                     onBlur={() => saveCampaign({ owner_label: ownerLabel.trim() || null })}
                     placeholder="Add lead"
-                    className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
+                    className="compass-input py-2"
                   />
                 </Field>
                 <Field label="Members">
-                  <div className="rounded-md border border-dashed border-neutral-200 px-2 py-1.5 text-sm text-neutral-400">
+                  <div className="rounded-xl border border-dashed border-stone-200 px-3.5 py-2 text-sm text-neutral-400">
                     Add members
                   </div>
                 </Field>
@@ -528,7 +523,7 @@ export function CampaignSidecar({
                       const iso = new Date(goLiveLocal).toISOString()
                       saveCampaign({ go_live_at: iso })
                     }}
-                    className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs"
+                    className="compass-input py-2 text-xs"
                   />
                 </Field>
                 <Field label="Dates">
@@ -543,7 +538,7 @@ export function CampaignSidecar({
                           end_date: endDate || null
                         })
                       }
-                      className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs"
+                      className="compass-input py-2 text-xs"
                     />
                     <span className="text-neutral-400">→</span>
                     <input
@@ -556,12 +551,12 @@ export function CampaignSidecar({
                           end_date: endDate || null
                         })
                       }
-                      className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs"
+                      className="compass-input py-2 text-xs"
                     />
                   </div>
                 </Field>
                 <Field label="Team">
-                  <div className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-sm text-neutral-600">
+                  <div className="rounded-xl border border-stone-200/80 bg-stone-50 px-3.5 py-2 text-sm text-neutral-600">
                     Sales
                   </div>
                 </Field>
@@ -578,7 +573,7 @@ export function CampaignSidecar({
                       })
                     }
                     placeholder="Add label"
-                    className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
+                    className="compass-input py-2"
                   />
                 </Field>
                 <Field label="Color">
@@ -607,7 +602,7 @@ export function CampaignSidecar({
                     onBlur={() => saveCampaign({ summary: summary.trim() || null })}
                     rows={3}
                     placeholder="What is this campaign aiming to do?"
-                    className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-sm"
+                    className="compass-input py-2"
                   />
                 </Field>
               </dl>
@@ -625,19 +620,19 @@ export function CampaignSidecar({
                 <div className="space-y-2.5 text-sm">
                   <div className="flex flex-wrap gap-1.5">
                     {campaign.offer_key ? (
-                      <span className="rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-[#c2410c]">
+                      <span className="rounded-xl bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-[#c2410c]">
                         {campaign.offer_key}
                       </span>
                     ) : null}
                     {campaign.structure_id ? (
-                      <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">
+                      <span className="rounded-xl bg-stone-100 px-2 py-0.5 text-[11px] text-neutral-600">
                         {campaign.structure_id}
                       </span>
                     ) : null}
                     {(campaign.vertical_tags ?? []).map((tag) => (
                       <span
                         key={`v-${tag}`}
-                        className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600"
+                        className="rounded-xl bg-stone-100 px-2 py-0.5 text-[11px] text-neutral-600"
                       >
                         {tag}
                       </span>
@@ -645,12 +640,12 @@ export function CampaignSidecar({
                     {(campaign.location_tags ?? []).map((tag) => (
                       <span
                         key={`l-${tag}`}
-                        className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600"
+                        className="rounded-xl bg-stone-100 px-2 py-0.5 text-[11px] text-neutral-600"
                       >
                         {tag}
                       </span>
                     ))}
-                    <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">
+                    <span className="rounded-xl bg-stone-100 px-2 py-0.5 text-[11px] text-neutral-600">
                       {copyStatusLabel(campaign.copy_status || 'none')}
                     </span>
                   </div>
@@ -677,7 +672,7 @@ export function CampaignSidecar({
                     }}
                   />
                   {!campaign.copy_confirmed_at ? (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2">
+                    <div className="rounded-xl border border-amber-200/80 bg-amber-50 px-3.5 py-2.5">
                       <p className="text-[12px] text-amber-950">
                         Match Instantly before the next wave
                       </p>
@@ -686,7 +681,7 @@ export function CampaignSidecar({
                         onClick={() =>
                           saveCampaign({ copy_confirmed_at: new Date().toISOString() })
                         }
-                        className="mt-1.5 rounded-md border border-amber-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700"
+                        className="compass-btn-secondary mt-2 text-[12px]"
                       >
                         Compass copy matches Instantly
                       </button>
@@ -701,13 +696,13 @@ export function CampaignSidecar({
                         setEditorTab('editor')
                         setEditorOpen(true)
                       }}
-                      className="rounded-md bg-[#e85d2a] px-2.5 py-1.5 text-[12px] font-semibold text-white"
+                      className="compass-btn-primary text-[12px]"
                     >
                       Open editor
                     </button>
                     <button
                       type="button"
-                      className="rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700"
+                      className="compass-btn-secondary text-[12px]"
                       onClick={() => {
                         void listLibraryItems<OutboundTemplate>('templates').then(async (templates) => {
                           const options = templates
@@ -750,13 +745,13 @@ export function CampaignSidecar({
                         setEditorTab('editor')
                         setEditorOpen(true)
                       }}
-                      className="rounded-md bg-[#e85d2a] px-2.5 py-1.5 text-[12px] font-semibold text-white"
+                      className="compass-btn-primary text-[12px]"
                     >
                       Add copy
                     </button>
                     <button
                       type="button"
-                      className="rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700"
+                      className="compass-btn-secondary text-[12px]"
                       onClick={() => {
                         void listLibraryItems<OutboundTemplate>('templates').then(async (templates) => {
                           const options = templates
@@ -802,21 +797,21 @@ export function CampaignSidecar({
               <div className="space-y-3 text-sm">
                 {campaign.experiment_status && campaign.experiment_status !== 'none' ? (
                   <div className="flex flex-wrap gap-1.5">
-                    <span className="rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-[#c2410c]">
+                    <span className="rounded-xl bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-[#c2410c]">
                       {experimentStatusLabel(campaign.experiment_status)}
                     </span>
                     {campaign.experiment_role && campaign.experiment_role !== 'none' ? (
-                      <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">
+                      <span className="rounded-xl bg-stone-100 px-2 py-0.5 text-[11px] text-neutral-600">
                         {campaign.experiment_role}
                       </span>
                     ) : null}
                     {campaign.experiment_factor && campaign.experiment_factor !== 'none' ? (
-                      <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">
+                      <span className="rounded-xl bg-stone-100 px-2 py-0.5 text-[11px] text-neutral-600">
                         {experimentFactorLabel(campaign.experiment_factor)}
                       </span>
                     ) : null}
                     {campaign.cta_type ? (
-                      <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">
+                      <span className="rounded-xl bg-stone-100 px-2 py-0.5 text-[11px] text-neutral-600">
                         {String(campaign.cta_type).replaceAll('_', ' ')}
                       </span>
                     ) : null}
@@ -833,7 +828,7 @@ export function CampaignSidecar({
                     setEditorTab('experiment')
                     setEditorOpen(true)
                   }}
-                  className="rounded-md bg-[#e85d2a] px-2.5 py-1.5 text-[12px] font-semibold text-white"
+                  className="compass-btn-primary text-[12px]"
                 >
                   Open experiment
                 </button>
@@ -855,7 +850,7 @@ export function CampaignSidecar({
                       { title: '', description: '', target_date: '', completed: false }
                     ])
                   }
-                  className="rounded-md px-1.5 py-0.5 text-sm text-neutral-500 hover:bg-neutral-100"
+                  className="rounded-xl px-2 py-0.5 text-sm text-neutral-500 hover:bg-stone-50"
                 >
                   +
                 </button>
@@ -871,7 +866,7 @@ export function CampaignSidecar({
                   {milestones.map((milestone, index) => (
                     <li
                       key={milestone.id ?? `new-${index}`}
-                      className="rounded-lg border border-neutral-100 p-2"
+                      className="rounded-xl border border-stone-100 bg-stone-50/60 p-3"
                     >
                       <div className="flex items-start gap-2">
                         <input
@@ -911,7 +906,7 @@ export function CampaignSidecar({
                               )
                             }
                             onBlur={() => saveMilestones(milestones)}
-                            className="w-full rounded border border-neutral-200 px-1.5 py-1 text-xs"
+                            className="compass-input py-1.5 text-xs"
                           />
                         </div>
                       </div>
@@ -996,6 +991,7 @@ export function CampaignSidecar({
           </>
         )}
       </div>
+      </div>
     </aside>
       {editorOpen ? (
         <SequenceEditor
@@ -1032,12 +1028,12 @@ function Section({
   action?: ReactNode
 }) {
   return (
-    <section className="rounded-xl border border-neutral-200 bg-white p-3.5">
-      <div className="mb-2.5 flex items-center gap-2">
+    <section className="rounded-xl border border-stone-200/70 bg-stone-50/40 p-4">
+      <div className="mb-3 flex items-center gap-2">
         <button
           type="button"
           onClick={onToggle}
-          className="flex min-w-0 flex-1 items-center gap-1 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400"
+          className="compass-section-label flex min-w-0 flex-1 items-center gap-1.5 text-left"
         >
           <span className="text-[10px]">{open ? '▼' : '▶'}</span>
           {title}
@@ -1067,8 +1063,8 @@ function Field({
     )
   }
   return (
-    <div className="grid grid-cols-[88px_minmax(0,1fr)] items-start gap-2.5">
-      <dt className="pt-2 text-xs text-neutral-500">{label}</dt>
+    <div className="grid grid-cols-[88px_minmax(0,1fr)] items-start gap-3">
+      <dt className="pt-2.5 text-xs text-neutral-500">{label}</dt>
       <dd className="min-w-0">{children}</dd>
     </div>
   )
@@ -1088,7 +1084,7 @@ function ProgressChart({
   const pct = scope > 0 ? Math.min(100, Math.round((completed / scope) * 100)) : 0
   const y = 36 - pct * 0.28
   return (
-    <div className="relative h-28 overflow-hidden rounded-lg bg-neutral-50 ring-1 ring-neutral-100">
+    <div className="relative h-28 overflow-hidden rounded-xl bg-stone-50 ring-1 ring-stone-100">
       <svg viewBox="0 0 100 40" className="h-full w-full" preserveAspectRatio="none">
         <line x1="0" y1="8" x2="100" y2="8" stroke="#d4d4d8" strokeWidth="0.5" strokeDasharray="2 2" />
         <line x1="0" y1="8" x2="100" y2="36" stroke="#93c5fd" strokeWidth="1" opacity="0.7" />

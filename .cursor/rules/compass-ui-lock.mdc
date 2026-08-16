@@ -27,7 +27,7 @@ The operator console visual language is **intentional and locked**. Preserve it 
 
 ## Source of truth
 
-- Tokens & utilities: `src/app/globals.css` (`--compass-*`, `.compass-panel`, `.compass-sidebar`, `.compass-*` helpers)
+- Tokens & utilities: `src/app/globals.css` (`--compass-*`, `.compass-panel`, `.compass-input`, `.compass-btn-*`, `.compass-sidebar`)
 - Shadows: `tailwind.config.ts` → `boxShadow.soft` / `boxShadow.lift`
 - Cards: `src/components/ui/card.tsx` (`rounded-2xl`, `shadow-soft`, soft borders)
 - Sidebar motion & link chrome: `src/components/ui/sidebar.tsx`
