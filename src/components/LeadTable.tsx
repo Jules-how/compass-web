@@ -804,7 +804,7 @@ export default function LeadTable({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between text-sm text-neutral-500">
+      <div className="flex items-center justify-between pt-0.5 text-xs text-neutral-500">
         <span>
           Showing {totalShown === 0 ? 0 : (page - 1) * pageSize + 1}–{totalShown} of{' '}
           {total.toLocaleString()} {bucket === 'prospects' ? 'prospects' : 'leads'}
@@ -812,21 +812,21 @@ export default function LeadTable({
             ? ` (${summary.filtered.toLocaleString()} match filters)`
             : ''}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => goToPage(page - 1)}
             disabled={page <= 1}
-            className="rounded-xl border border-stone-200 px-3 py-1.5 text-neutral-600 transition hover:bg-stone-50 disabled:opacity-50"
+            className="rounded-xl border border-stone-200 px-2.5 py-1 text-neutral-600 transition hover:bg-stone-50 disabled:opacity-50"
           >
             Previous
           </button>
-          <span className="px-2">Page {page}</span>
+          <span className="px-1.5">Page {page}</span>
           <button
             type="button"
             onClick={() => goToPage(page + 1)}
             disabled={!hasMore}
-            className="rounded-xl border border-stone-200 px-3 py-1.5 text-neutral-600 transition hover:bg-stone-50 disabled:opacity-50"
+            className="rounded-xl border border-stone-200 px-2.5 py-1 text-neutral-600 transition hover:bg-stone-50 disabled:opacity-50"
           >
             Next
           </button>
