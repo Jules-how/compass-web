@@ -176,8 +176,15 @@ export function SequenceEditor({
   const loadedLeadsRef = useRef<LeadContact[]>([])
   const componentsWidthRef = useRef(componentsWidth)
   const leadsHeightRef = useRef(leadsHeightVh)
+  const campaignRef = useRef<CompassCampaign | null>(null)
+  const sequenceRef = useRef<OutboundSequence | null>(null)
+  const persistInFlight = useRef(false)
+  const persistQueued = useRef(false)
+  const saveEpochRef = useRef(0)
   componentsWidthRef.current = componentsWidth
   leadsHeightRef.current = leadsHeightVh
+  campaignRef.current = campaign
+  sequenceRef.current = sequence
 
   const closeEditor = useCallback(() => {
     if (onClose) {
@@ -364,23 +371,31 @@ export function SequenceEditor({
     }
   }, [variant, closeEditor])
 
-  const persist = useCallback(
-    async (nextCampaign: CompassCampaign, nextSequence: OutboundSequence) => {
-      if (instantlyUnbound) return
-      setSaveState('saving')
-      const stamped = {
-        ...nextSequence,
-        updated_at: new Date().toISOString(),
-        offer_key: nextCampaign.offer_key ?? nextSequence.offer_key
-      }
-      try {
+  const persist = useCallback(async () => {
+    if (instantlyUnbound) return
+    if (persistInFlight.current) {
+      persistQueued.current = true
+      return
+    }
+    persistInFlight.current = true
+    setSaveState('saving')
+    try {
+      do {
+        persistQueued.current = false
+        const nextCampaign = campaignRef.current
+        const nextSequence = sequenceRef.current
+        if (!nextCampaign || !nextSequence) break
+        const epoch = ++saveEpochRef.current
+        const stamped = {
+          ...nextSequence,
+          updated_at: new Date().toISOString(),
+          offer_key: nextCampaign.offer_key ?? nextSequence.offer_key
+        }
         if (unbound) {
           const cam = { ...nextCampaign, sequence_draft: stamped, updated_at: new Date().toISOString() }
           writeUnbound(cam, stamped)
-          setCampaign(cam)
-          setSequence(stamped)
         } else if (campaignId) {
-          const updated = await updateCampaign(campaignId, {
+          await updateCampaign(campaignId, {
             offer_key: nextCampaign.offer_key ?? null,
             structure_id: stamped.structure_id,
             opener_mode: nextCampaign.opener_mode ?? 'nick-tier',
@@ -401,18 +416,27 @@ export function SequenceEditor({
             expression_key: nextCampaign.expression_key ?? null,
             cta_type: nextCampaign.cta_type ?? null
           })
-          setCampaign(updated)
-          setSequence(updated.sequence_draft ?? stamped)
         }
-        setSaveState('saved')
-        window.setTimeout(() => setSaveState('idle'), 1200)
-      } catch (err) {
-        setSaveState('idle')
-        setError(err instanceof Error ? err.message : 'Save failed')
+        // Never write the server row back into the editor. A late PATCH response
+        // was replacing what you were still typing (subject/CTA/body flicker).
+        if (epoch === saveEpochRef.current) {
+          setSaveState('saved')
+          window.setTimeout(() => {
+            if (epoch === saveEpochRef.current) setSaveState('idle')
+          }, 1200)
+        }
+      } while (persistQueued.current)
+    } catch (err) {
+      setSaveState('idle')
+      setError(err instanceof Error ? err.message : 'Save failed')
+    } finally {
+      persistInFlight.current = false
+      if (persistQueued.current) {
+        persistQueued.current = false
+        void persist()
       }
-    },
-    [campaignId, instantlyUnbound, unbound]
-  )
+    }
+  }, [campaignId, instantlyUnbound, unbound])
 
   const launchToInstantly = useCallback(async () => {
     if (!campaignId || unbound || instantlyUnbound || !campaign) return
@@ -423,7 +447,7 @@ export function SequenceEditor({
     setLaunchBusy(true)
     setError(null)
     try {
-      if (sequence) await persist(campaign, sequence)
+      if (sequence) await persist()
       const ensured = await ensureInstantlyCampaign(campaignId, { pushSequence: true })
       setCampaign(ensured.campaign)
       const pushed = await pushInstantlyLeads(campaignId, { dryRun: false })
@@ -440,25 +464,31 @@ export function SequenceEditor({
     }
   }, [campaign, campaignId, instantlyUnbound, persist, sequence, unbound])
 
-  const scheduleAutosave = useCallback(
-    (nextCampaign: CompassCampaign, nextSequence: OutboundSequence) => {
+  const scheduleAutosave = useCallback(() => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    autosaveTimer.current = setTimeout(() => {
+      void persist()
+    }, 800)
+  }, [persist])
+
+  useEffect(() => {
+    return () => {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
-      autosaveTimer.current = setTimeout(() => {
-        void persist(nextCampaign, nextSequence)
-      }, 500)
-    },
-    [persist]
-  )
+    }
+  }, [])
 
   const updateSequence = useCallback(
     (next: OutboundSequence, campaignPatch?: Partial<CompassCampaign>) => {
-      if (!campaign) return
-      const nextCampaign = { ...campaign, ...campaignPatch, structure_id: next.structure_id }
+      const current = campaignRef.current
+      if (!current) return
+      const nextCampaign = { ...current, ...campaignPatch, structure_id: next.structure_id }
+      sequenceRef.current = next
+      campaignRef.current = nextCampaign
       setSequence(next)
       setCampaign(nextCampaign)
-      scheduleAutosave(nextCampaign, next)
+      scheduleAutosave()
     },
-    [campaign, scheduleAutosave]
+    [scheduleAutosave]
   )
 
   const applyLibraryPayload = useCallback(
@@ -534,8 +564,9 @@ export function SequenceEditor({
   )
 
   function saveExplicit() {
-    if (!campaign || !sequence) return
-    void persist(campaign, sequence)
+    if (!campaignRef.current || !sequenceRef.current) return
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    void persist()
   }
 
   async function attachUnboundToNewCampaign() {
@@ -695,8 +726,9 @@ export function SequenceEditor({
                 return
               }
               const next = { ...campaign, name: e.target.value }
+              campaignRef.current = next
               setCampaign(next)
-              scheduleAutosave(next, sequence)
+              scheduleAutosave()
             }}
             className="min-w-0 flex-1 truncate border-0 bg-transparent text-[15px] font-semibold text-neutral-900 outline-none placeholder:text-neutral-400"
             placeholder="Untitled Campaign"
@@ -985,8 +1017,9 @@ export function SequenceEditor({
                 unbound={unbound}
                 onChange={(patch) => {
                   const nextCampaign = { ...campaign, ...patch }
+                  campaignRef.current = nextCampaign
                   setCampaign(nextCampaign)
-                  if (sequence) scheduleAutosave(nextCampaign, sequence)
+                  if (sequence) scheduleAutosave()
                 }}
               />
               {!unbound && !instantlyUnbound ? (
@@ -1009,8 +1042,9 @@ export function SequenceEditor({
               unbound={unbound}
               onChange={(patch) => {
                 const nextCampaign = { ...campaign, ...patch }
+                campaignRef.current = nextCampaign
                 setCampaign(nextCampaign)
-                if (sequence) scheduleAutosave(nextCampaign, sequence)
+                if (sequence) scheduleAutosave()
               }}
               onChallengerSpawned={(id) => {
                 if (onChallengerSpawned) onChallengerSpawned(id)
