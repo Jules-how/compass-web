@@ -204,6 +204,38 @@ export function nextOpenGoLiveAt(
   return goLiveAtFromSlot(day, start)
 }
 
+/** Map a pointer on a timed grid to a go-live, including days past the visible columns. */
+export function slotFromGridPoint(
+  firstDay: Date,
+  columnCount: number,
+  grid: { left: number; top: number; width: number },
+  clientX: number,
+  clientY: number,
+  occupiedIsos: Array<string | null | undefined>,
+  ignoreIso?: string | null
+): string {
+  const cols = Math.max(1, columnCount)
+  const colW = grid.width / cols
+  const dayIndex = Math.floor((clientX - grid.left) / colW)
+  const day = addDays(firstDay, Number.isFinite(dayIndex) ? dayIndex : 0)
+  const hour = hourFromOffsetPx(clientY - grid.top)
+  return nextOpenGoLiveAt(day, hour, occupiedIsos, ignoreIso)
+}
+
+/** Map a pointer on the 7×6 month grid, including cells past the visible month. */
+export function dayFromMonthGridPoint(
+  gridStart: Date,
+  grid: { left: number; top: number; width: number; height: number },
+  clientX: number,
+  clientY: number
+): Date {
+  const colW = grid.width / 7
+  const rowH = grid.height / 6
+  const col = Math.floor((clientX - grid.left) / colW)
+  const row = Math.floor((clientY - grid.top) / rowH)
+  return addDays(gridStart, row * 7 + col)
+}
+
 export type TimedLane = {
   id: string
   minutes: number

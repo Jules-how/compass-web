@@ -100,4 +100,28 @@ test('timed calendar events stay on one day and stack into the next free hour', 
   assert.equal(stacked.getHours(), 10)
   const third = new Date(nextOpenGoLiveAt(tue, 9, [nine, stacked.toISOString()]))
   assert.equal(third.getHours(), 11)
+
+  function addDays(date, n) {
+    const next = new Date(date)
+    next.setDate(next.getDate() + n)
+    return next
+  }
+  function slotFromGridPoint(firstDay, columnCount, grid, clientX, clientY, occupiedIsos, ignoreIso) {
+    const colW = grid.width / columnCount
+    const dayIndex = Math.floor((clientX - grid.left) / colW)
+    const day = addDays(firstDay, dayIndex)
+    const hour = Math.max(0, Math.min(23, Math.floor((clientY - grid.top) / CALENDAR_HOUR_HEIGHT)))
+    return nextOpenGoLiveAt(day, hour, occupiedIsos, ignoreIso)
+  }
+  const monday = new Date(2026, 7, 17)
+  const across = new Date(
+    slotFromGridPoint(monday, 7, { left: 0, top: 0, width: 700 }, 750, 9 * CALENDAR_HOUR_HEIGHT + 1, [])
+  )
+  assert.equal(across.getDate(), 24)
+  assert.equal(across.getHours(), 9)
+  const tuesday = new Date(
+    slotFromGridPoint(monday, 7, { left: 0, top: 0, width: 700 }, 150, 11 * CALENDAR_HOUR_HEIGHT + 1, [])
+  )
+  assert.equal(tuesday.getDate(), 18)
+  assert.equal(tuesday.getHours(), 11)
 })

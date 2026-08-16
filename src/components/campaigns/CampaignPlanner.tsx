@@ -1168,6 +1168,7 @@ export function CampaignPlanner() {
                 setSlotDraft(goLiveAt)
               }}
               onMoveCampaign={(id, goLiveAt) => persistGoLive(id, goLiveAt)}
+              onCursorChange={(day) => setCalendarCursor(startOfDay(day))}
             />
           ) : null}
         </div>
