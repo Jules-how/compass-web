@@ -57,6 +57,7 @@ export interface CompassCampaign {
   health: CampaignHealth | string
   start_date: string | null
   end_date: string | null
+  go_live_at: string | null
   color: string
   summary: string | null
   labels: string[]
@@ -112,7 +113,10 @@ export interface CompassCampaignActivity {
 }
 
 export const CAMPAIGN_LIST_COLUMNS =
-  'id,name,status,priority,health,start_date,end_date,color,summary,labels,owner_label,instantly_campaign_id,offer_key,structure_id,opener_mode,vertical_tags,location_tags,cold_expression,sequence_draft,copy_status,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,wave_cap,opener_reviewed_at,copy_confirmed_at,created_at,updated_at'
+  'id,name,status,priority,health,start_date,end_date,go_live_at,color,summary,labels,owner_label,instantly_campaign_id,offer_key,structure_id,opener_mode,vertical_tags,location_tags,cold_expression,sequence_draft,copy_status,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,wave_cap,opener_reviewed_at,copy_confirmed_at,created_at,updated_at'
+
+export const GO_LIVE_TIMEZONE = 'Australia/Sydney'
+export const MAX_LEAD_OPENER = 400
 
 export function emptyCampaignCopyFields() {
   return {
@@ -171,6 +175,7 @@ export function projectCampaignCopy(row: CompassCampaign): CompassCampaign {
         : null,
     opener_reviewed_at: row.opener_reviewed_at ?? null,
     copy_confirmed_at: row.copy_confirmed_at ?? null,
+    go_live_at: row.go_live_at ?? null,
     wave_cohort_count:
       typeof row.wave_cohort_count === 'number' ? row.wave_cohort_count : undefined,
     wave_positive_count:
@@ -344,6 +349,121 @@ export function formatCampaignDate(value: string | null | undefined): string {
   const date = new Date(`${value}T00:00:00`)
   if (Number.isNaN(date.getTime())) return value
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+export function parseGoLiveAt(value: unknown): { ok: true; iso: string | null } | { ok: false } {
+  if (value === undefined) return { ok: false }
+  if (value == null || value === '') return { ok: true, iso: null }
+  if (typeof value !== 'string') return { ok: false }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return { ok: false }
+  return { ok: true, iso: date.toISOString() }
+}
+
+export function dateOnlyInZone(
+  iso: string,
+  timeZone: string = GO_LIVE_TIMEZONE
+): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date(iso))
+  const year = parts.find((p) => p.type === 'year')?.value
+  const month = parts.find((p) => p.type === 'month')?.value
+  const day = parts.find((p) => p.type === 'day')?.value
+  return `${year}-${month}-${day}`
+}
+
+export function localDateOnlyFromIso(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return null
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+export function formatGoLiveAt(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit'
+  })
+}
+
+export function formatGoLiveTime(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })
+}
+
+export function goLiveToDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+/** 09:00 Australia/Sydney on YYYY-MM-DD as UTC ISO. */
+export function sydneyNineAmIso(dateOnly: string): string {
+  const plus10 = new Date(`${dateOnly}T09:00:00+10:00`)
+  const hour = Number(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: GO_LIVE_TIMEZONE,
+      hour: 'numeric',
+      hourCycle: 'h23'
+    }).format(plus10)
+  )
+  const offset = hour === 9 ? '+10:00' : hour === 8 ? '+11:00' : '+10:00'
+  return new Date(`${dateOnly}T09:00:00${offset}`).toISOString()
+}
+
+/** Next weekday 09:00 Australia/Sydney (today if already a weekday). */
+export function defaultGoLiveAt(now = new Date()): string {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: GO_LIVE_TIMEZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      weekday: 'short'
+    })
+      .formatToParts(now)
+      .filter((p) => p.type !== 'literal')
+      .map((p) => [p.type, p.value])
+  ) as Record<string, string>
+  let year = Number(parts.year)
+  let month = Number(parts.month)
+  let day = Number(parts.day)
+  const weekday = parts.weekday
+  const shift = weekday === 'Sat' ? 2 : weekday === 'Sun' ? 1 : 0
+  if (shift) {
+    const utc = Date.UTC(year, month - 1, day + shift)
+    const next = new Date(utc)
+    year = next.getUTCFullYear()
+    month = next.getUTCMonth() + 1
+    day = next.getUTCDate()
+  }
+  return sydneyNineAmIso(`${year}-${pad2(month)}-${pad2(day)}`)
+}
+
+export function shiftGoLiveAt(iso: string, deltaDays: number): string {
+  const date = new Date(iso)
+  date.setDate(date.getDate() + deltaDays)
+  return date.toISOString()
 }
 
 export const CAMPAIGN_COLORS = [

@@ -9,11 +9,14 @@ import {
 } from '@/lib/portal-http'
 import {
   CAMPAIGN_LIST_COLUMNS,
+  dateOnlyInZone,
+  defaultGoLiveAt,
   emptyCampaignCopyFields,
   normalizeCampaignHealth,
   normalizeCampaignStatus,
   normalizeLabels,
   normalizeOutboundTagList,
+  parseGoLiveAt,
   projectCampaignCopy,
   type CompassCampaign
 } from '@/lib/campaigns'
@@ -48,7 +51,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from('compass_pipeline_campaigns')
       .select(CAMPAIGN_LIST_COLUMNS)
-      .order('start_date', { ascending: true })
+      .order('go_live_at', { ascending: true })
       .order('name')
 
     if (error) {
@@ -88,6 +91,7 @@ export async function POST(request: NextRequest) {
     health?: string
     start_date?: string | null
     end_date?: string | null
+    go_live_at?: string | null
     color?: string
     summary?: string | null
     labels?: string[]
@@ -116,8 +120,11 @@ export async function POST(request: NextRequest) {
   }
 
   const stamp = nowIso()
+  const parsedGoLive = parseGoLiveAt(body.go_live_at === undefined ? defaultGoLiveAt() : body.go_live_at)
+  if (!parsedGoLive.ok) return portalJson({ error: 'invalid_go_live_at' }, { status: 400 })
+  const goLiveAt = parsedGoLive.iso || defaultGoLiveAt()
   const today = stamp.slice(0, 10)
-  const start = body.start_date || today
+  const start = body.start_date || dateOnlyInZone(goLiveAt) || today
   const end = body.end_date || start
   const copyDefaults = emptyCampaignCopyFields()
   const sequenceDraft = body.sequence_draft ?? null
@@ -134,6 +141,7 @@ export async function POST(request: NextRequest) {
     health: normalizeCampaignHealth(body.health),
     start_date: start,
     end_date: end < start ? start : end,
+    go_live_at: goLiveAt,
     color: body.color?.trim() || '#94a3b8',
     summary: body.summary?.trim() || null,
     labels: normalizeLabels(body.labels),

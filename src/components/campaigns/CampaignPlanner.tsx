@@ -12,7 +12,7 @@ import {
 } from 'react'
 import { useRouter } from 'next/navigation'
 import { CampaignCalendar } from '@/components/campaigns/CampaignCalendar'
-import { CampaignSidecar } from '@/components/campaigns/CampaignSidecar'
+import { CampaignReviewModal } from '@/components/campaigns/CampaignReviewModal'
 import {
   CALENDAR_GRAINS,
   shiftCursor,
@@ -31,8 +31,11 @@ import {
   campaignHealthLabel,
   campaignPriorityLabel,
   campaignStatusLabel,
-  formatCampaignDate,
+  defaultGoLiveAt,
+  formatGoLiveAt,
+  localDateOnlyFromIso,
   normalizeCampaignStatus,
+  shiftGoLiveAt,
   type CampaignStatus,
   type CompassCampaign
 } from '@/lib/campaigns'
@@ -41,7 +44,6 @@ import {
   ZOOM_OPTIONS,
   buildHeaderModel,
   buildTimelineRange,
-  clampDateOrder,
   dateToX,
   formatHoverDate,
   parseDateOnly,
@@ -58,13 +60,10 @@ const LABEL_WIDTH = 320
 const EMPTY_ROWS = 14
 const HEADER_HEIGHT = 52
 
-type DragMode = 'move' | 'resize-start' | 'resize-end'
 type DragState = {
   id: string
-  mode: DragMode
   originX: number
-  start: string
-  end: string
+  goLiveAt: string
 }
 
 type ViewMode = 'list' | 'board' | 'timeline' | 'calendar'
@@ -108,16 +107,16 @@ export function CampaignPlanner() {
   const [density, setDensity] = useState(() => pxPerDay('year'))
   const zoom = zoomFromPxPerDay(density)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [sidecarOpen, setSidecarOpen] = useState(true)
+  const [reviewOpen, setReviewOpen] = useState(false)
   const [drag, setDrag] = useState<DragState | null>(null)
-  const [draftDates, setDraftDates] = useState<Record<string, { start: string; end: string }>>({})
+  const [draftGoLive, setDraftGoLive] = useState<Record<string, string>>({})
   const [hoverDate, setHoverDate] = useState<Date | null>(null)
   const [hoverX, setHoverX] = useState<number | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
   const [displayOpen, setDisplayOpen] = useState(false)
   const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null)
-  const [view, setView] = useState<ViewMode>('timeline')
-  const [calendarGrain, setCalendarGrain] = useState<CalendarGrain>('month')
+  const [view, setView] = useState<ViewMode>('calendar')
+  const [calendarGrain, setCalendarGrain] = useState<CalendarGrain>('week')
   const [calendarCursor, setCalendarCursor] = useState(() => startOfDay(new Date()))
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
@@ -163,23 +162,24 @@ export function CampaignPlanner() {
       const ap = pinned[a.id] ? 0 : 1
       const bp = pinned[b.id] ? 0 : 1
       if (ap !== bp) return ap - bp
-      const as = a.start_date || '9999'
-      const bs = b.start_date || '9999'
+      const as = draftGoLive[a.id] || a.go_live_at || a.start_date || '9999'
+      const bs = draftGoLive[b.id] || b.go_live_at || b.start_date || '9999'
       return as.localeCompare(bs) || a.name.localeCompare(b.name)
     })
-  }, [filtered, pinned])
+  }, [filtered, pinned, draftGoLive])
 
   const range = useMemo(() => {
     return buildTimelineRange(
-      ordered.flatMap((c) => [
-        draftDates[c.id]?.start ?? c.start_date,
-        draftDates[c.id]?.end ?? c.end_date
-      ]),
+      ordered.flatMap((c) => {
+        const iso = draftGoLive[c.id] ?? c.go_live_at
+        const day = localDateOnlyFromIso(iso) ?? c.start_date
+        return [day, day]
+      }),
       zoom,
       undefined,
       density
     )
-  }, [ordered, draftDates, zoom, density])
+  }, [ordered, draftGoLive, zoom, density])
 
   const header = useMemo(
     () => buildHeaderModel(range, zoom, display.showWeekNumbers),
@@ -289,20 +289,18 @@ export function CampaignPlanner() {
   }
 
   function createCampaign(nextStatus?: CampaignStatus, openCopyEditor = false) {
-    const today = toDateOnly(range.today)
-    const end = toDateOnly(
-      new Date(range.today.getFullYear(), range.today.getMonth() + 1, range.today.getDate())
-    )
+    const goLive = defaultGoLiveAt()
     void createCampaignRemote({
       name: 'New campaign',
-      start_date: today,
-      end_date: end,
+      go_live_at: goLive,
+      start_date: localDateOnlyFromIso(goLive) ?? toDateOnly(range.today),
+      end_date: localDateOnlyFromIso(goLive) ?? toDateOnly(range.today),
       status: nextStatus
     })
       .then((campaign) => {
         refresh()
         setSelectedId(campaign.id)
-        setSidecarOpen(true)
+        setReviewOpen(true)
         if (openCopyEditor) router.push(`/sales/outbound/editor/${campaign.id}`)
       })
       .catch(() => {
@@ -312,7 +310,7 @@ export function CampaignPlanner() {
 
   function openCampaign(id: string) {
     setSelectedId(id)
-    setSidecarOpen(true)
+    setReviewOpen(true)
     setRowMenu(null)
   }
 
@@ -320,67 +318,43 @@ export function CampaignPlanner() {
     void updateCampaign(id, { status }).then(refresh).catch(refresh)
   }
 
-  function persistDates(id: string, start: string, end: string) {
-    const orderedDates = clampDateOrder(start, end)
-    void updateCampaign(id, {
-      start_date: orderedDates.start,
-      end_date: orderedDates.end
-    })
+  function persistGoLive(id: string, goLiveAt: string) {
+    void updateCampaign(id, { go_live_at: goLiveAt })
       .then(refresh)
       .catch(refresh)
-    setDraftDates((prev) => {
+    setDraftGoLive((prev) => {
       const next = { ...prev }
       delete next[id]
       return next
     })
-    refresh()
   }
 
-  function onPointerDownBar(e: ReactPointerEvent, campaign: CompassCampaign, mode: DragMode) {
+  function onPointerDownBar(e: ReactPointerEvent, campaign: CompassCampaign) {
     e.preventDefault()
     e.stopPropagation()
-    const start = draftDates[campaign.id]?.start ?? campaign.start_date
-    const end = draftDates[campaign.id]?.end ?? campaign.end_date
-    if (!start || !end) return
+    const goLiveAt = draftGoLive[campaign.id] ?? campaign.go_live_at
+    if (!goLiveAt) return
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     setSelectedId(campaign.id)
-    setSidecarOpen(true)
+    setReviewOpen(true)
     setRowMenu(null)
-    setDrag({ id: campaign.id, mode, originX: e.clientX, start, end })
+    setDrag({ id: campaign.id, originX: e.clientX, goLiveAt })
   }
 
   function onPointerMove(e: ReactPointerEvent) {
     if (!drag) return
     const deltaDays = Math.round((e.clientX - drag.originX) / dayWidth)
-    const startDate = parseDateOnly(drag.start)
-    const endDate = parseDateOnly(drag.end)
-    if (!startDate || !endDate) return
-
-    let nextStart = new Date(startDate)
-    let nextEnd = new Date(endDate)
-    if (drag.mode === 'move') {
-      nextStart.setDate(nextStart.getDate() + deltaDays)
-      nextEnd.setDate(nextEnd.getDate() + deltaDays)
-    } else if (drag.mode === 'resize-start') {
-      nextStart.setDate(nextStart.getDate() + deltaDays)
-      if (nextStart > endDate) nextStart = new Date(endDate)
-    } else {
-      nextEnd.setDate(nextEnd.getDate() + deltaDays)
-      if (nextEnd < startDate) nextEnd = new Date(startDate)
-    }
-    setDraftDates((prev) => ({
+    setDraftGoLive((prev) => ({
       ...prev,
-      [drag.id]: { start: toDateOnly(nextStart), end: toDateOnly(nextEnd) }
+      [drag.id]: shiftGoLiveAt(drag.goLiveAt, deltaDays)
     }))
   }
 
   function onPointerUp() {
     if (!drag) return
-    const draft = draftDates[drag.id]
-    const start = draft?.start ?? drag.start
-    const end = draft?.end ?? drag.end
+    const next = draftGoLive[drag.id] ?? drag.goLiveAt
     setDrag(null)
-    if (start !== drag.start || end !== drag.end) persistDates(drag.id, start, end)
+    if (next !== drag.goLiveAt) persistGoLive(drag.id, next)
   }
 
   function onTimelineMouseMove(e: React.MouseEvent<HTMLDivElement>) {
@@ -395,7 +369,7 @@ export function CampaignPlanner() {
     setHoverDate(xToDate(x, range))
   }
 
-  const selected = selectedId && sidecarOpen ? selectedId : null
+  const selected = selectedId && reviewOpen ? selectedId : null
   const menuCampaign = rowMenu ? campaigns.find((c) => c.id === rowMenu.campaignId) : null
 
   return (
@@ -438,8 +412,10 @@ export function CampaignPlanner() {
           </ToolbarIconButton>
           <ToolbarIconButton
             label="Toggle details"
-            active={sidecarOpen && Boolean(selectedId)}
-            onClick={() => setSidecarOpen((v) => !v)}
+            active={reviewOpen && Boolean(selectedId)}
+            onClick={() => {
+              if (selectedId) setReviewOpen((v) => !v)
+            }}
           >
             <PanelIcon />
           </ToolbarIconButton>
@@ -667,13 +643,12 @@ export function CampaignPlanner() {
           {view === 'list' ? (
             <div className="min-h-0 flex-1 overflow-auto p-4">
               <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-                <div className="hidden gap-3 border-b border-neutral-200 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-neutral-400 lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.6fr)]">
+                <div className="hidden gap-3 border-b border-neutral-200 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-neutral-400 lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,1.1fr)_minmax(0,0.6fr)]">
                   <div>Name</div>
                   <div>Status</div>
                   <div>Priority</div>
                   <div>Health</div>
-                  <div>Start</div>
-                  <div>End</div>
+                  <div>Go live</div>
                   <div>Lead</div>
                 </div>
                 {ready && ordered.length === 0 ? (
@@ -697,7 +672,7 @@ export function CampaignPlanner() {
                           onClick={() => openCampaign(campaign.id)}
                           onDoubleClick={() => openCampaignPage(campaign.id)}
                           title={`${campaign.name} — double-click to open page`}
-                          className={`grid w-full gap-3 px-4 py-3 text-left transition hover:bg-neutral-50 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.6fr)] lg:items-center ${
+                          className={`grid w-full gap-3 px-4 py-3 text-left transition hover:bg-neutral-50 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,1.1fr)_minmax(0,0.6fr)] lg:items-center ${
                             selectedId === campaign.id ? 'bg-neutral-50' : ''
                           }`}
                         >
@@ -724,10 +699,7 @@ export function CampaignPlanner() {
                             {campaignHealthLabel(campaign.health)}
                           </div>
                           <div className="text-sm text-neutral-600">
-                            {formatCampaignDate(campaign.start_date)}
-                          </div>
-                          <div className="text-sm text-neutral-600">
-                            {formatCampaignDate(campaign.end_date)}
+                            {formatGoLiveAt(campaign.go_live_at)}
                           </div>
                           <div className="flex items-center gap-1.5 text-sm text-neutral-600">
                             <LeadGlyph label={campaign.owner_label} />
@@ -824,11 +796,8 @@ export function CampaignPlanner() {
                                   </p>
                                 ) : null}
                                 <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-neutral-500">
-                                  {campaign.start_date || campaign.end_date ? (
-                                    <span>
-                                      {formatCampaignDate(campaign.start_date)} →{' '}
-                                      {formatCampaignDate(campaign.end_date)}
-                                    </span>
+                                  {campaign.go_live_at ? (
+                                    <span>{formatGoLiveAt(campaign.go_live_at)}</span>
                                   ) : null}
                                   <span>{campaignPriorityLabel(campaign.priority)}</span>
                                 </div>
@@ -957,16 +926,13 @@ export function CampaignPlanner() {
                   </div>
 
                   {ordered.map((campaign) => {
-                    const startStr = draftDates[campaign.id]?.start ?? campaign.start_date
-                    const endStr = draftDates[campaign.id]?.end ?? campaign.end_date
-                    const start = parseDateOnly(startStr)
-                    const end = parseDateOnly(endStr)
+                    const goLiveIso = draftGoLive[campaign.id] ?? campaign.go_live_at
+                    const start = parseDateOnly(localDateOnlyFromIso(goLiveIso))
                     const isSelected = selectedId === campaign.id
                     let left = 0
-                    let width = 40
-                    if (start && end) {
+                    const width = Math.max(132, dayWidth)
+                    if (start) {
                       left = dateToX(start, range)
-                      width = Math.max(28, dateToX(end, range) + dayWidth - left)
                     }
 
                     return (
@@ -996,11 +962,7 @@ export function CampaignPlanner() {
                             <button
                               type="button"
                               className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-left"
-                              onClick={() => {
-                                setSelectedId(campaign.id)
-                                setSidecarOpen(true)
-                                setRowMenu(null)
-                              }}
+                              onClick={() => openCampaign(campaign.id)}
                               onDoubleClick={() => openCampaignPage(campaign.id)}
                               title={timelineRowTitle(campaign)}
                             >
@@ -1086,13 +1048,9 @@ export function CampaignPlanner() {
                         <div
                           className="relative"
                           style={{ width: range.widthPx }}
-                          onClick={() => {
-                            setSelectedId(campaign.id)
-                            setSidecarOpen(true)
-                            setRowMenu(null)
-                          }}
+                          onClick={() => openCampaign(campaign.id)}
                         >
-                          {start && end ? (
+                          {start ? (
                             <div
                               className={`absolute top-1/2 h-7 -translate-y-1/2 cursor-grab overflow-clip rounded-md border bg-white active:cursor-grabbing ${
                                 isSelected
@@ -1100,32 +1058,23 @@ export function CampaignPlanner() {
                                   : 'border-neutral-200 shadow-sm'
                               }`}
                               style={{ left, width }}
-                              title={`${formatCampaignDate(startStr)} → ${formatCampaignDate(endStr)}`}
-                              onPointerDown={(e) => onPointerDownBar(e, campaign, 'move')}
+                              title={formatGoLiveAt(goLiveIso)}
+                              onPointerDown={(e) => onPointerDownBar(e, campaign)}
                             >
-                              <div
-                                className="absolute inset-y-0 left-0 z-10 w-2 cursor-ew-resize"
-                                onPointerDown={(e) => onPointerDownBar(e, campaign, 'resize-start')}
-                              />
                               <div
                                 className="absolute inset-y-0 left-0 w-1.5 rounded-l-[5px]"
                                 style={{ background: campaign.color || '#94a3b8' }}
                               />
-                              {/* Stick the title to the visible left edge of the bar while zoomed/panned. */}
                               <span
                                 className="sticky z-[1] inline-block max-w-full truncate py-1.5 pl-3.5 pr-2 text-[11px] font-medium text-neutral-700"
                                 style={{ left: listWidth + 6 }}
                               >
                                 {campaign.name}
                               </span>
-                              <div
-                                className="absolute inset-y-0 right-0 z-10 w-2 cursor-ew-resize"
-                                onPointerDown={(e) => onPointerDownBar(e, campaign, 'resize-end')}
-                              />
                             </div>
                           ) : (
                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] text-neutral-400">
-                              No dates
+                              No go-live
                             </div>
                           )}
                         </div>
@@ -1165,8 +1114,7 @@ export function CampaignPlanner() {
                       <div className="pointer-events-auto rounded-xl border border-neutral-200 bg-white/95 px-5 py-4 text-center shadow-sm backdrop-blur">
                         <p className="text-sm font-medium text-neutral-800">No campaigns yet</p>
                         <p className="mt-1 max-w-xs text-xs text-neutral-500">
-                          Create a campaign to place it on the timeline. Drag to move, pull the edges
-                          to change duration.
+                          Create a campaign to place its go-live on the timeline. Drag to move the day.
                         </p>
                         <button
                           type="button"
@@ -1187,30 +1135,27 @@ export function CampaignPlanner() {
             <CampaignCalendar
               campaigns={ordered.map((campaign) => ({
                 ...campaign,
-                start_date: draftDates[campaign.id]?.start ?? campaign.start_date,
-                end_date: draftDates[campaign.id]?.end ?? campaign.end_date
+                go_live_at: draftGoLive[campaign.id] ?? campaign.go_live_at
               }))}
               grain={calendarGrain}
               cursor={calendarCursor}
               selectedId={selectedId}
-              onSelect={(id) => {
-                setSelectedId(id)
-                setSidecarOpen(true)
-                setRowMenu(null)
-              }}
+              onSelect={(id) => openCampaign(id)}
               onOpenPage={openCampaignPage}
             />
           ) : null}
         </div>
 
         {selected ? (
-          <CampaignSidecar
+          <CampaignReviewModal
             campaignId={selected}
             onClose={() => {
+              setReviewOpen(false)
               setSelectedId(null)
             }}
             onUpdated={() => refresh()}
             onDeleted={() => {
+              setReviewOpen(false)
               setSelectedId(null)
               refresh()
             }}
@@ -1249,7 +1194,7 @@ export function CampaignPlanner() {
                     openCampaign(menuCampaign.id)
                   }}
                 >
-                  Open details panel
+                  Open review
                 </MenuItem>
                 <div className="my-1 border-t border-neutral-100" />
                 <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
@@ -1306,11 +1251,11 @@ export function CampaignPlanner() {
                 <MenuItem
                   onClick={() => {
                     setSelectedId(menuCampaign.id)
-                    setSidecarOpen(true)
+                    setReviewOpen(true)
                     setRowMenu(null)
                   }}
                 >
-                  Open details panel
+                  Open review
                 </MenuItem>
                 <div className="my-1 border-t border-neutral-100" />
                 <MenuItem

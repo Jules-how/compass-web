@@ -27,6 +27,8 @@ import {
   experimentFactorLabel,
   experimentStatusLabel,
   formatCampaignDate,
+  formatGoLiveAt,
+  goLiveToDatetimeLocal,
   type CompassCampaign,
   type CompassCampaignActivity,
   type CompassCampaignMilestone
@@ -107,6 +109,7 @@ export function CampaignSidecar({
   const [health, setHealth] = useState('no_updates')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [goLiveLocal, setGoLiveLocal] = useState('')
   const [summary, setSummary] = useState('')
   const [ownerLabel, setOwnerLabel] = useState('')
   const [color, setColor] = useState('#94a3b8')
@@ -133,6 +136,7 @@ export function CampaignSidecar({
       setHealth(detail.campaign.health)
       setStartDate(detail.campaign.start_date ?? '')
       setEndDate(detail.campaign.end_date ?? '')
+      setGoLiveLocal(goLiveToDatetimeLocal(detail.campaign.go_live_at))
       setSummary(detail.campaign.summary ?? '')
       setOwnerLabel(detail.campaign.owner_label ?? '')
       setColor(detail.campaign.color || '#94a3b8')
@@ -327,9 +331,7 @@ export function CampaignSidecar({
           />
           <p className="mt-0.5 text-xs text-neutral-500">
             {campaignStatusLabel(status)}
-            {startDate && endDate
-              ? ` · ${formatCampaignDate(startDate)} → ${formatCampaignDate(endDate)}`
-              : ''}
+            {goLiveLocal ? ` · ${formatGoLiveAt(new Date(goLiveLocal).toISOString())}` : ''}
           </p>
         </div>
         <button
@@ -512,6 +514,22 @@ export function CampaignSidecar({
                   <div className="rounded-md border border-dashed border-neutral-200 px-2 py-1.5 text-sm text-neutral-400">
                     Add members
                   </div>
+                </Field>
+                <Field label="Go live">
+                  <input
+                    type="datetime-local"
+                    value={goLiveLocal}
+                    onChange={(e) => setGoLiveLocal(e.target.value)}
+                    onBlur={() => {
+                      if (!goLiveLocal) {
+                        saveCampaign({ go_live_at: null })
+                        return
+                      }
+                      const iso = new Date(goLiveLocal).toISOString()
+                      saveCampaign({ go_live_at: iso })
+                    }}
+                    className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs"
+                  />
                 </Field>
                 <Field label="Dates">
                   <div className="flex items-center gap-1.5">

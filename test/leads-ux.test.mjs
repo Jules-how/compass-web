@@ -223,6 +223,16 @@ test('upload normalizes vertical and prefers form vertical by default', () => {
   assert.match(client, /preferFormVertical/)
 })
 
+test('lead PATCH route writes opener and facts', () => {
+  const route = read('src/app/api/leads/[id]/route.ts')
+  assert.match(route, /export async function PATCH/)
+  assert.match(route, /parseLeadFacts/)
+  assert.match(route, /MAX_LEAD_OPENER/)
+  assert.match(route, /opener_too_long/)
+  assert.match(route, /requirePortalAccess\(\{\s*operator:\s*true\s*\}\)/)
+  assert.match(route, /requireSameOrigin/)
+})
+
 test('lead column registry includes date added and recontact', () => {
   const cols = read('src/lib/lead-columns.ts')
   assert.match(cols, /date_added/)

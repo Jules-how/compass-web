@@ -12,6 +12,7 @@ import {
   CAMPAIGN_LIST_COLUMNS,
   CAMPAIGN_MILESTONE_COLUMNS,
   emptyCampaignCopyFields,
+  dateOnlyInZone,
   normalizeCampaignHealth,
   normalizeCampaignStatus,
   normalizeCtaType,
@@ -20,6 +21,7 @@ import {
   normalizeExperimentStatus,
   normalizeLabels,
   normalizeOutboundTagList,
+  parseGoLiveAt,
   projectCampaignCopy,
   validateExperimentWrite,
   type CompassCampaign,
@@ -155,6 +157,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     health?: string
     start_date?: string | null
     end_date?: string | null
+    go_live_at?: string | null
     color?: string
     summary?: string | null
     labels?: string[]
@@ -247,6 +250,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         activity.push({
           action: 'dates',
           body: `Changed end date to ${end ?? 'none'}`
+        })
+      }
+    }
+    if (body.go_live_at !== undefined) {
+      const parsed = parseGoLiveAt(body.go_live_at)
+      if (!parsed.ok) return portalJson({ error: 'invalid_go_live_at' }, { status: 400 })
+      if (parsed.iso !== existing.go_live_at) {
+        patch.go_live_at = parsed.iso
+        if (parsed.iso) patch.start_date = dateOnlyInZone(parsed.iso)
+        activity.push({
+          action: 'dates',
+          body: `Changed go-live to ${parsed.iso ?? 'none'}`
         })
       }
     }

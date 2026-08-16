@@ -22,6 +22,7 @@ export type CampaignPatch = Partial<{
   health: string
   start_date: string | null
   end_date: string | null
+  go_live_at: string | null
   color: string
   summary: string | null
   labels: string[]
@@ -81,8 +82,8 @@ async function readJson<T>(res: Response): Promise<T> {
 
 function sortCampaigns(rows: CompassCampaign[]): CompassCampaign[] {
   return rows.slice().sort((a, b) => {
-    const as = a.start_date || '9999'
-    const bs = b.start_date || '9999'
+    const as = a.go_live_at || a.start_date || '9999'
+    const bs = b.go_live_at || b.start_date || '9999'
     return as.localeCompare(bs) || a.name.localeCompare(b.name)
   })
 }
@@ -140,6 +141,7 @@ export async function createCampaign(
     status?: string
     start_date?: string
     end_date?: string
+    go_live_at?: string | null
     color?: string
   } & CampaignPatch
 ): Promise<CompassCampaign> {
@@ -152,6 +154,7 @@ export async function createCampaign(
       status: input?.status,
       start_date: input?.start_date,
       end_date: input?.end_date,
+      go_live_at: input?.go_live_at,
       color: input?.color,
       priority: input?.priority,
       health: input?.health,

@@ -50,6 +50,8 @@ export function datesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date)
   return aStart <= bEnd && aEnd >= bStart
 }
 
+type DatedItem = { id: string; start: Date; end: Date }
+
 export function campaignOverlapsPeriod(
   start: string | null | undefined,
   end: string | null | undefined,
@@ -60,6 +62,32 @@ export function campaignOverlapsPeriod(
   const b = parseDateOnly(end)
   if (!a || !b) return false
   return datesOverlap(a, b, rangeStart, rangeEnd)
+}
+
+export function goLiveFallsInPeriod(
+  goLiveAt: string | null | undefined,
+  rangeStart: Date,
+  rangeEnd: Date
+): boolean {
+  if (!goLiveAt) return false
+  const date = new Date(goLiveAt)
+  if (Number.isNaN(date.getTime())) return false
+  const local = startOfDay(date)
+  return local >= rangeStart && local <= rangeEnd
+}
+
+export function datedGoLiveCampaigns(
+  rows: Array<{ id: string; go_live_at: string | null | undefined }>
+): DatedItem[] {
+  const items: DatedItem[] = []
+  for (const row of rows) {
+    if (!row.go_live_at) continue
+    const date = new Date(row.go_live_at)
+    if (Number.isNaN(date.getTime())) continue
+    const day = startOfDay(date)
+    items.push({ id: row.id, start: day, end: day })
+  }
+  return items
 }
 
 /** Six Monday-start weeks covering the month (and adjacent overflow days). */
@@ -115,8 +143,6 @@ export type CalendarBar = {
   colStart: number
   colSpan: number
 }
-
-type DatedItem = { id: string; start: Date; end: Date }
 
 export function layoutWeekBars(week: Date[], items: DatedItem[]): CalendarBar[] {
   const weekStart = week[0]

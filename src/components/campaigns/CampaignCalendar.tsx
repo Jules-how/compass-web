@@ -3,9 +3,9 @@
 import { useMemo } from 'react'
 import {
   WEEKDAY_LABELS,
-  campaignOverlapsPeriod,
-  datedCampaigns,
+  datedGoLiveCampaigns,
   formatPeriodLabel,
+  goLiveFallsInPeriod,
   layoutWeekBars,
   monthWeeks,
   periodRange,
@@ -16,7 +16,8 @@ import {
 import { startOfDay } from '@/lib/campaign-timeline'
 import {
   campaignStatusLabel,
-  formatCampaignDate,
+  formatGoLiveAt,
+  formatGoLiveTime,
   type CompassCampaign
 } from '@/lib/campaigns'
 
@@ -38,17 +39,12 @@ export function CampaignCalendar({
   onOpenPage
 }: Props) {
   const items = useMemo(
-    () =>
-      datedCampaigns(
-        campaigns.map((c) => ({ id: c.id, start: c.start_date, end: c.end_date }))
-      ),
+    () => datedGoLiveCampaigns(campaigns.map((c) => ({ id: c.id, go_live_at: c.go_live_at }))),
     [campaigns]
   )
   const byId = useMemo(() => new Map(campaigns.map((c) => [c.id, c])), [campaigns])
   const { start, end } = periodRange(cursor, grain)
-  const inPeriod = campaigns.filter((c) =>
-    campaignOverlapsPeriod(c.start_date, c.end_date, start, end)
-  )
+  const inPeriod = campaigns.filter((c) => goLiveFallsInPeriod(c.go_live_at, start, end))
   const today = startOfDay(new Date())
   const todayKey = toDateOnly(today)
 
@@ -99,6 +95,44 @@ export function CampaignCalendar({
   )
 }
 
+function EventChip({
+  campaign,
+  selected,
+  compact,
+  onSelect,
+  onOpenPage
+}: {
+  campaign: CompassCampaign
+  selected: boolean
+  compact?: boolean
+  onSelect: () => void
+  onOpenPage: () => void
+}) {
+  const time = formatGoLiveTime(campaign.go_live_at)
+  return (
+    <button
+      type="button"
+      className={`pointer-events-auto truncate rounded-md border px-1.5 text-left font-medium ${
+        compact ? 'h-[22px] text-[11px]' : 'h-10 px-2 text-[12px]'
+      } ${
+        selected
+          ? 'border-[#5e6ad2] bg-white text-neutral-800 shadow-[0_0_0_1px_rgba(94,106,210,0.28)]'
+          : 'border-neutral-200 bg-white text-neutral-700 shadow-sm hover:border-neutral-300'
+      }`}
+      title={`${campaign.name} · ${formatGoLiveAt(campaign.go_live_at)}`}
+      onClick={onSelect}
+      onDoubleClick={onOpenPage}
+    >
+      <span
+        className="mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle"
+        style={{ background: campaign.color || '#94a3b8' }}
+      />
+      {time ? <span className="mr-1 tabular-nums text-neutral-500">{time}</span> : null}
+      {campaign.name}
+    </button>
+  )
+}
+
 function MonthGrid({
   cursor,
   items,
@@ -109,7 +143,7 @@ function MonthGrid({
   onOpenPage
 }: {
   cursor: Date
-  items: ReturnType<typeof datedCampaigns>
+  items: ReturnType<typeof datedGoLiveCampaigns>
   byId: Map<string, CompassCampaign>
   todayKey: string
   selectedId: string | null
@@ -172,30 +206,23 @@ function MonthGrid({
                 {bars.map((bar) => {
                   const campaign = byId.get(bar.campaignId)
                   if (!campaign) return null
-                  const isSelected = selectedId === campaign.id
                   return (
-                    <button
+                    <div
                       key={`${campaign.id}-${bar.colStart}-${wi}`}
-                      type="button"
-                      className={`pointer-events-auto mx-0.5 truncate rounded-md border px-1.5 text-left text-[11px] font-medium ${
-                        isSelected
-                          ? 'border-[#5e6ad2] bg-white text-neutral-800 shadow-[0_0_0_1px_rgba(94,106,210,0.28)]'
-                          : 'border-neutral-200 bg-white text-neutral-700 shadow-sm hover:border-neutral-300'
-                      }`}
+                      className="mx-0.5 min-w-0"
                       style={{
-                        gridColumn: `${bar.colStart + 1} / span ${bar.colSpan}`,
+                        gridColumn: `${bar.colStart + 1} / span 1`,
                         gridRow: bar.lane + 1
                       }}
-                      title={`${campaign.name} · ${formatCampaignDate(campaign.start_date)} → ${formatCampaignDate(campaign.end_date)}`}
-                      onClick={() => onSelect(campaign.id)}
-                      onDoubleClick={() => onOpenPage(campaign.id)}
                     >
-                      <span
-                        className="mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle"
-                        style={{ background: campaign.color || '#94a3b8' }}
+                      <EventChip
+                        campaign={campaign}
+                        selected={selectedId === campaign.id}
+                        compact
+                        onSelect={() => onSelect(campaign.id)}
+                        onOpenPage={() => onOpenPage(campaign.id)}
                       />
-                      {campaign.name}
-                    </button>
+                    </div>
                   )
                 })}
               </div>
@@ -217,7 +244,7 @@ function WeekGrid({
   onOpenPage
 }: {
   cursor: Date
-  items: ReturnType<typeof datedCampaigns>
+  items: ReturnType<typeof datedGoLiveCampaigns>
   byId: Map<string, CompassCampaign>
   todayKey: string
   selectedId: string | null
@@ -273,36 +300,28 @@ function WeekGrid({
           {bars.map((bar) => {
             const campaign = byId.get(bar.campaignId)
             if (!campaign) return null
-            const isSelected = selectedId === campaign.id
             return (
-              <button
+              <div
                 key={campaign.id}
-                type="button"
-                className={`h-10 truncate rounded-md border px-2 text-left text-[12px] font-medium ${
-                  isSelected
-                    ? 'border-[#5e6ad2] bg-white text-neutral-800 shadow-[0_0_0_1px_rgba(94,106,210,0.28)]'
-                    : 'border-neutral-200 bg-white text-neutral-700 shadow-sm hover:border-neutral-300'
-                }`}
+                className="min-w-0 px-0.5"
                 style={{
-                  gridColumn: `${bar.colStart + 1} / span ${bar.colSpan}`,
+                  gridColumn: `${bar.colStart + 1} / span 1`,
                   gridRow: bar.lane + 1
                 }}
-                title={`${campaign.name} · ${formatCampaignDate(campaign.start_date)} → ${formatCampaignDate(campaign.end_date)}`}
-                onClick={() => onSelect(campaign.id)}
-                onDoubleClick={() => onOpenPage(campaign.id)}
               >
-                <span
-                  className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
-                  style={{ background: campaign.color || '#94a3b8' }}
+                <EventChip
+                  campaign={campaign}
+                  selected={selectedId === campaign.id}
+                  onSelect={() => onSelect(campaign.id)}
+                  onOpenPage={() => onOpenPage(campaign.id)}
                 />
-                {campaign.name}
-              </button>
+              </div>
             )
           })}
         </div>
         {laneCount === 0 ? (
           <p className="relative px-4 py-10 text-center text-sm text-neutral-400">
-            No dated campaigns this week
+            No go-live dates this week
           </p>
         ) : null}
       </div>
@@ -321,15 +340,20 @@ function DayList({
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
 }) {
+  const sorted = campaigns.slice().sort((a, b) => {
+    const at = a.go_live_at || ''
+    const bt = b.go_live_at || ''
+    return at.localeCompare(bt)
+  })
   return (
     <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-neutral-200 bg-white">
-      {campaigns.length === 0 ? (
+      {sorted.length === 0 ? (
         <p className="px-4 py-12 text-center text-sm text-neutral-400">
-          No campaigns on this day
+          No campaigns going live this day
         </p>
       ) : (
         <ul className="divide-y divide-neutral-100">
-          {campaigns.map((campaign) => (
+          {sorted.map((campaign) => (
             <li key={campaign.id}>
               <button
                 type="button"
@@ -348,8 +372,7 @@ function DayList({
                     {campaign.name}
                   </div>
                   <div className="mt-0.5 text-[12px] text-neutral-500">
-                    {formatCampaignDate(campaign.start_date)} →{' '}
-                    {formatCampaignDate(campaign.end_date)}
+                    {formatGoLiveAt(campaign.go_live_at)}
                     <span className="mx-1.5 text-neutral-300">·</span>
                     {campaignStatusLabel(campaign.status)}
                   </div>

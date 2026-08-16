@@ -8,6 +8,7 @@ import {
 } from '@/lib/portal-http'
 import {
   CAMPAIGN_LIST_COLUMNS,
+  defaultGoLiveAt,
   emptyCampaignCopyFields,
   normalizeCtaType,
   normalizeExperimentFactor,
@@ -183,6 +184,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       health: 'no_updates',
       start_date: today,
       end_date: parent.end_date || today,
+      go_live_at: parent.go_live_at || defaultGoLiveAt(),
       color: parent.color || '#94a3b8',
       summary: parent.summary,
       labels: parent.labels ?? [],
