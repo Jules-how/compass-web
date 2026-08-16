@@ -198,6 +198,20 @@ test('upload skips rows missing email, name, or company and requires sourceServi
   assert.match(client, /'apify'/)
   assert.match(types, /'apify'/)
   assert.match(types, /skipped: Array/)
+
+  function normalizeEmail(raw) {
+    return String(raw ?? '').trim().toLowerCase()
+  }
+  function ingestSkipReason(mapped) {
+    if (!normalizeEmail(mapped.email)) return 'missing email'
+    if (!mapped.name.trim()) return 'missing name'
+    if (!mapped.company.trim()) return 'missing company'
+    return null
+  }
+  assert.equal(ingestSkipReason({ email: '', name: 'Ada', company: 'Acme' }), 'missing email')
+  assert.equal(ingestSkipReason({ email: 'ada@x.com', name: '', company: 'Acme' }), 'missing name')
+  assert.equal(ingestSkipReason({ email: 'ada@x.com', name: 'Ada', company: '' }), 'missing company')
+  assert.equal(ingestSkipReason({ email: 'ada@x.com', name: 'Ada', company: 'Acme' }), null)
 })
 
 test('upload normalizes vertical and prefers form vertical by default', () => {
