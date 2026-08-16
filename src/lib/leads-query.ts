@@ -271,3 +271,23 @@ export function leadFiltersToSearchParams(filters: LeadListFilters, page?: numbe
   if (page && page > 1) params.set('page', String(page))
   return params
 }
+
+export function leadFiltersNeedExactCount(filters: LeadListFilters): boolean {
+  return Boolean(
+    filters.vertical ||
+      filters.source ||
+      filters.outbound_status ||
+      filters.sync_state ||
+      (filters.completeness && filters.completeness !== 'any') ||
+      filters.city ||
+      filters.q ||
+      filters.recontact_ok ||
+      filters.suppressed ||
+      filters.recontact_ready ||
+      filters.pipeline_campaign_id ||
+      filters.instantly_campaign_id ||
+      filters.cohort_tag ||
+      filters.enrich_status ||
+      filters.bucket === 'prospects'
+  )
+}

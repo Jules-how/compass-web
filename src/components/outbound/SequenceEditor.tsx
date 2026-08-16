@@ -140,6 +140,7 @@ export function SequenceEditor({
   instantlyCampaignId,
   unbound = false,
   variant = 'page',
+  leadsPane = 'auto',
   initialTab = 'editor',
   onClose,
   onChallengerSpawned
@@ -148,6 +149,7 @@ export function SequenceEditor({
   instantlyCampaignId?: string
   unbound?: boolean
   variant?: 'page' | 'overlay'
+  leadsPane?: 'auto' | 'hidden'
   initialTab?: EditorTab
   onClose?: () => void
   onChallengerSpawned?: (campaignId: string) => void
@@ -164,7 +166,7 @@ export function SequenceEditor({
   const [previewOn, setPreviewOn] = useState(false)
   const [previewLead, setPreviewLead] = useState<LeadContact | null>(null)
   const [leadsHeightVh, setLeadsHeightVh] = useState(LEADS_HEIGHT_DEFAULT)
-  const [leadsCollapsed, setLeadsCollapsed] = useState(false)
+  const [leadsCollapsed, setLeadsCollapsed] = useState(variant === 'overlay')
   const [instantlyUnbound, setInstantlyUnbound] = useState(false)
   const [focusField, setFocusField] = useState<'subject' | 'body'>('body')
   const [componentsWidth, setComponentsWidth] = useState(COMPONENTS_WIDTH_DEFAULT)
@@ -176,6 +178,14 @@ export function SequenceEditor({
   const leadsHeightRef = useRef(leadsHeightVh)
   componentsWidthRef.current = componentsWidth
   leadsHeightRef.current = leadsHeightVh
+
+  const closeEditor = useCallback(() => {
+    if (onClose) {
+      onClose()
+      return
+    }
+    if (typeof window !== 'undefined') window.history.back()
+  }, [onClose])
 
   useEffect(() => {
     setTab(initialTab)
@@ -343,7 +353,7 @@ export function SequenceEditor({
   useEffect(() => {
     if (variant !== 'overlay') return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose?.()
+      if (e.key === 'Escape') closeEditor()
     }
     window.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
@@ -352,7 +362,7 @@ export function SequenceEditor({
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [variant, onClose])
+  }, [variant, closeEditor])
 
   const persist = useCallback(
     async (nextCampaign: CompassCampaign, nextSequence: OutboundSequence) => {
@@ -545,9 +555,7 @@ export function SequenceEditor({
         instantly_campaign_id: campaign.instantly_campaign_id ?? null
       })
       window.localStorage.removeItem(UNBOUND_KEY)
-      if (variant === 'overlay') {
-        onClose?.()
-      }
+      if (variant === 'overlay') closeEditor()
       window.location.href = `/sales/outbound/editor/${created.id}`
     } catch (err) {
       setSaveState('idle')
@@ -597,7 +605,7 @@ export function SequenceEditor({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => onClose?.()}
+              onClick={() => closeEditor()}
             />
             <motion.div
               role="dialog"
@@ -632,7 +640,7 @@ export function SequenceEditor({
           {variant === 'overlay' ? (
             <button
               type="button"
-              onClick={() => onClose?.()}
+              onClick={() => closeEditor()}
               className="mt-3 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-red-800"
             >
               Close
@@ -659,7 +667,8 @@ export function SequenceEditor({
     { id: 'settings', label: 'Settings' }
   ]
 
-  const showLeadsPane = !unbound && Boolean(campaignId || instantlyCampaignId)
+  const showLeadsPane =
+    leadsPane !== 'hidden' && !unbound && Boolean(campaignId || instantlyCampaignId)
   const previewingName = previewLead?.name || previewLead?.company || previewLead?.email
 
   return shell(
@@ -670,7 +679,7 @@ export function SequenceEditor({
           <button
             type="button"
             onClick={() => {
-              if (variant === 'overlay') onClose?.()
+              if (variant === 'overlay') closeEditor()
               else if (typeof window !== 'undefined') window.history.back()
             }}
             className="rounded-xl p-2 text-neutral-500 transition hover:bg-stone-50 hover:text-neutral-800"

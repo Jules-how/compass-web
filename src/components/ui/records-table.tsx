@@ -1,22 +1,41 @@
 'use client'
 
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import {
-  ArrowDown,
+  Briefcase,
+  Building2,
   Check,
   Clock,
   ExternalLink,
   Heart,
   Link2,
+  Mail,
+  MapPin,
   Minus,
-  Plus,
-  Tag as TagIcon
+  Phone,
+  Sparkles,
+  Tag as TagIcon,
+  User,
+  FileText,
+  Globe,
+  CircleDot
 } from 'lucide-react'
+import { LeadColumnPicker } from '@/components/LeadColumnPicker'
+import {
+  columnWidth,
+  LEAD_COLUMN_DEFS,
+  MIN_LEAD_COLUMN_WIDTH,
+  MAX_LEAD_COLUMN_WIDTH,
+  type LeadColumnId,
+  type LeadColumnPreset
+} from '@/lib/lead-columns'
+import {
+  leadColumnValue,
+  type Strength
+} from '@/lib/lead-records'
+import type { LeadContact } from '@/lib/types'
 
-/* Compact CRM grid: sticky first column, grid lines, tags, selection, sort, footer math. */
-
-export type Strength = 'strong' | 'weak' | 'veryweak' | 'none'
-export type SortKey = 'name' | 'last' | 'strength'
+export type { Strength }
 
 export const STRENGTH: Record<
   Strength,
@@ -57,15 +76,22 @@ const TAG_FALLBACK = [
   '#25a878'
 ]
 
-export type RecordsTableRow = {
-  id: string
-  name: string
-  tags: string[]
-  last: string
-  lastSort?: number
-  strength: Strength
-  website?: string
-  href?: string
+const COLUMN_ICONS: Partial<Record<LeadColumnId, ReactNode>> = {
+  first_name: <User size={14} strokeWidth={1.8} />,
+  last_name: <User size={14} strokeWidth={1.8} />,
+  email: <Mail size={14} strokeWidth={1.8} />,
+  job_title: <Briefcase size={14} strokeWidth={1.8} />,
+  company: <Building2 size={14} strokeWidth={1.8} />,
+  location: <MapPin size={14} strokeWidth={1.8} />,
+  website: <Globe size={14} strokeWidth={1.8} />,
+  linkedin: <Link2 size={14} strokeWidth={1.8} />,
+  phone: <Phone size={14} strokeWidth={1.8} />,
+  opener: <Sparkles size={14} strokeWidth={1.8} />,
+  lead_facts: <FileText size={14} strokeWidth={1.8} />,
+  status: <CircleDot size={14} strokeWidth={1.8} />,
+  categories: <TagIcon size={14} strokeWidth={1.8} />,
+  last_touch: <Clock size={14} strokeWidth={1.8} />,
+  strength: <Heart size={14} strokeWidth={1.8} />
 }
 
 function tagColor(name: string): string {
@@ -112,60 +138,80 @@ function Tag({ name }: { name: string }) {
   )
 }
 
-function HeaderCell({
-  label,
-  icon,
-  sortKey,
-  sort,
-  onSort,
-  className = ''
+function ResizeHandle({
+  columnId,
+  onResize
 }: {
-  label: string
-  icon: ReactNode
-  sortKey?: SortKey
-  sort: { key: SortKey; dir: 1 | -1 }
-  onSort: (key: SortKey) => void
-  className?: string
+  columnId: LeadColumnId
+  onResize: (id: LeadColumnId, width: number) => void
 }) {
-  const active = sortKey && sort.key === sortKey
+  const drag = useRef<{ startX: number; startWidth: number } | null>(null)
+
+  useEffect(() => {
+    function onMove(event: MouseEvent) {
+      if (!drag.current) return
+      const next = drag.current.startWidth + (event.clientX - drag.current.startX)
+      onResize(
+        columnId,
+        Math.min(MAX_LEAD_COLUMN_WIDTH, Math.max(MIN_LEAD_COLUMN_WIDTH, Math.round(next)))
+      )
+    }
+    function onUp() {
+      drag.current = null
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [columnId, onResize])
+
   return (
-    <th className={`records-header-cell ${className}`}>
-      <button
-        type="button"
-        className="records-header-button"
-        onClick={sortKey ? () => onSort(sortKey) : undefined}
-        aria-sort={
-          !sortKey ? undefined : active ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'
+    <button
+      type="button"
+      aria-label="Resize column"
+      className="records-resize"
+      onMouseDown={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        const th = (event.currentTarget.parentElement as HTMLElement | null)
+        drag.current = {
+          startX: event.clientX,
+          startWidth: th?.getBoundingClientRect().width ?? 140
         }
-      >
-        <span className="records-header-icon">{icon}</span>
-        <span className="truncate">{label}</span>
-        {sortKey ? (
-          <span
-            className={`records-sort ${active ? 'is-visible' : ''}`}
-            style={{
-              transform: active && sort.dir === -1 ? 'rotate(180deg)' : undefined
-            }}
-          >
-            <ArrowDown size={12} strokeWidth={2} />
-          </span>
-        ) : null}
-      </button>
-    </th>
+        document.body.style.cursor = 'col-resize'
+        document.body.style.userSelect = 'none'
+      }}
+    />
   )
 }
 
 export default function RecordsTable({
-  rows,
+  leads,
+  columns,
+  widths,
+  onResizeColumn,
   selected,
   onToggleRow,
   onToggleAll,
   onRowActivate,
   activeId,
   emptyMessage = 'No records match these filters.',
-  entityLabel = 'leads'
+  entityLabel = 'leads',
+  rowStart = 1,
+  preset = 'crm',
+  occupied = [],
+  phoneSparse = false,
+  onColumnsChange,
+  fill = false
 }: {
-  rows: RecordsTableRow[]
+  leads: LeadContact[]
+  columns: LeadColumnId[]
+  widths: Partial<Record<LeadColumnId, number>>
+  onResizeColumn: (id: LeadColumnId, width: number) => void
   selected: Set<string>
   onToggleRow: (id: string) => void
   onToggleAll: () => void
@@ -173,68 +219,57 @@ export default function RecordsTable({
   activeId?: string | null
   emptyMessage?: string
   entityLabel?: string
+  rowStart?: number
+  preset?: LeadColumnPreset
+  occupied?: LeadColumnId[]
+  phoneSparse?: boolean
+  onColumnsChange?: (next: LeadColumnId[]) => void
+  fill?: boolean
 }) {
-  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({
-    key: 'name',
+  const [sort, setSort] = useState<{ key: LeadColumnId | 'index'; dir: 1 | -1 }>({
+    key: 'first_name',
     dir: 1
   })
 
   const visibleRows = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      let value = 0
-      if (sort.key === 'name') value = a.name.localeCompare(b.name)
-      else if (sort.key === 'last') {
-        const aSort = a.lastSort ?? 0
-        const bSort = b.lastSort ?? 0
-        value = aSort === bSort ? a.last.localeCompare(b.last) : aSort - bSort
-      } else {
-        value = STRENGTH[a.strength].rank - STRENGTH[b.strength].rank
+    return [...leads].sort((a, b) => {
+      if (sort.key === 'index') return 0
+      if (sort.key === 'strength') {
+        const aRank = STRENGTH[leadColumnValue(a, 'strength').strength ?? 'none'].rank
+        const bRank = STRENGTH[leadColumnValue(b, 'strength').strength ?? 'none'].rank
+        return (aRank - bRank) * sort.dir
       }
-      return value * sort.dir
+      const aText = leadColumnValue(a, sort.key).text
+      const bText = leadColumnValue(b, sort.key).text
+      return aText.localeCompare(bText) * sort.dir
     })
-  }, [rows, sort])
+  }, [leads, sort])
 
   const allSelected =
     visibleRows.length > 0 && visibleRows.every((row) => selected.has(row.id))
   const partiallySelected =
     !allSelected && visibleRows.some((row) => selected.has(row.id))
 
-  const toggleSort = (key: SortKey) =>
-    setSort((current) =>
-      current.key === key
-        ? { key, dir: (current.dir * -1) as 1 | -1 }
-        : { key, dir: 1 }
-    )
-
-  const linkCount = rows.filter((row) => row.website).length
-  const averagePct =
-    rows.length === 0
-      ? 0
-      : Math.round(
-          (rows.reduce((sum, row) => sum + STRENGTH[row.strength].rank, 0) /
-            rows.length /
-            3) *
-            100
-        )
+  const minWidth =
+    84 + columns.reduce((sum, id) => sum + columnWidth(id, widths), 0)
 
   return (
-    <div className="records-shell">
+    <div className={`records-shell ${fill ? 'records-shell-fill' : ''}`}>
       <div
         className="records-scroll"
         tabIndex={0}
         aria-label={`${entityLabel} table. Scroll horizontally and vertically to view all columns and records.`}
       >
-        <table className="records-table">
+        <table className="records-table" style={{ minWidth }}>
           <colgroup>
-            <col className="records-company-col" />
-            <col className="records-category-col" />
-            <col className="records-last-col" />
-            <col className="records-strength-col" />
-            <col className="records-link-col" />
+            <col style={{ width: 84 }} />
+            {columns.map((id) => (
+              <col key={id} style={{ width: columnWidth(id, widths) }} />
+            ))}
           </colgroup>
           <thead>
             <tr>
-              <th className="records-header-cell records-sticky-cell">
+              <th className="records-header-cell records-sticky-cell records-index-head">
                 <div className="records-company-header">
                   <Checkbox
                     checked={allSelected}
@@ -242,161 +277,145 @@ export default function RecordsTable({
                     onChange={onToggleAll}
                     label={`Select all ${entityLabel}`}
                   />
-                  <span>Company</span>
+                  <span>#</span>
                 </div>
               </th>
-              <HeaderCell
-                label="Categories"
-                sort={sort}
-                onSort={toggleSort}
-                icon={<TagIcon size={15} strokeWidth={1.8} />}
-              />
-              <HeaderCell
-                label="Last interaction"
-                sortKey="last"
-                sort={sort}
-                onSort={toggleSort}
-                icon={<Clock size={15} strokeWidth={1.8} />}
-              />
-              <HeaderCell
-                label="Connection strength"
-                sortKey="strength"
-                sort={sort}
-                onSort={toggleSort}
-                icon={<Heart size={15} strokeWidth={1.8} />}
-              />
-              <HeaderCell
-                label="Links"
-                sort={sort}
-                onSort={toggleSort}
-                icon={<Link2 size={15} strokeWidth={1.8} />}
-              />
+              {columns.map((id, index) => {
+                const def = LEAD_COLUMN_DEFS.find((col) => col.id === id)
+                const active = sort.key === id
+                return (
+                  <th key={id} className="records-header-cell records-resizable">
+                    <div className="flex min-w-0 items-center gap-1">
+                    <button
+                      type="button"
+                      className="records-header-button min-w-0 flex-1"
+                      onClick={() =>
+                        setSort((current) =>
+                          current.key === id
+                            ? { key: id, dir: (current.dir * -1) as 1 | -1 }
+                            : { key: id, dir: 1 }
+                        )
+                      }
+                      aria-sort={active ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}
+                    >
+                      <span className="records-header-icon">{COLUMN_ICONS[id]}</span>
+                      <span className="truncate">{def?.label ?? id}</span>
+                    </button>
+                    {index === columns.length - 1 && onColumnsChange ? (
+                      <LeadColumnPicker
+                        variant="header"
+                        phoneSparse={phoneSparse}
+                        preset={preset}
+                        occupied={occupied}
+                        visible={columns}
+                        onChange={onColumnsChange}
+                      />
+                    ) : null}
+                    </div>
+                    <ResizeHandle columnId={id} onResize={onResizeColumn} />
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
             {visibleRows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="records-empty">
+                <td colSpan={columns.length + 1} className="records-empty">
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
-              visibleRows.map((row) => {
-                const selectedRow = selected.has(row.id)
-                const strength = STRENGTH[row.strength]
-                const active = activeId === row.id
+              visibleRows.map((lead, index) => {
+                const selectedRow = selected.has(lead.id)
+                const active = activeId === lead.id
                 return (
                   <tr
-                    key={row.id}
+                    key={lead.id}
                     className={`records-row ${selectedRow ? 'is-selected' : ''} ${
                       active ? 'is-active' : ''
                     }`}
-                    onClick={() => onRowActivate?.(row.id)}
+                    onClick={() => onRowActivate?.(lead.id)}
                   >
                     <td className="records-cell records-sticky-cell">
                       <div className="records-company-cell">
-                      <span
-                        onClick={(event) => event.stopPropagation()}
-                        onKeyDown={(event) => event.stopPropagation()}
-                      >
-                        <Checkbox
-                          checked={selectedRow}
-                          onChange={() => onToggleRow(row.id)}
-                          label={`Select ${row.name}`}
-                        />
-                      </span>
-                      <span className="records-company-mark">
-                        {row.name.slice(0, 1).toUpperCase()}
-                      </span>
-                      <button
-                        type="button"
-                        className={`records-company-name ${row.href ? 'has-link' : ''}`}
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          onRowActivate?.(row.id)
-                        }}
-                      >
-                        {row.name}
-                      </button>
-                      </div>
-                    </td>
-                    <td className="records-cell">
-                      <div className="records-tags">
-                        {row.tags.slice(0, 4).map((tag) => (
-                          <Tag key={tag} name={tag} />
-                        ))}
-                        {row.tags.length > 4 ? (
-                          <span className="records-more-tag">+{row.tags.length - 4}</span>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td
-                      className={`records-cell ${
-                        row.last === 'No contact' ? 'records-muted' : ''
-                      }`}
-                    >
-                      {row.last}
-                    </td>
-                    <td className="records-cell">
-                      <span className="records-strength">
                         <span
-                          className="records-strength-dot"
-                          style={{ background: strength.color }}
-                        />
-                        {strength.label}
-                      </span>
-                    </td>
-                    <td className="records-cell">
-                      {row.website && row.href ? (
-                        <a
-                          className="records-link"
-                          href={row.href}
-                          target="_blank"
-                          rel="noreferrer"
                           onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
                         >
-                          {row.website}
-                          <ExternalLink size={12} strokeWidth={1.8} />
-                        </a>
-                      ) : (
-                        <span className="records-muted">—</span>
-                      )}
+                          <Checkbox
+                            checked={selectedRow}
+                            onChange={() => onToggleRow(lead.id)}
+                            label={`Select ${lead.name || lead.email || 'lead'}`}
+                          />
+                        </span>
+                        <span className="records-index">{rowStart + index}</span>
+                      </div>
                     </td>
+                    {columns.map((column) => {
+                      const cell = leadColumnValue(lead, column)
+                      return (
+                        <td
+                          key={column}
+                          className={`records-cell ${cell.muted ? 'records-muted' : ''}`}
+                        >
+                          <CellBody cell={cell} column={column} />
+                        </td>
+                      )
+                    })}
                   </tr>
                 )
               })
             )}
           </tbody>
-          <tfoot>
-            <tr className="records-calculation-row">
-              <td className="records-cell records-sticky-cell records-calculation-label">
-                <span className="records-calculation-number">{rows.length}</span> count
-              </td>
-              <td className="records-cell">
-                <span className="records-add-calculation">
-                  <Plus size={14} strokeWidth={1.8} />
-                  {rows.reduce((sum, row) => sum + row.tags.length, 0)} tags
-                </span>
-              </td>
-              <td className="records-cell records-muted">—</td>
-              <td className="records-cell">
-                <span className="records-average">
-                  <span
-                    className="records-strength-dot"
-                    style={{ background: 'var(--records-orange)' }}
-                  />
-                  {averagePct}% average
-                </span>
-              </td>
-              <td className="records-cell">
-                <span className="records-muted">
-                  {linkCount} link{linkCount === 1 ? '' : 's'}
-                </span>
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
     </div>
   )
+}
+
+function CellBody({
+  cell,
+  column
+}: {
+  cell: ReturnType<typeof leadColumnValue>
+  column: LeadColumnId
+}) {
+  if (column === 'categories') {
+    const tags = cell.tags ?? []
+    if (tags.length === 0) return <span className="records-muted">—</span>
+    return (
+      <div className="records-tags">
+        {tags.slice(0, 4).map((tag) => (
+          <Tag key={tag} name={tag} />
+        ))}
+        {tags.length > 4 ? <span className="records-more-tag">+{tags.length - 4}</span> : null}
+      </div>
+    )
+  }
+  if (column === 'strength') {
+    const strength = STRENGTH[cell.strength ?? 'none']
+    return (
+      <span className="records-strength">
+        <span className="records-strength-dot" style={{ background: strength.color }} />
+        {strength.label}
+      </span>
+    )
+  }
+  if (cell.href && cell.text) {
+    return (
+      <a
+        className="records-link"
+        href={cell.href}
+        target="_blank"
+        rel="noreferrer"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {cell.text}
+        <ExternalLink size={12} strokeWidth={1.8} />
+      </a>
+    )
+  }
+  if (!cell.text) return <span className="records-muted">—</span>
+  return <span className="records-clip">{cell.text}</span>
 }

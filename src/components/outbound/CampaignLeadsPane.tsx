@@ -159,6 +159,7 @@ export function CampaignLeadsPane({
         <div className="min-h-0 flex-1 overflow-hidden">
           <LeadTable
             variant="embed"
+            columnPreset="campaign"
             leads={display.leads}
             filters={filters}
             page={page}

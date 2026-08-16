@@ -6,7 +6,7 @@ import { SequenceEditor } from '@/components/outbound/SequenceEditor'
 export default function OutboundEditorNewPage() {
   return (
     <OperatorShell flush width="full">
-      <SequenceEditor unbound variant="page" />
+      <SequenceEditor unbound variant="overlay" />
     </OperatorShell>
   )
 }

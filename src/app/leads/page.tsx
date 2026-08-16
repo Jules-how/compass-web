@@ -14,7 +14,7 @@ export default async function LeadsPage() {
       active="leads"
       role="owner"
       title="Leads"
-      subtitle="Outbound lead database"
+      compact
       width="full"
     >
       <Suspense fallback={<LoadingBlock label="Loading leads…" />}>

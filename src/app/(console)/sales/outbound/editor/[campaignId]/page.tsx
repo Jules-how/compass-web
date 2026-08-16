@@ -12,7 +12,7 @@ export default function OutboundEditorCampaignPage({
   const { campaignId } = use(params)
   return (
     <OperatorShell flush width="full">
-      <SequenceEditor campaignId={campaignId} variant="page" />
+      <SequenceEditor campaignId={campaignId} variant="overlay" />
     </OperatorShell>
   )
 }

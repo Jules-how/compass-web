@@ -19,6 +19,7 @@ import {
 import { useConsoleNav } from '@/components/ConsoleNav'
 import { SidebarLabel, SidebarLink } from '@/components/ui/sidebar'
 import { prefetchJson } from '@/lib/use-cached-json'
+import { LEAD_PAGE_SIZE } from '@/lib/list-columns'
 import { cn } from '@/lib/utils'
 
 export type NavKey =
@@ -100,7 +101,7 @@ const OPERATOR_SECTIONS: NavSection[] = [
         label: 'CRM',
         key: 'leads',
         icon: CrmIcon,
-        api: '/api/leads/list'
+        api: `/api/leads/list?page=1&pageSize=${LEAD_PAGE_SIZE}`
       }
     ]
   },
@@ -147,9 +148,13 @@ export function navKeyFromPathname(pathname: string | null): NavKey {
   return 'home'
 }
 
-function prefetchApi(api?: string) {
-  if (!api || typeof window === 'undefined') return
-  prefetchJson(api, api)
+function prefetchApi(api?: string, key?: NavKey) {
+  if (typeof window === 'undefined') return
+  if (api) prefetchJson(api, api)
+  if (key === 'leads') {
+    prefetchJson('leads:summary:global', '/api/leads/summary')
+    prefetchJson('leads:facets', '/api/leads/facets')
+  }
 }
 
 function NavItemLink({
@@ -177,14 +182,14 @@ function NavItemLink({
         )
       }}
       active={isActive}
-      onMouseEnter={() => prefetchApi(item.api)}
-      onFocus={() => prefetchApi(item.api)}
+      onMouseEnter={() => prefetchApi(item.api, item.key)}
+      onFocus={() => prefetchApi(item.api, item.key)}
       onClick={(event) => {
         if (!consoleNav) return
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
         if (event.button !== 0) return
         event.preventDefault()
-        prefetchApi(item.api)
+        prefetchApi(item.api, item.key)
         consoleNav.navigate(item.href)
       }}
       badge={

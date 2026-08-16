@@ -13,6 +13,9 @@ import {
 import { LEAD_FACT_KINDS, parseLeadFacts, type LeadFact } from '@/lib/lead-facts'
 import type { LeadContact } from '@/lib/types'
 import type { OutboundStep } from '@/lib/outbound-copy'
+import { SequenceEditor } from '@/components/outbound/SequenceEditor'
+import RecordsTable from '@/components/ui/records-table'
+import { useLeadGridColumns } from '@/components/LeadColumnPicker'
 
 const easeOut = [0.22, 1, 0.36, 1] as const
 
@@ -27,11 +30,6 @@ function stepBody(step: OutboundStep): string {
     .map((slot) => slot.body.trim())
     .filter(Boolean)
     .join('\n\n')
-}
-
-function factCount(value: unknown): number {
-  const parsed = parseLeadFacts(value)
-  return parsed.ok ? parsed.facts.length : 0
 }
 
 function asFacts(value: unknown): LeadFact[] {
@@ -55,9 +53,10 @@ export function CampaignReviewModal({
   const [total, setTotal] = useState(0)
   const [query, setQuery] = useState('')
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
-  const [stepIndex, setStepIndex] = useState(0)
   const [goLiveLocal, setGoLiveLocal] = useState('')
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setMounted(true)
@@ -65,7 +64,10 @@ export function CampaignReviewModal({
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') {
+        if (editorOpen) return
+        onClose()
+      }
     }
     window.addEventListener('keydown', onKey)
     const previousOverflow = document.body.style.overflow
@@ -74,7 +76,7 @@ export function CampaignReviewModal({
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = previousOverflow
     }
-  }, [onClose])
+  }, [onClose, editorOpen])
 
   const load = useCallback(async () => {
     setLoadError(null)
@@ -105,7 +107,9 @@ export function CampaignReviewModal({
       const rows = body.leads ?? []
       setLeads(rows)
       setTotal(typeof body.total === 'number' ? body.total : rows.length)
-      setSelectedLeadId((prev) => prev && rows.some((row) => row.id === prev) ? prev : rows[0]?.id ?? null)
+      setSelectedLeadId((prev) =>
+        prev && rows.some((row) => row.id === prev) ? prev : rows[0]?.id ?? null
+      )
     } catch {
       setLoadError('Could not load campaign')
     }
@@ -119,14 +123,18 @@ export function CampaignReviewModal({
     const q = query.trim().toLowerCase()
     if (!q) return leads
     return leads.filter((lead) => {
-      const hay = [lead.name, lead.email, lead.company].filter(Boolean).join(' ').toLowerCase()
+      const hay = [lead.name, lead.email, lead.company, lead.opener].filter(Boolean).join(' ').toLowerCase()
       return hay.includes(q)
     })
   }, [leads, query])
 
-  const selectedLead = filteredLeads.find((row) => row.id === selectedLeadId) ?? leads.find((row) => row.id === selectedLeadId) ?? null
+  const grid = useLeadGridColumns('campaign', leads)
+  const selectedLead =
+    filteredLeads.find((row) => row.id === selectedLeadId) ??
+    leads.find((row) => row.id === selectedLeadId) ??
+    null
   const steps = campaign?.sequence_draft?.steps ?? []
-  const step = steps[stepIndex] ?? null
+  const firstStep = steps[0] ?? null
 
   function saveGoLive() {
     if (!goLiveLocal) return
@@ -146,7 +154,7 @@ export function CampaignReviewModal({
     <AnimatePresence>
       <motion.div
         key={campaignId}
-        className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-6"
+        className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -162,13 +170,13 @@ export function CampaignReviewModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby="campaign-review-title"
-          className="relative z-10 flex h-[min(100dvh,920px)] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl border border-stone-200/80 bg-[var(--compass-wash)] shadow-soft sm:h-[min(92vh,920px)] sm:rounded-2xl"
+          className="relative z-10 flex h-[min(100dvh,960px)] w-full max-w-[min(1600px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-t-2xl border border-stone-200/80 bg-[var(--compass-wash)] shadow-soft sm:h-[min(94vh,960px)] sm:rounded-2xl"
           initial={{ opacity: 0, y: 18, scale: 0.985 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 12, scale: 0.985 }}
           transition={{ duration: 0.22, ease: easeOut }}
         >
-          <header className="flex shrink-0 items-start justify-between gap-3 border-b border-stone-200/80 bg-white px-5 py-4">
+          <header className="flex shrink-0 items-center justify-between gap-3 border-b border-stone-200/80 bg-white px-5 py-3">
             <div className="min-w-0">
               <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
                 Campaign review
@@ -189,29 +197,42 @@ export function CampaignReviewModal({
                     <span>Instantly bound</span>
                   </>
                 ) : null}
+                <span className="text-neutral-300">·</span>
+                <span>
+                  {steps.length > 0
+                    ? `${steps.length} email${steps.length === 1 ? '' : 's'}`
+                    : 'No sequence draft yet'}
+                </span>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <label className="flex flex-col text-[11px] text-neutral-500">
+            <div className="flex h-9 shrink-0 items-center gap-2">
+              <label className="flex h-9 items-center gap-2 text-[12px] text-neutral-500">
                 Go live
                 <input
                   type="datetime-local"
                   value={goLiveLocal}
                   onChange={(e) => setGoLiveLocal(e.target.value)}
                   onBlur={saveGoLive}
-                  className="mt-0.5 rounded-xl border border-stone-200 bg-white px-2 py-1.5 text-[12px] text-neutral-800"
+                  className="h-9 rounded-xl border border-stone-200 bg-white px-2.5 text-[12px] text-neutral-800"
                 />
               </label>
               <Link
                 href={`/sales/pipeline/${campaignId}`}
-                className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
+                className="inline-flex h-9 items-center rounded-xl border border-stone-200 bg-white px-3 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
               >
                 Campaign page
               </Link>
               <button
                 type="button"
+                onClick={() => setEditorOpen(true)}
+                className="inline-flex h-9 items-center rounded-xl bg-[#e85d2a] px-3 text-[12px] font-semibold text-white hover:bg-[#d24f1f]"
+              >
+                Open editor
+              </button>
+              <button
+                type="button"
                 onClick={onClose}
-                className="rounded-xl p-2 text-neutral-500 hover:bg-neutral-100"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-neutral-500 hover:bg-neutral-100"
                 aria-label="Close"
               >
                 ×
@@ -222,116 +243,78 @@ export function CampaignReviewModal({
           {loadError ? (
             <p className="px-5 py-8 text-sm text-red-700">{loadError}</p>
           ) : (
-            <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_minmax(0,280px)]">
-              <aside className="min-h-0 overflow-y-auto border-b border-stone-200/80 bg-white p-3 lg:border-b-0 lg:border-r">
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search leads"
-                  className="mb-2 w-full rounded-xl border border-stone-200 px-3 py-2 text-[13px]"
+            <div className="flex min-h-0 flex-1">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search leads"
+                    className="h-9 w-full max-w-md rounded-xl border border-stone-200 bg-white px-3 text-[13px]"
+                  />
+                  {firstStep ? (
+                    <p className="ml-auto truncate text-[12px] text-neutral-500">
+                      {applyOpenerPreview(firstStep.subject || firstStep.label, selectedLead?.opener)}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="min-h-0 flex-1">
+                <RecordsTable
+                  leads={filteredLeads}
+                  columns={grid.visible}
+                  widths={grid.widths}
+                  onResizeColumn={grid.resizeColumn}
+                  occupied={grid.occupied}
+                  preset="campaign"
+                  selected={selectedIds}
+                  onToggleRow={(id) => {
+                    setSelectedIds((current) => {
+                      const next = new Set(current)
+                      if (next.has(id)) next.delete(id)
+                      else next.add(id)
+                      return next
+                    })
+                  }}
+                  onToggleAll={() => {
+                    setSelectedIds((current) =>
+                      current.size === filteredLeads.length
+                        ? new Set()
+                        : new Set(filteredLeads.map((lead) => lead.id))
+                    )
+                  }}
+                  onColumnsChange={grid.setVisible}
+                  onRowActivate={(id) => setSelectedLeadId(id)}
+                  activeId={selectedLeadId}
+                  fill
+                  emptyMessage="No leads in this campaign yet"
                 />
-                {filteredLeads.length === 0 ? (
-                  <p className="px-1 py-8 text-center text-[13px] text-neutral-400">
-                    No leads in this campaign yet
-                  </p>
-                ) : (
-                  <ul className="space-y-0.5">
-                    {filteredLeads.map((lead) => {
-                      const ready = Boolean(lead.opener?.trim())
-                      const facts = factCount(lead.lead_facts)
-                      const active = lead.id === selectedLeadId
-                      return (
-                        <li key={lead.id}>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedLeadId(lead.id)}
-                            className={`w-full rounded-xl px-2.5 py-2 text-left ${
-                              active ? 'bg-white shadow-soft ring-1 ring-[#5e6ad2]/30' : 'hover:bg-neutral-50'
-                            }`}
-                          >
-                            <div className="truncate text-[13px] font-medium text-neutral-900">
-                              {lead.name || lead.email || 'Untitled'}
-                            </div>
-                            <div className="truncate text-[11px] text-neutral-500">{lead.email}</div>
-                            <div className="mt-0.5 flex gap-2 text-[10px] text-neutral-400">
-                              <span>{ready ? 'Opener' : 'No opener'}</span>
-                              <span>{facts} fact{facts === 1 ? '' : 's'}</span>
-                            </div>
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
-              </aside>
-
-              <section className="min-h-0 overflow-y-auto p-4">
-                {selectedLead ? (
+                </div>
+              </div>
+              {selectedLead ? (
+                <aside className="flex w-[min(100%,380px)] shrink-0 flex-col overflow-y-auto border-l border-stone-200/80 bg-white p-4">
                   <LeadEditor
                     lead={selectedLead}
                     onPatched={(next) => {
                       setLeads((rows) => rows.map((row) => (row.id === next.id ? next : row)))
                     }}
                   />
-                ) : (
-                  <div className="rounded-2xl border border-stone-200 bg-white p-6 text-sm text-neutral-500 shadow-soft">
-                    Select a lead to edit opener and research facts. Changes save as you type.
-                  </div>
-                )}
-              </section>
-
-              <section className="min-h-0 overflow-y-auto border-t border-stone-200/80 bg-white p-4 lg:border-l lg:border-t-0">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                    Sequence
-                  </p>
-                  {steps.length > 1 ? (
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        disabled={stepIndex <= 0}
-                        onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
-                        className="rounded-lg border border-stone-200 px-2 py-0.5 text-[12px] disabled:opacity-40"
-                      >
-                        Prev
-                      </button>
-                      <span className="text-[11px] tabular-nums text-neutral-500">
-                        {stepIndex + 1}/{steps.length}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={stepIndex >= steps.length - 1}
-                        onClick={() => setStepIndex((i) => Math.min(steps.length - 1, i + 1))}
-                        className="rounded-lg border border-stone-200 px-2 py-0.5 text-[12px] disabled:opacity-40"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-                {step ? (
-                  <div className="rounded-2xl border border-stone-200 bg-[var(--compass-wash)] p-3 shadow-soft">
-                    <p className="text-[11px] font-medium text-neutral-500">{step.label}</p>
-                    <p className="mt-1 text-[13px] font-semibold text-neutral-900">
-                      {step.subject || 'No subject'}
-                    </p>
-                    <pre className="mt-2 whitespace-pre-wrap font-sans text-[12px] leading-relaxed text-neutral-700">
-                      {applyOpenerPreview(stepBody(step), selectedLead?.opener)}
-                    </pre>
-                  </div>
-                ) : (
-                  <p className="text-[13px] text-neutral-400">No sequence draft yet.</p>
-                )}
-                <Link
-                  href={`/sales/outbound/editor/${campaignId}`}
-                  className="mt-3 inline-flex rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
-                >
-                  Open editor
-                </Link>
-              </section>
+                </aside>
+              ) : null}
             </div>
           )}
         </motion.div>
+        {editorOpen ? (
+          <SequenceEditor
+            campaignId={campaignId}
+            variant="overlay"
+            leadsPane="hidden"
+            onClose={() => {
+              setEditorOpen(false)
+              void load()
+              onUpdated()
+            }}
+          />
+        ) : null}
       </motion.div>
     </AnimatePresence>,
     document.body
@@ -410,7 +393,7 @@ function LeadEditor({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-soft">
+      <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-[15px] font-semibold text-neutral-900">
@@ -433,7 +416,7 @@ function LeadEditor({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-soft">
+      <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
         <label className="text-[12px] font-medium text-neutral-600">Opener</label>
         <textarea
           value={opener}
@@ -444,7 +427,7 @@ function LeadEditor({
         />
       </div>
 
-      <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-soft">
+      <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-[12px] font-medium text-neutral-600">Research facts</p>
           <button

@@ -1,8 +1,14 @@
 import type { LeadContact } from '@/lib/types'
-import { formatRelativeLeadDate } from '@/lib/lead-columns'
+import {
+  formatLeadFactsPreview,
+  parseLeadFacts
+} from '@/lib/lead-facts'
+import { formatRelativeLeadDate, type LeadColumnId } from '@/lib/lead-columns'
 import { computeRecontactEligibility } from '@/lib/recontact-eligibility'
-import { humanizeVertical } from '@/lib/leads-meta'
-import type { RecordsTableRow, Strength } from '@/components/ui/records-table'
+import { humanizeStatus, humanizeVertical } from '@/lib/leads-meta'
+import { splitPersonName } from '@/lib/sequence-preview'
+
+export type Strength = 'strong' | 'weak' | 'veryweak' | 'none'
 
 function parseTagList(raw: string | null | undefined): string[] {
   if (!raw?.trim()) return []
@@ -49,37 +55,122 @@ export function leadCategoryTags(lead: LeadContact): string[] {
   return tags
 }
 
-function displayName(lead: LeadContact): string {
-  const person = lead.name?.trim()
-  const company = lead.company?.trim()
-  if (person && company && person !== company) return `${person} — ${company}`
-  return person || company || lead.email?.trim() || 'Untitled'
+export function leadLocation(lead: LeadContact): string {
+  return [lead.city, lead.state].filter(Boolean).join(', ')
 }
 
-function linkHref(lead: LeadContact): string | undefined {
-  const linkedin = lead.linkedin?.trim()
-  if (linkedin) {
-    return linkedin.startsWith('http') ? linkedin : `https://${linkedin}`
-  }
-  return undefined
-}
-
-function linkLabel(lead: LeadContact): string | undefined {
+export function leadLinkedinHref(lead: LeadContact): string | undefined {
   const linkedin = lead.linkedin?.trim()
   if (!linkedin) return undefined
+  return linkedin.startsWith('http') ? linkedin : `https://${linkedin}`
+}
+
+export function leadLinkedinLabel(lead: LeadContact): string {
+  const linkedin = lead.linkedin?.trim()
+  if (!linkedin) return ''
   return linkedin.replace(/^https?:\/\//i, '').replace(/\/$/, '')
 }
 
-export function leadToRecordsRow(lead: LeadContact, now = new Date()): RecordsTableRow {
-  const lastMs = lead.last_outbound_at ? Date.parse(lead.last_outbound_at) : NaN
-  return {
-    id: lead.id,
-    name: displayName(lead),
-    tags: leadCategoryTags(lead),
-    last: formatRelativeLeadDate(lead.last_outbound_at, now),
-    lastSort: Number.isNaN(lastMs) ? 0 : lastMs,
-    strength: leadConnectionStrength(lead),
-    website: linkLabel(lead),
-    href: linkHref(lead)
+export type LeadCell = {
+  text: string
+  href?: string
+  tags?: string[]
+  strength?: Strength
+  muted?: boolean
+}
+
+export function leadColumnValue(lead: LeadContact, column: LeadColumnId, now = new Date()): LeadCell {
+  const { firstName, lastName } = splitPersonName(lead.name)
+  switch (column) {
+    case 'first_name':
+      return { text: firstName }
+    case 'last_name':
+      return { text: lastName }
+    case 'email':
+      return { text: lead.email?.trim() || '' }
+    case 'job_title':
+      return { text: lead.role?.trim() || '' }
+    case 'company':
+      return { text: lead.company?.trim() || '' }
+    case 'location':
+      return { text: leadLocation(lead) }
+    case 'website':
+      return { text: '' }
+    case 'linkedin': {
+      const href = leadLinkedinHref(lead)
+      return { text: leadLinkedinLabel(lead), href }
+    }
+    case 'phone':
+      return { text: lead.phone?.trim() || '' }
+    case 'opener':
+      return { text: lead.opener?.trim() || '' }
+    case 'lead_facts':
+      return { text: formatLeadFactsPreview(lead.lead_facts) }
+    case 'status':
+      return { text: humanizeStatus(lead.outbound_status) }
+    case 'categories':
+      return { text: '', tags: leadCategoryTags(lead) }
+    case 'last_touch': {
+      const text = formatRelativeLeadDate(lead.last_outbound_at, now)
+      return { text, muted: text === 'No contact' }
+    }
+    case 'strength':
+      return { text: '', strength: leadConnectionStrength(lead) }
+    case 'source':
+      return { text: lead.source?.trim() || '' }
+    case 'campaign':
+      return {
+        text:
+          lead.instantly_campaign_name?.trim() ||
+          lead.instantly_campaign?.trim() ||
+          lead.pipeline_campaign_id?.trim() ||
+          ''
+      }
+    case 'vertical': {
+      const label = humanizeVertical(lead.vertical)
+      return { text: label === '—' ? '' : label }
+    }
+    default:
+      return { text: '' }
   }
+}
+
+export function leadColumnOccupied(lead: LeadContact, column: LeadColumnId): boolean {
+  if (column === 'website') return false
+  if (column === 'lead_facts') {
+    const parsed = parseLeadFacts(lead.lead_facts)
+    return parsed.ok && parsed.facts.length > 0
+  }
+  if (column === 'categories') return leadCategoryTags(lead).length > 0
+  if (column === 'last_touch') return Boolean(lead.last_outbound_at)
+  if (column === 'strength') return leadConnectionStrength(lead) !== 'none'
+  if (column === 'status') return Boolean(lead.outbound_status?.trim())
+  const cell = leadColumnValue(lead, column)
+  if (cell.tags?.length) return true
+  if (cell.strength && cell.strength !== 'none') return true
+  return Boolean(cell.text.trim())
+}
+
+export function occupiedLeadColumns(leads: LeadContact[]): LeadColumnId[] {
+  const ids: LeadColumnId[] = [
+    'first_name',
+    'last_name',
+    'email',
+    'job_title',
+    'company',
+    'location',
+    'website',
+    'linkedin',
+    'phone',
+    'opener',
+    'lead_facts',
+    'status',
+    'categories',
+    'last_touch',
+    'strength',
+    'source',
+    'campaign',
+    'vertical'
+  ]
+  return ids.filter((id) => leads.some((lead) => leadColumnOccupied(lead, id)))
 }

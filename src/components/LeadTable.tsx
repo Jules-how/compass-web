@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { LeadContact, LeadListFilters, LeadSummaryCounts } from '@/lib/types'
 import { exportToCsv } from '@/lib/csv'
-import { leadFiltersToSearchParams } from '@/lib/leads-query'
+import { leadFiltersNeedExactCount, leadFiltersToSearchParams } from '@/lib/leads-query'
 import {
   COMPLETENESS_OPTIONS,
   LEAD_SEGMENTS_STORAGE_KEY,
@@ -20,10 +20,11 @@ import {
   type SavedLeadSegment
 } from '@/lib/leads-meta'
 import { computeRecontactEligibility } from '@/lib/recontact-eligibility'
-import { leadToRecordsRow } from '@/lib/lead-records'
 import type { LeadBucket } from '@/lib/lead-buckets'
 import { LeadSidecar } from '@/components/LeadSidecar'
+import { useLeadGridColumns } from '@/components/LeadColumnPicker'
 import RecordsTable from '@/components/ui/records-table'
+import type { LeadColumnPreset } from '@/lib/lead-columns'
 
 interface LeadTableProps {
   leads: LeadContact[]
@@ -38,6 +39,7 @@ interface LeadTableProps {
   onNavigate: (filters: LeadListFilters, page?: number) => void
   onReload: () => void
   variant?: 'page' | 'embed'
+  columnPreset?: LeadColumnPreset
   onLeadSelect?: (lead: LeadContact | null) => void
 }
 
@@ -70,6 +72,7 @@ export default function LeadTable({
   onNavigate,
   onReload,
   variant = 'page',
+  columnPreset = 'crm',
   onLeadSelect
 }: LeadTableProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -83,6 +86,8 @@ export default function LeadTable({
   const [bulkTag, setBulkTag] = useState('')
   const [savedSegments, setSavedSegments] = useState<SavedLeadSegment[]>([])
   const [segmentName, setSegmentName] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(() => leadFiltersNeedExactCount(filters))
+  const grid = useLeadGridColumns(columnPreset, leads)
 
   const embed = variant === 'embed'
   const bucket: LeadBucket = filters.bucket === 'prospects' ? 'prospects' : 'leads'
@@ -110,8 +115,6 @@ export default function LeadTable({
   function withBucket(next: LeadListFilters): LeadListFilters {
     return { ...next, bucket }
   }
-
-  const recordRows = useMemo(() => leads.map((lead) => leadToRecordsRow(lead)), [leads])
 
   const verticalOptions = useMemo(
     () => mergeVerticalOptions(discoveredVerticals),
@@ -362,36 +365,96 @@ export default function LeadTable({
 
   return (
     <div className={embed ? 'flex h-full min-h-0 gap-3' : 'flex gap-5'}>
-      <div className={embed ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-2' : 'min-w-0 flex-1 space-y-5'}>
-      {/* Leads / Prospects tabs */}
-      <div className="inline-flex items-center rounded-xl bg-stone-100/90 p-0.5 shadow-soft">
-        <button
-          type="button"
-          onClick={() => switchBucket('leads')}
-          className={`rounded-[10px] px-3.5 py-1.5 text-sm font-medium transition ${
-            bucket === 'leads'
-              ? 'bg-white text-neutral-900 shadow-soft'
-              : 'text-neutral-600 hover:text-neutral-900'
-          }`}
-        >
-          Leads
-        </button>
-        <button
-          type="button"
-          onClick={() => switchBucket('prospects')}
-          className={`rounded-[10px] px-3.5 py-1.5 text-sm font-medium transition ${
-            bucket === 'prospects'
-              ? 'bg-white text-neutral-900 shadow-soft'
-              : 'text-neutral-600 hover:text-neutral-900'
-          }`}
-        >
-          Prospects
-        </button>
+      <div className={embed ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-2' : 'min-w-0 flex-1 space-y-3'}>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex items-center rounded-xl bg-stone-100/90 p-0.5 shadow-soft">
+          <button
+            type="button"
+            onClick={() => switchBucket('leads')}
+            className={`rounded-[10px] px-3 py-1.5 text-sm font-medium transition ${
+              bucket === 'leads'
+                ? 'bg-white text-neutral-900 shadow-soft'
+                : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            Leads
+          </button>
+          <button
+            type="button"
+            onClick={() => switchBucket('prospects')}
+            className={`rounded-[10px] px-3 py-1.5 text-sm font-medium transition ${
+              bucket === 'prospects'
+                ? 'bg-white text-neutral-900 shadow-soft'
+                : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            Prospects
+          </button>
+        </div>
+        <input
+          type="search"
+          placeholder="Name, email, company, or phone"
+          value={draftFilters.q ?? ''}
+          onChange={(e) =>
+            setDraftFilters((f) => ({ ...f, q: e.target.value || undefined }))
+          }
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') applyFilters()
+          }}
+          className="min-w-[12rem] flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+        />
+        {embed ? (
+          <>
+            <FilterSelect
+              label="Enrich"
+              hideLabel
+              value={draftFilters.enrich_status ?? ''}
+              onChange={(v) => patchFilters({ enrich_status: v || undefined })}
+              options={[
+                { value: 'none', label: 'None' },
+                { value: 'queued', label: 'Queued' },
+                { value: 'enriched', label: 'Enriched' },
+                { value: 'thin', label: 'Thin' },
+                { value: 'opener_ready', label: 'Opener ready' },
+                { value: 'uploaded', label: 'Uploaded' }
+              ]}
+              className="w-40"
+            />
+            <button
+              type="button"
+              onClick={() => applyFilters()}
+              className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 hover:bg-stone-50"
+            >
+              Search
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((open) => !open)}
+              className={`rounded-xl border px-3 py-2 text-sm font-medium ${
+                filtersOpen || leadFiltersNeedExactCount(filters)
+                  ? 'border-sf-orange/40 bg-orange-50 text-neutral-900'
+                  : 'border-stone-200 bg-white text-neutral-700 hover:bg-stone-50'
+              }`}
+            >
+              Filters
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleExport(false)}
+              disabled={exporting || total === 0}
+              className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-stone-50 disabled:opacity-60"
+            >
+              {exporting ? 'Exporting…' : 'Export CSV'}
+            </button>
+          </>
+        )}
       </div>
 
-      {/* Summary chips */}
-      {summary && !embed && (
-        <div className="flex flex-wrap gap-2">
+      {summary && !embed ? (
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
           {summaryChips.map((chip) => {
             const active = chipActive(chip.filters)
             return (
@@ -399,7 +462,7 @@ export default function LeadTable({
                 key={chip.key}
                 type="button"
                 onClick={() => onNavigate(withBucket(chip.filters), 1)}
-                className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm transition ${
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[12px] transition ${
                   active
                     ? 'border-sf-orange/40 bg-orange-50 text-neutral-900 shadow-soft'
                     : 'border-stone-200/70 bg-white text-neutral-600 shadow-soft hover:border-stone-300 hover:bg-stone-50'
@@ -408,16 +471,15 @@ export default function LeadTable({
                 <span className="font-semibold tabular-nums text-neutral-900">
                   {chip.count.toLocaleString()}
                 </span>
-                <span className="text-xs font-medium text-neutral-500">{chip.label}</span>
+                <span className="font-medium text-neutral-500">{chip.label}</span>
               </button>
             )
           })}
         </div>
-      )}
+      ) : null}
 
-      {/* Segments */}
-      {!embed ? (
-      <div className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
+      {!embed && filtersOpen ? (
+      <div className="rounded-2xl border border-stone-200/70 bg-white p-4 shadow-soft">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
             Segments
@@ -454,80 +516,21 @@ export default function LeadTable({
               </button>
             </span>
           ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
           <input
             type="text"
             placeholder="Save current filters as…"
             value={segmentName}
             onChange={(e) => setSegmentName(e.target.value)}
-            className="min-w-[200px] flex-1 rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+            className="min-w-[160px] flex-1 rounded-xl border border-stone-200 px-3 py-1.5 text-sm focus:border-sf-orange focus:outline-none"
           />
           <button
             type="button"
             onClick={saveCurrentSegment}
-            className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 transition hover:bg-stone-50"
+            className="rounded-xl border border-stone-200 px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-stone-50"
           >
             Save segment
           </button>
         </div>
-      </div>
-      ) : null}
-
-      {/* Filter bar */}
-      <div
-        className={
-          embed
-            ? 'shrink-0 rounded-xl border border-stone-200/70 bg-white p-2.5 shadow-soft'
-            : 'rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft'
-        }
-      >
-        <div className={embed ? 'flex flex-wrap items-end gap-2' : 'mb-4'}>
-          <label className={embed ? 'min-w-[12rem] flex-1' : 'block'}>
-            <span className={embed ? 'sr-only' : 'mb-1.5 block text-xs font-medium text-neutral-500'}>
-              Search
-            </span>
-            <input
-              type="search"
-              placeholder="Name, email, company, or phone"
-              value={draftFilters.q ?? ''}
-              onChange={(e) =>
-                setDraftFilters((f) => ({ ...f, q: e.target.value || undefined }))
-              }
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') applyFilters()
-              }}
-              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
-            />
-          </label>
-          {embed ? (
-            <>
-              <FilterSelect
-                label="Enrich"
-                value={draftFilters.enrich_status ?? ''}
-                onChange={(v) => patchFilters({ enrich_status: v || undefined })}
-                options={[
-                  { value: 'none', label: 'None' },
-                  { value: 'queued', label: 'Queued' },
-                  { value: 'enriched', label: 'Enriched' },
-                  { value: 'thin', label: 'Thin' },
-                  { value: 'opener_ready', label: 'Opener ready' },
-                  { value: 'uploaded', label: 'Uploaded' }
-                ]}
-                className="w-40"
-              />
-              <button
-                type="button"
-                onClick={() => applyFilters()}
-                className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 hover:bg-stone-50"
-              >
-                Search
-              </button>
-            </>
-          ) : null}
-        </div>
-        {!embed ? (
-        <>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <FilterSelect
             label="Vertical"
@@ -633,7 +636,7 @@ export default function LeadTable({
             />
           </label>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <FilterSelect
             label=""
             hideLabel
@@ -693,21 +696,10 @@ export default function LeadTable({
           >
             Reset
           </button>
-          <div className="ml-auto flex flex-wrap items-center gap-3">
-            {exportNote && <span className="text-xs text-neutral-500">{exportNote}</span>}
-            <button
-              type="button"
-              onClick={() => void handleExport(false)}
-              disabled={exporting || total === 0}
-              className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 transition hover:bg-stone-50 disabled:opacity-60"
-            >
-              {exporting ? 'Exporting…' : 'Export CSV'}
-            </button>
-          </div>
+          {exportNote ? <span className="ml-auto text-xs text-neutral-500">{exportNote}</span> : null}
         </div>
-        </>
-        ) : null}
       </div>
+      ) : null}
 
       {/* Bulk actions */}
       {selected.size > 0 && (
@@ -786,18 +778,26 @@ export default function LeadTable({
       )}
 
       {/* Table */}
-      <div className={embed ? 'min-h-0 flex-1 overflow-auto' : ''}>
+      <div className={embed ? 'min-h-0 flex-1 overflow-hidden' : ''}>
       <RecordsTable
-        rows={recordRows}
+        leads={leads}
+        columns={grid.visible}
+        widths={grid.widths}
+        onResizeColumn={grid.resizeColumn}
+        occupied={grid.occupied}
+        preset={columnPreset}
         selected={selected}
         onToggleRow={toggleSelect}
         onToggleAll={toggleSelectAll}
+        onColumnsChange={grid.setVisible}
         onRowActivate={(id) => {
           const lead = leads.find((row) => row.id === id) ?? null
           onLeadSelect?.(lead)
           setSelectedId(selectedId === id ? null : id)
         }}
         activeId={selectedId}
+        rowStart={(page - 1) * pageSize + 1}
+        fill={embed}
         emptyMessage={`No ${bucket === 'prospects' ? 'prospects' : 'leads'} match these filters.`}
         entityLabel={bucket === 'prospects' ? 'prospects' : 'leads'}
       />

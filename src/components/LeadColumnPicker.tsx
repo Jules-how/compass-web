@@ -3,26 +3,39 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   LEAD_COLUMN_DEFS,
-  loadVisibleLeadColumns,
-  persistVisibleLeadColumns,
-  type LeadColumnId
+  loadHiddenLeadColumns,
+  loadLeadColumnWidths,
+  loadPinnedLeadColumns,
+  persistHiddenLeadColumns,
+  persistLeadColumnWidths,
+  persistPinnedLeadColumns,
+  requiredColumnsFor,
+  resolveVisibleLeadColumns,
+  type LeadColumnId,
+  type LeadColumnPreset
 } from '@/lib/lead-columns'
+import { occupiedLeadColumns } from '@/lib/lead-records'
+import type { LeadContact } from '@/lib/types'
 
 export function LeadColumnPicker({
   phoneSparse,
   visible,
   onChange,
-  /** compact = trailing table-header "+" control (Attio-style). */
+  preset = 'crm',
+  occupied = [],
   variant = 'button'
 }: {
   phoneSparse: boolean
   visible: LeadColumnId[]
   onChange: (next: LeadColumnId[]) => void
+  preset?: LeadColumnPreset
+  occupied?: LeadColumnId[]
   variant?: 'button' | 'header'
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
+  const required = requiredColumnsFor(preset)
 
   useEffect(() => {
     if (!open) return
@@ -47,20 +60,16 @@ export function LeadColumnPicker({
   }, [phoneSparse, query])
 
   function toggle(id: LeadColumnId) {
-    const def = LEAD_COLUMN_DEFS.find((c) => c.id === id)
-    if (def?.required) return
+    if (required.includes(id)) return
     const next = visible.includes(id) ? visible.filter((v) => v !== id) : [...visible, id]
-    const ordered = LEAD_COLUMN_DEFS.map((c) => c.id).filter((c) => next.includes(c))
+    const ordered = LEAD_COLUMN_DEFS.map((c) => c.id).filter((c) => next.includes(c) || required.includes(c))
     onChange(ordered)
-    persistVisibleLeadColumns(ordered)
   }
 
   const menu = open ? (
     <div
       role="menu"
-      className={`absolute z-30 mt-1.5 w-60 rounded-xl border border-stone-200 bg-white p-2 shadow-soft ${
-        variant === 'header' ? 'right-0' : 'right-0'
-      }`}
+      className="absolute right-0 z-30 mt-1.5 w-60 rounded-xl border border-stone-200 bg-white p-2 shadow-soft"
     >
       <input
         type="search"
@@ -71,25 +80,31 @@ export function LeadColumnPicker({
         autoFocus
       />
       <p className="px-2 pb-1 text-[10px] font-medium uppercase tracking-wide text-neutral-400">
-        Visible columns
+        Instantly-aligned columns
       </p>
       <ul className="max-h-72 space-y-0.5 overflow-y-auto">
         {options.map((col) => {
           const checked = visible.includes(col.id)
+          const hasData = occupied.includes(col.id)
+          const locked = required.includes(col.id)
           return (
             <li key={col.id}>
               <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-neutral-700 hover:bg-stone-50">
                 <input
                   type="checkbox"
                   checked={checked}
-                  disabled={Boolean(col.required)}
+                  disabled={locked}
                   onChange={() => toggle(col.id)}
                   className="rounded border-stone-300"
                 />
                 <span>{col.label}</span>
-                {col.required ? (
+                {locked ? (
                   <span className="ml-auto text-[10px] uppercase tracking-wide text-neutral-400">
                     Required
+                  </span>
+                ) : hasData ? (
+                  <span className="ml-auto text-[10px] uppercase tracking-wide text-neutral-400">
+                    Has data
                   </span>
                 ) : null}
               </label>
@@ -108,7 +123,10 @@ export function LeadColumnPicker({
       <div ref={rootRef} className="relative inline-flex">
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={(event) => {
+            event.stopPropagation()
+            setOpen((v) => !v)
+          }}
           className="rounded-md px-1.5 py-0.5 text-xs font-medium text-neutral-500 transition hover:bg-stone-100 hover:text-neutral-800"
           aria-expanded={open}
           aria-haspopup="menu"
@@ -137,20 +155,50 @@ export function LeadColumnPicker({
   )
 }
 
-export function useLeadColumnVisibility(phoneSparse: boolean) {
-  const [visible, setVisible] = useState<LeadColumnId[]>(DEFAULT_SAFE)
+export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[]) {
+  const occupied = useMemo(() => occupiedLeadColumns(leads), [leads])
+  const [pinned, setPinned] = useState<LeadColumnId[]>([])
+  const [hidden, setHidden] = useState<LeadColumnId[]>([])
+  const [widths, setWidths] = useState<Partial<Record<LeadColumnId, number>>>({})
+  const [ready, setReady] = useState(false)
+
   useEffect(() => {
-    setVisible(loadVisibleLeadColumns())
-  }, [])
+    setPinned(loadPinnedLeadColumns(preset))
+    setHidden(loadHiddenLeadColumns(preset))
+    setWidths(loadLeadColumnWidths())
+    setReady(true)
+  }, [preset])
 
-  const effective = useMemo(() => {
-    if (!phoneSparse) return visible
-    return visible.filter((id) => id !== 'phone')
-  }, [visible, phoneSparse])
+  const visible = useMemo(
+    () =>
+      resolveVisibleLeadColumns({
+        preset,
+        occupied,
+        pinned,
+        hidden
+      }),
+    [preset, occupied, pinned, hidden]
+  )
 
-  return { visible: effective, setVisible }
+  function setVisible(next: LeadColumnId[]) {
+    const required = requiredColumnsFor(preset)
+    const added = next.filter((id) => !visible.includes(id))
+    const removed = visible.filter((id) => !next.includes(id) && !required.includes(id))
+    const nextPinned = Array.from(new Set([...pinned.filter((id) => !removed.includes(id)), ...added]))
+    const nextHidden = Array.from(new Set([...hidden.filter((id) => !added.includes(id)), ...removed]))
+    setPinned(nextPinned)
+    setHidden(nextHidden)
+    persistPinnedLeadColumns(nextPinned, preset)
+    persistHiddenLeadColumns(nextHidden, preset)
+  }
+
+  function resizeColumn(id: LeadColumnId, width: number) {
+    setWidths((current) => {
+      const next = { ...current, [id]: width }
+      persistLeadColumnWidths(next)
+      return next
+    })
+  }
+
+  return { visible, occupied, widths, resizeColumn, setVisible, ready }
 }
-
-const DEFAULT_SAFE: LeadColumnId[] = LEAD_COLUMN_DEFS.filter((c) => c.defaultVisible).map(
-  (c) => c.id
-)

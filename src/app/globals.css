@@ -157,6 +157,9 @@ body {
   --orange: var(--records-orange);
   --red: var(--records-red);
   --ink-3: var(--records-ink-3);
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
   overflow: hidden;
   border-radius: 1rem;
   border: 1px solid color-mix(in srgb, var(--compass-line) 90%, transparent);
@@ -164,20 +167,60 @@ body {
   box-shadow: var(--compass-shadow-sm);
 }
 
+.records-shell-fill {
+  flex: 1;
+  min-height: 0;
+}
+
 .records-scroll {
+  min-height: 0;
+  flex: 1;
   max-height: 70vh;
   overflow: auto;
   outline: none;
 }
 
+.records-shell-fill .records-scroll {
+  max-height: none;
+}
+
 .records-table {
   width: 100%;
-  min-width: 920px;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 13px;
   line-height: 1.35;
   color: var(--records-ink);
+}
+
+.records-index {
+  width: 1.75rem;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--records-ink-3);
+}
+
+.records-clip {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.records-resizable {
+  position: relative;
+}
+
+.records-resize {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  z-index: 5;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
 }
 
 .records-company-col { width: 28%; }

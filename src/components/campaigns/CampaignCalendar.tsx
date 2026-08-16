@@ -1,12 +1,21 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import {
+  CALENDAR_EVENT_HEIGHT,
+  CALENDAR_GUTTER_PX,
+  CALENDAR_HOUR_HEIGHT,
+  CALENDAR_HOURS,
+  CALENDAR_SCROLL_HOUR,
   WEEKDAY_LABELS,
   datedGoLiveCampaigns,
+  eventOffsetPx,
   formatPeriodLabel,
   goLiveFallsInPeriod,
+  hourLabel,
+  layoutTimedEvents,
   layoutWeekBars,
+  minutesFromMidnight,
   monthWeeks,
   periodRange,
   toDateOnly,
@@ -15,7 +24,6 @@ import {
 } from '@/lib/campaign-calendar'
 import { startOfDay } from '@/lib/campaign-timeline'
 import {
-  campaignStatusLabel,
   formatGoLiveAt,
   formatGoLiveTime,
   type CompassCampaign
@@ -85,6 +93,7 @@ export function CampaignCalendar({
 
       {grain === 'day' ? (
         <DayList
+          cursor={cursor}
           campaigns={inPeriod}
           selectedId={selectedId}
           onSelect={onSelect}
@@ -112,8 +121,8 @@ function EventChip({
   return (
     <button
       type="button"
-      className={`pointer-events-auto truncate rounded-md border px-1.5 text-left font-medium ${
-        compact ? 'h-[22px] text-[11px]' : 'h-10 px-2 text-[12px]'
+      className={`pointer-events-auto flex w-full min-w-0 flex-col justify-center overflow-hidden rounded-lg border text-left font-medium ${
+        compact ? 'h-[22px] px-1.5 py-0 text-[11px]' : 'h-full px-2 py-1.5 text-[12px]'
       } ${
         selected
           ? 'border-[#5e6ad2] bg-white text-neutral-800 shadow-[0_0_0_1px_rgba(94,106,210,0.28)]'
@@ -123,12 +132,19 @@ function EventChip({
       onClick={onSelect}
       onDoubleClick={onOpenPage}
     >
-      <span
-        className="mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle"
-        style={{ background: campaign.color || '#94a3b8' }}
-      />
-      {time ? <span className="mr-1 tabular-nums text-neutral-500">{time}</span> : null}
-      {campaign.name}
+      <span className="flex min-w-0 items-center gap-1">
+        <span
+          className="inline-block h-2 w-2 shrink-0 rounded-full"
+          style={{ background: campaign.color || '#94a3b8' }}
+        />
+        {time ? (
+          <span className="shrink-0 tabular-nums text-neutral-500">{time}</span>
+        ) : null}
+        {compact ? <span className="min-w-0 truncate">{campaign.name}</span> : null}
+      </span>
+      {compact ? null : (
+        <span className="min-w-0 line-clamp-2 leading-snug">{campaign.name}</span>
+      )}
     </button>
   )
 }
@@ -209,7 +225,7 @@ function MonthGrid({
                   return (
                     <div
                       key={`${campaign.id}-${bar.colStart}-${wi}`}
-                      className="mx-0.5 min-w-0"
+                      className="mx-0.5 min-w-0 overflow-hidden"
                       style={{
                         gridColumn: `${bar.colStart + 1} / span 1`,
                         gridRow: bar.lane + 1
@@ -234,6 +250,143 @@ function MonthGrid({
   )
 }
 
+function TimedDayColumn({
+  campaigns,
+  selectedId,
+  isToday,
+  onSelect,
+  onOpenPage
+}: {
+  campaigns: CompassCampaign[]
+  selectedId: string | null
+  isToday: boolean
+  onSelect: (id: string) => void
+  onOpenPage: (id: string) => void
+}) {
+  const lanes = layoutTimedEvents(
+    campaigns.flatMap((campaign) => {
+      const minutes = minutesFromMidnight(campaign.go_live_at)
+      if (minutes == null) return []
+      return [{ id: campaign.id, minutes }]
+    })
+  )
+  const byId = new Map(campaigns.map((campaign) => [campaign.id, campaign]))
+
+  return (
+    <div
+      className={`relative min-w-0 overflow-hidden border-r border-neutral-100 last:border-r-0 ${
+        isToday ? 'bg-[#5e6ad2]/[0.04]' : ''
+      }`}
+    >
+      {Array.from({ length: CALENDAR_HOURS }, (_, hour) => (
+        <div
+          key={hour}
+          className="border-t border-neutral-100"
+          style={{ height: CALENDAR_HOUR_HEIGHT }}
+        />
+      ))}
+      {lanes.map((lane) => {
+        const campaign = byId.get(lane.id)
+        if (!campaign) return null
+        const widthPct = 100 / lane.laneCount
+        return (
+          <div
+            key={campaign.id}
+            className="absolute overflow-hidden px-0.5"
+            style={{
+              top: eventOffsetPx(lane.minutes),
+              height: CALENDAR_EVENT_HEIGHT,
+              left: `calc(${lane.lane * widthPct}% + 2px)`,
+              width: `calc(${widthPct}% - 4px)`
+            }}
+          >
+            <EventChip
+              campaign={campaign}
+              selected={selectedId === campaign.id}
+              onSelect={() => onSelect(campaign.id)}
+              onOpenPage={() => onOpenPage(campaign.id)}
+            />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function HourGutter() {
+  return (
+    <div className="shrink-0" style={{ width: CALENDAR_GUTTER_PX }}>
+      {Array.from({ length: CALENDAR_HOURS }, (_, hour) => (
+        <div key={hour} className="relative" style={{ height: CALENDAR_HOUR_HEIGHT }}>
+          {hour === 0 ? null : (
+            <span className="absolute -top-2 right-2 text-[11px] tabular-nums text-neutral-400">
+              {hourLabel(hour)}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function TimedBoard({
+  days,
+  byId,
+  todayKey,
+  selectedId,
+  onSelect,
+  onOpenPage
+}: {
+  days: Date[]
+  byId: Map<string, CompassCampaign>
+  todayKey: string
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onOpenPage: (id: string) => void
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const node = scrollRef.current
+    if (!node) return
+    node.scrollTop = CALENDAR_SCROLL_HOUR * CALENDAR_HOUR_HEIGHT
+  }, [days])
+
+  return (
+    <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
+      <div
+        className="flex"
+        style={{ height: CALENDAR_HOURS * CALENDAR_HOUR_HEIGHT }}
+      >
+        <HourGutter />
+        <div
+          className="grid min-w-0 flex-1"
+          style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
+        >
+          {days.map((day) => {
+            const key = toDateOnly(day)
+            const campaigns = Array.from(byId.values()).filter((campaign) => {
+              const minutes = minutesFromMidnight(campaign.go_live_at)
+              if (minutes == null || !campaign.go_live_at) return false
+              return toDateOnly(new Date(campaign.go_live_at)) === key
+            })
+            return (
+              <TimedDayColumn
+                key={key}
+                campaigns={campaigns}
+                selectedId={selectedId}
+                isToday={key === todayKey}
+                onSelect={onSelect}
+                onOpenPage={onOpenPage}
+              />
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function WeekGrid({
   cursor,
   items,
@@ -252,136 +405,85 @@ function WeekGrid({
   onOpenPage: (id: string) => void
 }) {
   const days = weekDays(cursor)
-  const bars = layoutWeekBars(days, items)
-  const laneCount = bars.reduce((max, bar) => Math.max(max, bar.lane + 1), 0)
+  const weekIds = new Set(items.map((item) => item.id))
+  const weekById = new Map(
+    [...byId.entries()].filter(([id]) => weekIds.has(id))
+  )
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white">
-      <div className="grid grid-cols-7 border-b border-neutral-200">
-        {days.map((day) => {
-          const key = toDateOnly(day)
-          const isToday = key === todayKey
-          return (
-            <div
-              key={key}
-              className={`border-r border-neutral-100 px-3 py-2 last:border-r-0 ${
-                isToday ? 'bg-[#5e6ad2]/[0.06]' : 'bg-[#f7f8f9]'
-              }`}
-            >
-              <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                {WEEKDAY_LABELS[(day.getDay() + 6) % 7]}
-              </div>
-              <div
-                className={`text-[15px] tabular-nums ${
-                  isToday ? 'font-semibold text-[#5e6ad2]' : 'text-neutral-800'
-                }`}
-              >
-                {day.getDate()}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-      <div className="relative min-h-0 flex-1">
-        <div className="absolute inset-0 grid grid-cols-7">
-          {days.map((day) => (
-            <div
-              key={toDateOnly(day)}
-              className={`border-r border-neutral-100 last:border-r-0 ${
-                toDateOnly(day) === todayKey ? 'bg-[#5e6ad2]/[0.04]' : ''
-              }`}
-            />
-          ))}
-        </div>
-        <div
-          className="absolute inset-x-1 top-3 grid gap-y-1"
-          style={{ gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}
-        >
-          {bars.map((bar) => {
-            const campaign = byId.get(bar.campaignId)
-            if (!campaign) return null
+      <div className="flex shrink-0 border-b border-neutral-200">
+        <div className="shrink-0 border-r border-neutral-100" style={{ width: CALENDAR_GUTTER_PX }} />
+        <div className="grid min-w-0 flex-1 grid-cols-7">
+          {days.map((day) => {
+            const key = toDateOnly(day)
+            const isToday = key === todayKey
             return (
               <div
-                key={campaign.id}
-                className="min-w-0 px-0.5"
-                style={{
-                  gridColumn: `${bar.colStart + 1} / span 1`,
-                  gridRow: bar.lane + 1
-                }}
+                key={key}
+                className={`border-r border-neutral-100 px-3 py-2 last:border-r-0 ${
+                  isToday ? 'bg-[#5e6ad2]/[0.06]' : 'bg-[#f7f8f9]'
+                }`}
               >
-                <EventChip
-                  campaign={campaign}
-                  selected={selectedId === campaign.id}
-                  onSelect={() => onSelect(campaign.id)}
-                  onOpenPage={() => onOpenPage(campaign.id)}
-                />
+                <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                  {WEEKDAY_LABELS[(day.getDay() + 6) % 7]}
+                </div>
+                <div
+                  className={`text-[15px] tabular-nums ${
+                    isToday ? 'font-semibold text-[#5e6ad2]' : 'text-neutral-800'
+                  }`}
+                >
+                  {day.getDate()}
+                </div>
               </div>
             )
           })}
         </div>
-        {laneCount === 0 ? (
-          <p className="relative px-4 py-10 text-center text-sm text-neutral-400">
-            No go-live dates this week
-          </p>
-        ) : null}
       </div>
+      <TimedBoard
+        days={days}
+        byId={weekById}
+        todayKey={todayKey}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        onOpenPage={onOpenPage}
+      />
     </div>
   )
 }
 
 function DayList({
+  cursor,
   campaigns,
   selectedId,
   onSelect,
   onOpenPage
 }: {
+  cursor: Date
   campaigns: CompassCampaign[]
   selectedId: string | null
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
 }) {
-  const sorted = campaigns.slice().sort((a, b) => {
-    const at = a.go_live_at || ''
-    const bt = b.go_live_at || ''
-    return at.localeCompare(bt)
-  })
+  const todayKey = toDateOnly(new Date())
+  const day = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate())
+  const byId = new Map(campaigns.map((campaign) => [campaign.id, campaign]))
+
   return (
-    <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-neutral-200 bg-white">
-      {sorted.length === 0 ? (
-        <p className="px-4 py-12 text-center text-sm text-neutral-400">
-          No campaigns going live this day
-        </p>
-      ) : (
-        <ul className="divide-y divide-neutral-100">
-          {sorted.map((campaign) => (
-            <li key={campaign.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(campaign.id)}
-                onDoubleClick={() => onOpenPage(campaign.id)}
-                className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-neutral-50 ${
-                  selectedId === campaign.id ? 'bg-neutral-50' : ''
-                }`}
-              >
-                <span
-                  className="mt-1 h-3.5 w-3.5 shrink-0 rounded-full"
-                  style={{ background: campaign.color || '#94a3b8' }}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium text-neutral-900">
-                    {campaign.name}
-                  </div>
-                  <div className="mt-0.5 text-[12px] text-neutral-500">
-                    {formatGoLiveAt(campaign.go_live_at)}
-                    <span className="mx-1.5 text-neutral-300">·</span>
-                    {campaignStatusLabel(campaign.status)}
-                  </div>
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white">
+      <div className="flex shrink-0 border-b border-neutral-200 bg-[#f7f8f9] px-3 py-2">
+        <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+          {day.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })}
+        </div>
+      </div>
+      <TimedBoard
+        days={[day]}
+        byId={byId}
+        todayKey={todayKey}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        onOpenPage={onOpenPage}
+      />
     </div>
   )
 }

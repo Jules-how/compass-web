@@ -3,7 +3,7 @@ import type { LeadContact, LeadListFilters } from '@/lib/types'
 import { requirePortalAccess } from '@/lib/portal-access'
 import { portalAccessResponse, portalJson } from '@/lib/portal-http'
 import { LEAD_LIST_COLUMNS, LEAD_PAGE_SIZE } from '@/lib/list-columns'
-import { applyLeadFilters, parseLeadListFilters, type LeadFilterQuery } from '@/lib/leads-query'
+import { applyLeadFilters, leadFiltersNeedExactCount, parseLeadListFilters, type LeadFilterQuery } from '@/lib/leads-query'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,9 +33,10 @@ export async function GET(request: NextRequest) {
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
     // Cast away supabase-js deep generics before dynamic filter chaining.
+    const countMode = leadFiltersNeedExactCount(filters) ? 'exact' : 'estimated'
     let query = supabase
       .from('lead_contacts')
-      .select(LEAD_LIST_COLUMNS, { count: 'exact' })
+      .select(LEAD_LIST_COLUMNS, { count: countMode })
       .order('mirrored_at', { ascending: false }) as unknown as ListQuery
 
     query = applyLeadFilters(query, filters) as ListQuery

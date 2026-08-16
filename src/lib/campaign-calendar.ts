@@ -111,6 +111,70 @@ export function weekDays(cursor: Date): Date[] {
   return Array.from({ length: 7 }, (_, i) => addDays(start, i))
 }
 
+/** Pixel height of one hour row in week/day calendars. */
+export const CALENDAR_HOUR_HEIGHT = 56
+export const CALENDAR_HOURS = 24
+export const CALENDAR_GUTTER_PX = 64
+/** Go-live blocks have no duration; render a readable card at the start time. */
+export const CALENDAR_EVENT_HEIGHT = 64
+export const CALENDAR_SCROLL_HOUR = 7
+
+export function minutesFromMidnight(iso: string | null | undefined): number | null {
+  if (!iso) return null
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return null
+  return date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60
+}
+
+export function hourLabel(hour: number): string {
+  const date = new Date(2000, 0, 1, hour, 0, 0)
+  return date.toLocaleTimeString('en-AU', { hour: 'numeric' })
+}
+
+export function eventOffsetPx(minutes: number): number {
+  const clamped = Math.min(CALENDAR_HOURS * 60 - 1, Math.max(0, minutes))
+  return (clamped / 60) * CALENDAR_HOUR_HEIGHT
+}
+
+export type TimedLane = {
+  id: string
+  minutes: number
+  lane: number
+  laneCount: number
+}
+
+/** Pack same-day go-live cards that would overlap vertically into columns. */
+export function layoutTimedEvents(
+  events: Array<{ id: string; minutes: number }>,
+  durationMinutes = Math.round((CALENDAR_EVENT_HEIGHT / CALENDAR_HOUR_HEIGHT) * 60)
+): TimedLane[] {
+  const sorted = events
+    .slice()
+    .sort((a, b) => a.minutes - b.minutes || a.id.localeCompare(b.id))
+  const laneEnds: number[] = []
+  const placed: Array<{ id: string; minutes: number; lane: number; end: number }> = []
+
+  for (const event of sorted) {
+    const end = event.minutes + durationMinutes
+    let lane = laneEnds.findIndex((laneEnd) => laneEnd <= event.minutes)
+    if (lane === -1) {
+      lane = laneEnds.length
+      laneEnds.push(end)
+    } else {
+      laneEnds[lane] = end
+    }
+    placed.push({ id: event.id, minutes: event.minutes, lane, end })
+  }
+
+  return placed.map((item) => {
+    const overlapping = placed.filter(
+      (other) => other.minutes < item.end && other.end > item.minutes
+    )
+    const laneCount = overlapping.reduce((max, row) => Math.max(max, row.lane + 1), 1)
+    return { id: item.id, minutes: item.minutes, lane: item.lane, laneCount }
+  })
+}
+
 export function formatPeriodLabel(cursor: Date, grain: CalendarGrain): string {
   if (grain === 'day') {
     return cursor.toLocaleDateString('en-AU', {

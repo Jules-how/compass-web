@@ -1,92 +1,210 @@
 /**
- * CRM lead table column registry + operator-visible column prefs.
- * Defaults stay lean; optional columns can be toggled (Attio-style).
+ * CRM / campaign lead grid columns.
+ * Instantly-aligned fields, plus Compass research (opener, facts) and CRM extras.
+ * Empty columns stay hidden unless the operator pins them in the picker.
  */
 
-export const LEAD_COLUMN_STORAGE_KEY = 'compass.leadColumns.v3'
+export const LEAD_COLUMN_STORAGE_KEY = 'compass.leadColumns.v4'
+export const CAMPAIGN_LEAD_COLUMN_STORAGE_KEY = 'compass.campaignLeadColumns.v1'
+export const LEAD_COLUMN_WIDTHS_KEY = 'compass.leadColumnWidths.v1'
+export const LEAD_COLUMN_PINNED_KEY = 'compass.leadColumnsPinned.v1'
+export const LEAD_COLUMN_HIDDEN_KEY = 'compass.leadColumnsHidden.v1'
+
+export type LeadColumnPreset = 'crm' | 'campaign'
 
 export type LeadColumnId =
-  | 'name'
+  | 'first_name'
+  | 'last_name'
   | 'email'
-  | 'phone'
+  | 'job_title'
   | 'company'
   | 'location'
-  | 'vertical'
-  | 'campaign'
-  | 'stage'
-  | 'cooldown'
-  | 'last_touch'
-  | 'date_added'
-  | 'source'
-  | 'role'
+  | 'website'
   | 'linkedin'
+  | 'phone'
   | 'opener'
   | 'lead_facts'
+  | 'status'
+  | 'categories'
+  | 'last_touch'
+  | 'strength'
+  | 'source'
+  | 'campaign'
+  | 'vertical'
 
 export type LeadColumnDef = {
   id: LeadColumnId
   label: string
-  /** Always shown — cannot be hidden via the column picker. */
-  required?: boolean
-  /** Default visibility for new operators. */
-  defaultVisible: boolean
+  defaultWidth: number
 }
 
 export const LEAD_COLUMN_DEFS: LeadColumnDef[] = [
-  { id: 'name', label: 'Name', required: true, defaultVisible: true },
-  { id: 'email', label: 'Email', defaultVisible: true },
-  { id: 'phone', label: 'Phone', defaultVisible: false },
-  { id: 'company', label: 'Company', defaultVisible: true },
-  { id: 'location', label: 'Location', defaultVisible: false },
-  { id: 'vertical', label: 'Vertical', defaultVisible: true },
-  { id: 'campaign', label: 'Campaign', defaultVisible: false },
-  { id: 'stage', label: 'Stage', defaultVisible: true },
-  { id: 'cooldown', label: 'Recontact', defaultVisible: true },
-  { id: 'last_touch', label: 'Last interaction', defaultVisible: true },
-  { id: 'date_added', label: 'Date added', defaultVisible: true },
-  { id: 'source', label: 'Source', defaultVisible: false },
-  { id: 'role', label: 'Role', defaultVisible: false },
-  { id: 'linkedin', label: 'LinkedIn', defaultVisible: false },
-  { id: 'opener', label: 'Opener', defaultVisible: false },
-  { id: 'lead_facts', label: 'Lead facts', defaultVisible: false }
+  { id: 'first_name', label: 'First name', defaultWidth: 140 },
+  { id: 'last_name', label: 'Last name', defaultWidth: 140 },
+  { id: 'email', label: 'Email', defaultWidth: 220 },
+  { id: 'job_title', label: 'Job title', defaultWidth: 160 },
+  { id: 'company', label: 'Company', defaultWidth: 180 },
+  { id: 'location', label: 'Location', defaultWidth: 140 },
+  { id: 'website', label: 'Website', defaultWidth: 160 },
+  { id: 'linkedin', label: 'LinkedIn', defaultWidth: 180 },
+  { id: 'phone', label: 'Phone', defaultWidth: 140 },
+  { id: 'opener', label: 'Opener', defaultWidth: 280 },
+  { id: 'lead_facts', label: 'Facts', defaultWidth: 240 },
+  { id: 'status', label: 'Status', defaultWidth: 140 },
+  { id: 'categories', label: 'Categories', defaultWidth: 220 },
+  { id: 'last_touch', label: 'Last interaction', defaultWidth: 160 },
+  { id: 'strength', label: 'Connection strength', defaultWidth: 170 },
+  { id: 'source', label: 'Source', defaultWidth: 120 },
+  { id: 'campaign', label: 'Campaign', defaultWidth: 180 },
+  { id: 'vertical', label: 'Vertical', defaultWidth: 140 }
 ]
 
-export const DEFAULT_VISIBLE_LEAD_COLUMNS: LeadColumnId[] = LEAD_COLUMN_DEFS.filter(
-  (c) => c.defaultVisible
-).map((c) => c.id)
+export const CRM_REQUIRED_COLUMNS: LeadColumnId[] = ['first_name', 'last_name', 'company']
+export const CAMPAIGN_REQUIRED_COLUMNS: LeadColumnId[] = [
+  'first_name',
+  'last_name',
+  'opener',
+  'lead_facts'
+]
+
+export const CRM_DEFAULT_COLUMNS: LeadColumnId[] = [
+  'first_name',
+  'last_name',
+  'company',
+  'categories',
+  'last_touch',
+  'strength'
+]
+
+export const CAMPAIGN_DEFAULT_COLUMNS: LeadColumnId[] = [
+  'first_name',
+  'last_name',
+  'email',
+  'opener',
+  'lead_facts'
+]
+
+export const DEFAULT_VISIBLE_LEAD_COLUMNS: LeadColumnId[] = [...CRM_DEFAULT_COLUMNS]
+
+export const MIN_LEAD_COLUMN_WIDTH = 80
+export const MAX_LEAD_COLUMN_WIDTH = 480
 
 export function isLeadColumnId(value: string): value is LeadColumnId {
   return LEAD_COLUMN_DEFS.some((c) => c.id === value)
 }
 
-export function loadVisibleLeadColumns(): LeadColumnId[] {
-  if (typeof window === 'undefined') return [...DEFAULT_VISIBLE_LEAD_COLUMNS]
+export function requiredColumnsFor(preset: LeadColumnPreset): LeadColumnId[] {
+  return preset === 'campaign' ? CAMPAIGN_REQUIRED_COLUMNS : CRM_REQUIRED_COLUMNS
+}
+
+export function defaultColumnsFor(preset: LeadColumnPreset): LeadColumnId[] {
+  return preset === 'campaign' ? [...CAMPAIGN_DEFAULT_COLUMNS] : [...CRM_DEFAULT_COLUMNS]
+}
+
+export function storageKeyFor(preset: LeadColumnPreset): string {
+  return preset === 'campaign' ? CAMPAIGN_LEAD_COLUMN_STORAGE_KEY : LEAD_COLUMN_STORAGE_KEY
+}
+
+export function pinnedKeyFor(preset: LeadColumnPreset): string {
+  return `${LEAD_COLUMN_PINNED_KEY}.${preset}`
+}
+
+export function hiddenKeyFor(preset: LeadColumnPreset): string {
+  return `${LEAD_COLUMN_HIDDEN_KEY}.${preset}`
+}
+
+function readIdList(key: string): LeadColumnId[] | null {
+  if (typeof window === 'undefined') return null
   try {
-    const raw = window.localStorage.getItem(LEAD_COLUMN_STORAGE_KEY)
-    if (!raw) return [...DEFAULT_VISIBLE_LEAD_COLUMNS]
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return null
     const parsed = JSON.parse(raw) as unknown
-    if (!Array.isArray(parsed)) return [...DEFAULT_VISIBLE_LEAD_COLUMNS]
+    if (!Array.isArray(parsed)) return null
     const ids = parsed.filter((v): v is LeadColumnId => typeof v === 'string' && isLeadColumnId(v))
-    // Always keep required columns.
-    for (const def of LEAD_COLUMN_DEFS) {
-      if (def.required && !ids.includes(def.id)) ids.unshift(def.id)
-    }
-    return ids.length ? ids : [...DEFAULT_VISIBLE_LEAD_COLUMNS]
+    return ids.length ? ids : null
   } catch {
-    return [...DEFAULT_VISIBLE_LEAD_COLUMNS]
+    return null
   }
 }
 
-export function persistVisibleLeadColumns(ids: LeadColumnId[]) {
+export function loadVisibleLeadColumns(preset: LeadColumnPreset = 'crm'): LeadColumnId[] {
+  return readIdList(storageKeyFor(preset)) ?? defaultColumnsFor(preset)
+}
+
+export function loadPinnedLeadColumns(preset: LeadColumnPreset = 'crm'): LeadColumnId[] {
+  return readIdList(pinnedKeyFor(preset)) ?? []
+}
+
+export function loadHiddenLeadColumns(preset: LeadColumnPreset = 'crm'): LeadColumnId[] {
+  return readIdList(hiddenKeyFor(preset)) ?? []
+}
+
+export function persistVisibleLeadColumns(ids: LeadColumnId[], preset: LeadColumnPreset = 'crm') {
   if (typeof window === 'undefined') return
-  const next = [...ids]
-  for (const def of LEAD_COLUMN_DEFS) {
-    if (def.required && !next.includes(def.id)) next.unshift(def.id)
-  }
-  window.localStorage.setItem(LEAD_COLUMN_STORAGE_KEY, JSON.stringify(next))
+  const required = requiredColumnsFor(preset)
+  const next = LEAD_COLUMN_DEFS.map((c) => c.id).filter((id) => ids.includes(id) || required.includes(id))
+  window.localStorage.setItem(storageKeyFor(preset), JSON.stringify(next))
 }
 
-/** Relative / compact timestamps for dense CRM rows (Attio-style phrasing). */
+export function persistPinnedLeadColumns(ids: LeadColumnId[], preset: LeadColumnPreset = 'crm') {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(pinnedKeyFor(preset), JSON.stringify(ids.filter(isLeadColumnId)))
+}
+
+export function persistHiddenLeadColumns(ids: LeadColumnId[], preset: LeadColumnPreset = 'crm') {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(hiddenKeyFor(preset), JSON.stringify(ids.filter(isLeadColumnId)))
+}
+
+export function resolveVisibleLeadColumns(opts: {
+  preset: LeadColumnPreset
+  occupied: LeadColumnId[]
+  pinned: LeadColumnId[]
+  hidden: LeadColumnId[]
+}): LeadColumnId[] {
+  const required = requiredColumnsFor(opts.preset)
+  const occupied = new Set(opts.occupied)
+  const pinned = new Set(opts.pinned)
+  const hidden = new Set(opts.hidden)
+  return LEAD_COLUMN_DEFS.map((c) => c.id).filter((id) => {
+    if (required.includes(id)) return true
+    if (hidden.has(id)) return false
+    return pinned.has(id) || occupied.has(id)
+  })
+}
+
+export function loadLeadColumnWidths(): Partial<Record<LeadColumnId, number>> {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = window.localStorage.getItem(LEAD_COLUMN_WIDTHS_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object') return {}
+    const out: Partial<Record<LeadColumnId, number>> = {}
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (!isLeadColumnId(key) || typeof value !== 'number' || !Number.isFinite(value)) continue
+      out[key] = Math.min(MAX_LEAD_COLUMN_WIDTH, Math.max(MIN_LEAD_COLUMN_WIDTH, Math.round(value)))
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+export function persistLeadColumnWidths(widths: Partial<Record<LeadColumnId, number>>) {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(LEAD_COLUMN_WIDTHS_KEY, JSON.stringify(widths))
+}
+
+export function columnWidth(
+  id: LeadColumnId,
+  widths: Partial<Record<LeadColumnId, number>>
+): number {
+  const def = LEAD_COLUMN_DEFS.find((c) => c.id === id)
+  return widths[id] ?? def?.defaultWidth ?? 140
+}
+
+/** Relative / compact timestamps for dense CRM rows. */
 export function formatRelativeLeadDate(
   value: string | null | undefined,
   now = new Date(),

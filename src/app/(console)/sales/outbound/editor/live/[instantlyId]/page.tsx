@@ -12,7 +12,7 @@ export default function OutboundLiveUnboundEditorPage({
   const { instantlyId } = use(params)
   return (
     <OperatorShell flush width="full">
-      <SequenceEditor instantlyCampaignId={instantlyId} variant="page" />
+      <SequenceEditor instantlyCampaignId={instantlyId} variant="overlay" />
     </OperatorShell>
   )
 }
