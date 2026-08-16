@@ -4,11 +4,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   LEAD_COLUMN_DEFS,
   loadHiddenLeadColumns,
+  loadLeadColumnOrder,
   loadLeadColumnWidths,
   loadPinnedLeadColumns,
   persistHiddenLeadColumns,
+  persistLeadColumnOrder,
   persistLeadColumnWidths,
   persistPinnedLeadColumns,
+  defaultColumnsFor,
   requiredColumnsFor,
   resolveVisibleLeadColumns,
   type LeadColumnId,
@@ -62,8 +65,8 @@ export function LeadColumnPicker({
   function toggle(id: LeadColumnId) {
     if (required.includes(id)) return
     const next = visible.includes(id) ? visible.filter((v) => v !== id) : [...visible, id]
-    const ordered = LEAD_COLUMN_DEFS.map((c) => c.id).filter((c) => next.includes(c) || required.includes(c))
-    onChange(ordered)
+    const withRequired = required.filter((id) => !next.includes(id))
+    onChange([...next, ...withRequired])
   }
 
   const menu = open ? (
@@ -159,12 +162,14 @@ export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[
   const occupied = useMemo(() => occupiedLeadColumns(leads), [leads])
   const [pinned, setPinned] = useState<LeadColumnId[]>([])
   const [hidden, setHidden] = useState<LeadColumnId[]>([])
+  const [order, setOrder] = useState<LeadColumnId[]>(() => defaultColumnsFor(preset))
   const [widths, setWidths] = useState<Partial<Record<LeadColumnId, number>>>({})
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
     setPinned(loadPinnedLeadColumns(preset))
     setHidden(loadHiddenLeadColumns(preset))
+    setOrder(loadLeadColumnOrder(preset))
     setWidths(loadLeadColumnWidths())
     setReady(true)
   }, [preset])
@@ -175,9 +180,10 @@ export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[
         preset,
         occupied,
         pinned,
-        hidden
+        hidden,
+        order
       }),
-    [preset, occupied, pinned, hidden]
+    [preset, occupied, pinned, hidden, order]
   )
 
   function setVisible(next: LeadColumnId[]) {
@@ -188,8 +194,10 @@ export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[
     const nextHidden = Array.from(new Set([...hidden.filter((id) => !added.includes(id)), ...removed]))
     setPinned(nextPinned)
     setHidden(nextHidden)
+    setOrder(next)
     persistPinnedLeadColumns(nextPinned, preset)
     persistHiddenLeadColumns(nextHidden, preset)
+    persistLeadColumnOrder(next, preset)
   }
 
   function resizeColumn(id: LeadColumnId, width: number) {

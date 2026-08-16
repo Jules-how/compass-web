@@ -1149,6 +1149,7 @@ export function CampaignPlanner() {
         {selected ? (
           <CampaignReviewModal
             campaignId={selected}
+            campaign={campaigns.find((row) => row.id === selected) ?? null}
             onClose={() => {
               setReviewOpen(false)
               setSelectedId(null)

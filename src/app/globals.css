@@ -209,6 +209,27 @@ body {
   white-space: nowrap;
 }
 
+.records-opener-input {
+  display: block;
+  width: 100%;
+  min-height: 2.6rem;
+  resize: vertical;
+  border: 1px solid transparent;
+  border-radius: 0.65rem;
+  background: transparent;
+  padding: 0.2rem 0.35rem;
+  font-size: 13px;
+  line-height: 1.4;
+  color: inherit;
+}
+
+.records-opener-input:hover,
+.records-opener-input:focus {
+  border-color: var(--records-line);
+  background: white;
+  outline: none;
+}
+
 .records-resizable {
   position: relative;
 }
@@ -247,6 +268,10 @@ body {
   font-size: 11px;
   font-weight: 550;
   white-space: nowrap;
+}
+
+.records-header-cell[draggable='true'] {
+  cursor: grab;
 }
 
 .records-header-cell:last-child,

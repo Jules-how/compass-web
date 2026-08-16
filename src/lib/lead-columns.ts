@@ -9,6 +9,7 @@ export const CAMPAIGN_LEAD_COLUMN_STORAGE_KEY = 'compass.campaignLeadColumns.v1'
 export const LEAD_COLUMN_WIDTHS_KEY = 'compass.leadColumnWidths.v1'
 export const LEAD_COLUMN_PINNED_KEY = 'compass.leadColumnsPinned.v1'
 export const LEAD_COLUMN_HIDDEN_KEY = 'compass.leadColumnsHidden.v1'
+export const LEAD_COLUMN_ORDER_KEY = 'compass.leadColumnOrder.v1'
 
 export type LeadColumnPreset = 'crm' | 'campaign'
 
@@ -113,6 +114,10 @@ export function hiddenKeyFor(preset: LeadColumnPreset): string {
   return `${LEAD_COLUMN_HIDDEN_KEY}.${preset}`
 }
 
+export function orderKeyFor(preset: LeadColumnPreset): string {
+  return `${LEAD_COLUMN_ORDER_KEY}.${preset}`
+}
+
 function readIdList(key: string): LeadColumnId[] | null {
   if (typeof window === 'undefined') return null
   try {
@@ -142,8 +147,49 @@ export function loadHiddenLeadColumns(preset: LeadColumnPreset = 'crm'): LeadCol
 export function persistVisibleLeadColumns(ids: LeadColumnId[], preset: LeadColumnPreset = 'crm') {
   if (typeof window === 'undefined') return
   const required = requiredColumnsFor(preset)
-  const next = LEAD_COLUMN_DEFS.map((c) => c.id).filter((id) => ids.includes(id) || required.includes(id))
+  const seen = new Set<LeadColumnId>()
+  const next: LeadColumnId[] = []
+  for (const id of ids) {
+    if (!isLeadColumnId(id) || seen.has(id)) continue
+    seen.add(id)
+    next.push(id)
+  }
+  for (const id of required) {
+    if (!seen.has(id)) next.push(id)
+  }
   window.localStorage.setItem(storageKeyFor(preset), JSON.stringify(next))
+}
+
+export function loadLeadColumnOrder(preset: LeadColumnPreset = 'crm'): LeadColumnId[] {
+  return readIdList(orderKeyFor(preset)) ?? defaultColumnsFor(preset)
+}
+
+export function persistLeadColumnOrder(ids: LeadColumnId[], preset: LeadColumnPreset = 'crm') {
+  if (typeof window === 'undefined') return
+  const seen = new Set<LeadColumnId>()
+  const next: LeadColumnId[] = []
+  for (const id of ids) {
+    if (!isLeadColumnId(id) || seen.has(id)) continue
+    seen.add(id)
+    next.push(id)
+  }
+  window.localStorage.setItem(orderKeyFor(preset), JSON.stringify(next))
+}
+
+export function applyColumnOrder(visible: LeadColumnId[], order: LeadColumnId[]): LeadColumnId[] {
+  const remaining = new Set(visible)
+  const next: LeadColumnId[] = []
+  for (const id of order) {
+    if (!remaining.has(id)) continue
+    remaining.delete(id)
+    next.push(id)
+  }
+  for (const id of visible) {
+    if (!remaining.has(id)) continue
+    remaining.delete(id)
+    next.push(id)
+  }
+  return next
 }
 
 export function persistPinnedLeadColumns(ids: LeadColumnId[], preset: LeadColumnPreset = 'crm') {
@@ -161,16 +207,18 @@ export function resolveVisibleLeadColumns(opts: {
   occupied: LeadColumnId[]
   pinned: LeadColumnId[]
   hidden: LeadColumnId[]
+  order?: LeadColumnId[]
 }): LeadColumnId[] {
   const required = requiredColumnsFor(opts.preset)
   const occupied = new Set(opts.occupied)
   const pinned = new Set(opts.pinned)
   const hidden = new Set(opts.hidden)
-  return LEAD_COLUMN_DEFS.map((c) => c.id).filter((id) => {
+  const visible = LEAD_COLUMN_DEFS.map((c) => c.id).filter((id) => {
     if (required.includes(id)) return true
     if (hidden.has(id)) return false
     return pinned.has(id) || occupied.has(id)
   })
+  return applyColumnOrder(visible, opts.order ?? defaultColumnsFor(opts.preset))
 }
 
 export function loadLeadColumnWidths(): Partial<Record<LeadColumnId, number>> {

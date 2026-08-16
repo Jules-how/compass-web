@@ -4,13 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import Link from 'next/link'
-import { getCampaignDetail, updateCampaign } from '@/lib/campaigns-client'
+import { updateCampaign } from '@/lib/campaigns-client'
 import {
   campaignStatusLabel,
   goLiveToDatetimeLocal,
   type CompassCampaign
 } from '@/lib/campaigns'
-import { LEAD_FACT_KINDS, parseLeadFacts, type LeadFact } from '@/lib/lead-facts'
 import type { LeadContact } from '@/lib/types'
 import type { OutboundStep } from '@/lib/outbound-copy'
 import { SequenceEditor } from '@/components/outbound/SequenceEditor'
@@ -18,6 +17,7 @@ import RecordsTable from '@/components/ui/records-table'
 import { useLeadGridColumns } from '@/components/LeadColumnPicker'
 
 const easeOut = [0.22, 1, 0.36, 1] as const
+const LEAD_PAGE_SIZE = 80
 
 function applyOpenerPreview(text: string, opener: string | null | undefined): string {
   const value = opener?.trim() || ''
@@ -32,35 +32,61 @@ function stepBody(step: OutboundStep): string {
     .join('\n\n')
 }
 
-function asFacts(value: unknown): LeadFact[] {
-  const parsed = parseLeadFacts(value)
-  return parsed.ok ? parsed.facts : []
+async function fetchLeadPage(campaignId: string, page: number, pageSize: number) {
+  const res = await fetch(
+    `/api/leads/list?pipeline_campaign_id=${encodeURIComponent(campaignId)}&page=${page}&pageSize=${pageSize}`,
+    { headers: { Accept: 'application/json' }, cache: 'no-store' }
+  )
+  const body = (await res.json().catch(() => ({}))) as {
+    leads?: LeadContact[]
+    total?: number
+    error?: string
+  }
+  if (!res.ok) {
+    throw new Error(body.error || 'Could not load leads')
+  }
+  return {
+    leads: body.leads ?? [],
+    total: typeof body.total === 'number' ? body.total : (body.leads ?? []).length
+  }
 }
 
 export function CampaignReviewModal({
   campaignId,
+  campaign: initialCampaign,
   onClose,
   onUpdated
 }: {
   campaignId: string
+  campaign?: CompassCampaign | null
   onClose: () => void
   onUpdated: () => void
   onDeleted?: () => void
 }) {
   const [mounted, setMounted] = useState(false)
-  const [campaign, setCampaign] = useState<CompassCampaign | null>(null)
+  const [campaign, setCampaign] = useState<CompassCampaign | null>(initialCampaign ?? null)
   const [leads, setLeads] = useState<LeadContact[]>([])
   const [total, setTotal] = useState(0)
+  const [loadingLeads, setLoadingLeads] = useState(true)
   const [query, setQuery] = useState('')
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
-  const [goLiveLocal, setGoLiveLocal] = useState('')
+  const [goLiveLocal, setGoLiveLocal] = useState(() =>
+    initialCampaign ? goLiveToDatetimeLocal(initialCampaign.go_live_at) : ''
+  )
   const [loadError, setLoadError] = useState<string | null>(null)
   const [editorOpen, setEditorOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const openerTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (!initialCampaign) return
+    setCampaign(initialCampaign)
+    setGoLiveLocal(goLiveToDatetimeLocal(initialCampaign.go_live_at))
+  }, [initialCampaign])
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -78,46 +104,36 @@ export function CampaignReviewModal({
     }
   }, [onClose, editorOpen])
 
-  const load = useCallback(async () => {
+  const loadLeads = useCallback(async () => {
     setLoadError(null)
+    setLoadingLeads(true)
     try {
-      const [detail, leadsRes] = await Promise.all([
-        getCampaignDetail(campaignId),
-        fetch(
-          `/api/leads/list?pipeline_campaign_id=${encodeURIComponent(campaignId)}&limit=500`,
-          { headers: { Accept: 'application/json' }, cache: 'no-store' }
-        )
-      ])
-      if (!detail) {
-        setLoadError('Campaign not found')
-        return
-      }
-      setCampaign(detail.campaign)
-      setGoLiveLocal(goLiveToDatetimeLocal(detail.campaign.go_live_at))
-      const body = (await leadsRes.json().catch(() => ({}))) as {
-        leads?: LeadContact[]
-        total?: number
-        error?: string
-      }
-      if (!leadsRes.ok) {
-        setLeads([])
-        setTotal(0)
-        return
-      }
-      const rows = body.leads ?? []
-      setLeads(rows)
-      setTotal(typeof body.total === 'number' ? body.total : rows.length)
+      const first = await fetchLeadPage(campaignId, 1, LEAD_PAGE_SIZE)
+      setLeads(first.leads)
+      setTotal(first.total)
       setSelectedLeadId((prev) =>
-        prev && rows.some((row) => row.id === prev) ? prev : rows[0]?.id ?? null
+        prev && first.leads.some((row) => row.id === prev) ? prev : first.leads[0]?.id ?? null
       )
+      setLoadingLeads(false)
+
+      const pages = Math.ceil(first.total / LEAD_PAGE_SIZE)
+      for (let page = 2; page <= pages; page += 1) {
+        const next = await fetchLeadPage(campaignId, page, LEAD_PAGE_SIZE)
+        setLeads((current) => {
+          const seen = new Set(current.map((row) => row.id))
+          return [...current, ...next.leads.filter((row) => !seen.has(row.id))]
+        })
+        setTotal(next.total)
+      }
     } catch {
-      setLoadError('Could not load campaign')
+      setLoadError('Could not load campaign leads')
+      setLoadingLeads(false)
     }
   }, [campaignId])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    void loadLeads()
+  }, [loadLeads])
 
   const filteredLeads = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -147,6 +163,37 @@ export function CampaignReviewModal({
       })
       .catch(() => undefined)
   }
+
+  function persistOpener(leadId: string, opener: string) {
+    setLeads((rows) => rows.map((row) => (row.id === leadId ? { ...row, opener } : row)))
+    const timers = openerTimers.current
+    const existing = timers.get(leadId)
+    if (existing) clearTimeout(existing)
+    timers.set(
+      leadId,
+      setTimeout(() => {
+        void fetch(`/api/leads/${encodeURIComponent(leadId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ opener })
+        })
+          .then(async (res) => {
+            const body = (await res.json().catch(() => ({}))) as { lead?: LeadContact }
+            if (res.ok && body.lead) {
+              setLeads((rows) => rows.map((row) => (row.id === body.lead?.id ? body.lead : row)))
+            }
+          })
+          .catch(() => undefined)
+      }, 400)
+    )
+  }
+
+  useEffect(() => {
+    const timers = openerTimers.current
+    return () => {
+      for (const timer of timers.values()) clearTimeout(timer)
+    }
+  }, [])
 
   if (!mounted) return null
 
@@ -190,7 +237,10 @@ export function CampaignReviewModal({
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-neutral-500">
                 <span>{campaign ? campaignStatusLabel(campaign.status) : '…'}</span>
                 <span className="text-neutral-300">·</span>
-                <span>{total} lead{total === 1 ? '' : 's'}</span>
+                <span>
+                  {total} lead{total === 1 ? '' : 's'}
+                  {loadingLeads && leads.length > 0 && leads.length < total ? ` · showing ${leads.length}` : ''}
+                </span>
                 {campaign?.instantly_campaign_id ? (
                   <>
                     <span className="text-neutral-300">·</span>
@@ -243,22 +293,24 @@ export function CampaignReviewModal({
           {loadError ? (
             <p className="px-5 py-8 text-sm text-red-700">{loadError}</p>
           ) : (
-            <div className="flex min-h-0 flex-1">
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col p-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search leads"
-                    className="h-9 w-full max-w-md rounded-xl border border-stone-200 bg-white px-3 text-[13px]"
-                  />
-                  {firstStep ? (
-                    <p className="ml-auto truncate text-[12px] text-neutral-500">
-                      {applyOpenerPreview(firstStep.subject || firstStep.label, selectedLead?.opener)}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="min-h-0 flex-1">
+            <div className="flex min-h-0 flex-1 flex-col p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search leads"
+                  className="h-9 w-full max-w-md rounded-xl border border-stone-200 bg-white px-3 text-[13px]"
+                />
+                {firstStep ? (
+                  <p className="ml-auto truncate text-[12px] text-neutral-500">
+                    {applyOpenerPreview(
+                      firstStep.subject || firstStep.label || stepBody(firstStep),
+                      selectedLead?.opener
+                    )}
+                  </p>
+                ) : null}
+              </div>
+              <div className="min-h-0 flex-1">
                 <RecordsTable
                   leads={filteredLeads}
                   columns={grid.visible}
@@ -283,23 +335,13 @@ export function CampaignReviewModal({
                     )
                   }}
                   onColumnsChange={grid.setVisible}
+                  onOpenerChange={persistOpener}
                   onRowActivate={(id) => setSelectedLeadId(id)}
                   activeId={selectedLeadId}
                   fill
-                  emptyMessage="No leads in this campaign yet"
+                  emptyMessage={loadingLeads ? 'Loading leads…' : 'No leads in this campaign yet'}
                 />
-                </div>
               </div>
-              {selectedLead ? (
-                <aside className="flex w-[min(100%,380px)] shrink-0 flex-col overflow-y-auto border-l border-stone-200/80 bg-white p-4">
-                  <LeadEditor
-                    lead={selectedLead}
-                    onPatched={(next) => {
-                      setLeads((rows) => rows.map((row) => (row.id === next.id ? next : row)))
-                    }}
-                  />
-                </aside>
-              ) : null}
             </div>
           )}
         </motion.div>
@@ -310,7 +352,7 @@ export function CampaignReviewModal({
             leadsPane="hidden"
             onClose={() => {
               setEditorOpen(false)
-              void load()
+              void loadLeads()
               onUpdated()
             }}
           />
@@ -318,184 +360,5 @@ export function CampaignReviewModal({
       </motion.div>
     </AnimatePresence>,
     document.body
-  )
-}
-
-function LeadEditor({
-  lead,
-  onPatched
-}: {
-  lead: LeadContact
-  onPatched: (lead: LeadContact) => void
-}) {
-  const [opener, setOpener] = useState(lead.opener ?? '')
-  const [facts, setFacts] = useState<LeadFact[]>(() => asFacts(lead.lead_facts))
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [error, setError] = useState<string | null>(null)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const leadId = lead.id
-
-  useEffect(() => {
-    setOpener(lead.opener ?? '')
-    setFacts(asFacts(lead.lead_facts))
-    setSaveState('idle')
-    setError(null)
-  }, [lead.id, lead.opener, lead.lead_facts])
-
-  const persist = useCallback(
-    (nextOpener: string, nextFacts: LeadFact[]) => {
-      if (timer.current) clearTimeout(timer.current)
-      timer.current = setTimeout(() => {
-        setSaveState('saving')
-        void fetch(`/api/leads/${encodeURIComponent(leadId)}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ opener: nextOpener, lead_facts: nextFacts })
-        })
-          .then(async (res) => {
-            const body = (await res.json().catch(() => ({}))) as {
-              lead?: LeadContact
-              error?: string
-            }
-            if (!res.ok) {
-              setSaveState('error')
-              setError(body.error || 'Save failed')
-              return
-            }
-            if (body.lead) onPatched(body.lead)
-            setSaveState('saved')
-            setError(null)
-          })
-          .catch(() => {
-            setSaveState('error')
-            setError('Save failed')
-          })
-      }, 450)
-    },
-    [leadId, onPatched]
-  )
-
-  useEffect(() => {
-    return () => {
-      if (timer.current) clearTimeout(timer.current)
-    }
-  }, [])
-
-  function updateOpener(value: string) {
-    setOpener(value)
-    persist(value, facts)
-  }
-
-  function updateFacts(next: LeadFact[]) {
-    setFacts(next)
-    persist(opener, next)
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold text-neutral-900">
-              {lead.name || 'Untitled lead'}
-            </p>
-            <p className="truncate text-[12px] text-neutral-500">{lead.email}</p>
-            <p className="mt-1 truncate text-[12px] text-neutral-500">
-              {[lead.company, lead.role, lead.city].filter(Boolean).join(' · ') || 'No company'}
-            </p>
-          </div>
-          <p className="shrink-0 text-[11px] text-neutral-400">
-            {saveState === 'saving'
-              ? 'Saving…'
-              : saveState === 'saved'
-                ? 'Saved'
-                : saveState === 'error'
-                  ? error
-                  : 'Autosave'}
-          </p>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
-        <label className="text-[12px] font-medium text-neutral-600">Opener</label>
-        <textarea
-          value={opener}
-          onChange={(e) => updateOpener(e.target.value)}
-          rows={5}
-          placeholder="Personalised first line for Instantly {{opener}}"
-          className="mt-2 w-full rounded-xl border border-stone-200 px-3 py-2 text-[13px] leading-relaxed text-neutral-800"
-        />
-      </div>
-
-      <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-[12px] font-medium text-neutral-600">Research facts</p>
-          <button
-            type="button"
-            disabled={facts.length >= 8}
-            onClick={() =>
-              updateFacts([...facts, { kind: 'about', claim: 'New fact', url: null }])
-            }
-            className="rounded-xl border border-stone-200 px-2 py-1 text-[11px] font-medium text-neutral-700 disabled:opacity-40"
-          >
-            Add fact
-          </button>
-        </div>
-        {facts.length === 0 ? (
-          <p className="text-[13px] text-neutral-400">No research facts on this lead.</p>
-        ) : (
-          <ul className="space-y-3">
-            {facts.map((fact, index) => (
-              <li key={`${fact.kind}-${index}`} className="rounded-xl border border-stone-100 p-3">
-                <div className="flex gap-2">
-                  <select
-                    value={fact.kind}
-                    onChange={(e) => {
-                      const next = facts.slice()
-                      next[index] = { ...fact, kind: e.target.value as LeadFact['kind'] }
-                      updateFacts(next)
-                    }}
-                    className="rounded-lg border border-stone-200 px-2 py-1 text-[12px]"
-                  >
-                    {LEAD_FACT_KINDS.map((kind) => (
-                      <option key={kind} value={kind}>
-                        {kind}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => updateFacts(facts.filter((_, i) => i !== index))}
-                    className="ml-auto text-[11px] text-neutral-400 hover:text-neutral-700"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <textarea
-                  value={fact.claim}
-                  onChange={(e) => {
-                    const next = facts.slice()
-                    next[index] = { ...fact, claim: e.target.value }
-                    updateFacts(next)
-                  }}
-                  rows={2}
-                  className="mt-2 w-full rounded-lg border border-stone-200 px-2 py-1.5 text-[13px]"
-                />
-                <input
-                  value={fact.url ?? ''}
-                  onChange={(e) => {
-                    const next = facts.slice()
-                    next[index] = { ...fact, url: e.target.value.trim() || null }
-                    updateFacts(next)
-                  }}
-                  placeholder="https://…"
-                  className="mt-2 w-full rounded-lg border border-stone-200 px-2 py-1.5 text-[12px]"
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
   )
 }

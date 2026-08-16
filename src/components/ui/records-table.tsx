@@ -206,6 +206,7 @@ export default function RecordsTable({
   occupied = [],
   phoneSparse = false,
   onColumnsChange,
+  onOpenerChange,
   fill = false
 }: {
   leads: LeadContact[]
@@ -224,6 +225,7 @@ export default function RecordsTable({
   occupied?: LeadColumnId[]
   phoneSparse?: boolean
   onColumnsChange?: (next: LeadColumnId[]) => void
+  onOpenerChange?: (leadId: string, opener: string) => void
   fill?: boolean
 }) {
   const [sort, setSort] = useState<{ key: LeadColumnId | 'index'; dir: 1 | -1 }>({
@@ -284,7 +286,35 @@ export default function RecordsTable({
                 const def = LEAD_COLUMN_DEFS.find((col) => col.id === id)
                 const active = sort.key === id
                 return (
-                  <th key={id} className="records-header-cell records-resizable">
+                  <th
+                    key={id}
+                    className="records-header-cell records-resizable"
+                    draggable={Boolean(onColumnsChange)}
+                    onDragStart={(event) => {
+                      if (!onColumnsChange) return
+                      if ((event.target as HTMLElement).closest('.records-resize')) {
+                        event.preventDefault()
+                        return
+                      }
+                      event.dataTransfer.setData('text/plain', id)
+                      event.dataTransfer.effectAllowed = 'move'
+                    }}
+                    onDragOver={(event) => {
+                      if (!onColumnsChange) return
+                      event.preventDefault()
+                      event.dataTransfer.dropEffect = 'move'
+                    }}
+                    onDrop={(event) => {
+                      if (!onColumnsChange) return
+                      event.preventDefault()
+                      const from = event.dataTransfer.getData('text/plain')
+                      if (!from || from === id || !columns.includes(from as LeadColumnId)) return
+                      const next = columns.filter((column) => column !== from)
+                      const at = next.indexOf(id)
+                      next.splice(at, 0, from as LeadColumnId)
+                      onColumnsChange(next)
+                    }}
+                  >
                     <div className="flex min-w-0 items-center gap-1">
                     <button
                       type="button"
@@ -359,7 +389,15 @@ export default function RecordsTable({
                           key={column}
                           className={`records-cell ${cell.muted ? 'records-muted' : ''}`}
                         >
-                          <CellBody cell={cell} column={column} />
+                          {column === 'opener' && onOpenerChange ? (
+                            <OpenerCell
+                              leadId={lead.id}
+                              value={lead.opener ?? ''}
+                              onChange={onOpenerChange}
+                            />
+                          ) : (
+                            <CellBody cell={cell} column={column} />
+                          )}
                         </td>
                       )
                     })}
@@ -371,6 +409,37 @@ export default function RecordsTable({
         </table>
       </div>
     </div>
+  )
+}
+
+function OpenerCell({
+  leadId,
+  value,
+  onChange
+}: {
+  leadId: string
+  value: string
+  onChange: (leadId: string, opener: string) => void
+}) {
+  const [text, setText] = useState(value)
+  useEffect(() => {
+    setText(value)
+  }, [value, leadId])
+
+  return (
+    <textarea
+      value={text}
+      rows={2}
+      placeholder="Personalised first line"
+      className="records-opener-input"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+      onChange={(event) => {
+        const next = event.target.value
+        setText(next)
+        onChange(leadId, next)
+      }}
+    />
   )
 }
 
