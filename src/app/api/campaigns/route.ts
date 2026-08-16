@@ -27,6 +27,7 @@ import {
   type OutboundSequence
 } from '@/lib/outbound-copy'
 import { applyLeadTallies, tallyLeadsByCampaign } from '@/lib/campaign-wave'
+import { loadCohortLeadRowsForCampaigns } from '@/lib/lead-lists'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,13 +63,28 @@ export async function GET() {
     const ids = campaigns.map((row) => row.id)
     let tallies: Record<string, { cohort: number; positive: number; meetings: number }> = {}
     if (ids.length > 0) {
-      const leadsRes = await supabase
-        .from('lead_contacts')
-        .select('pipeline_campaign_id,outbound_status')
-        .in('pipeline_campaign_id', ids)
-        .limit(8000)
-      if (!leadsRes.error) {
-        tallies = tallyLeadsByCampaign(leadsRes.data ?? [])
+      try {
+        const byCampaign = await loadCohortLeadRowsForCampaigns<{
+          id?: string | null
+          outbound_status?: string | null
+          pipeline_campaign_id?: string | null
+        }>(supabase, ids, 'id,outbound_status,pipeline_campaign_id')
+        const rows = Object.entries(byCampaign).flatMap(([campaignId, leads]) =>
+          leads.map((lead) => ({
+            ...lead,
+            pipeline_campaign_id: campaignId
+          }))
+        )
+        tallies = tallyLeadsByCampaign(rows)
+      } catch {
+        const leadsRes = await supabase
+          .from('lead_contacts')
+          .select('pipeline_campaign_id,outbound_status')
+          .in('pipeline_campaign_id', ids)
+          .limit(8000)
+        if (!leadsRes.error) {
+          tallies = tallyLeadsByCampaign(leadsRes.data ?? [])
+        }
       }
     }
 

@@ -4,6 +4,7 @@ import { requirePortalAccess } from '@/lib/portal-access'
 import { portalAccessResponse, portalJson } from '@/lib/portal-http'
 import { LEAD_LIST_COLUMNS, LEAD_PAGE_SIZE } from '@/lib/list-columns'
 import { applyLeadFilters, parseLeadListFilters, type LeadFilterQuery } from '@/lib/leads-query'
+import { fetchMemberLeadIds, resolveCampaignCohort } from '@/lib/lead-lists'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,6 +33,33 @@ export async function GET(request: NextRequest) {
 
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
+
+    let memberIds: string[] | null = null
+    if (filters.list_id) {
+      memberIds = await fetchMemberLeadIds(supabase, [filters.list_id])
+      if (memberIds.length === 0) {
+        return portalJson({
+          leads: [],
+          total: 0,
+          page,
+          pageSize: exportLimit ?? pageSize,
+          filters
+        })
+      }
+    } else if (filters.cohort_campaign_id) {
+      const cohort = await resolveCampaignCohort(supabase, filters.cohort_campaign_id)
+      memberIds = cohort.leadIds
+      if (memberIds.length === 0) {
+        return portalJson({
+          leads: [],
+          total: 0,
+          page,
+          pageSize: exportLimit ?? pageSize,
+          filters
+        })
+      }
+    }
+
     // Cast away supabase-js deep generics before dynamic filter chaining.
     let query = supabase
       .from('lead_contacts')
@@ -39,6 +67,9 @@ export async function GET(request: NextRequest) {
       .order('mirrored_at', { ascending: false }) as unknown as ListQuery
 
     query = applyLeadFilters(query, filters) as ListQuery
+    if (memberIds) {
+      query = query.in('id', memberIds.slice(0, 5000)) as ListQuery
+    }
 
     if (exportLimit) {
       query = query.limit(exportLimit)

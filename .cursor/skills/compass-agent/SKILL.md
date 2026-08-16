@@ -92,6 +92,12 @@ curl -sS "$COMPASS_BASE_URL/api/agent/leads?limit=40" \
 curl -sS "$COMPASS_BASE_URL/api/agent/leads/cohort?pipeline_campaign_id=campaign-au-brokers-growth-2026-08&enrich_status=none,queued&limit=50" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 
+curl -sS "$COMPASS_BASE_URL/api/agent/lists" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
+
+curl -sS "$COMPASS_BASE_URL/api/agent/leads/cohort?list_id=list-…&enrich_status=none,queued&limit=50" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
+
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \

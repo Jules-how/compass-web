@@ -11,6 +11,7 @@ Local and cloud Cursor agents connect to Compass over `/api/agent/*` (secret aut
 - Compass can create a paused Instantly campaign, push sequence copy, and push cohort leads with merge vars (`POST /api/campaigns/:id/instantly/*` and `/api/agent/instantly/*`). Activate stays in Instantly.
 - Outbound craft UI persists campaigns + library to Supabase (same store as `/api/agent/outbound/*`). Unbound editor drafts stay browser-local until “save as campaign.”
 - Campaign brief of record = Compass campaign copy (`sequence_draft`, `cold_expression`, …), not vault `brief.md`.
+- CRM lists (`compass_lead_lists`) segment `lead_contacts`; campaigns attach lists; agent cohort accepts `list_id` or `pipeline_campaign_id`. Research + openers still go through `PATCH /api/agent/leads/mark`.
 
 ## UI aesthetic is locked
 

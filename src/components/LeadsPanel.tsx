@@ -8,6 +8,7 @@ import { LoadingBlock } from '@/components/LoadingBlock'
 import { LEAD_PAGE_SIZE } from '@/lib/list-columns'
 import { leadFiltersToSearchParams, parseLeadListFilters } from '@/lib/leads-query'
 import { useCachedJson } from '@/lib/use-cached-json'
+import type { CompassLeadList } from '@/lib/lead-lists'
 
 type ListPayload = {
   leads: LeadContact[]
@@ -57,6 +58,9 @@ export function LeadsPanel() {
 
   const facets = useCachedJson<FacetsPayload>('leads:facets', '/api/leads/facets', {
     staleMs: 60_000
+  })
+  const crmLists = useCachedJson<{ lists: CompassLeadList[] }>('leads:crm-lists', '/api/lead-lists', {
+    staleMs: 30_000
   })
 
   const [listError, setListError] = useState<string | null>(null)
@@ -118,11 +122,13 @@ export function LeadsPanel() {
 
   const reloadSummary = summary.reload
   const reloadFacets = facets.reload
+  const reloadLists = crmLists.reload
   const reload = useCallback(() => {
     setReloadToken((n) => n + 1)
     void reloadSummary(true)
     void reloadFacets(true)
-  }, [reloadSummary, reloadFacets])
+    void reloadLists(true)
+  }, [reloadSummary, reloadFacets, reloadLists])
 
   if (listError && !display) {
     return (
@@ -175,6 +181,8 @@ export function LeadsPanel() {
         total={rowsAreCurrent ? total : 0}
         summary={summaryCounts}
         discoveredVerticals={discoveredVerticals}
+        crmLists={crmLists.data?.lists ?? []}
+        onListsChange={() => void reloadLists(true)}
         onNavigate={navigate}
         onReload={reload}
       />

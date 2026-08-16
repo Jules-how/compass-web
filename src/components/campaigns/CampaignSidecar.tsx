@@ -14,6 +14,7 @@ import {
 import {
   deleteCampaign,
   getCampaignDetail,
+  replaceCampaignCrmLists,
   replaceCampaignMilestones,
   updateCampaign,
   type CampaignPatch
@@ -43,6 +44,7 @@ import { SequenceEditor } from '@/components/outbound/SequenceEditor'
 import { CampaignInstantlyPanel } from '@/components/outbound/CampaignInstantlyPanel'
 import { CampaignWaveSection } from '@/components/campaigns/CampaignWaveSection'
 import type { WaveSnapshot } from '@/lib/campaign-wave'
+import type { CompassLeadList } from '@/lib/lead-lists'
 
 const SIDECAR_WIDTH_KEY = 'compass.pipeline.sidecarWidth.v1'
 const SIDECAR_WIDTH_DEFAULT = 440
@@ -85,6 +87,8 @@ export function CampaignSidecar({
   const [resizing, setResizing] = useState(false)
   const [campaign, setCampaign] = useState<CompassCampaign | null>(null)
   const [wave, setWave] = useState<WaveSnapshot | null>(null)
+  const [attachedLists, setAttachedLists] = useState<CompassLeadList[]>([])
+  const [availableLists, setAvailableLists] = useState<CompassLeadList[]>([])
   const [activity, setActivity] = useState<CompassCampaignActivity[]>([])
   const [favorited, setFavorited] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -129,7 +133,18 @@ export function CampaignSidecar({
       setError(null)
       setCampaign(detail.campaign)
       setWave(detail.wave ?? null)
+      setAttachedLists(detail.lists ?? [])
       setActivity(detail.activity)
+      try {
+        const listsRes = await fetch('/api/lead-lists', {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store'
+        })
+        const listsBody = (await listsRes.json().catch(() => ({}))) as { lists?: CompassLeadList[] }
+        setAvailableLists(listsBody.lists ?? [])
+      } catch {
+        setAvailableLists(detail.lists ?? [])
+      }
       setName(detail.campaign.name)
       setStatus(detail.campaign.status)
       setPriority(detail.campaign.priority)
@@ -219,6 +234,15 @@ export function CampaignSidecar({
       .then((updated: CompassCampaign) => {
         void hydrate(campaignId)
         onUpdated(updated)
+      })
+      .catch(() => setError('not_found'))
+  }
+
+  function saveLists(listIds: string[]) {
+    void replaceCampaignCrmLists(campaignId, listIds)
+      .then(() => {
+        void hydrate(campaignId)
+        onUpdated()
       })
       .catch(() => setError('not_found'))
   }
@@ -441,7 +465,13 @@ export function CampaignSidecar({
               open={openSections.wave}
               onToggle={() => setOpenSections((prev) => ({ ...prev, wave: !prev.wave }))}
             >
-              <CampaignWaveSection wave={wave} onSave={saveCampaign} />
+              <CampaignWaveSection
+                wave={wave}
+                attachedLists={attachedLists}
+                availableLists={availableLists}
+                onSave={saveCampaign}
+                onReplaceLists={saveLists}
+              />
             </Section>
 
             <Section

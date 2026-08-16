@@ -13,6 +13,7 @@ import {
 } from '@/lib/outbound-copy'
 import { isHotOutboundStatus, isRecontactBlocked } from '@/lib/recontact-eligibility'
 import { leadPreviewValues, splitPersonName } from '@/lib/sequence-preview'
+import { resolveCampaignCohort, selectLeadsByIds } from '@/lib/lead-lists'
 import type { LeadContact } from '@/lib/types'
 import { InstantlyApiError, getInstantlyTimezone } from '@/lib/instantly'
 import {
@@ -227,16 +228,14 @@ async function loadCohortLeads(
   campaignId: string,
   leadIds?: string[]
 ): Promise<LeadContact[]> {
-  let query = supabase
-    .from('lead_contacts')
-    .select(PUSH_LEAD_COLUMNS)
-    .eq('pipeline_campaign_id', campaignId)
-    .order('email', { ascending: true, nullsFirst: false })
-    .limit(INSTANTLY_PUSH_MAX)
-  if (leadIds?.length) query = query.in('id', leadIds.slice(0, INSTANTLY_PUSH_MAX))
-  const { data, error } = await query
-  if (error) throw new Error(error.message)
-  return (data ?? []) as LeadContact[]
+  const requested = (leadIds ?? []).map((id) => id.trim()).filter(Boolean)
+  const cohort = await resolveCampaignCohort(supabase, campaignId)
+  const ids = requested.length
+    ? requested.filter((id) => cohort.leadIds.includes(id)).slice(0, INSTANTLY_PUSH_MAX)
+    : cohort.leadIds.slice(0, INSTANTLY_PUSH_MAX)
+  const rows = await selectLeadsByIds<LeadContact>(supabase, PUSH_LEAD_COLUMNS, ids)
+  rows.sort((a, b) => String(a.email || '').localeCompare(String(b.email || '')))
+  return rows
 }
 
 export async function ensureInstantlyCampaign(input: {

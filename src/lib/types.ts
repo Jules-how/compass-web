@@ -481,6 +481,10 @@ export interface LeadListFilters {
   cohort_tag?: string
   /** Enrichment readiness: none|queued|enriched|thin|opener_ready|uploaded */
   enrich_status?: string
+  /** CRM list membership. */
+  list_id?: string
+  /** Campaign cohort via attached lists, else pipeline_campaign_id stamp. */
+  cohort_campaign_id?: string
 }
 
 export interface LeadSummaryCounts {

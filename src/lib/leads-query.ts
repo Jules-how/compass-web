@@ -37,7 +37,9 @@ export function parseLeadListFilters(searchParams: URLSearchParams): LeadListFil
     pipeline_campaign_id: emptyToUndef(searchParams.get('pipeline_campaign_id')),
     instantly_campaign_id: emptyToUndef(searchParams.get('instantly_campaign_id')),
     cohort_tag: emptyToUndef(searchParams.get('cohort_tag')),
-    enrich_status: emptyToUndef(searchParams.get('enrich_status'))
+    enrich_status: emptyToUndef(searchParams.get('enrich_status')),
+    list_id: emptyToUndef(searchParams.get('list_id')),
+    cohort_campaign_id: emptyToUndef(searchParams.get('cohort_campaign_id'))
   }
 }
 
@@ -267,6 +269,8 @@ export function leadFiltersToSearchParams(filters: LeadListFilters, page?: numbe
   }
   if (filters.cohort_tag) params.set('cohort_tag', filters.cohort_tag)
   if (filters.enrich_status) params.set('enrich_status', filters.enrich_status)
+  if (filters.list_id) params.set('list_id', filters.list_id)
+  if (filters.cohort_campaign_id) params.set('cohort_campaign_id', filters.cohort_campaign_id)
   if (filters.bucket === 'prospects') params.set('bucket', 'prospects')
   if (page && page > 1) params.set('page', String(page))
   return params

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { LeadContact, LeadListFilters, LeadSummaryCounts } from '@/lib/types'
+import type { CompassLeadList } from '@/lib/lead-lists'
 import { exportToCsv } from '@/lib/csv'
 import { leadFiltersToSearchParams } from '@/lib/leads-query'
 import {
@@ -35,6 +36,8 @@ interface LeadTableProps {
   total: number
   summary: LeadSummaryCounts | null
   discoveredVerticals?: string[]
+  crmLists?: CompassLeadList[]
+  onListsChange?: () => void
   onNavigate: (filters: LeadListFilters, page?: number) => void
   onReload: () => void
   variant?: 'page' | 'embed'
@@ -67,6 +70,8 @@ export default function LeadTable({
   total,
   summary,
   discoveredVerticals = [],
+  crmLists = [],
+  onListsChange,
   onNavigate,
   onReload,
   variant = 'page',
@@ -81,6 +86,8 @@ export default function LeadTable({
   const [bulkNote, setBulkNote] = useState<string | null>(null)
   const [bulkStatus, setBulkStatus] = useState<string>('contacted')
   const [bulkTag, setBulkTag] = useState('')
+  const [bulkListId, setBulkListId] = useState('')
+  const [newListName, setNewListName] = useState('')
   const [savedSegments, setSavedSegments] = useState<SavedLeadSegment[]>([])
   const [segmentName, setSegmentName] = useState('')
 
@@ -255,6 +262,69 @@ export default function LeadTable({
     }
   }
 
+  async function runListMembers(action: 'add' | 'remove') {
+    const ids = Array.from(selected)
+    const listId = bulkListId.trim() || filters.list_id || ''
+    if (ids.length === 0) {
+      setBulkNote('Select at least one lead')
+      return
+    }
+    if (!listId) {
+      setBulkNote('Pick a list first')
+      return
+    }
+    setBulkBusy(true)
+    setBulkNote(null)
+    try {
+      const res = await fetch(`/api/lead-lists/${encodeURIComponent(listId)}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(action === 'add' ? { add: ids } : { remove: ids })
+      })
+      const body = (await res.json().catch(() => ({}))) as { error?: string; added?: number; removed?: number }
+      if (!res.ok) throw new Error(body.error ?? `list update failed (${res.status})`)
+      setBulkNote(
+        action === 'add'
+          ? `Added ${body.added ?? ids.length} to list.`
+          : `Removed ${body.removed ?? ids.length} from list.`
+      )
+      setSelected(new Set())
+      onListsChange?.()
+      onReload()
+    } catch (err) {
+      setBulkNote(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  async function createCrmList() {
+    const name = newListName.trim()
+    if (!name) {
+      setBulkNote('Enter a list name')
+      return
+    }
+    setBulkBusy(true)
+    setBulkNote(null)
+    try {
+      const res = await fetch('/api/lead-lists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ name })
+      })
+      const body = (await res.json().catch(() => ({}))) as { error?: string; list?: { id: string } }
+      if (!res.ok) throw new Error(body.error ?? `create failed (${res.status})`)
+      setNewListName('')
+      setBulkNote(`Created list “${name}”.`)
+      onListsChange?.()
+      if (body.list?.id) onNavigate({ ...filters, list_id: body.list.id }, 1)
+    } catch (err) {
+      setBulkNote(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
   function saveCurrentSegment() {
     const name = segmentName.trim()
     if (!name) {
@@ -415,6 +485,60 @@ export default function LeadTable({
         </div>
       )}
 
+      {/* CRM lists */}
+      {!embed ? (
+        <div className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+              Lists
+            </span>
+            <button
+              type="button"
+              onClick={() => onNavigate({ ...filters, list_id: undefined }, 1)}
+              className={`rounded-xl border px-2.5 py-1 text-xs transition ${
+                !filters.list_id
+                  ? 'border-sf-orange/40 bg-orange-50 text-neutral-900'
+                  : 'border-stone-200/80 text-neutral-600 hover:bg-stone-50'
+              }`}
+            >
+              All leads
+            </button>
+            {crmLists.map((list) => (
+              <button
+                key={list.id}
+                type="button"
+                onClick={() => onNavigate({ ...filters, list_id: list.id }, 1)}
+                className={`rounded-xl border px-2.5 py-1 text-xs transition ${
+                  filters.list_id === list.id
+                    ? 'border-sf-orange/40 bg-orange-50 text-neutral-900'
+                    : 'border-stone-200/80 text-neutral-600 hover:bg-stone-50'
+                }`}
+              >
+                {list.name}
+                <span className="ml-1 text-neutral-400">{list.member_count ?? 0}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              placeholder="New list name"
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              className="min-w-[200px] flex-1 rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+            />
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => void createCrmList()}
+              className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 transition hover:bg-stone-50 disabled:opacity-60"
+            >
+              Create list
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {/* Segments */}
       {!embed ? (
       <div className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
@@ -529,6 +653,15 @@ export default function LeadTable({
         {!embed ? (
         <>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <FilterSelect
+            label="List"
+            value={draftFilters.list_id ?? ''}
+            onChange={(v) => patchFilters({ list_id: v || undefined })}
+            options={crmLists.map((list) => ({
+              value: list.id,
+              label: `${list.name} (${list.member_count ?? 0})`
+            }))}
+          />
           <FilterSelect
             label="Vertical"
             value={draftFilters.vertical ?? ''}
@@ -762,6 +895,34 @@ export default function LeadTable({
             className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
           >
             Add tag
+          </button>
+          <select
+            value={bulkListId || filters.list_id || ''}
+            onChange={(e) => setBulkListId(e.target.value)}
+            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs"
+          >
+            <option value="">List…</option>
+            {crmLists.map((list) => (
+              <option key={list.id} value={list.id}>
+                {list.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={bulkBusy || !(bulkListId || filters.list_id)}
+            onClick={() => void runListMembers('add')}
+            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
+          >
+            Add to list
+          </button>
+          <button
+            type="button"
+            disabled={bulkBusy || !(bulkListId || filters.list_id)}
+            onClick={() => void runListMembers('remove')}
+            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
+          >
+            Remove from list
           </button>
           <button
             type="button"

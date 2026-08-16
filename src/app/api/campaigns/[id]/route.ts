@@ -41,6 +41,7 @@ import {
   summarizeWaveLeads,
   type WaveSnapshot
 } from '@/lib/campaign-wave'
+import { loadCampaignCohortLeadRows, listCrmLists } from '@/lib/lead-lists'
 import {
   fetchInstantlyCampaignAnalytics,
   resolveInstantlyApiKey
@@ -72,12 +73,17 @@ async function loadWaveForCampaign(
   supabase: SupabaseClient,
   campaign: CompassCampaign
 ): Promise<WaveSnapshot> {
-  const leadsRes = await supabase
-    .from('lead_contacts')
-    .select('enrich_status,opener,email,company,outbound_status')
-    .eq('pipeline_campaign_id', campaign.id)
-    .limit(5000)
-  const rows = Array.isArray(leadsRes.data) ? leadsRes.data : []
+  const { rows } = await loadCampaignCohortLeadRows<{
+    enrich_status?: string | null
+    opener?: string | null
+    email?: string | null
+    company?: string | null
+    outbound_status?: string | null
+  }>(
+    supabase,
+    campaign.id,
+    'id,enrich_status,opener,email,company,outbound_status'
+  )
   const leads = summarizeWaveLeads(rows)
   let instantly: { sent: number; bounced: number } | null = null
   const instantlyId = campaign.instantly_campaign_id?.trim()
@@ -128,6 +134,12 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
     const campaign = projectCampaign(campaignRes.data as CompassCampaign)
     const wave = await loadWaveForCampaign(supabase, campaign)
+    const attachedRes = await supabase
+      .from('compass_campaign_lists')
+      .select('list_id')
+      .eq('campaign_id', id)
+    const attached = new Set((attachedRes.data ?? []).map((row) => String(row.list_id)))
+    const lists = (await listCrmLists(supabase)).filter((row) => attached.has(row.id))
 
     return portalJsonCached({
       campaign: {
@@ -138,7 +150,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       },
       milestones: (milestonesRes.data ?? []) as CompassCampaignMilestone[],
       activity: (activityRes.data ?? []) as CompassCampaignActivity[],
-      wave
+      wave,
+      lists
     })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })

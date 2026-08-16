@@ -82,7 +82,7 @@ export function CampaignReviewModal({
       const [detail, leadsRes] = await Promise.all([
         getCampaignDetail(campaignId),
         fetch(
-          `/api/leads/list?pipeline_campaign_id=${encodeURIComponent(campaignId)}&limit=500`,
+          `/api/leads/list?cohort_campaign_id=${encodeURIComponent(campaignId)}&limit=500`,
           { headers: { Accept: 'application/json' }, cache: 'no-store' }
         )
       ])

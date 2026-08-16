@@ -20,7 +20,7 @@ Apply migrations:
 - `0041_lead_enrich_readiness.sql` — `enrich_status` on `lead_contacts`
 - `0043_lead_facts.sql` — `lead_facts` jsonb on `lead_contacts`
 - `0044_lead_facts_shape.sql` — engager-fact array comment (`kind` / `claim` / `url`)
-- `0045_campaign_wave.sql` — `wave_cap`, `opener_reviewed_at`, `copy_confirmed_at` on pipeline campaigns
+- `0047_lead_lists.sql` — `compass_lead_lists`, members, `compass_campaign_lists`
 
 Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/DELETE) for saved sequences with vertical tags, component breakdown, Instantly-style performance, and `last_used_at`.
 
@@ -32,9 +32,11 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 | `POST` | `/api/agent/sync` | `{ sources?: ['ads','instantly','instantly_leads'] }` |
 | `GET` | `/api/agent/leads` | Lean Instantly-hot leads (`status`, `limit`, `q`) |
 | `GET` | `/api/agent/leads/inventory` | Uncontacted counts by vertical × state (orient) |
-| `GET` | `/api/agent/leads/cohort` | Harvest input: contacts on a pipeline campaign (`pipeline_campaign_id` required; `enrich_status`, `limit`, `offset`) |
+| `GET` | `/api/agent/leads/cohort` | Harvest input: CRM `list_id` **or** `pipeline_campaign_id` (attached lists, else stamp). `enrich_status`, `limit`, `offset` |
+| `GET` | `/api/agent/lists` | CRM lists + member counts |
+| `PATCH` | `/api/agent/lists/:id/members` | `{ add?: id[], remove?: id[] }` max 50 |
 | `PATCH` | `/api/agent/leads/mark` | Bulk `ids[]` or `emails[]` for campaign/cohort/`enrich_status` / Instantly land (max 500). Per-row `rows[]` for `lead_facts` / `opener` / Instantly ids (max 50). Facts are `[{kind, claim, url}]`. |
-| `GET` | `/api/agent/campaigns` | Pipeline + Instantly glance. Compact `wave` per campaign (`cap`, `cohort`, `openers`, `blocked`, `readyToActivate`) |
+| `GET` | `/api/agent/campaigns` | Pipeline + Instantly glance. Compact `wave` + `listIds` per campaign |
 | `GET` | `/api/agent/outbound/summary` | Library counts + offer keys (~1–2KB) |
 | `GET` | `/api/agent/outbound/:kind` | Compact list (`limit` default 40 max 100; `full=1` for bodies/sequences) |
 | `POST` | `/api/agent/outbound/:kind` | Create library row |
