@@ -554,7 +554,7 @@ export function LibraryItemDetailSheet({
     <AnimatePresence>
       <motion.div
         key={`${kind}-${id}`}
-        className="fixed inset-0 z-[120] flex justify-end"
+        className="fixed inset-0 z-[120] flex items-end justify-center p-3 sm:items-center sm:justify-end sm:p-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -562,7 +562,7 @@ export function LibraryItemDetailSheet({
       >
         <button
           type="button"
-          className="absolute inset-0 bg-neutral-950/35"
+          className="absolute inset-0 bg-neutral-950/20"
           aria-label="Close component detail"
           onClick={onClose}
         />
@@ -571,22 +571,22 @@ export function LibraryItemDetailSheet({
           aria-modal="true"
           aria-labelledby="library-item-detail-title"
           className={cn(
-            'relative z-10 flex h-full w-full flex-col border-l border-stone-200/80 bg-white shadow-soft',
-            wideSheet ? 'max-w-2xl' : 'max-w-xl'
+            'relative z-10 flex w-full max-h-[min(86dvh,640px)] flex-col overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-lift',
+            wideSheet ? 'max-w-xl' : 'max-w-[26rem]'
           )}
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ duration: 0.26, ease: easeOut }}
+          initial={{ opacity: 0, y: 16, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 10, scale: 0.98 }}
+          transition={{ duration: 0.22, ease: easeOut }}
         >
-          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-stone-100 px-5 py-4">
+          <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-3 pt-4">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
                 {KIND_TITLE[kind]}
               </p>
               <h2
                 id="library-item-detail-title"
-                className="mt-0.5 truncate text-[16px] font-semibold text-neutral-900"
+                className="mt-0.5 text-[16px] font-semibold leading-snug text-neutral-900"
               >
                 {title}
               </h2>
@@ -612,7 +612,7 @@ export function LibraryItemDetailSheet({
             </button>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
             {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
             {!item && !loadError ? (
               <p className="text-[13px] text-neutral-500">Loading…</p>
@@ -634,17 +634,9 @@ export function LibraryItemDetailSheet({
             {saveError ? <p className="mt-3 text-sm text-red-600">{saveError}</p> : null}
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-stone-100 px-5 py-3">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-stone-100 bg-[var(--compass-wash)] px-5 py-3">
             {editing ? (
               <>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => void save()}
-                  className="rounded-xl bg-[#e85d2a] px-3.5 py-2 text-[12px] font-semibold text-white shadow-soft disabled:opacity-60"
-                >
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
                 <button
                   type="button"
                   disabled={saving}
@@ -652,6 +644,14 @@ export function LibraryItemDetailSheet({
                   className="rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-[12px] font-medium text-neutral-600 shadow-soft hover:bg-stone-50"
                 >
                   Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void save()}
+                  className="rounded-xl bg-[#e85d2a] px-3.5 py-2 text-[12px] font-semibold text-white shadow-soft disabled:opacity-60"
+                >
+                  {saving ? 'Saving…' : 'Save'}
                 </button>
               </>
             ) : (
