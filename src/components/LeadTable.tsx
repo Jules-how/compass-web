@@ -778,7 +778,7 @@ export default function LeadTable({
       )}
 
       {/* Table */}
-      <div className={embed ? 'min-h-0 flex-1 overflow-hidden' : ''}>
+      <div className={embed ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : ''}>
       <RecordsTable
         leads={leads}
         columns={grid.visible}

@@ -293,7 +293,7 @@ export function CampaignReviewModal({
           {loadError ? (
             <p className="px-5 py-8 text-sm text-red-700">{loadError}</p>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col p-4">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
               <div className="mb-3 flex items-center gap-2">
                 <input
                   value={query}
@@ -310,7 +310,7 @@ export function CampaignReviewModal({
                   </p>
                 ) : null}
               </div>
-              <div className="min-h-0 flex-1">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <RecordsTable
                   leads={filteredLeads}
                   columns={grid.visible}

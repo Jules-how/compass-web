@@ -147,7 +147,7 @@ export function CampaignLeadsPane({
   const hasMore = totalShown < display.total
 
   return (
-    <div className={className}>
+    <div className={`flex min-h-0 flex-1 flex-col overflow-hidden ${className ?? ''}`}>
       <div className="flex h-full min-h-0 flex-col px-3 py-2">
         <div className="mb-1 flex shrink-0 items-baseline justify-between gap-2">
           <p className="text-[12px] text-neutral-500">
@@ -156,7 +156,7 @@ export function CampaignLeadsPane({
             {listBusy ? ' · updating' : ''}
           </p>
         </div>
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <LeadTable
             variant="embed"
             columnPreset="campaign"
