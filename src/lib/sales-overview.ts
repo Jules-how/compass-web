@@ -224,6 +224,7 @@ export function buildSalesOverviewModel(input: {
     Math.round(Number(input.prior30d.total_opportunity_value) || 0)
   )
   const positive = interested + meetings
+  const delivered = Math.max(0, sent30 - bounced)
 
   const campaigns = selectHomeCampaigns(input.campaigns, SALES_CAMPAIGN_LIMIT).map(
     mapSalesCampaign
@@ -260,7 +261,7 @@ export function buildSalesOverviewModel(input: {
       expectedRevenueDelta: pctDelta(opportunityValue, priorOpportunityValue),
       meetingsBooked: meetings,
       bounceRate: ratePct(bounced, contacted || sent30),
-      positiveReplyRate: ratePct(positive, sent30),
+      positiveReplyRate: ratePct(positive, delivered),
       contactsRemaining
     },
     campaigns,

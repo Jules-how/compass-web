@@ -7,6 +7,7 @@ import {
   type CompassCampaignMilestone
 } from '@/lib/campaigns'
 import type { OutboundSequence } from '@/lib/outbound-copy'
+import type { WaveSnapshot } from '@/lib/campaign-wave'
 import { peekQueryCache, writeQueryCache } from '@/lib/query-cache'
 
 export const CAMPAIGNS_QUERY_KEY = '/api/campaigns'
@@ -43,12 +44,16 @@ export type CampaignPatch = Partial<{
   experiment_decision: string | null
   expression_key: string | null
   cta_type: string | null
+  wave_cap: number | null
+  opener_reviewed_at: string | null
+  copy_confirmed_at: string | null
 }>
 
 export type CampaignDetail = {
   campaign: CompassCampaign
   milestones: CompassCampaignMilestone[]
   activity: CompassCampaignActivity[]
+  wave?: WaveSnapshot | null
 }
 
 function project(row: CompassCampaign): CompassCampaign {
@@ -123,7 +128,8 @@ export async function getCampaignDetail(id: string): Promise<CampaignDetail | nu
   return {
     campaign: project(body.campaign),
     milestones: body.milestones ?? [],
-    activity: body.activity ?? []
+    activity: body.activity ?? [],
+    wave: body.wave ?? null
   }
 }
 
@@ -177,6 +183,70 @@ export async function updateCampaign(id: string, patch: CampaignPatch): Promise<
   const campaign = project(await readJson<CompassCampaign>(res))
   upsertInCache(campaign)
   return campaign
+}
+
+export type InstantlyPushLeadsClientResult = {
+  ok: boolean
+  dryRun: boolean
+  instantlyCampaignId: string
+  eligible: Array<{ id: string; email: string }>
+  skipped: Array<{ id: string; email: string | null; reason: string }>
+  missingVars: Array<{ id: string; email: string; keys: string[] }>
+  uploaded: number
+  created: Array<{ id: string; email: string; instantlyLeadId: string }>
+  instantlySkipped: number
+  invalidEmails: number
+  marked: number
+}
+
+export async function ensureInstantlyCampaign(
+  id: string,
+  options?: { pushSequence?: boolean }
+): Promise<{ created: boolean; instantlyCampaignId: string; campaign: CompassCampaign }> {
+  const res = await fetch(`/api/campaigns/${encodeURIComponent(id)}/instantly/ensure`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ pushSequence: options?.pushSequence === true })
+  })
+  const body = await readJson<{
+    created: boolean
+    instantlyCampaignId: string
+    campaign: CompassCampaign
+  }>(res)
+  upsertInCache(project(body.campaign))
+  return {
+    created: body.created,
+    instantlyCampaignId: body.instantlyCampaignId,
+    campaign: project(body.campaign)
+  }
+}
+
+export async function pushInstantlySequence(
+  id: string
+): Promise<{ instantlyCampaignId: string; steps: number }> {
+  const res = await fetch(`/api/campaigns/${encodeURIComponent(id)}/instantly/push-sequence`, {
+    method: 'POST',
+    headers: { Accept: 'application/json' }
+  })
+  return readJson(res)
+}
+
+export async function pushInstantlyLeads(
+  id: string,
+  options?: {
+    leadIds?: string[]
+    dryRun?: boolean
+    skipIfInWorkspace?: boolean
+    verifyOnImport?: boolean
+    requireOpener?: boolean
+  }
+): Promise<InstantlyPushLeadsClientResult> {
+  const res = await fetch(`/api/campaigns/${encodeURIComponent(id)}/instantly/push-leads`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(options ?? {})
+  })
+  return readJson(res)
 }
 
 export type SpawnChallengerInput = {

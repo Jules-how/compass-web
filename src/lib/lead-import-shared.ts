@@ -93,3 +93,27 @@ export function mapCsvRow(raw: Record<string, string | undefined>): MappedLeadRo
     vertical: lookup(raw, COLUMN_ALIASES.vertical)
   }
 }
+
+export const LEAD_SOURCE_SERVICES = [
+  'prospeo',
+  'origami',
+  'vibe',
+  'manual',
+  'other',
+  'apify'
+] as const
+
+export type LeadSourceServiceTag = (typeof LEAD_SOURCE_SERVICES)[number]
+
+export function isLeadSourceService(value: string): boolean {
+  return (LEAD_SOURCE_SERVICES as readonly string[]).includes(value)
+}
+
+export type IngestSkipRow = { row: number; reason: string }
+
+export function ingestSkipReason(mapped: MappedLeadRow): string | null {
+  if (!normalizeEmail(mapped.email)) return 'missing email'
+  if (!mapped.name.trim()) return 'missing name'
+  if (!mapped.company.trim()) return 'missing company'
+  return null
+}

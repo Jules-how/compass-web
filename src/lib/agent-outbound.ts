@@ -6,6 +6,7 @@ import {
   normalizeTags,
   type OutboundCopyStatus
 } from '@/lib/outbound-copy'
+import { copyPatchClearsConfirm, parseWaveCap } from '@/lib/campaign-wave'
 
 export const OUTBOUND_KINDS = [
   'offers',
@@ -434,6 +435,10 @@ export function campaignCopyCompact(
     experiment_decision: row.experiment_decision ?? null,
     expression_key: row.expression_key ?? null,
     cta_type: row.cta_type ?? null,
+    instantly_campaign_id: row.instantly_campaign_id ?? null,
+    wave_cap: row.wave_cap ?? null,
+    opener_reviewed_at: row.opener_reviewed_at ?? null,
+    copy_confirmed_at: row.copy_confirmed_at ?? null,
     updated_at: row.updated_at ?? null
   }
   if (full) base.sequence_draft = row.sequence_draft ?? null
@@ -442,7 +447,8 @@ export function campaignCopyCompact(
 
 export function buildCampaignCopyPatch(
   body: Record<string, unknown>,
-  stamp: string
+  stamp: string,
+  existing?: { copy_confirmed_at?: string | null }
 ): BuildResult {
   const patch: Record<string, unknown> = { updated_at: stamp }
   if (body.offer_key !== undefined) {
@@ -519,6 +525,30 @@ export function buildCampaignCopyPatch(
   if (body.cta_type !== undefined) {
     patch.cta_type =
       typeof body.cta_type === 'string' ? body.cta_type.trim() || null : null
+  }
+  if (body.wave_cap !== undefined) {
+    const cap = parseWaveCap(body.wave_cap)
+    if (cap !== undefined) patch.wave_cap = cap
+  }
+  if (body.opener_reviewed_at !== undefined) {
+    if (body.opener_reviewed_at === null || body.opener_reviewed_at === '') {
+      patch.opener_reviewed_at = null
+    } else if (body.opener_reviewed_at === true) {
+      patch.opener_reviewed_at = stamp
+    } else if (typeof body.opener_reviewed_at === 'string') {
+      patch.opener_reviewed_at = body.opener_reviewed_at
+    }
+  }
+  if (body.copy_confirmed_at !== undefined) {
+    if (body.copy_confirmed_at === null || body.copy_confirmed_at === '') {
+      patch.copy_confirmed_at = null
+    } else if (body.copy_confirmed_at === true) {
+      patch.copy_confirmed_at = stamp
+    } else if (typeof body.copy_confirmed_at === 'string') {
+      patch.copy_confirmed_at = body.copy_confirmed_at
+    }
+  } else if (copyPatchClearsConfirm(body) && existing?.copy_confirmed_at) {
+    patch.copy_confirmed_at = null
   }
   return { ok: true, row: patch }
 }

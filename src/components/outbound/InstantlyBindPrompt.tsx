@@ -58,7 +58,7 @@ export function InstantlyBindPrompt({
       <p className="mt-1 text-[13px] text-amber-900/80">
         {instantlyName} · Instantly id{' '}
         <code className="text-[12px]">{instantlyCampaignId}</code>. Leads still list from Compass.
-        Sequence editing stays off until you bind a workshop campaign.
+        Sequence editing stays off until you bind a workshop campaign. Activate stays in Instantly.
       </p>
       <div className="mt-3 flex flex-wrap items-end gap-2">
         <label className="min-w-[12rem] flex-1">

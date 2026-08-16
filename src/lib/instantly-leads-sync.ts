@@ -491,6 +491,9 @@ const OUTBOUND_RANK: Record<string, number> = {
   meeting_booked: 5,
   booked: 5,
   converted: 6,
+  bounced: 7,
+  unsubscribed: 7,
+  dead: 7,
   suppressed: 7
 }
 

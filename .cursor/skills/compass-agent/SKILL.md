@@ -1,6 +1,6 @@
 ---
 name: compass-agent
-description: Connect Cursor local/cloud agents to Switchflow Compass (Compass-Web) for lean daily sync, campaign briefs, Instantly leads, ads data, and outbound offers/copy libraries. Use when syncing Instantly/Google/Meta, reading/writing outbound offers expressions templates CTAs, or operator metrics without opening the UI.
+description: Connect Cursor local/cloud agents to Switchflow Compass (Compass-Web) for lean daily sync, campaign briefs, Instantly lead push/sync, ads data, and outbound offers/copy libraries. Use when syncing Instantly/Google/Meta, pushing cohort leads into Instantly (no CSV), reading/writing outbound offers expressions templates CTAs, or operator metrics without opening the UI.
 ---
 
 # Compass agent bridge
@@ -56,9 +56,9 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/expressions/<id>" \
   -d '{"notes":"..."}'
 ```
 
-Campaign copy (brief of record): `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`).
+Campaign copy (brief of record): `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Wave fields: `wave_cap`, `opener_reviewed_at`, `copy_confirmed_at`. Changing sequence copy clears `copy_confirmed_at`. Compact `wave` is on `GET /api/agent/campaigns` — not on the brief.
 
-**Operating model:** Compass = workshop · vault agent = runner · Instantly = mail truck. Do not invent vault `brief.md` for new campaigns.
+**Operating model:** Compass = workshop · vault agent = runner · Instantly = mail truck. Activate stays in Instantly. Do not invent vault `brief.md` for new campaigns.
 
 Kinds: `offers` | `expressions` | `structures` | `ctas` | `subjects` | `openers` | `templates`.
 
@@ -79,6 +79,8 @@ Sources:
 | `instantly` | Refresh Instantly cold-email glance snapshot |
 | `instantly_leads` | Pull replied / interested / meeting / not interested / OOO / wrong-person Instantly leads into `lead_contacts` (Inbox Instantly) |
 
+Inbox Instantly classify writes `outbound_status` then marks triage done: positive → `interested`, not now → `not_interested`, wrong person → `wrong_person`, bad offer → `not_interested` + tag `bad_offer`, OOO → `out_of_office`. Meeting booked stays Instantly interest `meeting_booked` (webhook). Compose in Instantly Unibox / Gmail.
+
 **Real-time Instantly:** `POST /api/webhooks/instantly` (Bearer `INSTANTLY_WEBHOOK_SECRET` or `COMPASS_AGENT_SECRET`). Nightly pull remains the backstop.
 
 4. **Drill Instantly / pipeline only when needed**:
@@ -93,10 +95,53 @@ curl -sS "$COMPASS_BASE_URL/api/agent/leads/cohort?pipeline_campaign_id=campaign
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
+  -d '{"rows":[{"email":"ada@example.com","outbound_status":"in_instantly","instantly_lead_id":"…","instantly_campaign_id":"…"}]}'
+
+curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
   -d '{"rows":[{"id":"…","enrich_status":"enriched","lead_facts":[{"kind":"policy","claim":"No application fee on home loans","url":"https://example.com.au/about"}]}]}'
+
 
 curl -sS "$COMPASS_BASE_URL/api/agent/campaigns" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
+```
+
+**Push to Instantly** (no CSV). Never activate from Compass.
+
+```bash
+# Create a paused Instantly campaign if unbound (optional pushSequence)
+curl -sS -X POST "$COMPASS_BASE_URL/api/agent/instantly/ensure" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"campaignId":"campaign-au-brokers-growth-2026-08","pushSequence":true}'
+
+# Dry-run then push cohort leads (names, opener → personalization, custom vars)
+curl -sS -X POST "$COMPASS_BASE_URL/api/agent/instantly/push-leads" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"campaignId":"campaign-au-brokers-growth-2026-08","dryRun":true}'
+
+curl -sS -X POST "$COMPASS_BASE_URL/api/agent/instantly/push-leads" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"campaignId":"campaign-au-brokers-growth-2026-08"}'
+
+curl -sS -X POST "$COMPASS_BASE_URL/api/agent/instantly/push-sequence" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"campaignId":"campaign-au-brokers-growth-2026-08"}'
+```
+
+Push marks Compass `in_instantly` / Instantly ids the same turn. Skip workspace dupes; Instantly verifies on import. Activate stays in Instantly after Jules sign-off.
+
+Wave on that list is compact (`cap`, `cohort`, `blocked`, `readyToActivate`). PATCH wave via campaign copy:
+
+```bash
+curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/campaigns/<id>/copy" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"wave_cap":40,"opener_reviewed_at":true}'
 ```
 
 ## Daily cron
@@ -117,3 +162,5 @@ Vercel hits `GET /api/cron/daily-sync` once per day (`vercel.json`). Auth with `
 - Re-run ads/Instantly sync just to read/write copy libraries.
 - Pull unbounded lead lists — always pass `limit` and status filters.
 - Start a local MCP or Electron for this path.
+- Download CSVs to load Instantly. Use `/api/agent/instantly/push-leads`.
+- Activate Instantly campaigns from the agent.

@@ -73,7 +73,8 @@ export async function GET() {
       'lead_out_of_office',
       'lead_wrong_person',
       'lead_unsubscribed',
-      'email_bounced'
+      'email_bounced',
+      'email_sent'
     ]
   })
 }

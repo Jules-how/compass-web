@@ -7,6 +7,7 @@ import {
   requireSameOrigin
 } from '@/lib/portal-http'
 import { PIPELINE_STATUSES } from '@/lib/leads-meta'
+import { isClassifyOutboundStatus } from '@/lib/inbox-classify'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,7 +101,10 @@ export async function POST(request: NextRequest) {
 
     if (action === 'set_status') {
       const status = typeof body.status === 'string' ? body.status.trim() : ''
-      if (!(PIPELINE_STATUSES as readonly string[]).includes(status)) {
+      if (
+        !(PIPELINE_STATUSES as readonly string[]).includes(status) &&
+        !isClassifyOutboundStatus(status)
+      ) {
         return portalJson({ error: 'invalid_status' }, { status: 400 })
       }
       const patch: Record<string, unknown> = {

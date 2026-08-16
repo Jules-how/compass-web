@@ -23,7 +23,7 @@ export type TaskActionPlan = {
   secondary: TaskActionTarget[]
 }
 
-const INSTANTLY_UNIBOX = 'https://app.instantly.ai/app/unibox'
+export const INSTANTLY_UNIBOX = 'https://app.instantly.ai/app/unibox'
 const PROSPEO_APP = 'https://app.prospeo.io/'
 const META_ADS = 'https://adsmanager.facebook.com/adsmanager/'
 

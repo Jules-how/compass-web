@@ -618,7 +618,7 @@ export function HomeDashboard() {
                   hot={Boolean(inboxCount && inboxCount > 0)}
                 />
                 <PulseStat
-                  href="/sales"
+                  href="/inbox?tab=instantly"
                   label="Replies"
                   value={
                     coldEmail.loading && !coldEmail.data

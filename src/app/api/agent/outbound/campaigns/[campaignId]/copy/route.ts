@@ -16,7 +16,7 @@ interface Ctx {
 }
 
 const COPY_SELECT =
-  'id,name,offer_key,structure_id,opener_mode,vertical_tags,location_tags,cold_expression,copy_status,sequence_draft,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,updated_at'
+  'id,name,offer_key,structure_id,opener_mode,vertical_tags,location_tags,cold_expression,copy_status,sequence_draft,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,instantly_campaign_id,wave_cap,opener_reviewed_at,copy_confirmed_at,updated_at'
 
 export async function GET(request: Request, context: Ctx) {
   const authError = requireAgentAuth(request)
@@ -62,21 +62,23 @@ export async function PATCH(request: Request, context: Ctx) {
     return portalJson({ error: 'invalid_json' }, { status: 400 })
   }
 
-  const stamp = new Date().toISOString()
-  const built = buildCampaignCopyPatch(body, stamp)
-  if (!built.ok) return portalJson({ error: built.error }, { status: 400 })
-
   try {
     const admin = getPortalAdminClient()
     const existing = await admin
       .from('compass_pipeline_campaigns')
-      .select('id')
+      .select('id,copy_confirmed_at')
       .eq('id', campaignId)
       .maybeSingle()
     if (existing.error) {
       return portalJson({ error: 'fetch_failed', detail: existing.error.message }, { status: 500 })
     }
     if (!existing.data) return portalJson({ error: 'not_found' }, { status: 404 })
+
+    const stamp = new Date().toISOString()
+    const built = buildCampaignCopyPatch(body, stamp, {
+      copy_confirmed_at: existing.data.copy_confirmed_at ?? null
+    })
+    if (!built.ok) return portalJson({ error: built.error }, { status: 400 })
 
     const { data, error } = await admin
       .from('compass_pipeline_campaigns')

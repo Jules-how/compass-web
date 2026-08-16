@@ -79,6 +79,8 @@ export function mapWebhookEventToOutboundStatus(eventType: string | null | undef
     case 'lead_unsubscribed':
     case 'email_bounced':
       return 'suppressed'
+    case 'email_sent':
+      return 'in_instantly'
     default:
       return null
   }

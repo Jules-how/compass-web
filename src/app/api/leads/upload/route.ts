@@ -1,5 +1,5 @@
 import { type NextRequest } from 'next/server'
-import { normalizeEmail, normalizePhone, normalizeLinkedin, mapCsvRow } from '@/lib/lead-import-shared'
+import { normalizeEmail, normalizePhone, normalizeLinkedin, mapCsvRow, ingestSkipReason, isLeadSourceService } from '@/lib/lead-import-shared'
 import { normalizeVerticalSlug } from '@/lib/leads-meta'
 import type { LeadSourceService, LeadVertical } from '@/lib/types'
 import { requirePortalAccess } from '@/lib/portal-access'
@@ -55,8 +55,12 @@ export async function POST(request: NextRequest) {
     typeof body.vertical === 'string' && body.vertical.trim()
       ? normalizeVerticalSlug(body.vertical)
       : null
-  const sourceService =
-    typeof body.sourceService === 'string' && body.sourceService.trim() ? body.sourceService.trim() : 'manual'
+  const sourceServiceRaw =
+    typeof body.sourceService === 'string' ? body.sourceService.trim() : ''
+  if (!isLeadSourceService(sourceServiceRaw)) {
+    return portalJson({ error: 'source_service_required' }, { status: 400 })
+  }
+  const sourceService = sourceServiceRaw
   const filename = typeof body.filename === 'string' ? body.filename : null
   // When true (default), the upload form vertical wins over CSV Industry/Category.
   // Mixed-industry consolidations can set preferFormVertical: false to keep per-row Industry.
@@ -127,6 +131,7 @@ export async function POST(request: NextRequest) {
     //    (mirrors lead-import.ts `byEmail` + `touch`).
     let imported = 0
     let dupes = 0
+    const skipped: Array<{ row: number; reason: string }> = []
     const contactsToInsert: Record<string, unknown>[] = []
     const sourceRowsToInsert: Record<string, unknown>[] = []
 
@@ -164,11 +169,13 @@ export async function POST(request: NextRequest) {
         mirrored_at: now
       }
 
-      // Skip rows with no usable identifier — record as skipped, not imported.
-      if (!email && !phone && !mapped.name) {
+      // Skip rows missing email, name, or company — record as skipped, not imported.
+      const skipReason = ingestSkipReason(mapped)
+      if (skipReason) {
         baseSourceRow.decision = 'skipped'
-        baseSourceRow.reason = 'no usable name, email, or phone'
+        baseSourceRow.reason = skipReason
         sourceRowsToInsert.push(baseSourceRow)
+        skipped.push({ row: i + 1, reason: skipReason })
         continue
       }
 
@@ -240,7 +247,7 @@ export async function POST(request: NextRequest) {
     }
 
     return portalJson(
-      { batchId, rowCount: rows.length, imported, dupes, errors },
+      { batchId, rowCount: rows.length, imported, dupes, skipped, errors },
       { status: 201 }
     )
   } catch (err) {

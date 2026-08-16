@@ -79,6 +79,13 @@ export interface CompassCampaign {
   experiment_decision?: string | null
   expression_key?: string | null
   cta_type?: CtaType | string | null
+  wave_cap?: number | null
+  opener_reviewed_at?: string | null
+  copy_confirmed_at?: string | null
+  /** Computed on list/detail — not a DB column. */
+  wave_cohort_count?: number
+  wave_positive_count?: number
+  wave_meeting_count?: number
   created_at: string
   updated_at: string
 }
@@ -105,7 +112,7 @@ export interface CompassCampaignActivity {
 }
 
 export const CAMPAIGN_LIST_COLUMNS =
-  'id,name,status,priority,health,start_date,end_date,color,summary,labels,owner_label,instantly_campaign_id,offer_key,structure_id,opener_mode,vertical_tags,location_tags,cold_expression,sequence_draft,copy_status,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,created_at,updated_at'
+  'id,name,status,priority,health,start_date,end_date,color,summary,labels,owner_label,instantly_campaign_id,offer_key,structure_id,opener_mode,vertical_tags,location_tags,cold_expression,sequence_draft,copy_status,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,wave_cap,opener_reviewed_at,copy_confirmed_at,created_at,updated_at'
 
 export function emptyCampaignCopyFields() {
   return {
@@ -126,7 +133,10 @@ export function emptyCampaignCopyFields() {
     sample_size_target: null as number | null,
     experiment_decision: null as string | null,
     expression_key: null as string | null,
-    cta_type: null as string | null
+    cta_type: null as string | null,
+    wave_cap: null as number | null,
+    opener_reviewed_at: null as string | null,
+    copy_confirmed_at: null as string | null
   }
 }
 
@@ -154,7 +164,19 @@ export function projectCampaignCopy(row: CompassCampaign): CompassCampaign {
         : null,
     experiment_decision: row.experiment_decision ?? null,
     expression_key: row.expression_key ?? null,
-    cta_type: normalizeCtaType(row.cta_type)
+    cta_type: normalizeCtaType(row.cta_type),
+    wave_cap:
+      typeof row.wave_cap === 'number' && Number.isFinite(row.wave_cap)
+        ? Math.max(0, Math.floor(row.wave_cap))
+        : null,
+    opener_reviewed_at: row.opener_reviewed_at ?? null,
+    copy_confirmed_at: row.copy_confirmed_at ?? null,
+    wave_cohort_count:
+      typeof row.wave_cohort_count === 'number' ? row.wave_cohort_count : undefined,
+    wave_positive_count:
+      typeof row.wave_positive_count === 'number' ? row.wave_positive_count : undefined,
+    wave_meeting_count:
+      typeof row.wave_meeting_count === 'number' ? row.wave_meeting_count : undefined
   }
 }
 

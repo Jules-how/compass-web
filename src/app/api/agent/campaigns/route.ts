@@ -1,4 +1,10 @@
 import { requireAgentAuth } from '@/lib/agent-auth'
+import {
+  buildWaveSnapshot,
+  compactWaveForAgent,
+  emptyWaveLeadSummary,
+  summarizeLeadsByCampaign
+} from '@/lib/campaign-wave'
 import { getPortalAdminClient } from '@/lib/portal-admin'
 import { portalJson } from '@/lib/portal-http'
 import { loadSyncSnapshot } from '@/lib/sync-snapshots'
@@ -19,7 +25,9 @@ export async function GET(request: Request) {
     const [pipeline, instantlySnap] = await Promise.all([
       admin
         .from('compass_pipeline_campaigns')
-        .select('id,name,status,health,priority,summary,instantly_campaign_id,start_date,end_date,updated_at')
+        .select(
+          'id,name,status,health,priority,summary,instantly_campaign_id,offer_key,copy_status,wave_cap,opener_reviewed_at,copy_confirmed_at,start_date,end_date,updated_at'
+        )
         .order('priority', { ascending: false })
         .limit(40),
       loadSyncSnapshot<ColdEmailGlance>(admin, 'instantly_cold_email')
@@ -29,20 +37,50 @@ export async function GET(request: Request) {
       return portalJson({ error: 'fetch_failed', detail: pipeline.error.message }, { status: 500 })
     }
 
+    const rows = pipeline.data ?? []
+    const ids = rows.map((row) => row.id)
+    let leadSummaries: ReturnType<typeof summarizeLeadsByCampaign> = {}
+    if (ids.length > 0) {
+      const leadsRes = await admin
+        .from('lead_contacts')
+        .select('pipeline_campaign_id,outbound_status,opener,enrich_status,email,company')
+        .in('pipeline_campaign_id', ids)
+        .limit(8000)
+      if (!leadsRes.error) {
+        leadSummaries = summarizeLeadsByCampaign(leadsRes.data ?? [])
+      }
+    }
+
     return portalJson({
       ok: true,
-      pipeline: (pipeline.data ?? []).map((row) => ({
-        id: row.id,
-        name: row.name,
-        status: row.status,
-        health: row.health,
-        priority: row.priority,
-        summary: row.summary,
-        instantlyCampaignId: row.instantly_campaign_id,
-        startDate: row.start_date,
-        endDate: row.end_date,
-        updatedAt: row.updated_at
-      })),
+      pipeline: rows.map((row) => {
+        const snapshot = buildWaveSnapshot({
+          campaign: {
+            offer_key: row.offer_key,
+            copy_status: row.copy_status,
+            instantly_campaign_id: row.instantly_campaign_id,
+            wave_cap: row.wave_cap,
+            opener_reviewed_at: row.opener_reviewed_at,
+            copy_confirmed_at: row.copy_confirmed_at
+          },
+          leads: leadSummaries[row.id] ?? emptyWaveLeadSummary(),
+          instantly: null,
+          includeCopyMatch: true
+        })
+        return {
+          id: row.id,
+          name: row.name,
+          status: row.status,
+          health: row.health,
+          priority: row.priority,
+          summary: row.summary,
+          instantlyCampaignId: row.instantly_campaign_id,
+          startDate: row.start_date,
+          endDate: row.end_date,
+          updatedAt: row.updated_at,
+          wave: compactWaveForAgent(snapshot)
+        }
+      }),
       instantly: {
         syncedAt: instantlySnap?.syncedAt ?? null,
         campaigns: instantlySnap?.payload?.campaigns ?? [],

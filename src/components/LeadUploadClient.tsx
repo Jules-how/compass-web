@@ -6,7 +6,7 @@ import Link from 'next/link'
 import type { LeadSourceService, LeadVertical, LeadUploadResult } from '@/lib/types'
 import { LEAD_VERTICALS, humanizeVertical, normalizeVerticalSlug } from '@/lib/leads-meta'
 
-const SOURCE_SERVICES: LeadSourceService[] = ['prospeo', 'origami', 'vibe', 'manual', 'other']
+const SOURCE_SERVICES: LeadSourceService[] = ['prospeo', 'origami', 'vibe', 'apify', 'manual', 'other']
 
 type Status = 'idle' | 'parsing' | 'uploading' | 'done' | 'error'
 
@@ -121,6 +121,7 @@ export default function LeadUploadClient() {
         rowCount: body.rowCount ?? parsed.rows.length,
         imported: body.imported ?? 0,
         dupes: body.dupes ?? 0,
+        skipped: Array.isArray(body.skipped) ? body.skipped : [],
         errors: body.errors ?? []
       })
       setStatus('done')
@@ -310,7 +311,7 @@ export default function LeadUploadClient() {
       {result && (
         <section className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm">
           <h2 className="mb-2 font-semibold text-emerald-900">Import complete</h2>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-5">
             <div>
               <dt className="text-xs uppercase text-emerald-700">Rows</dt>
               <dd className="font-medium text-emerald-900">{result.rowCount}</dd>
@@ -324,6 +325,10 @@ export default function LeadUploadClient() {
               <dd className="font-medium text-emerald-900">{result.dupes}</dd>
             </div>
             <div>
+              <dt className="text-xs uppercase text-emerald-700">Skipped</dt>
+              <dd className="font-medium text-emerald-900">{result.skipped.length}</dd>
+            </div>
+            <div>
               <dt className="text-xs uppercase text-emerald-700">Errors</dt>
               <dd className="font-medium text-emerald-900">{result.errors.length}</dd>
             </div>
@@ -332,6 +337,21 @@ export default function LeadUploadClient() {
             Batch id: <code>{result.batchId}</code>
             {` · Vertical: ${resolveVertical()}`}
           </p>
+          {result.skipped.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs font-medium text-emerald-800">
+                Show {result.skipped.length} skipped row{result.skipped.length === 1 ? '' : 's'}
+              </summary>
+              <ul className="mt-1 list-inside list-disc text-xs text-emerald-800">
+                {result.skipped.slice(0, 20).map((row) => (
+                  <li key={`${row.row}-${row.reason}`}>
+                    Row {row.row}: {row.reason}
+                  </li>
+                ))}
+                {result.skipped.length > 20 && <li>…and {result.skipped.length - 20} more</li>}
+              </ul>
+            </details>
+          )}
           {result.errors.length > 0 && (
             <details className="mt-2">
               <summary className="cursor-pointer text-xs font-medium text-emerald-800">

@@ -4,6 +4,7 @@ import type { CompassCampaign } from '@/lib/campaigns'
 import type { OutboundBoardCampaign, OutboundBoard } from '@/lib/instantly'
 import { normalizeCopyStatus, type OutboundSequence } from '@/lib/outbound-copy'
 import { splitCampaignMeta } from '@/lib/sales-overview'
+import { computeOutcomeMetrics } from '@/lib/outbound-outcome-metrics'
 
 export type OutboundFactorKey =
   | 'offer'
@@ -29,9 +30,14 @@ export type OutboundFactorRow = {
   subtitle?: string
   campaigns: number
   sent: number
+  bounced: number
+  delivered: number
   replies: number
   replyRate: number
+  positive: number
+  positiveRate: number
   meetings: number
+  meetingsPer100: number
   opportunities: number
   campaignIds: string[]
 }
@@ -204,6 +210,19 @@ export function enrichOutboundCampaignFactors(
 
   const structure = (bind?.structure_id || '').trim() || '—'
   const expression = expressionLabel(bind?.expression_key, bind?.cold_expression)
+  const outcome = computeOutcomeMetrics(
+    { sent: campaign.sendCount, bounced: campaign.bouncedCount },
+    {
+      positive:
+        typeof bind?.wave_positive_count === 'number'
+          ? bind.wave_positive_count
+          : campaign.positiveReplies ?? 0,
+      meetings:
+        typeof bind?.wave_meeting_count === 'number'
+          ? bind.wave_meeting_count
+          : campaign.meetings ?? 0
+    }
+  )
 
   return {
     ...campaign,
@@ -219,7 +238,12 @@ export function enrichOutboundCampaignFactors(
     audience,
     expression,
     structure,
-    pipelineCampaignId: bind?.id
+    pipelineCampaignId: bind?.id,
+    positiveReplies: outcome.positive,
+    meetings: outcome.meetings,
+    delivered: outcome.delivered,
+    positiveRate: outcome.positiveRate,
+    meetingsPer100: outcome.meetingsPer100
   }
 }
 
@@ -256,27 +280,43 @@ export function rollupOutboundByFactor(
       subtitle: key === 'cta' && c.ctaType ? c.ctaType : undefined,
       campaigns: 0,
       sent: 0,
+      bounced: 0,
+      delivered: 0,
       replies: 0,
       replyRate: 0,
+      positive: 0,
+      positiveRate: 0,
       meetings: 0,
+      meetingsPer100: 0,
       opportunities: 0,
       campaignIds: []
     }
     cur.campaigns += 1
     cur.sent += c.sendCount
+    cur.bounced += c.bouncedCount || 0
     cur.replies += c.replyCount
-    cur.meetings += c.meetings || c.opportunities || 0
+    cur.positive += c.positiveReplies || 0
+    cur.meetings += c.meetings || 0
     cur.opportunities += c.opportunities
     cur.campaignIds.push(c.id)
     map.set(factorKey, cur)
   }
 
   return Array.from(map.values())
-    .map((row) => ({
-      ...row,
-      replyRate: row.sent ? Math.round((row.replies / row.sent) * 1000) / 10 : 0
-    }))
-    .sort((a, b) => b.replyRate - a.replyRate || b.sent - a.sent)
+    .map((row) => {
+      const outcome = computeOutcomeMetrics(
+        { sent: row.sent, bounced: row.bounced },
+        { positive: row.positive, meetings: row.meetings }
+      )
+      return {
+        ...row,
+        delivered: outcome.delivered,
+        replyRate: row.sent ? Math.round((row.replies / row.sent) * 1000) / 10 : 0,
+        positiveRate: outcome.positiveRate,
+        meetingsPer100: outcome.meetingsPer100
+      }
+    })
+    .sort((a, b) => b.positiveRate - a.positiveRate || b.meetingsPer100 - a.meetingsPer100 || b.sent - a.sent)
 }
 
 /** Count how many locked factors differ between two enriched campaigns. */

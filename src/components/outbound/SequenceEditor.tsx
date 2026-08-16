@@ -7,8 +7,10 @@ import { ArrowLeft, ChevronDown, Eye, EyeOff, Monitor, Plus, Rocket, Smartphone,
 import { useRouter } from 'next/navigation'
 import {
   createCampaign,
+  ensureInstantlyCampaign,
   getCampaignDetail,
   listCampaigns,
+  pushInstantlyLeads,
   updateCampaign
 } from '@/lib/campaigns-client'
 import type { CompassCampaign } from '@/lib/campaigns'
@@ -35,6 +37,7 @@ import {
   type LibraryDragPayload
 } from '@/components/outbound/EditorComponentsAccordion'
 import { CampaignCopyMeta } from '@/components/outbound/CampaignCopyMeta'
+import { CampaignInstantlyPanel } from '@/components/outbound/CampaignInstantlyPanel'
 import { CampaignExperimentPanel } from '@/components/outbound/CampaignExperimentPanel'
 import { CopyArchivePanel } from '@/components/outbound/CopyArchivePanel'
 import { SequenceAnalyticsPanel } from '@/components/outbound/SequenceAnalyticsPanel'
@@ -155,6 +158,7 @@ export function SequenceEditor({
   const [activeStepId, setActiveStepId] = useState<string | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [launchBusy, setLaunchBusy] = useState(false)
   const [tab, setTab] = useState<EditorTab>(initialTab)
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [previewOn, setPreviewOn] = useState(false)
@@ -397,6 +401,32 @@ export function SequenceEditor({
     },
     [campaignId, instantlyUnbound, unbound]
   )
+
+  const launchToInstantly = useCallback(async () => {
+    if (!campaignId || unbound || instantlyUnbound || !campaign) return
+    const ok = window.confirm(
+      'Create or bind a paused Instantly campaign, push this copy, then push eligible leads. You still activate in Instantly after sign-off.'
+    )
+    if (!ok) return
+    setLaunchBusy(true)
+    setError(null)
+    try {
+      if (sequence) await persist(campaign, sequence)
+      const ensured = await ensureInstantlyCampaign(campaignId, { pushSequence: true })
+      setCampaign(ensured.campaign)
+      const pushed = await pushInstantlyLeads(campaignId, { dryRun: false })
+      setError(null)
+      window.alert(
+        pushed.created.length
+          ? `Pushed ${pushed.created.length} lead${pushed.created.length === 1 ? '' : 's'}. Activate stays in Instantly.`
+          : 'Copy is on Instantly. No new leads pushed (preview skips or already there). Activate stays in Instantly.'
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Instantly push failed')
+    } finally {
+      setLaunchBusy(false)
+    }
+  }, [campaign, campaignId, instantlyUnbound, persist, sequence, unbound])
 
   const scheduleAutosave = useCallback(
     (nextCampaign: CompassCampaign, nextSequence: OutboundSequence) => {
@@ -712,10 +742,12 @@ export function SequenceEditor({
           ) : null}
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#e85d2a] px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-soft"
+            disabled={unbound || instantlyUnbound || !campaignId || launchBusy}
+            onClick={() => void launchToInstantly()}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#e85d2a] px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-soft disabled:opacity-50"
           >
             <Rocket className="size-3.5" />
-            Launch
+            {launchBusy ? 'Pushing…' : 'Push to Instantly'}
           </button>
         </div>
       </header>
@@ -780,7 +812,7 @@ export function SequenceEditor({
             >
               {campaign.copy_status === 'live' ? (
                 <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
-                  Compass copy. Instantly may differ. Launch does not push.
+                  Compass copy. Instantly may differ until you push copy.
                 </p>
               ) : null}
               {sequence.steps.map((step, index) => (
@@ -935,7 +967,7 @@ export function SequenceEditor({
           ) : null}
 
           {tab === 'settings' ? (
-            <div className="mx-auto max-w-lg px-4 py-8">
+            <div className="mx-auto max-w-lg space-y-4 px-4 py-8">
               <CampaignCopyMeta
                 campaign={campaign}
                 sequence={sequence}
@@ -946,6 +978,17 @@ export function SequenceEditor({
                   if (sequence) scheduleAutosave(nextCampaign, sequence)
                 }}
               />
+              {!unbound && !instantlyUnbound ? (
+                <div className="rounded-2xl border border-stone-200/70 bg-white p-4 shadow-soft">
+                  <h2 className="text-[13px] font-semibold text-neutral-900">Instantly</h2>
+                  <div className="mt-3">
+                    <CampaignInstantlyPanel
+                      campaign={campaign}
+                      onCampaignChange={setCampaign}
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -1138,6 +1181,7 @@ export function SequenceEditor({
               className="min-h-0 flex-1 overflow-hidden"
               pipelineCampaignId={instantlyUnbound ? null : campaignId || campaign.id}
               instantlyCampaignId={campaign.instantly_campaign_id || instantlyCampaignId}
+              waveCap={campaign.wave_cap}
               onLeadSelect={setPreviewLead}
               onLeadsLoaded={(leads) => {
                 loadedLeadsRef.current = leads

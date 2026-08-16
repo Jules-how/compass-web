@@ -67,6 +67,7 @@ function buildSalesOverviewModel({ rolling30d, prior30d, campaigns, daily }) {
   const contacted = Math.max(0, Math.round(Number(rolling30d.contacted_count) || sent30))
   const interested = Math.max(0, Math.round(Number(rolling30d.total_interested) || 0))
   const meetings = Math.max(0, Math.round(Number(rolling30d.total_meeting_booked) || 0))
+  const delivered = Math.max(0, sent30 - bounced)
   const opportunityValue = Math.max(
     0,
     Math.round(Number(rolling30d.total_opportunity_value) || 0)
@@ -103,7 +104,7 @@ function buildSalesOverviewModel({ rolling30d, prior30d, campaigns, daily }) {
       expectedRevenueDelta: pctDelta(opportunityValue, priorOpportunityValue),
       meetingsBooked: meetings,
       bounceRate: ratePct(bounced, contacted || sent30),
-      positiveReplyRate: ratePct(interested + meetings, sent30),
+      positiveReplyRate: ratePct(interested + meetings, delivered),
       contactsRemaining: 0
     },
     campaigns: mapped,
@@ -188,7 +189,7 @@ test('buildSalesOverviewModel maps Instantly overview into KPIs', () => {
   assert.equal(model.kpis.replies, 10)
   assert.equal(model.kpis.bounceRate, ratePct(33, 1591))
   assert.equal(model.kpis.expectedRevenue, 5000)
-  assert.equal(model.kpis.positiveReplyRate, ratePct(5, 1675))
+  assert.equal(model.kpis.positiveReplyRate, ratePct(5, 1642))
   assert.equal(model.campaigns[0].list, 'Switchflow')
   assert.equal(model.campaigns[0].offer, 'Brokers · Pay Per Booked')
   assert.equal(model.series.length, 2)

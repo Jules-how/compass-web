@@ -13,6 +13,7 @@ import {
   type OutboundBoard
 } from '@/lib/instantly'
 import { enrichOutboundBoardFactors } from '@/lib/outbound-factor-performance'
+import { applyLeadTallies, tallyLeadsByCampaign } from '@/lib/campaign-wave'
 import { demoOutboundBoard } from '@/lib/outbound-live-demo'
 
 export const dynamic = 'force-dynamic'
@@ -30,13 +31,27 @@ async function loadPipelineBinds(
       .eq('archived', false)
   ])
 
-  const pipeline = (campaigns || []).map((row) =>
-    projectCampaignCopy({ ...emptyCampaignCopyFields(), ...(row as CompassCampaign) })
+  const pipeline = applyLeadTallies(
+    (campaigns || []).map((row) =>
+      projectCampaignCopy({ ...emptyCampaignCopyFields(), ...(row as CompassCampaign) })
+    ),
+    tallyLeadsByCampaign([])
   )
   const offerNames = Object.fromEntries(
     (offers || []).map((o: { offer_key: string; name: string }) => [o.offer_key, o.name])
   )
-  return { pipeline, offerNames }
+  if (pipeline.length === 0) return { pipeline, offerNames }
+
+  const ids = pipeline.map((row) => row.id)
+  const { data: leads } = await supabase
+    .from('lead_contacts')
+    .select('pipeline_campaign_id,outbound_status')
+    .in('pipeline_campaign_id', ids)
+    .limit(8000)
+  return {
+    pipeline: applyLeadTallies(pipeline, tallyLeadsByCampaign(leads ?? [])),
+    offerNames
+  }
 }
 
 function withFactors(

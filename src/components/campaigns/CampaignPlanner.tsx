@@ -36,6 +36,7 @@ import {
   type CampaignStatus,
   type CompassCampaign
 } from '@/lib/campaigns'
+import { wavePlannerBit } from '@/lib/campaign-wave'
 import {
   ZOOM_OPTIONS,
   buildHeaderModel,
@@ -1670,6 +1671,8 @@ function copyMetaBits(campaign: CompassCampaign): string[] {
         : 'EXP'
     bits.unshift(`${factor} · ${campaign.experiment_status}`)
   }
+  const waveBit = wavePlannerBit(campaign, campaign.wave_cohort_count ?? 0)
+  if (waveBit) bits.push(waveBit)
   return bits
 }
 

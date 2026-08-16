@@ -15,12 +15,40 @@ const ENRICH_STATUSES = new Set([
   'uploaded'
 ])
 
+const OUTBOUND_STATUSES = new Set([
+  'uncontacted',
+  'in_instantly',
+  'bounced',
+  'out_of_office',
+  'replied',
+  'interested',
+  'not_interested',
+  'unsubscribed',
+  'wrong_person',
+  'suppressed',
+  'dead',
+  'meeting_booked',
+  'converted'
+])
+
 const MARK_BODY_MAX_BYTES = 256 * 1024
 const MAX_IDS = 500
 const MAX_ROWS = 50
 const MAX_OPENER = 400
 
 type MarkPatch = Record<string, unknown>
+
+type SharedMarkBody = {
+  pipeline_campaign_id?: string | null
+  cohort_tag?: string | null
+  enrich_status?: string | null
+  outbound_status?: string | null
+  instantly_lead_id?: string | null
+  instantly_campaign_id?: string | null
+  instantly_campaign_name?: string | null
+  instantly_campaign?: string | null
+  instantly_uploaded_at?: string | null
+}
 
 function parseEnrichStatus(value: unknown): { ok: true; status: string } | { ok: false } {
   const status = typeof value === 'string' ? value.trim() : 'none'
@@ -35,14 +63,7 @@ function parseOptionalText(value: unknown): string | null {
   return trimmed || null
 }
 
-function applySharedFields(
-  patch: MarkPatch,
-  body: {
-    pipeline_campaign_id?: string | null
-    cohort_tag?: string | null
-    enrich_status?: string | null
-  }
-): Response | null {
+function applySharedFields(patch: MarkPatch, body: SharedMarkBody): Response | null {
   if (body.pipeline_campaign_id !== undefined) {
     patch.pipeline_campaign_id =
       typeof body.pipeline_campaign_id === 'string'
@@ -58,14 +79,54 @@ function applySharedFields(
     if (!parsed.ok) return portalJson({ error: 'invalid_enrich_status' }, { status: 400 })
     patch.enrich_status = parsed.status
   }
+  if (body.outbound_status !== undefined) {
+    const status = parseOptionalText(body.outbound_status)
+    if (!status || !OUTBOUND_STATUSES.has(status)) {
+      return portalJson({ error: 'invalid_outbound_status' }, { status: 400 })
+    }
+    patch.outbound_status = status
+  }
+  const leadId = parseOptionalText(body.instantly_lead_id)
+  if (body.instantly_lead_id !== undefined) patch.instantly_lead_id = leadId
+  const campaignId = parseOptionalText(body.instantly_campaign_id)
+  if (body.instantly_campaign_id !== undefined) {
+    patch.instantly_campaign_id = campaignId
+    if (campaignId) patch.instantly_campaign_ids = [campaignId]
+  }
+  const campaignName =
+    parseOptionalText(body.instantly_campaign_name) || parseOptionalText(body.instantly_campaign)
+  if (body.instantly_campaign_name !== undefined || body.instantly_campaign !== undefined) {
+    patch.instantly_campaign_name = campaignName
+    patch.instantly_campaign = campaignName
+  }
+  if (body.instantly_uploaded_at !== undefined) {
+    patch.instantly_uploaded_at = parseOptionalText(body.instantly_uploaded_at)
+  } else if (campaignId || leadId || patch.outbound_status === 'in_instantly') {
+    const stamp = new Date().toISOString()
+    if (patch.instantly_uploaded_at === undefined) patch.instantly_uploaded_at = stamp
+    patch.instantly_synced_at = stamp
+  }
   return null
 }
 
+function sharedFromUnknown(row: Record<string, unknown>): SharedMarkBody {
+  return {
+    pipeline_campaign_id: row.pipeline_campaign_id as string | null | undefined,
+    cohort_tag: row.cohort_tag as string | null | undefined,
+    enrich_status: row.enrich_status as string | null | undefined,
+    outbound_status: row.outbound_status as string | null | undefined,
+    instantly_lead_id: row.instantly_lead_id as string | null | undefined,
+    instantly_campaign_id: row.instantly_campaign_id as string | null | undefined,
+    instantly_campaign_name: row.instantly_campaign_name as string | null | undefined,
+    instantly_campaign: row.instantly_campaign as string | null | undefined,
+    instantly_uploaded_at: row.instantly_uploaded_at as string | null | undefined
+  }
+}
+
 /**
- * Mark leads: bulk campaign/cohort/status, or per-row facts/opener.
- * Bulk: { ids: string[], pipeline_campaign_id?, cohort_tag?, enrich_status? }
- * Rows: { rows: [{ id, lead_facts?, opener?, enrich_status?, pipeline_campaign_id?, cohort_tag? }] }
- * Caps: 500 ids, 50 rows. Do not send lead_facts on the bulk ids path.
+ * Mark leads: bulk campaign/cohort/status, or per-row facts/opener/Instantly land.
+ * Bulk: { ids: string[] } or { emails: string[] } plus shared fields (max 500).
+ * Rows: { rows: [{ id? or email, lead_facts?, opener?, Instantly fields }] } (max 50).
  */
 export async function PATCH(request: Request) {
   const authError = requireAgentAuth(request)
@@ -73,10 +134,17 @@ export async function PATCH(request: Request) {
 
   let body: {
     ids?: unknown
+    emails?: unknown
     rows?: unknown
     pipeline_campaign_id?: string | null
     cohort_tag?: string | null
     enrich_status?: string | null
+    outbound_status?: string | null
+    instantly_lead_id?: string | null
+    instantly_campaign_id?: string | null
+    instantly_campaign_name?: string | null
+    instantly_campaign?: string | null
+    instantly_uploaded_at?: string | null
     lead_facts?: unknown
     opener?: unknown
   }
@@ -92,8 +160,10 @@ export async function PATCH(request: Request) {
 
   const hasRows = Array.isArray(body.rows)
   const hasIds = Array.isArray(body.ids)
-  if (hasRows && hasIds) {
-    return portalJson({ error: 'use_rows_or_ids' }, { status: 400 })
+  const hasEmails = Array.isArray(body.emails)
+  const modes = [hasRows, hasIds, hasEmails].filter(Boolean).length
+  if (modes > 1) {
+    return portalJson({ error: 'use_rows_or_ids_or_emails' }, { status: 400 })
   }
 
   try {
@@ -103,58 +173,57 @@ export async function PATCH(request: Request) {
       const rawRows = (body.rows as unknown[]).slice(0, MAX_ROWS)
       if (rawRows.length === 0) return portalJson({ error: 'rows_required' }, { status: 400 })
 
-      const parsed: { id: string; patch: MarkPatch }[] = []
+      const parsed: { key: string; by: 'id' | 'email'; patch: MarkPatch }[] = []
       for (const raw of rawRows) {
         if (!raw || typeof raw !== 'object') {
           return portalJson({ error: 'row_invalid' }, { status: 400 })
         }
         const row = raw as Record<string, unknown>
         const id = typeof row.id === 'string' ? row.id.trim() : ''
-        if (!id) return portalJson({ error: 'row_id_required' }, { status: 400 })
+        const email = parseOptionalText(row.email)?.toLowerCase() || ''
+        if (!id && !email) return portalJson({ error: 'row_id_or_email_required' }, { status: 400 })
         const patch: MarkPatch = { updated_at: new Date().toISOString() }
-        const sharedError = applySharedFields(patch, {
-          pipeline_campaign_id: row.pipeline_campaign_id as string | null | undefined,
-          cohort_tag: row.cohort_tag as string | null | undefined,
-          enrich_status: row.enrich_status as string | null | undefined
-        })
+        const sharedError = applySharedFields(patch, sharedFromUnknown(row))
         if (sharedError) return sharedError
         if (row.lead_facts !== undefined) {
           const facts = parseLeadFacts(row.lead_facts)
           if (!facts.ok) {
-            return portalJson({ error: facts.error, id }, { status: 400 })
+            return portalJson({ error: facts.error, id: id || email }, { status: 400 })
           }
           patch.lead_facts = facts.facts
         }
         if (row.opener !== undefined) {
           if (row.opener != null && typeof row.opener !== 'string') {
-            return portalJson({ error: 'opener_invalid', id }, { status: 400 })
+            return portalJson({ error: 'opener_invalid', id: id || email }, { status: 400 })
           }
           const opener = parseOptionalText(row.opener)
           if (opener && opener.length > MAX_OPENER) {
-            return portalJson({ error: 'opener_too_long', id }, { status: 400 })
+            return portalJson({ error: 'opener_too_long', id: id || email }, { status: 400 })
           }
           patch.opener = opener
         }
         if (Object.keys(patch).length <= 1) {
-          return portalJson({ error: 'row_no_fields', id }, { status: 400 })
+          return portalJson({ error: 'row_no_fields', id: id || email }, { status: 400 })
         }
-        parsed.push({ id, patch })
+        parsed.push({
+          key: id || email,
+          by: id ? 'id' : 'email',
+          patch
+        })
       }
 
       let updated = 0
       const failed: { id: string; error: string }[] = []
       for (const row of parsed) {
-        const { data, error } = await admin
-          .from('lead_contacts')
-          .update(row.patch)
-          .eq('id', row.id)
-          .select('id')
+        let query = admin.from('lead_contacts').update(row.patch).select('id')
+        query = row.by === 'id' ? query.eq('id', row.key) : query.eq('email', row.key)
+        const { data, error } = await query
         if (error) {
-          failed.push({ id: row.id, error: error.message })
+          failed.push({ id: row.key, error: error.message })
           continue
         }
         if (!data?.length) {
-          failed.push({ id: row.id, error: 'not_found' })
+          failed.push({ id: row.key, error: 'not_found' })
           continue
         }
         updated += 1
@@ -172,7 +241,15 @@ export async function PATCH(request: Request) {
           .filter(Boolean)
           .slice(0, MAX_IDS)
       : []
-    if (ids.length === 0) return portalJson({ error: 'ids_required' }, { status: 400 })
+    const emails = hasEmails
+      ? (body.emails as unknown[])
+          .map((email) => (typeof email === 'string' ? email.trim().toLowerCase() : ''))
+          .filter(Boolean)
+          .slice(0, MAX_IDS)
+      : []
+    if (ids.length === 0 && emails.length === 0) {
+      return portalJson({ error: 'ids_or_emails_required' }, { status: 400 })
+    }
 
     const patch: MarkPatch = { updated_at: new Date().toISOString() }
     const sharedError = applySharedFields(patch, body)
@@ -181,11 +258,9 @@ export async function PATCH(request: Request) {
       return portalJson({ error: 'no_fields' }, { status: 400 })
     }
 
-    const { data, error } = await admin
-      .from('lead_contacts')
-      .update(patch)
-      .in('id', ids)
-      .select('id')
+    let query = admin.from('lead_contacts').update(patch).select('id')
+    query = ids.length ? query.in('id', ids) : query.in('email', emails)
+    const { data, error } = await query
     if (error) {
       return portalJson({ error: 'update_failed', detail: error.message }, { status: 400 })
     }

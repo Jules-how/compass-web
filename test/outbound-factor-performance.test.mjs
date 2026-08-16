@@ -86,6 +86,8 @@ test('factor performance module + hub wiring exist', () => {
   assert.match(section, /Group by/)
   assert.match(section, /CTA type/)
   assert.match(section, /Expression/)
+  assert.match(section, /Positive %/)
+  assert.match(section, /Mtgs\/100/)
 
   const hub = read('src/components/outbound/OutboundHub.tsx')
   assert.match(hub, /OutboundFactorSection/)

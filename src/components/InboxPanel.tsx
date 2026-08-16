@@ -27,6 +27,7 @@ import {
   type InboxTab
 } from '@/lib/inbox-ui'
 import type { InboxSuggestion, InboxTriageState, LeadLifecycleStatus } from '@/lib/inbox-triage'
+import { INSTANTLY_CLASSIFY_ACTIONS, classifyAction } from '@/lib/inbox-classify'
 import { peekQueryCache, writeQueryCache } from '@/lib/query-cache'
 import { tasksHref } from '@/lib/task-organisation'
 import { useCachedJson } from '@/lib/use-cached-json'
@@ -168,7 +169,8 @@ function ContextPane({
   onTriage,
   onLifecycle,
   onCreateTask,
-  onRefreshSuggest
+  onRefreshSuggest,
+  onClassify
 }: {
   item: InboxItem | null
   busy: boolean
@@ -177,6 +179,7 @@ function ContextPane({
   onLifecycle: (lifecycle: LeadLifecycleStatus) => void
   onCreateTask: () => void
   onRefreshSuggest: () => void
+  onClassify: (id: string) => void
 }) {
   if (!item) {
     return (
@@ -204,11 +207,39 @@ function ContextPane({
             {item.title}
           </h2>
         </div>
-        {item.href ? (
-          <Link href={item.href} className="compass-btn-secondary shrink-0 !px-2.5 !py-1.5 text-[12px]">
-            Open
-          </Link>
-        ) : null}
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          {item.href ? (
+            item.hrefExternal ? (
+              <a
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="compass-btn-secondary shrink-0 !px-2.5 !py-1.5 text-[12px]"
+              >
+                Unibox
+              </a>
+            ) : (
+              <Link href={item.href} className="compass-btn-secondary shrink-0 !px-2.5 !py-1.5 text-[12px]">
+                Open
+              </Link>
+            )
+          ) : null}
+          {item.gmailHref ? (
+            <a
+              href={item.gmailHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="compass-btn-secondary shrink-0 !px-2.5 !py-1.5 text-[12px]"
+            >
+              Gmail
+            </a>
+          ) : null}
+          {item.crmHref ? (
+            <Link href={item.crmHref} className="compass-btn-secondary shrink-0 !px-2.5 !py-1.5 text-[12px]">
+              CRM
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
@@ -237,6 +268,20 @@ function ContextPane({
             </ActionButton>
           )}
         </div>
+
+        {item.tab === 'instantly' ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {INSTANTLY_CLASSIFY_ACTIONS.map((action) => (
+              <ActionButton
+                key={action.id}
+                disabled={busy}
+                onClick={() => onClassify(action.id)}
+              >
+                {action.label}
+              </ActionButton>
+            ))}
+          </div>
+        ) : null}
 
         {item.tab === 'leads' ? (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -548,6 +593,45 @@ export function InboxPanel() {
     })
   }
 
+  function onClassify(actionId: string) {
+    if (!selected || selected.tab !== 'instantly') return
+    const action = classifyAction(actionId)
+    if (!action) return
+    startTransition(() => {
+      void (async () => {
+        setActionError(null)
+        const statusRes = await fetch('/api/leads/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            action: 'set_status',
+            ids: [selected.sourceId],
+            status: action.outboundStatus
+          })
+        })
+        if (!statusRes.ok) {
+          setActionError('Could not classify this reply')
+          return
+        }
+        if (action.tag) {
+          const tagRes = await fetch('/api/leads/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({
+              action: 'add_tag',
+              ids: [selected.sourceId],
+              tag: action.tag
+            })
+          })
+          if (!tagRes.ok) {
+            setActionError('Classified, but could not tag bad offer')
+          }
+        }
+        await patchTriage(selected, 'done')
+      })()
+    })
+  }
+
   function onLifecycle(lifecycle: LeadLifecycleStatus) {
     if (!selected) return
     const triage: InboxTriageState =
@@ -771,6 +855,7 @@ export function InboxPanel() {
               onTriage={onTriage}
               onLifecycle={onLifecycle}
               onCreateTask={onCreateTask}
+              onClassify={onClassify}
               onRefreshSuggest={() => {
                 if (selected) void loadSuggestion(selected)
               }}

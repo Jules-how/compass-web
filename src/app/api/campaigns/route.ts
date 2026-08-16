@@ -23,6 +23,7 @@ import {
   normalizeCopyStatus,
   type OutboundSequence
 } from '@/lib/outbound-copy'
+import { applyLeadTallies, tallyLeadsByCampaign } from '@/lib/campaign-wave'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,8 +55,22 @@ export async function GET() {
       return portalJson({ error: 'fetch_failed', detail: error.message }, { status: 500 })
     }
 
+    const campaigns = ((data ?? []) as CompassCampaign[]).map(projectCampaign)
+    const ids = campaigns.map((row) => row.id)
+    let tallies: Record<string, { cohort: number; positive: number; meetings: number }> = {}
+    if (ids.length > 0) {
+      const leadsRes = await supabase
+        .from('lead_contacts')
+        .select('pipeline_campaign_id,outbound_status')
+        .in('pipeline_campaign_id', ids)
+        .limit(8000)
+      if (!leadsRes.error) {
+        tallies = tallyLeadsByCampaign(leadsRes.data ?? [])
+      }
+    }
+
     return portalJsonCached({
-      campaigns: ((data ?? []) as CompassCampaign[]).map(projectCampaign)
+      campaigns: applyLeadTallies(campaigns, tallies)
     })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })

@@ -34,6 +34,8 @@ function mapWebhookEventToOutboundStatus(eventType) {
     case 'lead_unsubscribed':
     case 'email_bounced':
       return 'suppressed'
+    case 'email_sent':
+      return 'in_instantly'
     default:
       return null
   }
@@ -45,7 +47,7 @@ test('Instantly webhook events map into Compass outbound lanes', () => {
   assert.equal(mapWebhookEventToOutboundStatus('lead_meeting_booked'), 'meeting_booked')
   assert.equal(mapWebhookEventToOutboundStatus('lead_closed'), 'converted')
   assert.equal(mapWebhookEventToOutboundStatus('email_bounced'), 'suppressed')
-  assert.equal(mapWebhookEventToOutboundStatus('email_sent'), null)
+  assert.equal(mapWebhookEventToOutboundStatus('email_sent'), 'in_instantly')
 })
 
 test('Instantly webhook route is authenticated and documented', () => {

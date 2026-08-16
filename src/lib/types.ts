@@ -451,6 +451,7 @@ export type LeadSourceService =
   | 'vibe'
   | 'manual'
   | 'other'
+  | 'apify'
 
 // Filters accepted by the /leads page (all optional, combined with AND).
 export interface LeadListFilters {
@@ -502,5 +503,6 @@ export interface LeadUploadResult {
   rowCount: number
   imported: number
   dupes: number
+  skipped: Array<{ row: number; reason: string }>
   errors: string[]
 }

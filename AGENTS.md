@@ -8,6 +8,7 @@ Local and cloud Cursor agents connect to Compass over `/api/agent/*` (secret aut
 - Docs: [`docs/AGENT_BRIDGE.md`](docs/AGENT_BRIDGE.md)
 - Prefer `GET /api/agent/brief` before dumping data — keep prompts token-lean.
 - Instantly replied/interested/meeting/not-interested/OOO/wrong-person leads sync into `lead_contacts` so Inbox Instantly stays aligned.
+- Compass can create a paused Instantly campaign, push sequence copy, and push cohort leads with merge vars (`POST /api/campaigns/:id/instantly/*` and `/api/agent/instantly/*`). Activate stays in Instantly.
 - Outbound craft UI persists campaigns + library to Supabase (same store as `/api/agent/outbound/*`). Unbound editor drafts stay browser-local until “save as campaign.”
 - Campaign brief of record = Compass campaign copy (`sequence_draft`, `cold_expression`, …), not vault `brief.md`.
 
@@ -69,14 +70,14 @@ non-obvious bits for working in the Cursor Cloud environment.
 - Keep the Compass ↔ vault ↔ Instantly cold-email loop simple; do not encode elaborate multi-gate ceremony spines.
 - Treat `offer-library.md` as a loose baseline guide; campaign-specific offer variants live in Compass.
 - Prefer creator/source outbound examples as the labeled library baseline; keep Jules variations labeled separately — do not treat fused Switchflow campaign copy as creator source of truth.
-- Cheap lead habits only: Instantly-screen before upload, mark Compass the same turn after upload, and never treat upload as activate (activate only after Jules sign-off).
+- Cheap lead habits only: Instantly-screen (skip-if-in-workspace / verify on import) before push, mark Compass the same turn after push, and never treat push as activate (activate only after Jules sign-off).
 - Home priorities should deep-link to the relevant tool (Gmail for replies, Instantly, Prospeo, etc.) and be completable in place.
 - Project/campaign progress percentages must reflect real completion data, not decorative placeholders.
 - Outbound craft Components should stay roomy for comparing styles (wide gallery / type tabs); click opens full view + edit (slide-over), while drag/Use still inserts into the draft.
 
 ## Learned Workspace Facts
 
-- Cold-email operating model: Compass = workshop (orient + craft sequences from library components/templates + leads); vault agent = runner (research/openers/personalizations + Instantly screen/upload + mark Compass); Instantly = mail truck (activate after Jules sign-off).
+- Cold-email operating model: Compass = workshop (orient + craft sequences from library components/templates + leads); Compass or the vault agent pushes leads and copy into Instantly via API; Instantly = mail truck (activate after Jules sign-off). No CSV hop for Instantly.
 - Vault outbound `.md` files hold process and per-lead work, not a parallel offer/template warehouse.
 - Compass stores reusable opener formats/examples; per-lead openers stay vault enrich → Instantly merge vars.
 - Outbound library rows carry provenance (`source` | `yours`) plus `source_creator` / `source_file`; source inventory seeds from vault playbooks (Nick Saraev Cold Email / ACC / Nick / Platten / Connor), and newly added UI rows default to yours.

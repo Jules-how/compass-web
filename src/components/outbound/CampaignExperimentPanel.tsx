@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   CTA_TYPES,
   EXPERIMENT_FACTORS,
@@ -12,6 +12,9 @@ import {
   type CompassCampaign
 } from '@/lib/campaigns'
 import { spawnChallenger } from '@/lib/campaigns-client'
+import type { OutboundBoardCampaign } from '@/lib/instantly'
+import { computeOutcomeMetrics } from '@/lib/outbound-outcome-metrics'
+import { useCachedJson } from '@/lib/use-cached-json'
 
 const CONTROL =
   'w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-[13px] text-neutral-800 outline-none transition focus:border-neutral-400'
@@ -31,6 +34,30 @@ export function CampaignExperimentPanel({
   const [spawnFactor, setSpawnFactor] = useState('cta')
   const [spawnCtaType, setSpawnCtaType] = useState('timed_call')
   const [spawnBusy, setSpawnBusy] = useState(false)
+  const board = useCachedJson<{ live: OutboundBoardCampaign[]; history: OutboundBoardCampaign[] }>(
+    '/api/instantly/outbound-campaigns',
+    '/api/instantly/outbound-campaigns',
+    { staleMs: 60_000 }
+  )
+  const outcome = useMemo(() => {
+    const rows = [...(board.data?.live ?? []), ...(board.data?.history ?? [])]
+    const instantly = campaign.instantly_campaign_id
+      ? rows.find((row) => row.id === campaign.instantly_campaign_id)
+      : null
+    return computeOutcomeMetrics(
+      { sent: instantly?.sendCount ?? 0, bounced: instantly?.bouncedCount ?? 0 },
+      {
+        positive: campaign.wave_positive_count ?? instantly?.positiveReplies ?? 0,
+        meetings: campaign.wave_meeting_count ?? instantly?.meetings ?? 0
+      }
+    )
+  }, [
+    board.data,
+    campaign.instantly_campaign_id,
+    campaign.wave_meeting_count,
+    campaign.wave_positive_count
+  ])
+  const sampleTarget = campaign.sample_size_target ?? 150
 
   if (unbound) {
     return (
@@ -170,6 +197,11 @@ export function CampaignExperimentPanel({
               />
             </label>
           </div>
+
+          <p className="rounded-xl border border-stone-100 bg-stone-50 px-3 py-2 text-[12px] text-neutral-600">
+            Live N {outcome.delivered} / {sampleTarget} delivered · {outcome.positive} positive ·{' '}
+            {outcome.meetingsPer100} meetings / 100
+          </p>
 
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-medium text-neutral-500">Decision notes</span>

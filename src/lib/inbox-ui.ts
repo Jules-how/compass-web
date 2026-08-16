@@ -19,6 +19,7 @@ import {
   type TriageLookup
 } from '@/lib/inbox-triage'
 import type { CompassTask, LeadContact } from '@/lib/types'
+import { gmailSearchUrl, INSTANTLY_UNIBOX } from '@/lib/task-action-targets'
 
 /** Visible Inbox tabs — Gmail stays reserved until sync ships. */
 export const INBOX_TABS = ['agents', 'instantly', 'leads'] as const
@@ -48,6 +49,9 @@ export type InboxItem = {
   phone: string | null
   body: string | null
   href: string | null
+  hrefExternal?: boolean
+  gmailHref?: string | null
+  crmHref?: string | null
   meta: { label: string; value: string }[]
   agentStatus?: string | null
   instantlyStatus?: string | null
@@ -279,7 +283,10 @@ export function projectInstantlyInboxItem(
     body:
       interest ||
       (campaign ? `Reply associated with campaign “${campaign}”.` : 'Instantly inbound reply.'),
-    href: `/leads?outbound_status=${encodeURIComponent(lead.outbound_status || 'replied')}`,
+    href: INSTANTLY_UNIBOX,
+    hrefExternal: true,
+    gmailHref: lead.email?.trim() ? gmailSearchUrl(lead.email.trim()) : null,
+    crmHref: `/leads?outbound_status=${encodeURIComponent(lead.outbound_status || 'replied')}`,
     meta,
     agentStatus: null,
     instantlyStatus: lead.outbound_status

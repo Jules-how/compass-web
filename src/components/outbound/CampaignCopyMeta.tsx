@@ -131,7 +131,7 @@ export function CampaignCopyMeta({
           <input
             value={campaign?.instantly_campaign_id ?? ''}
             onChange={(e) => onChange({ instantly_campaign_id: e.target.value || null })}
-            placeholder="Link only — no auto-activate"
+            placeholder="Paste an existing Instantly id, or create from Settings → Instantly"
             className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-[12px]"
           />
         </Field>

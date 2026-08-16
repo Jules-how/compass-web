@@ -32,6 +32,18 @@ import {
   normalizeCopyStatus,
   type OutboundSequence
 } from '@/lib/outbound-copy'
+import {
+  buildWaveSnapshot,
+  copyPatchClearsConfirm,
+  parseWaveCap,
+  summarizeWaveLeads,
+  type WaveSnapshot
+} from '@/lib/campaign-wave'
+import {
+  fetchInstantlyCampaignAnalytics,
+  resolveInstantlyApiKey
+} from '@/lib/instantly'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,6 +64,39 @@ function projectCampaign(row: CompassCampaign): CompassCampaign {
     health: row.health || 'no_updates',
     color: row.color || '#94a3b8'
   })
+}
+
+async function loadWaveForCampaign(
+  supabase: SupabaseClient,
+  campaign: CompassCampaign
+): Promise<WaveSnapshot> {
+  const leadsRes = await supabase
+    .from('lead_contacts')
+    .select('enrich_status,opener,email,company,outbound_status')
+    .eq('pipeline_campaign_id', campaign.id)
+    .limit(5000)
+  const rows = Array.isArray(leadsRes.data) ? leadsRes.data : []
+  const leads = summarizeWaveLeads(rows)
+  let instantly: { sent: number; bounced: number } | null = null
+  const instantlyId = campaign.instantly_campaign_id?.trim()
+  if (instantlyId) {
+    try {
+      const apiKey = await resolveInstantlyApiKey(supabase)
+      if (apiKey) {
+        const analytics = await fetchInstantlyCampaignAnalytics(apiKey, instantlyId)
+        const row = analytics[0]
+        if (row) {
+          instantly = {
+            sent: Math.max(0, Number(row.emails_sent_count) || 0),
+            bounced: Math.max(0, Number(row.bounced_count) || 0)
+          }
+        }
+      }
+    } catch {
+      instantly = null
+    }
+  }
+  return buildWaveSnapshot({ campaign, leads, instantly, includeCopyMatch: true })
 }
 
 export async function GET(_request: NextRequest, context: RouteContext) {
@@ -79,10 +124,19 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     }
     if (!campaignRes.data) return portalJson({ error: 'not_found' }, { status: 404 })
 
+    const campaign = projectCampaign(campaignRes.data as CompassCampaign)
+    const wave = await loadWaveForCampaign(supabase, campaign)
+
     return portalJsonCached({
-      campaign: projectCampaign(campaignRes.data as CompassCampaign),
+      campaign: {
+        ...campaign,
+        wave_cohort_count: wave.cohort,
+        wave_positive_count: wave.positive,
+        wave_meeting_count: wave.meetings
+      },
       milestones: (milestonesRes.data ?? []) as CompassCampaignMilestone[],
-      activity: (activityRes.data ?? []) as CompassCampaignActivity[]
+      activity: (activityRes.data ?? []) as CompassCampaignActivity[],
+      wave
     })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })
@@ -123,6 +177,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     experiment_decision?: string | null
     expression_key?: string | null
     cta_type?: string | null
+    wave_cap?: number | null
+    opener_reviewed_at?: string | null
+    copy_confirmed_at?: string | null
   }
   try {
     body = (await readBoundedJson(request, 256 * 1024)) as typeof body
@@ -282,6 +339,26 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
     if (body.cta_type !== undefined) {
       patch.cta_type = normalizeCtaType(body.cta_type)
+    }
+    if (body.wave_cap !== undefined) {
+      const cap = parseWaveCap(body.wave_cap)
+      if (cap !== undefined) patch.wave_cap = cap
+    }
+    if (body.opener_reviewed_at !== undefined) {
+      if (body.opener_reviewed_at === null || body.opener_reviewed_at === '') {
+        patch.opener_reviewed_at = null
+      } else if (typeof body.opener_reviewed_at === 'string') {
+        patch.opener_reviewed_at = body.opener_reviewed_at
+      }
+    }
+    if (body.copy_confirmed_at !== undefined) {
+      if (body.copy_confirmed_at === null || body.copy_confirmed_at === '') {
+        patch.copy_confirmed_at = null
+      } else if (typeof body.copy_confirmed_at === 'string') {
+        patch.copy_confirmed_at = body.copy_confirmed_at
+      }
+    } else if (copyPatchClearsConfirm(body) && existing.copy_confirmed_at) {
+      patch.copy_confirmed_at = null
     }
 
     const mergedRole = normalizeExperimentRole(

@@ -119,7 +119,7 @@ export function OutboundFactorSection() {
   }, [enriched, scope])
 
   const rows = useMemo(() => rollupOutboundByFactor(scoped, factor), [scoped, factor])
-  const maxReply = rows[0]?.replyRate || 1
+  const maxPositive = rows[0]?.positiveRate || 1
 
   const selectedCampaigns: OutboundFactorCampaign[] = selected
     ? scoped.filter((c) => factorValue(c, factor) === selected)
@@ -131,7 +131,7 @@ export function OutboundFactorSection() {
         <div>
           <CardTitle>Performance by factor</CardTitle>
           <CardDescription>
-            Instantly metrics rolled up by campaign bind — offer, CTA, expression, structure, audience
+            Instantly volume + Compass ledger outcomes — positive replies and meetings per 100 delivered
           </CardDescription>
         </div>
         <span
@@ -211,9 +211,9 @@ export function OutboundFactorSection() {
                   <th className="px-1 py-3 font-medium capitalize">{factor}</th>
                   <th className="px-3 py-3 font-medium">Campaigns</th>
                   <th className="px-3 py-3 font-medium">Sent</th>
-                  <th className="px-3 py-3 font-medium">Reply %</th>
+                  <th className="px-3 py-3 font-medium">Positive %</th>
                   <th className="px-3 py-3 font-medium">Meetings</th>
-                  <th className="px-3 py-3 font-medium">Opps</th>
+                  <th className="px-3 py-3 font-medium">Mtgs/100</th>
                 </tr>
               </thead>
               <tbody>
@@ -247,23 +247,23 @@ export function OutboundFactorSection() {
                         <span
                           className={cn(
                             'tabular-nums font-semibold',
-                            row.replyRate === maxReply ? 'text-emerald-700' : 'text-neutral-800'
+                            row.positiveRate === maxPositive ? 'text-emerald-700' : 'text-neutral-800'
                           )}
                         >
-                          {row.replyRate}%
+                          {row.positiveRate}%
                         </span>
                         <span className="ml-2 inline-block h-1.5 w-16 overflow-hidden rounded-full bg-stone-100 align-middle">
                           <span
                             className="block h-full rounded-full bg-[#e85d2a]"
                             style={{
-                              width: `${Math.max(8, (row.replyRate / maxReply) * 100)}%`
+                              width: `${Math.max(8, (row.positiveRate / maxPositive) * 100)}%`
                             }}
                           />
                         </span>
                       </td>
                       <td className="px-3 py-3 tabular-nums text-neutral-600">{row.meetings}</td>
                       <td className="px-3 py-3 tabular-nums text-neutral-600">
-                        {row.opportunities}
+                        {row.meetingsPer100}
                       </td>
                     </tr>
                   )
@@ -308,10 +308,10 @@ export function OutboundFactorSection() {
                       Sent <b className="font-semibold text-neutral-900">{c.sendCount}</b>
                     </span>
                     <span>
-                      Reply <b className="font-semibold text-neutral-900">{c.replyRate}%</b>
+                      Positive <b className="font-semibold text-neutral-900">{c.positiveRate ?? 0}%</b>
                     </span>
                     <span>
-                      Opps <b className="font-semibold text-neutral-900">{c.opportunities}</b>
+                      Mtgs/100 <b className="font-semibold text-neutral-900">{c.meetingsPer100 ?? 0}</b>
                     </span>
                   </div>
                 </div>

@@ -68,10 +68,13 @@ export type OutboundBoardCampaign = {
   opportunities: number
   bouncedCount: number
   completedCount: number
-  /** @deprecated Prefer replyCount / opportunities — kept for older demo rows. */
+  /** Compass ledger positives (interested + meeting). Instantly volume stays on sendCount. */
   positiveReplies: number
-  /** @deprecated Prefer opportunities — kept for older demo rows. */
+  /** Compass ledger meetings (`meeting_booked` / `booked`). */
   meetings: number
+  delivered?: number
+  positiveRate?: number
+  meetingsPer100?: number
   startedAt: string
   updatedAt: string
   /** Compass pipeline campaign id when `instantly_campaign_id` is bound. */
@@ -237,8 +240,8 @@ export function mapInstantlyRowToOutboundCampaign(
     opportunities,
     bouncedCount: Math.max(0, Number(row.bounced_count) || 0),
     completedCount: Math.max(0, Number(row.completed_count) || 0),
-    positiveReplies: opportunities,
-    meetings: opportunities,
+    positiveReplies: 0,
+    meetings: 0,
     startedAt: '',
     updatedAt: ''
   }
@@ -420,7 +423,7 @@ export function buildColdEmailGlance(input: {
   }
 }
 
-async function instantlyFetch<T>(
+export async function instantlyFetch<T>(
   path: string,
   apiKey: string,
   init?: RequestInit
@@ -430,20 +433,22 @@ async function instantlyFetch<T>(
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${apiKey}`,
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
       ...(init?.headers ?? {})
     },
     cache: 'no-store'
   })
 
+  const detail = await res.text().catch(() => '')
   if (!res.ok) {
-    const detail = await res.text().catch(() => '')
     throw new InstantlyApiError(
       detail || `Instantly request failed (${res.status})`,
       res.status
     )
   }
 
-  return (await res.json()) as T
+  if (!detail.trim()) return {} as T
+  return JSON.parse(detail) as T
 }
 
 export async function fetchInstantlyAnalyticsOverview(

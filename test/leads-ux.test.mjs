@@ -184,6 +184,22 @@ test('facets API discovers verticals for filters', () => {
   assert.match(facets, /verticals/)
 })
 
+test('upload skips rows missing email, name, or company and requires sourceService', () => {
+  const upload = read('src/app/api/leads/upload/route.ts')
+  const shared = read('src/lib/lead-import-shared.ts')
+  const client = read('src/components/LeadUploadClient.tsx')
+  const types = read('src/lib/types.ts')
+  assert.match(shared, /export function ingestSkipReason/)
+  assert.match(shared, /missing email/)
+  assert.match(shared, /'apify'/)
+  assert.match(upload, /source_service_required/)
+  assert.match(upload, /ingestSkipReason/)
+  assert.match(upload, /skipped/)
+  assert.match(client, /'apify'/)
+  assert.match(types, /'apify'/)
+  assert.match(types, /skipped: Array/)
+})
+
 test('upload normalizes vertical and prefers form vertical by default', () => {
   const upload = read('src/app/api/leads/upload/route.ts')
   const client = read('src/components/LeadUploadClient.tsx')

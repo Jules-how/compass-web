@@ -38,6 +38,9 @@ import {
 } from '@/lib/outbound-library-client'
 import type { OutboundTemplate } from '@/lib/outbound-copy'
 import { SequenceEditor } from '@/components/outbound/SequenceEditor'
+import { CampaignInstantlyPanel } from '@/components/outbound/CampaignInstantlyPanel'
+import { CampaignWaveSection } from '@/components/campaigns/CampaignWaveSection'
+import type { WaveSnapshot } from '@/lib/campaign-wave'
 
 const SIDECAR_WIDTH_KEY = 'compass.pipeline.sidecarWidth.v1'
 const SIDECAR_WIDTH_DEFAULT = 440
@@ -79,11 +82,13 @@ export function CampaignSidecar({
   const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null)
   const [resizing, setResizing] = useState(false)
   const [campaign, setCampaign] = useState<CompassCampaign | null>(null)
+  const [wave, setWave] = useState<WaveSnapshot | null>(null)
   const [activity, setActivity] = useState<CompassCampaignActivity[]>([])
   const [favorited, setFavorited] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [showAllActivity, setShowAllActivity] = useState(false)
   const [openSections, setOpenSections] = useState({
+    wave: true,
     properties: true,
     copy: true,
     experiment: true,
@@ -120,6 +125,7 @@ export function CampaignSidecar({
       }
       setError(null)
       setCampaign(detail.campaign)
+      setWave(detail.wave ?? null)
       setActivity(detail.activity)
       setName(detail.campaign.name)
       setStatus(detail.campaign.status)
@@ -429,6 +435,14 @@ export function CampaignSidecar({
         ) : (
           <>
             <Section
+              title="Wave"
+              open={openSections.wave}
+              onToggle={() => setOpenSections((prev) => ({ ...prev, wave: !prev.wave }))}
+            >
+              <CampaignWaveSection wave={wave} onSave={saveCampaign} />
+            </Section>
+
+            <Section
               title="Properties"
               open={openSections.properties}
               onToggle={() =>
@@ -636,6 +650,32 @@ export function CampaignSidecar({
                       Instantly: {campaign.instantly_campaign_id}
                     </p>
                   ) : null}
+                  <CampaignInstantlyPanel
+                    compact
+                    campaign={campaign}
+                    onCampaignChange={(next) => {
+                      setCampaign(next)
+                      onUpdated(next)
+                    }}
+                  />
+                  {!campaign.copy_confirmed_at ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2">
+                      <p className="text-[12px] text-amber-950">
+                        Match Instantly before the next wave
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          saveCampaign({ copy_confirmed_at: new Date().toISOString() })
+                        }
+                        className="mt-1.5 rounded-md border border-amber-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-neutral-700"
+                      >
+                        Compass copy matches Instantly
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-emerald-800">Copy match confirmed</p>
+                  )}
                   <div className="flex flex-wrap gap-2 pt-1">
                     <button
                       type="button"

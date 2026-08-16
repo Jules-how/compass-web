@@ -18,6 +18,7 @@ import {
   enrichOutboundCampaignFactors,
   type OutboundFactorCampaign
 } from '@/lib/outbound-factor-performance'
+import { computeOutcomeMetrics } from '@/lib/outbound-outcome-metrics'
 import { useCachedJson } from '@/lib/use-cached-json'
 
 type OutboundBoardPayload = {
@@ -44,9 +45,16 @@ function ArmCard({
   label: string
 }) {
   const sent = metrics?.sendCount ?? 0
+  const outcome = computeOutcomeMetrics(
+    { sent, bounced: metrics?.bouncedCount ?? 0 },
+    {
+      positive: campaign.wave_positive_count ?? metrics?.positiveReplies ?? 0,
+      meetings: campaign.wave_meeting_count ?? metrics?.meetings ?? 0
+    }
+  )
   const target = campaign.sample_size_target ?? 0
   const progress =
-    target > 0 ? Math.min(100, Math.round((sent / target) * 100)) : null
+    target > 0 ? Math.min(100, Math.round((outcome.delivered / target) * 100)) : null
   return (
     <div className="rounded-xl border border-stone-200 bg-white p-3">
       <div className="flex items-start justify-between gap-2">
@@ -90,21 +98,16 @@ function ArmCard({
       </dl>
       <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px]">
         <div className="rounded-lg bg-stone-50 px-2 py-1.5">
-          <div className="font-semibold text-neutral-900">{sent}</div>
-          <div className="text-neutral-400">Sent</div>
+          <div className="font-semibold text-neutral-900">{outcome.delivered}</div>
+          <div className="text-neutral-400">Delivered</div>
         </div>
         <div className="rounded-lg bg-stone-50 px-2 py-1.5">
-          <div className="font-semibold text-neutral-900">{metrics?.replyCount ?? 0}</div>
-          <div className="text-neutral-400">Replies</div>
+          <div className="font-semibold text-neutral-900">{outcome.positiveRate}%</div>
+          <div className="text-neutral-400">Positive</div>
         </div>
         <div className="rounded-lg bg-stone-50 px-2 py-1.5">
-          <div className="font-semibold text-neutral-900">
-            {metrics?.sendCount
-              ? Math.round((metrics.replyCount / metrics.sendCount) * 1000) / 10
-              : 0}
-            %
-          </div>
-          <div className="text-neutral-400">Reply</div>
+          <div className="font-semibold text-neutral-900">{outcome.meetingsPer100}</div>
+          <div className="text-neutral-400">Mtgs/100</div>
         </div>
       </div>
       {progress != null ? (
@@ -112,7 +115,7 @@ function ArmCard({
           <div className="mb-1 flex justify-between text-[10px] text-neutral-500">
             <span>Sample progress</span>
             <span>
-              {sent}/{target}
+              {outcome.delivered}/{target}
             </span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-stone-100">
