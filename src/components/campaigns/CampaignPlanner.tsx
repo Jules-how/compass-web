@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { CampaignCalendar } from '@/components/campaigns/CampaignCalendar'
 import { CampaignReviewModal } from '@/components/campaigns/CampaignReviewModal'
+import { CampaignSlotComposer } from '@/components/campaigns/CampaignSlotComposer'
 import {
   CALENDAR_GRAINS,
   shiftCursor,
@@ -118,6 +119,8 @@ export function CampaignPlanner() {
   const [view, setView] = useState<ViewMode>('calendar')
   const [calendarGrain, setCalendarGrain] = useState<CalendarGrain>('week')
   const [calendarCursor, setCalendarCursor] = useState(() => startOfDay(new Date()))
+  const [slotDraft, setSlotDraft] = useState<string | null>(null)
+  const [slotPlaced, setSlotPlaced] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [query, setQuery] = useState('')
@@ -230,6 +233,10 @@ export function CampaignPlanner() {
       if (e.target instanceof HTMLSelectElement) return
       const key = e.key.toLowerCase()
       if (key === 'escape') {
+        if (slotDraft) {
+          setSlotDraft(null)
+          return
+        }
         setSelectedId(null)
         setRowMenu(null)
         setFilterOpen(false)
@@ -248,7 +255,7 @@ export function CampaignPlanner() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setZoomLevel, view, calendarGrain])
+  }, [setZoomLevel, view, calendarGrain, slotDraft])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -1140,11 +1147,37 @@ export function CampaignPlanner() {
               grain={calendarGrain}
               cursor={calendarCursor}
               selectedId={selectedId}
+              draftGoLiveAt={slotPlaced ? null : slotDraft}
               onSelect={(id) => openCampaign(id)}
               onOpenPage={openCampaignPage}
+              onCreateSlot={(goLiveAt) => {
+                setReviewOpen(false)
+                setSlotPlaced(false)
+                setSlotDraft(goLiveAt)
+              }}
             />
           ) : null}
         </div>
+
+        {slotDraft ? (
+          <CampaignSlotComposer
+            goLiveAt={slotDraft}
+            onClose={() => {
+              setSlotDraft(null)
+              setSlotPlaced(false)
+            }}
+            onCreated={(campaign) => {
+              setSelectedId(campaign.id)
+              setSlotPlaced(true)
+              refresh()
+            }}
+            onOpenReview={(id) => {
+              setSlotDraft(null)
+              setSelectedId(id)
+              setReviewOpen(true)
+            }}
+          />
+        ) : null}
 
         {selected ? (
           <CampaignReviewModal

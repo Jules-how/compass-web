@@ -11,6 +11,7 @@ import {
   datedGoLiveCampaigns,
   eventOffsetPx,
   formatPeriodLabel,
+  goLiveAtFromSlot,
   goLiveFallsInPeriod,
   hourLabel,
   layoutTimedEvents,
@@ -34,8 +35,10 @@ type Props = {
   grain: CalendarGrain
   cursor: Date
   selectedId: string | null
+  draftGoLiveAt?: string | null
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
+  onCreateSlot: (goLiveAt: string) => void
 }
 
 export function CampaignCalendar({
@@ -43,8 +46,10 @@ export function CampaignCalendar({
   grain,
   cursor,
   selectedId,
+  draftGoLiveAt,
   onSelect,
-  onOpenPage
+  onOpenPage,
+  onCreateSlot
 }: Props) {
   const items = useMemo(
     () => datedGoLiveCampaigns(campaigns.map((c) => ({ id: c.id, go_live_at: c.go_live_at }))),
@@ -76,6 +81,7 @@ export function CampaignCalendar({
           selectedId={selectedId}
           onSelect={onSelect}
           onOpenPage={onOpenPage}
+          onCreateSlot={onCreateSlot}
         />
       ) : null}
 
@@ -86,8 +92,10 @@ export function CampaignCalendar({
           byId={byId}
           todayKey={todayKey}
           selectedId={selectedId}
+          draftGoLiveAt={draftGoLiveAt}
           onSelect={onSelect}
           onOpenPage={onOpenPage}
+          onCreateSlot={onCreateSlot}
         />
       ) : null}
 
@@ -96,8 +104,10 @@ export function CampaignCalendar({
           cursor={cursor}
           campaigns={inPeriod}
           selectedId={selectedId}
+          draftGoLiveAt={draftGoLiveAt}
           onSelect={onSelect}
           onOpenPage={onOpenPage}
+          onCreateSlot={onCreateSlot}
         />
       ) : null}
     </div>
@@ -156,7 +166,8 @@ function MonthGrid({
   todayKey,
   selectedId,
   onSelect,
-  onOpenPage
+  onOpenPage,
+  onCreateSlot
 }: {
   cursor: Date
   items: ReturnType<typeof datedGoLiveCampaigns>
@@ -165,6 +176,7 @@ function MonthGrid({
   selectedId: string | null
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
+  onCreateSlot: (goLiveAt: string) => void
 }) {
   const weeks = monthWeeks(cursor)
   const month = cursor.getMonth()
@@ -195,9 +207,11 @@ function MonthGrid({
                 const inMonth = day.getMonth() === month
                 const isToday = key === todayKey
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={key}
-                    className={`border-r border-neutral-100 last:border-r-0 ${
+                    onClick={() => onCreateSlot(goLiveAtFromSlot(day, 9))}
+                    className={`group/slot w-full border-r border-neutral-100 text-left last:border-r-0 hover:bg-[var(--compass-accent)]/[0.04] ${
                       isToday ? 'bg-[#5e6ad2]/[0.06]' : ''
                     }`}
                   >
@@ -212,7 +226,7 @@ function MonthGrid({
                     >
                       {day.getDate()}
                     </div>
-                  </div>
+                  </button>
                 )
               })}
               <div
@@ -251,17 +265,23 @@ function MonthGrid({
 }
 
 function TimedDayColumn({
+  day,
   campaigns,
   selectedId,
   isToday,
+  draftGoLiveAt,
   onSelect,
-  onOpenPage
+  onOpenPage,
+  onCreateSlot
 }: {
+  day: Date
   campaigns: CompassCampaign[]
   selectedId: string | null
   isToday: boolean
+  draftGoLiveAt?: string | null
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
+  onCreateSlot: (goLiveAt: string) => void
 }) {
   const lanes = layoutTimedEvents(
     campaigns.flatMap((campaign) => {
@@ -279,11 +299,18 @@ function TimedDayColumn({
       }`}
     >
       {Array.from({ length: CALENDAR_HOURS }, (_, hour) => (
-        <div
+        <button
           key={hour}
-          className="border-t border-neutral-100"
-          style={{ height: CALENDAR_HOUR_HEIGHT }}
-        />
+          type="button"
+          onClick={() => onCreateSlot(goLiveAtFromSlot(day, hour))}
+          className="group/slot absolute left-0 right-0 border-t border-neutral-100 hover:bg-[var(--compass-accent)]/[0.05]"
+          style={{ top: hour * CALENDAR_HOUR_HEIGHT, height: CALENDAR_HOUR_HEIGHT }}
+          aria-label={`Add campaign ${day.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })} ${hourLabel(hour)}`}
+        >
+          <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-neutral-400 opacity-0 shadow-sm ring-1 ring-stone-200/80 group-hover/slot:opacity-100">
+            + Add
+          </span>
+        </button>
       ))}
       {lanes.map((lane) => {
         const campaign = byId.get(lane.id)
@@ -292,7 +319,7 @@ function TimedDayColumn({
         return (
           <div
             key={campaign.id}
-            className="absolute overflow-hidden px-0.5"
+            className="absolute z-10 overflow-hidden px-0.5"
             style={{
               top: eventOffsetPx(lane.minutes),
               height: CALENDAR_EVENT_HEIGHT,
@@ -309,6 +336,18 @@ function TimedDayColumn({
           </div>
         )
       })}
+      {draftGoLiveAt && toDateOnly(new Date(draftGoLiveAt)) === toDateOnly(day) ? (
+        <div
+          className="pointer-events-none absolute left-1 right-1 overflow-hidden rounded-lg border border-dashed border-[var(--compass-accent)]/50 bg-[var(--compass-accent)]/[0.06] px-2 py-1.5"
+          style={{
+            top: eventOffsetPx(minutesFromMidnight(draftGoLiveAt) ?? 0),
+            height: CALENDAR_EVENT_HEIGHT
+          }}
+        >
+          <p className="text-[11px] font-medium text-[var(--compass-accent)]">New campaign</p>
+          <p className="text-[11px] text-neutral-500">{formatGoLiveTime(draftGoLiveAt)}</p>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -334,15 +373,19 @@ function TimedBoard({
   byId,
   todayKey,
   selectedId,
+  draftGoLiveAt,
   onSelect,
-  onOpenPage
+  onOpenPage,
+  onCreateSlot
 }: {
   days: Date[]
   byId: Map<string, CompassCampaign>
   todayKey: string
   selectedId: string | null
+  draftGoLiveAt?: string | null
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
+  onCreateSlot: (goLiveAt: string) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -373,11 +416,14 @@ function TimedBoard({
             return (
               <TimedDayColumn
                 key={key}
+                day={day}
                 campaigns={campaigns}
                 selectedId={selectedId}
                 isToday={key === todayKey}
+                draftGoLiveAt={draftGoLiveAt}
                 onSelect={onSelect}
                 onOpenPage={onOpenPage}
+                onCreateSlot={onCreateSlot}
               />
             )
           })}
@@ -393,16 +439,20 @@ function WeekGrid({
   byId,
   todayKey,
   selectedId,
+  draftGoLiveAt,
   onSelect,
-  onOpenPage
+  onOpenPage,
+  onCreateSlot
 }: {
   cursor: Date
   items: ReturnType<typeof datedGoLiveCampaigns>
   byId: Map<string, CompassCampaign>
   todayKey: string
   selectedId: string | null
+  draftGoLiveAt?: string | null
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
+  onCreateSlot: (goLiveAt: string) => void
 }) {
   const days = weekDays(cursor)
   const weekIds = new Set(items.map((item) => item.id))
@@ -412,16 +462,18 @@ function WeekGrid({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white">
-      <div className="flex shrink-0 border-b border-neutral-200">
-        <div className="shrink-0 border-r border-neutral-100" style={{ width: CALENDAR_GUTTER_PX }} />
+      <div className="flex shrink-0 border-b border-neutral-200 bg-[#f7f8f9]">
+        <div className="shrink-0" style={{ width: CALENDAR_GUTTER_PX }} />
         <div className="grid min-w-0 flex-1 grid-cols-7">
           {days.map((day) => {
             const key = toDateOnly(day)
             const isToday = key === todayKey
             return (
-              <div
+              <button
+                type="button"
                 key={key}
-                className={`border-r border-neutral-100 px-3 py-2 last:border-r-0 ${
+                onClick={() => onCreateSlot(goLiveAtFromSlot(day, 9))}
+                className={`border-r border-neutral-100 px-3 py-2 text-left last:border-r-0 hover:bg-[var(--compass-accent)]/[0.04] ${
                   isToday ? 'bg-[#5e6ad2]/[0.06]' : 'bg-[#f7f8f9]'
                 }`}
               >
@@ -435,7 +487,7 @@ function WeekGrid({
                 >
                   {day.getDate()}
                 </div>
-              </div>
+              </button>
             )
           })}
         </div>
@@ -445,8 +497,10 @@ function WeekGrid({
         byId={weekById}
         todayKey={todayKey}
         selectedId={selectedId}
+        draftGoLiveAt={draftGoLiveAt}
         onSelect={onSelect}
         onOpenPage={onOpenPage}
+        onCreateSlot={onCreateSlot}
       />
     </div>
   )
@@ -456,14 +510,18 @@ function DayList({
   cursor,
   campaigns,
   selectedId,
+  draftGoLiveAt,
   onSelect,
-  onOpenPage
+  onOpenPage,
+  onCreateSlot
 }: {
   cursor: Date
   campaigns: CompassCampaign[]
   selectedId: string | null
+  draftGoLiveAt?: string | null
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
+  onCreateSlot: (goLiveAt: string) => void
 }) {
   const todayKey = toDateOnly(new Date())
   const day = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate())
@@ -481,8 +539,10 @@ function DayList({
         byId={byId}
         todayKey={todayKey}
         selectedId={selectedId}
+        draftGoLiveAt={draftGoLiveAt}
         onSelect={onSelect}
         onOpenPage={onOpenPage}
+        onCreateSlot={onCreateSlot}
       />
     </div>
   )

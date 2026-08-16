@@ -31,14 +31,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const id = decodeURIComponent(rawId || '').trim()
   if (!id) return portalJson({ error: 'missing_id' }, { status: 400 })
 
-  let body: { opener?: unknown; lead_facts?: unknown }
+  let body: { opener?: unknown; lead_facts?: unknown; pipeline_campaign_id?: unknown }
   try {
     body = (await readBoundedJson(request, 64 * 1024)) as typeof body
   } catch {
     return portalJson({ error: 'invalid_request' }, { status: 400 })
   }
 
-  if (body.opener === undefined && body.lead_facts === undefined) {
+  if (
+    body.opener === undefined &&
+    body.lead_facts === undefined &&
+    body.pipeline_campaign_id === undefined
+  ) {
     return portalJson({ error: 'empty_patch' }, { status: 400 })
   }
 
@@ -57,6 +61,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const facts = parseLeadFacts(body.lead_facts)
     if (!facts.ok) return portalJson({ error: facts.error }, { status: 400 })
     patch.lead_facts = facts.facts as LeadFact[]
+  }
+
+  if (body.pipeline_campaign_id !== undefined) {
+    if (body.pipeline_campaign_id == null || body.pipeline_campaign_id === '') {
+      patch.pipeline_campaign_id = null
+    } else if (typeof body.pipeline_campaign_id !== 'string') {
+      return portalJson({ error: 'pipeline_campaign_id_invalid' }, { status: 400 })
+    } else {
+      patch.pipeline_campaign_id = body.pipeline_campaign_id.trim() || null
+    }
   }
 
   try {

@@ -78,6 +78,16 @@ test('timed calendar events stay on one day and pack overlapping lanes', () => {
   }
 
   assert.equal(eventOffsetPx(9 * 60), 9 * CALENDAR_HOUR_HEIGHT)
+
+  function goLiveAtFromSlot(day, hour, minute = 0) {
+    return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute, 0, 0).toISOString()
+  }
+  const tue = new Date(2026, 7, 11)
+  const slot = new Date(goLiveAtFromSlot(tue, 12))
+  assert.equal(slot.getFullYear(), 2026)
+  assert.equal(slot.getMonth(), 7)
+  assert.equal(slot.getDate(), 11)
+  assert.equal(slot.getHours(), 12)
   const packed = layoutTimedEvents([
     { id: 'a', minutes: 9 * 60 },
     { id: 'b', minutes: 9 * 60 + 10 }

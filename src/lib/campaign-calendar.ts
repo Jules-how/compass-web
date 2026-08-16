@@ -131,6 +131,31 @@ export function hourLabel(hour: number): string {
   return date.toLocaleTimeString('en-AU', { hour: 'numeric' })
 }
 
+/** Local wall-clock go-live for a calendar square (day column + hour row). */
+export function goLiveAtFromSlot(day: Date, hour: number, minute = 0): string {
+  return new Date(
+    day.getFullYear(),
+    day.getMonth(),
+    day.getDate(),
+    hour,
+    minute,
+    0,
+    0
+  ).toISOString()
+}
+
+export function formatSlotHeading(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return 'New campaign'
+  return date.toLocaleString('en-AU', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit'
+  })
+}
+
 export function eventOffsetPx(minutes: number): number {
   const clamped = Math.min(CALENDAR_HOURS * 60 - 1, Math.max(0, minutes))
   return (clamped / 60) * CALENDAR_HOUR_HEIGHT
