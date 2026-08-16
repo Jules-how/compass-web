@@ -326,7 +326,19 @@ export function CampaignPlanner() {
   }
 
   function persistGoLive(id: string, goLiveAt: string) {
-    void updateCampaign(id, { go_live_at: goLiveAt })
+    const day = localDateOnlyFromIso(goLiveAt)
+    setCampaigns((rows) =>
+      rows.map((row) =>
+        row.id === id
+          ? { ...row, go_live_at: goLiveAt, start_date: day ?? row.start_date, end_date: day ?? row.end_date }
+          : row
+      )
+    )
+    void updateCampaign(id, {
+      go_live_at: goLiveAt,
+      start_date: day ?? undefined,
+      end_date: day ?? undefined
+    })
       .then(refresh)
       .catch(refresh)
     setDraftGoLive((prev) => {
@@ -1155,6 +1167,7 @@ export function CampaignPlanner() {
                 setSlotPlaced(false)
                 setSlotDraft(goLiveAt)
               }}
+              onMoveCampaign={(id, goLiveAt) => persistGoLive(id, goLiveAt)}
             />
           ) : null}
         </div>

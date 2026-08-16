@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import {
   CALENDAR_EVENT_HEIGHT,
   CALENDAR_GUTTER_PX,
@@ -13,11 +13,12 @@ import {
   formatPeriodLabel,
   goLiveAtFromSlot,
   goLiveFallsInPeriod,
+  hourFromOffsetPx,
   hourLabel,
-  layoutTimedEvents,
   layoutWeekBars,
   minutesFromMidnight,
   monthWeeks,
+  nextOpenGoLiveAt,
   periodRange,
   toDateOnly,
   weekDays,
@@ -39,6 +40,17 @@ type Props = {
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
   onCreateSlot: (goLiveAt: string) => void
+  onMoveCampaign: (id: string, goLiveAt: string) => void
+}
+
+type CalendarDrag = {
+  id: string
+  pointerId: number
+  originX: number
+  originY: number
+  goLiveAt: string
+  liveGoLiveAt: string
+  moved: boolean
 }
 
 export function CampaignCalendar({
@@ -49,17 +61,23 @@ export function CampaignCalendar({
   draftGoLiveAt,
   onSelect,
   onOpenPage,
-  onCreateSlot
+  onCreateSlot,
+  onMoveCampaign
 }: Props) {
   const items = useMemo(
     () => datedGoLiveCampaigns(campaigns.map((c) => ({ id: c.id, go_live_at: c.go_live_at }))),
     [campaigns]
   )
   const byId = useMemo(() => new Map(campaigns.map((c) => [c.id, c])), [campaigns])
+  const occupiedIsos = useMemo(() => campaigns.map((c) => c.go_live_at), [campaigns])
   const { start, end } = periodRange(cursor, grain)
   const inPeriod = campaigns.filter((c) => goLiveFallsInPeriod(c.go_live_at, start, end))
   const today = startOfDay(new Date())
   const todayKey = toDateOnly(today)
+
+  function openSlot(day: Date, hour: number) {
+    onCreateSlot(nextOpenGoLiveAt(day, hour, occupiedIsos))
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col p-4">
@@ -79,9 +97,11 @@ export function CampaignCalendar({
           byId={byId}
           todayKey={todayKey}
           selectedId={selectedId}
+          occupiedIsos={occupiedIsos}
           onSelect={onSelect}
           onOpenPage={onOpenPage}
-          onCreateSlot={onCreateSlot}
+          onCreateSlot={openSlot}
+          onMoveCampaign={onMoveCampaign}
         />
       ) : null}
 
@@ -93,9 +113,11 @@ export function CampaignCalendar({
           todayKey={todayKey}
           selectedId={selectedId}
           draftGoLiveAt={draftGoLiveAt}
+          occupiedIsos={occupiedIsos}
           onSelect={onSelect}
           onOpenPage={onOpenPage}
-          onCreateSlot={onCreateSlot}
+          onCreateSlot={openSlot}
+          onMoveCampaign={onMoveCampaign}
         />
       ) : null}
 
@@ -105,9 +127,11 @@ export function CampaignCalendar({
           campaigns={inPeriod}
           selectedId={selectedId}
           draftGoLiveAt={draftGoLiveAt}
+          occupiedIsos={occupiedIsos}
           onSelect={onSelect}
           onOpenPage={onOpenPage}
-          onCreateSlot={onCreateSlot}
+          onCreateSlot={openSlot}
+          onMoveCampaign={onMoveCampaign}
         />
       ) : null}
     </div>
@@ -118,43 +142,51 @@ function EventChip({
   campaign,
   selected,
   compact,
+  dragging,
   onSelect,
-  onOpenPage
+  onOpenPage,
+  onPointerDown
 }: {
   campaign: CompassCampaign
   selected: boolean
   compact?: boolean
+  dragging?: boolean
   onSelect: () => void
   onOpenPage: () => void
+  onPointerDown?: (event: ReactPointerEvent<HTMLButtonElement>) => void
 }) {
   const time = formatGoLiveTime(campaign.go_live_at)
+  const color = campaign.color || '#E5570A'
   return (
     <button
       type="button"
-      className={`pointer-events-auto flex w-full min-w-0 flex-col justify-center overflow-hidden rounded-lg border text-left font-medium ${
-        compact ? 'h-[22px] px-1.5 py-0 text-[11px]' : 'h-full px-2 py-1.5 text-[12px]'
+      className={`relative pointer-events-auto flex w-full min-w-0 overflow-hidden rounded-xl border text-left shadow-soft ${
+        compact ? 'h-[22px] items-center gap-1.5 px-1.5 text-[11px]' : 'h-full flex-col justify-center gap-0.5 py-1.5 pl-3 pr-2'
       } ${
         selected
-          ? 'border-[#5e6ad2] bg-white text-neutral-800 shadow-[0_0_0_1px_rgba(94,106,210,0.28)]'
-          : 'border-neutral-200 bg-white text-neutral-700 shadow-sm hover:border-neutral-300'
-      }`}
+          ? 'border-[var(--compass-accent)]/40 bg-white ring-1 ring-[var(--compass-accent)]/25'
+          : 'border-stone-200/90 bg-white hover:border-stone-300'
+      } ${dragging ? 'cursor-grabbing opacity-90 shadow-lift' : 'cursor-grab'}`}
       title={`${campaign.name} · ${formatGoLiveAt(campaign.go_live_at)}`}
       onClick={onSelect}
       onDoubleClick={onOpenPage}
+      onPointerDown={onPointerDown}
     >
-      <span className="flex min-w-0 items-center gap-1">
-        <span
-          className="inline-block h-2 w-2 shrink-0 rounded-full"
-          style={{ background: campaign.color || '#94a3b8' }}
-        />
-        {time ? (
-          <span className="shrink-0 tabular-nums text-neutral-500">{time}</span>
-        ) : null}
-        {compact ? <span className="min-w-0 truncate">{campaign.name}</span> : null}
-      </span>
-      {compact ? null : (
-        <span className="min-w-0 line-clamp-2 leading-snug">{campaign.name}</span>
+      {compact ? (
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: color }} />
+      ) : (
+        <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: color }} />
       )}
+      {time ? (
+        <span className="shrink-0 text-[11px] font-medium tabular-nums text-neutral-500">{time}</span>
+      ) : null}
+      <span
+        className={`min-w-0 font-medium text-neutral-800 ${
+          compact ? 'truncate text-[11px]' : 'line-clamp-2 text-[12px] leading-snug'
+        }`}
+      >
+        {campaign.name}
+      </span>
     </button>
   )
 }
@@ -165,24 +197,45 @@ function MonthGrid({
   byId,
   todayKey,
   selectedId,
+  occupiedIsos,
   onSelect,
   onOpenPage,
-  onCreateSlot
+  onCreateSlot,
+  onMoveCampaign
 }: {
   cursor: Date
   items: ReturnType<typeof datedGoLiveCampaigns>
   byId: Map<string, CompassCampaign>
   todayKey: string
   selectedId: string | null
+  occupiedIsos: Array<string | null | undefined>
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
-  onCreateSlot: (goLiveAt: string) => void
+  onCreateSlot: (day: Date, hour: number) => void
+  onMoveCampaign: (id: string, goLiveAt: string) => void
 }) {
   const weeks = monthWeeks(cursor)
   const month = cursor.getMonth()
+  const gridRef = useRef<HTMLDivElement>(null)
+  const [drag, setDrag] = useState<CalendarDrag | null>(null)
+
+  function dayFromPoint(clientX: number, clientY: number): Date | null {
+    const root = gridRef.current
+    if (!root) return null
+    const cells = root.querySelectorAll<HTMLElement>('[data-cal-day]')
+    for (const cell of cells) {
+      const rect = cell.getBoundingClientRect()
+      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+        const key = cell.dataset.calDay
+        if (!key) return null
+        return new Date(`${key}T12:00:00`)
+      }
+    }
+    return null
+  }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white">
+    <div ref={gridRef} className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white">
       <div className="grid grid-cols-7 border-b border-neutral-200 bg-[#f7f8f9]">
         {WEEKDAY_LABELS.map((label) => (
           <div
@@ -210,7 +263,8 @@ function MonthGrid({
                   <button
                     type="button"
                     key={key}
-                    onClick={() => onCreateSlot(goLiveAtFromSlot(day, 9))}
+                    data-cal-day={key}
+                    onClick={() => onCreateSlot(day, 9)}
                     className={`group/slot w-full border-r border-neutral-100 text-left last:border-r-0 hover:bg-[var(--compass-accent)]/[0.04] ${
                       isToday ? 'bg-[#5e6ad2]/[0.06]' : ''
                     }`}
@@ -249,8 +303,26 @@ function MonthGrid({
                         campaign={campaign}
                         selected={selectedId === campaign.id}
                         compact
+                        dragging={drag?.id === campaign.id}
                         onSelect={() => onSelect(campaign.id)}
                         onOpenPage={() => onOpenPage(campaign.id)}
+                        onPointerDown={(event) => {
+                          if (event.button !== 0) return
+                          event.preventDefault()
+                          event.stopPropagation()
+                          event.currentTarget.setPointerCapture(event.pointerId)
+                          const goLiveAt = campaign.go_live_at || goLiveAtFromSlot(week[bar.colStart]!, 9)
+                          setDrag({
+                            id: campaign.id,
+                            pointerId: event.pointerId,
+                            originX: event.clientX,
+                            originY: event.clientY,
+                            goLiveAt,
+                            liveGoLiveAt: goLiveAt,
+                            moved: false
+                          })
+                          onSelect(campaign.id)
+                        }}
                       />
                     </div>
                   )
@@ -260,6 +332,29 @@ function MonthGrid({
           )
         })}
       </div>
+      {drag ? (
+        <DragLayer
+          drag={drag}
+          onMove={(event, current) => {
+            const moved =
+              current.moved ||
+              Math.abs(event.clientX - current.originX) > 4 ||
+              Math.abs(event.clientY - current.originY) > 4
+            const day = dayFromPoint(event.clientX, event.clientY)
+            const hour = new Date(current.goLiveAt).getHours()
+            const liveGoLiveAt = day
+              ? nextOpenGoLiveAt(day, hour, occupiedIsos, current.goLiveAt)
+              : current.goLiveAt
+            setDrag({ ...current, moved, liveGoLiveAt })
+          }}
+          onUp={(current) => {
+            setDrag(null)
+            if (current.moved && current.liveGoLiveAt !== current.goLiveAt) {
+              onMoveCampaign(current.id, current.liveGoLiveAt)
+            }
+          }}
+        />
+      ) : null}
     </div>
   )
 }
@@ -270,28 +365,25 @@ function TimedDayColumn({
   selectedId,
   isToday,
   draftGoLiveAt,
+  drag,
   onSelect,
   onOpenPage,
-  onCreateSlot
+  onCreateSlot,
+  onEventPointerDown,
+  suppressClick
 }: {
   day: Date
   campaigns: CompassCampaign[]
   selectedId: string | null
   isToday: boolean
   draftGoLiveAt?: string | null
+  drag: CalendarDrag | null
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
-  onCreateSlot: (goLiveAt: string) => void
+  onCreateSlot: (day: Date, hour: number) => void
+  onEventPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, campaign: CompassCampaign) => void
+  suppressClick: { current: boolean }
 }) {
-  const lanes = layoutTimedEvents(
-    campaigns.flatMap((campaign) => {
-      const minutes = minutesFromMidnight(campaign.go_live_at)
-      if (minutes == null) return []
-      return [{ id: campaign.id, minutes }]
-    })
-  )
-  const byId = new Map(campaigns.map((campaign) => [campaign.id, campaign]))
-
   return (
     <div
       className={`relative min-w-0 overflow-hidden border-r border-neutral-100 last:border-r-0 ${
@@ -302,7 +394,13 @@ function TimedDayColumn({
         <button
           key={hour}
           type="button"
-          onClick={() => onCreateSlot(goLiveAtFromSlot(day, hour))}
+          onClick={() => {
+            if (suppressClick.current) {
+              suppressClick.current = false
+              return
+            }
+            onCreateSlot(day, hour)
+          }}
           className="group/slot absolute left-0 right-0 border-t border-neutral-100 hover:bg-[var(--compass-accent)]/[0.05]"
           style={{ top: hour * CALENDAR_HOUR_HEIGHT, height: CALENDAR_HOUR_HEIGHT }}
           aria-label={`Add campaign ${day.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })} ${hourLabel(hour)}`}
@@ -312,35 +410,47 @@ function TimedDayColumn({
           </span>
         </button>
       ))}
-      {lanes.map((lane) => {
-        const campaign = byId.get(lane.id)
-        if (!campaign) return null
-        const widthPct = 100 / lane.laneCount
+      {campaigns.map((campaign) => {
+        const minutes = minutesFromMidnight(campaign.go_live_at)
+        if (minutes == null) return null
+        const dragging = drag?.id === campaign.id
+        const top = dragging
+          ? eventOffsetPx(minutesFromMidnight(drag.liveGoLiveAt) ?? minutes)
+          : eventOffsetPx(minutes)
         return (
           <div
             key={campaign.id}
-            className="absolute z-10 overflow-hidden px-0.5"
+            className={`absolute z-10 px-1 ${dragging ? 'z-20' : ''}`}
             style={{
-              top: eventOffsetPx(lane.minutes),
+              top: top + (CALENDAR_HOUR_HEIGHT - CALENDAR_EVENT_HEIGHT) / 2,
               height: CALENDAR_EVENT_HEIGHT,
-              left: `calc(${lane.lane * widthPct}% + 2px)`,
-              width: `calc(${widthPct}% - 4px)`
+              left: 2,
+              right: 2
             }}
           >
             <EventChip
-              campaign={campaign}
+              campaign={
+                dragging ? { ...campaign, go_live_at: drag.liveGoLiveAt } : campaign
+              }
               selected={selectedId === campaign.id}
-              onSelect={() => onSelect(campaign.id)}
+              dragging={dragging}
+              onSelect={() => {
+                if (drag?.moved) return
+                onSelect(campaign.id)
+              }}
               onOpenPage={() => onOpenPage(campaign.id)}
+              onPointerDown={(event) => onEventPointerDown(event, campaign)}
             />
           </div>
         )
       })}
       {draftGoLiveAt && toDateOnly(new Date(draftGoLiveAt)) === toDateOnly(day) ? (
         <div
-          className="pointer-events-none absolute left-1 right-1 overflow-hidden rounded-lg border border-dashed border-[var(--compass-accent)]/50 bg-[var(--compass-accent)]/[0.06] px-2 py-1.5"
+          className="pointer-events-none absolute left-1 right-1 overflow-hidden rounded-xl border border-dashed border-[var(--compass-accent)]/50 bg-[var(--compass-accent)]/[0.06] px-2.5 py-1.5"
           style={{
-            top: eventOffsetPx(minutesFromMidnight(draftGoLiveAt) ?? 0),
+            top:
+              eventOffsetPx(minutesFromMidnight(draftGoLiveAt) ?? 0) +
+              (CALENDAR_HOUR_HEIGHT - CALENDAR_EVENT_HEIGHT) / 2,
             height: CALENDAR_EVENT_HEIGHT
           }}
         >
@@ -368,32 +478,89 @@ function HourGutter() {
   )
 }
 
+function DragLayer({
+  drag,
+  onMove,
+  onUp
+}: {
+  drag: CalendarDrag
+  onMove: (event: PointerEvent, drag: CalendarDrag) => void
+  onUp: (drag: CalendarDrag) => void
+}) {
+  const dragRef = useRef(drag)
+  const onMoveRef = useRef(onMove)
+  const onUpRef = useRef(onUp)
+  dragRef.current = drag
+  onMoveRef.current = onMove
+  onUpRef.current = onUp
+
+  useEffect(() => {
+    function move(event: PointerEvent) {
+      if (event.pointerId !== dragRef.current.pointerId) return
+      onMoveRef.current(event, dragRef.current)
+    }
+    function up(event: PointerEvent) {
+      if (event.pointerId !== dragRef.current.pointerId) return
+      onUpRef.current(dragRef.current)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+    }
+  }, [])
+
+  return null
+}
+
 function TimedBoard({
   days,
   byId,
   todayKey,
   selectedId,
   draftGoLiveAt,
+  occupiedIsos,
   onSelect,
   onOpenPage,
-  onCreateSlot
+  onCreateSlot,
+  onMoveCampaign
 }: {
   days: Date[]
   byId: Map<string, CompassCampaign>
   todayKey: string
   selectedId: string | null
   draftGoLiveAt?: string | null
+  occupiedIsos: Array<string | null | undefined>
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
-  onCreateSlot: (goLiveAt: string) => void
+  onCreateSlot: (day: Date, hour: number) => void
+  onMoveCampaign: (id: string, goLiveAt: string) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const [drag, setDrag] = useState<CalendarDrag | null>(null)
+  const suppressClick = useRef(false)
 
   useEffect(() => {
     const node = scrollRef.current
     if (!node) return
     node.scrollTop = CALENDAR_SCROLL_HOUR * CALENDAR_HOUR_HEIGHT
   }, [days])
+
+  function liveSlotFromPoint(clientX: number, clientY: number, ignoreIso: string) {
+    const grid = gridRef.current
+    if (!grid) return ignoreIso
+    const rect = grid.getBoundingClientRect()
+    const colW = rect.width / days.length
+    const dayIndex = Math.max(0, Math.min(days.length - 1, Math.floor((clientX - rect.left) / colW)))
+    const hour = hourFromOffsetPx(clientY - rect.top)
+    const day = days[dayIndex]
+    if (!day) return ignoreIso
+    return nextOpenGoLiveAt(day, hour, occupiedIsos, ignoreIso)
+  }
 
   return (
     <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
@@ -403,15 +570,18 @@ function TimedBoard({
       >
         <HourGutter />
         <div
+          ref={gridRef}
           className="grid min-w-0 flex-1"
           style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
         >
           {days.map((day) => {
             const key = toDateOnly(day)
             const campaigns = Array.from(byId.values()).filter((campaign) => {
-              const minutes = minutesFromMidnight(campaign.go_live_at)
-              if (minutes == null || !campaign.go_live_at) return false
-              return toDateOnly(new Date(campaign.go_live_at)) === key
+              const source =
+                drag?.id === campaign.id ? drag.liveGoLiveAt : campaign.go_live_at
+              const minutes = minutesFromMidnight(source)
+              if (minutes == null || !source) return false
+              return toDateOnly(new Date(source)) === key
             })
             return (
               <TimedDayColumn
@@ -421,14 +591,56 @@ function TimedBoard({
                 selectedId={selectedId}
                 isToday={key === todayKey}
                 draftGoLiveAt={draftGoLiveAt}
+                drag={drag}
                 onSelect={onSelect}
                 onOpenPage={onOpenPage}
                 onCreateSlot={onCreateSlot}
+                suppressClick={suppressClick}
+                onEventPointerDown={(event, campaign) => {
+                  if (event.button !== 0) return
+                  event.preventDefault()
+                  event.stopPropagation()
+                  event.currentTarget.setPointerCapture(event.pointerId)
+                  const goLiveAt = campaign.go_live_at || goLiveAtFromSlot(day, 9)
+                  setDrag({
+                    id: campaign.id,
+                    pointerId: event.pointerId,
+                    originX: event.clientX,
+                    originY: event.clientY,
+                    goLiveAt,
+                    liveGoLiveAt: goLiveAt,
+                    moved: false
+                  })
+                  onSelect(campaign.id)
+                }}
               />
             )
           })}
         </div>
       </div>
+      {drag ? (
+        <DragLayer
+          drag={drag}
+          onMove={(event, current) => {
+            const moved =
+              current.moved ||
+              Math.abs(event.clientX - current.originX) > 4 ||
+              Math.abs(event.clientY - current.originY) > 4
+            setDrag({
+              ...current,
+              moved,
+              liveGoLiveAt: liveSlotFromPoint(event.clientX, event.clientY, current.goLiveAt)
+            })
+          }}
+          onUp={(current) => {
+            if (current.moved) suppressClick.current = true
+            setDrag(null)
+            if (current.moved && current.liveGoLiveAt !== current.goLiveAt) {
+              onMoveCampaign(current.id, current.liveGoLiveAt)
+            }
+          }}
+        />
+      ) : null}
     </div>
   )
 }
@@ -440,9 +652,11 @@ function WeekGrid({
   todayKey,
   selectedId,
   draftGoLiveAt,
+  occupiedIsos,
   onSelect,
   onOpenPage,
-  onCreateSlot
+  onCreateSlot,
+  onMoveCampaign
 }: {
   cursor: Date
   items: ReturnType<typeof datedGoLiveCampaigns>
@@ -450,9 +664,11 @@ function WeekGrid({
   todayKey: string
   selectedId: string | null
   draftGoLiveAt?: string | null
+  occupiedIsos: Array<string | null | undefined>
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
-  onCreateSlot: (goLiveAt: string) => void
+  onCreateSlot: (day: Date, hour: number) => void
+  onMoveCampaign: (id: string, goLiveAt: string) => void
 }) {
   const days = weekDays(cursor)
   const weekIds = new Set(items.map((item) => item.id))
@@ -472,7 +688,7 @@ function WeekGrid({
               <button
                 type="button"
                 key={key}
-                onClick={() => onCreateSlot(goLiveAtFromSlot(day, 9))}
+                onClick={() => onCreateSlot(day, 9)}
                 className={`border-r border-neutral-100 px-3 py-2 text-left last:border-r-0 hover:bg-[var(--compass-accent)]/[0.04] ${
                   isToday ? 'bg-[#5e6ad2]/[0.06]' : 'bg-[#f7f8f9]'
                 }`}
@@ -498,9 +714,11 @@ function WeekGrid({
         todayKey={todayKey}
         selectedId={selectedId}
         draftGoLiveAt={draftGoLiveAt}
+        occupiedIsos={occupiedIsos}
         onSelect={onSelect}
         onOpenPage={onOpenPage}
         onCreateSlot={onCreateSlot}
+        onMoveCampaign={onMoveCampaign}
       />
     </div>
   )
@@ -511,17 +729,21 @@ function DayList({
   campaigns,
   selectedId,
   draftGoLiveAt,
+  occupiedIsos,
   onSelect,
   onOpenPage,
-  onCreateSlot
+  onCreateSlot,
+  onMoveCampaign
 }: {
   cursor: Date
   campaigns: CompassCampaign[]
   selectedId: string | null
   draftGoLiveAt?: string | null
+  occupiedIsos: Array<string | null | undefined>
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
-  onCreateSlot: (goLiveAt: string) => void
+  onCreateSlot: (day: Date, hour: number) => void
+  onMoveCampaign: (id: string, goLiveAt: string) => void
 }) {
   const todayKey = toDateOnly(new Date())
   const day = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate())
@@ -540,9 +762,11 @@ function DayList({
         todayKey={todayKey}
         selectedId={selectedId}
         draftGoLiveAt={draftGoLiveAt}
+        occupiedIsos={occupiedIsos}
         onSelect={onSelect}
         onOpenPage={onOpenPage}
         onCreateSlot={onCreateSlot}
+        onMoveCampaign={onMoveCampaign}
       />
     </div>
   )

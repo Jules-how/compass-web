@@ -112,11 +112,11 @@ export function weekDays(cursor: Date): Date[] {
 }
 
 /** Pixel height of one hour row in week/day calendars. */
-export const CALENDAR_HOUR_HEIGHT = 56
+export const CALENDAR_HOUR_HEIGHT = 64
 export const CALENDAR_HOURS = 24
 export const CALENDAR_GUTTER_PX = 64
-/** Go-live blocks have no duration; render a readable card at the start time. */
-export const CALENDAR_EVENT_HEIGHT = 64
+/** One campaign fills one hour row, with a small gap so stacked cards stay readable. */
+export const CALENDAR_EVENT_HEIGHT = 56
 export const CALENDAR_SCROLL_HOUR = 7
 
 export function minutesFromMidnight(iso: string | null | undefined): number | null {
@@ -159,6 +159,49 @@ export function formatSlotHeading(iso: string): string {
 export function eventOffsetPx(minutes: number): number {
   const clamped = Math.min(CALENDAR_HOURS * 60 - 1, Math.max(0, minutes))
   return (clamped / 60) * CALENDAR_HOUR_HEIGHT
+}
+
+export function hourFromOffsetPx(offsetY: number): number {
+  return Math.max(0, Math.min(CALENDAR_HOURS - 1, Math.floor(offsetY / CALENDAR_HOUR_HEIGHT)))
+}
+
+/** Hours already taken on a local calendar day. */
+export function occupiedHoursOnDay(
+  day: Date,
+  isos: Array<string | null | undefined>
+): Set<number> {
+  const key = toDateOnly(day)
+  const hours = new Set<number>()
+  for (const iso of isos) {
+    if (!iso) continue
+    const date = new Date(iso)
+    if (Number.isNaN(date.getTime())) continue
+    if (toDateOnly(date) !== key) continue
+    hours.add(date.getHours())
+  }
+  return hours
+}
+
+/** Next free hour on that day, walking forward then backward from the preferred hour. */
+export function nextOpenGoLiveAt(
+  day: Date,
+  preferredHour: number,
+  occupiedIsos: Array<string | null | undefined>,
+  ignoreIso?: string | null
+): string {
+  const occupied = occupiedHoursOnDay(
+    day,
+    occupiedIsos.filter((iso) => iso && iso !== ignoreIso)
+  )
+  const start = Math.max(0, Math.min(CALENDAR_HOURS - 1, Math.floor(preferredHour)))
+  if (!occupied.has(start)) return goLiveAtFromSlot(day, start)
+  for (let hour = start + 1; hour < CALENDAR_HOURS; hour++) {
+    if (!occupied.has(hour)) return goLiveAtFromSlot(day, hour)
+  }
+  for (let hour = start - 1; hour >= 0; hour--) {
+    if (!occupied.has(hour)) return goLiveAtFromSlot(day, hour)
+  }
+  return goLiveAtFromSlot(day, start)
 }
 
 export type TimedLane = {
