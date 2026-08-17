@@ -14,7 +14,6 @@ export function CampaignWaveSection({
     return <p className="text-sm text-neutral-500">Loading wave…</p>
   }
 
-  const capValue = wave.cap == null ? '' : String(wave.cap)
   const reviewed = Boolean(wave.openerReviewedAt)
   const confirmed = Boolean(wave.copyConfirmedAt)
   const bounce = wave.instantly
@@ -22,30 +21,11 @@ export function CampaignWaveSection({
 
   return (
     <div className="space-y-4 text-sm">
-      <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-medium text-neutral-500">Cap</span>
-          <input
-            type="number"
-            min={0}
-            placeholder="30–50"
-            defaultValue={capValue}
-            key={`cap-${wave.cap ?? 'none'}`}
-            onBlur={(e) => {
-              const raw = e.target.value.trim()
-              const next = raw === '' ? null : Math.max(0, Math.floor(Number(raw)))
-              if (next !== (wave.cap ?? null)) onSave({ wave_cap: next })
-            }}
-            className="compass-input py-2"
-          />
-        </label>
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-medium text-neutral-500">Cohort</span>
-          <p className="rounded-xl border border-stone-200/80 bg-stone-50 px-3.5 py-2 text-sm text-neutral-800">
-            {wave.cohort}
-            {wave.cap != null ? ` / ${wave.cap}` : ''}
-          </p>
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[11px] font-medium text-neutral-500">Cohort</span>
+        <p className="rounded-xl border border-stone-200/80 bg-stone-50 px-3.5 py-2 text-sm text-neutral-800">
+          {wave.cohort}
+        </p>
       </div>
       <p className="text-[12px] text-neutral-600">
         Openers {wave.openers} / {wave.cohort}

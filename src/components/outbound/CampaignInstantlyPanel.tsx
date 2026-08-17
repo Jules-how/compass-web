@@ -21,8 +21,6 @@ function skipLabel(reason: string): string {
       return 'already in this Instantly campaign'
     case 'missing_opener':
       return 'missing opener'
-    case 'over_cap':
-      return 'over wave cap'
     default:
       return reason
   }

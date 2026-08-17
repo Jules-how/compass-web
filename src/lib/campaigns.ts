@@ -83,7 +83,6 @@ export interface CompassCampaign {
   experiment_decision?: string | null
   expression_key?: string | null
   cta_type?: CtaType | string | null
-  wave_cap?: number | null
   opener_reviewed_at?: string | null
   copy_confirmed_at?: string | null
   /** Computed on list/detail — not a DB column. */
@@ -117,7 +116,7 @@ export interface CompassCampaignActivity {
 }
 
 const CAMPAIGN_CORE_COLUMNS =
-  'id,name,status,priority,health,start_date,end_date,go_live_at,google_calendar_event_id,color,summary,labels,owner_label,instantly_campaign_id,offer_key,structure_id,opener_mode,vertical_tags,location_tags,copy_status,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,wave_cap,opener_reviewed_at,copy_confirmed_at,created_at,updated_at'
+  'id,name,status,priority,health,start_date,end_date,go_live_at,google_calendar_event_id,color,summary,labels,owner_label,instantly_campaign_id,offer_key,structure_id,opener_mode,vertical_tags,location_tags,copy_status,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,opener_reviewed_at,copy_confirmed_at,created_at,updated_at'
 
 /** Planner / list GET — skip bulky sequence JSON. */
 export const CAMPAIGN_BOARD_COLUMNS = CAMPAIGN_CORE_COLUMNS
@@ -148,7 +147,6 @@ export function emptyCampaignCopyFields() {
     experiment_decision: null as string | null,
     expression_key: null as string | null,
     cta_type: null as string | null,
-    wave_cap: null as number | null,
     opener_reviewed_at: null as string | null,
     copy_confirmed_at: null as string | null
   }
@@ -179,10 +177,6 @@ export function projectCampaignCopy(row: CompassCampaign): CompassCampaign {
     experiment_decision: row.experiment_decision ?? null,
     expression_key: row.expression_key ?? null,
     cta_type: normalizeCtaType(row.cta_type),
-    wave_cap:
-      typeof row.wave_cap === 'number' && Number.isFinite(row.wave_cap)
-        ? Math.max(0, Math.floor(row.wave_cap))
-        : null,
     opener_reviewed_at: row.opener_reviewed_at ?? null,
     copy_confirmed_at: row.copy_confirmed_at ?? null,
     go_live_at: row.go_live_at ?? null,
@@ -435,17 +429,12 @@ export function openerModeLabel(mode?: string | null): string | null {
   return value.replaceAll('_', ' ')
 }
 
-export function campaignLeadCountLabel(campaign: Pick<CompassCampaign, 'wave_cohort_count' | 'wave_cap'>): string | null {
+export function campaignLeadCountLabel(campaign: Pick<CompassCampaign, 'wave_cohort_count'>): string | null {
   const count =
     typeof campaign.wave_cohort_count === 'number' && Number.isFinite(campaign.wave_cohort_count)
       ? Math.max(0, Math.floor(campaign.wave_cohort_count))
       : 0
   if (count <= 0) return null
-  const cap =
-    typeof campaign.wave_cap === 'number' && Number.isFinite(campaign.wave_cap)
-      ? Math.max(0, Math.floor(campaign.wave_cap))
-      : null
-  if (cap != null && cap > 0) return `${count} / ${cap} leads`
   return `${count} lead${count === 1 ? '' : 's'}`
 }
 

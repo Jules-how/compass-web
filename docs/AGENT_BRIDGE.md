@@ -20,7 +20,8 @@ Apply migrations:
 - `0041_lead_enrich_readiness.sql` — `enrich_status` on `lead_contacts`
 - `0043_lead_facts.sql` — `lead_facts` jsonb on `lead_contacts`
 - `0044_lead_facts_shape.sql` — engager-fact array comment (`kind` / `claim` / `url`)
-- `0045_campaign_wave.sql` — `wave_cap`, `opener_reviewed_at`, `copy_confirmed_at` on pipeline campaigns
+- `0045_campaign_wave.sql` — `opener_reviewed_at`, `copy_confirmed_at` on pipeline campaigns
+- `0050_drop_wave_cap.sql` — drop unused campaign column
 - `0047_lead_website.sql` — `website` + `company_domain` on `lead_contacts`
 
 Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/DELETE) for saved sequences with vertical tags, component breakdown, Instantly-style performance, and `last_used_at`.
@@ -64,9 +65,9 @@ One factor per challenger card. A/B = two Instantly campaigns (not Step variants
 
 ### Wave fields (campaign copy)
 
-`wave_cap` (integer, first wave 30–50), `opener_reviewed_at`, `copy_confirmed_at`. Activate stays in Instantly — Compass only lists blockers.
+`opener_reviewed_at`, `copy_confirmed_at`. Activate stays in Instantly — Compass only lists blockers.
 
-PATCH `wave_cap` / `opener_reviewed_at: true` (or an ISO stamp) / `copy_confirmed_at: true` on the same copy route. Confirm Compass copy matches the Instantly body before the next wave.
+PATCH `opener_reviewed_at: true` (or an ISO stamp) / `copy_confirmed_at: true` on the same copy route. Confirm Compass copy matches the Instantly body.
 
 ### Outcome metrics
 

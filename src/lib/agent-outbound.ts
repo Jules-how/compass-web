@@ -6,7 +6,7 @@ import {
   normalizeTags,
   type OutboundCopyStatus
 } from '@/lib/outbound-copy'
-import { copyPatchClearsConfirm, parseWaveCap } from '@/lib/campaign-wave'
+import { copyPatchClearsConfirm } from '@/lib/campaign-wave'
 
 export const OUTBOUND_KINDS = [
   'offers',
@@ -436,7 +436,6 @@ export function campaignCopyCompact(
     expression_key: row.expression_key ?? null,
     cta_type: row.cta_type ?? null,
     instantly_campaign_id: row.instantly_campaign_id ?? null,
-    wave_cap: row.wave_cap ?? null,
     opener_reviewed_at: row.opener_reviewed_at ?? null,
     copy_confirmed_at: row.copy_confirmed_at ?? null,
     updated_at: row.updated_at ?? null
@@ -525,10 +524,6 @@ export function buildCampaignCopyPatch(
   if (body.cta_type !== undefined) {
     patch.cta_type =
       typeof body.cta_type === 'string' ? body.cta_type.trim() || null : null
-  }
-  if (body.wave_cap !== undefined) {
-    const cap = parseWaveCap(body.wave_cap)
-    if (cap !== undefined) patch.wave_cap = cap
   }
   if (body.opener_reviewed_at !== undefined) {
     if (body.opener_reviewed_at === null || body.opener_reviewed_at === '') {

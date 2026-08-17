@@ -45,7 +45,6 @@ export type CampaignPatch = Partial<{
   experiment_decision: string | null
   expression_key: string | null
   cta_type: string | null
-  wave_cap: number | null
   opener_reviewed_at: string | null
   copy_confirmed_at: string | null
 }>
@@ -265,6 +264,8 @@ export type SpawnChallengerInput = {
   vertical_tags?: string[]
   location_tags?: string[]
   sequence_draft?: OutboundSequence | null
+  subject?: string | null
+  opener_mode?: string | null
 }
 
 export async function spawnChallenger(

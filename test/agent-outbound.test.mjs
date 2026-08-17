@@ -113,7 +113,7 @@ test('agent-outbound module maps kinds and omits heavy list fields', () => {
   assert.match(src, /pack_summary/)
   assert.match(src, /sequence/)
   assert.match(src, /LIST_LIMIT_MAX = 100/)
-  assert.match(src, /wave_cap/)
+  assert.doesNotMatch(src, /wave_cap/)
   assert.match(src, /copy_confirmed_at/)
   assert.match(src, /copyPatchClearsConfirm/)
 })

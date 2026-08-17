@@ -17,14 +17,12 @@ type ListPayload = {
 export function CampaignLeadsPane({
   pipelineCampaignId,
   instantlyCampaignId,
-  waveCap,
   onLeadSelect,
   onLeadsLoaded,
   className
 }: {
   pipelineCampaignId?: string | null
   instantlyCampaignId?: string | null
-  waveCap?: number | null
   onLeadSelect?: (lead: LeadContact | null) => void
   onLeadsLoaded?: (leads: LeadContact[]) => void
   className?: string
@@ -152,7 +150,6 @@ export function CampaignLeadsPane({
         <div className="mb-1 flex shrink-0 items-baseline justify-between gap-2">
           <p className="text-[12px] text-neutral-500">
             {display.total.toLocaleString()} lead{display.total === 1 ? '' : 's'} in this campaign
-            {typeof waveCap === 'number' ? ` · wave ${display.total}/${waveCap}` : ''}
             {listBusy ? ' · updating' : ''}
           </p>
         </div>

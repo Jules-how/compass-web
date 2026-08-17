@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       admin
         .from('compass_pipeline_campaigns')
         .select(
-          'id,name,status,health,priority,summary,instantly_campaign_id,offer_key,copy_status,wave_cap,opener_reviewed_at,copy_confirmed_at,start_date,end_date,go_live_at,updated_at'
+          'id,name,status,health,priority,summary,instantly_campaign_id,offer_key,copy_status,opener_reviewed_at,copy_confirmed_at,start_date,end_date,go_live_at,updated_at'
         )
         .order('priority', { ascending: false })
         .limit(40),
@@ -59,7 +59,6 @@ export async function GET(request: Request) {
             offer_key: row.offer_key,
             copy_status: row.copy_status,
             instantly_campaign_id: row.instantly_campaign_id,
-            wave_cap: row.wave_cap,
             opener_reviewed_at: row.opener_reviewed_at,
             copy_confirmed_at: row.copy_confirmed_at
           },

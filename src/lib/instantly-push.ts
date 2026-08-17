@@ -37,7 +37,6 @@ export type PushSkipReason =
   | 'hot'
   | 'already_in_campaign'
   | 'missing_opener'
-  | 'over_cap'
 
 export type PushSkip = { id: string; email: string | null; reason: PushSkipReason }
 
@@ -157,13 +156,9 @@ export function missingPreviewKeys(lead: LeadContact): string[] {
 export function previewPushLeads(
   leads: LeadContact[],
   instantlyCampaignId: string,
-  options?: { requireOpener?: boolean; cap?: number | null }
+  options?: { requireOpener?: boolean }
 ): InstantlyPushPreview {
   const requireOpener = options?.requireOpener !== false
-  const cap =
-    typeof options?.cap === 'number' && Number.isFinite(options.cap)
-      ? Math.max(0, Math.floor(options.cap))
-      : null
   const skipped: PushSkip[] = []
   const eligible: Array<{ id: string; email: string; lead: LeadContact }> = []
   for (const lead of leads) {
@@ -174,17 +169,10 @@ export function previewPushLeads(
     }
     eligible.push({ id: lead.id, email: trim(lead.email).toLowerCase(), lead })
   }
-  let kept = eligible
-  if (cap != null && kept.length > cap) {
-    for (const row of kept.slice(cap)) {
-      skipped.push({ id: row.id, email: row.email, reason: 'over_cap' })
-    }
-    kept = kept.slice(0, cap)
-  }
   return {
-    eligible: kept.map((row) => ({ id: row.id, email: row.email })),
+    eligible: eligible.map((row) => ({ id: row.id, email: row.email })),
     skipped,
-    missingVars: kept
+    missingVars: eligible
       .map((row) => ({
         id: row.id,
         email: row.email,
@@ -332,13 +320,8 @@ export async function pushLeadsToInstantly(input: {
   if (!instantlyId) throw new InstantlyApiError('Bind or create an Instantly campaign first', 400)
 
   const leads = await loadCohortLeads(input.supabase, input.campaign.id, input.leadIds)
-  const cap =
-    typeof input.campaign.wave_cap === 'number' && Number.isFinite(input.campaign.wave_cap)
-      ? Math.max(0, Math.floor(input.campaign.wave_cap))
-      : null
   const preview = previewPushLeads(leads, instantlyId, {
-    requireOpener: input.requireOpener !== false,
-    cap
+    requireOpener: input.requireOpener !== false
   })
 
   if (input.dryRun || preview.eligible.length === 0) {

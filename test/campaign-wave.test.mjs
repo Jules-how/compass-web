@@ -53,10 +53,6 @@ function bounceRate(sent, bounced) {
 }
 
 function buildWaveSnapshot(input) {
-  const cap =
-    typeof input.campaign.wave_cap === 'number' && Number.isFinite(input.campaign.wave_cap)
-      ? Math.max(0, Math.floor(input.campaign.wave_cap))
-      : null
   const copyStatus = normalizeCopyStatus(input.campaign.copy_status)
   const bound = Boolean((input.campaign.instantly_campaign_id || '').trim())
   const offer = Boolean((input.campaign.offer_key || '').trim())
@@ -75,11 +71,6 @@ function buildWaveSnapshot(input) {
     { id: 'copy', ok: copyOk, blocking: true },
     { id: 'bound', ok: bound, blocking: true },
     { id: 'cohort', ok: cohort > 0, blocking: true },
-    {
-      id: 'cap',
-      ok: cap != null && cap > 0 && cohort <= cap,
-      blocking: true
-    },
     { id: 'openers', ok: cohort === 0 ? false : openers === cohort, blocking: true },
     { id: 'reviewed', ok: Boolean(reviewedAt), blocking: true }
   ]
@@ -94,7 +85,7 @@ function buildWaveSnapshot(input) {
   }
 
   const blocked = checks.some((c) => c.blocking && !c.ok)
-  return { cap, cohort, openers, checks, blocked, readyToActivate: !blocked, bounceRate: rate }
+  return { cohort, openers, checks, blocked, readyToActivate: !blocked, bounceRate: rate }
 }
 
 function copyPatchClearsConfirm(body) {
@@ -107,7 +98,6 @@ function readyCampaign(overrides = {}) {
     offer_key: 'growth-system',
     copy_status: 'live',
     instantly_campaign_id: 'inst-1',
-    wave_cap: 40,
     opener_reviewed_at: '2026-08-16T00:00:00.000Z',
     copy_confirmed_at: '2026-08-16T00:00:00.000Z',
     ...overrides
@@ -136,14 +126,14 @@ test('wave snapshot blocks when offer is missing', () => {
   assert.equal(snap.readyToActivate, false)
 })
 
-test('wave snapshot blocks when cohort is over cap', () => {
+test('wave snapshot does not block a large cohort', () => {
   const snap = buildWaveSnapshot({
-    campaign: readyCampaign({ wave_cap: 30 }),
+    campaign: readyCampaign(),
     leads: readyLeads(40),
     instantly: null
   })
-  assert.equal(snap.checks.find((c) => c.id === 'cap').ok, false)
-  assert.equal(snap.blocked, true)
+  assert.equal(snap.blocked, false)
+  assert.equal(snap.readyToActivate, true)
 })
 
 test('wave snapshot warns on bounce above 2% without blocking', () => {
@@ -192,14 +182,14 @@ test('copy PATCH clears confirm unless confirm is sent in the same body', () => 
   assert.equal(copyPatchClearsConfirm({ sequence_draft: {} }), true)
   assert.equal(copyPatchClearsConfirm({ cold_expression: 'x' }), true)
   assert.equal(copyPatchClearsConfirm({ sequence_draft: {}, copy_confirmed_at: 'now' }), false)
-  assert.equal(copyPatchClearsConfirm({ wave_cap: 40 }), false)
+  assert.equal(copyPatchClearsConfirm({ hypothesis: 'x' }), false)
 })
 
 test('wave files and sidecar Wave section are wired', () => {
   const migration = read('supabase/migrations/0045_campaign_wave.sql')
-  assert.match(migration, /wave_cap/)
   assert.match(migration, /opener_reviewed_at/)
   assert.match(migration, /copy_confirmed_at/)
+  assert.match(read('supabase/migrations/0050_drop_wave_cap.sql'), /DROP COLUMN IF EXISTS wave_cap/)
 
   const lib = read('src/lib/campaign-wave.ts')
   assert.match(lib, /export function buildWaveSnapshot/)
@@ -207,6 +197,8 @@ test('wave files and sidecar Wave section are wired', () => {
   assert.match(lib, /wave_opener_count/)
   assert.match(lib, /copy_match/)
   assert.match(lib, /WAVE_BOUNCE_WARN_PCT/)
+  assert.doesNotMatch(lib, /wave_cap/)
+  assert.doesNotMatch(lib, /parseWaveCap/)
 
   const sidecar = read('src/components/campaigns/CampaignSidecar.tsx')
   assert.match(sidecar, /CampaignWaveSection/)
@@ -218,5 +210,7 @@ test('wave files and sidecar Wave section are wired', () => {
 
   const agent = read('src/app/api/agent/campaigns/route.ts')
   assert.match(agent, /compactWaveForAgent/)
+  assert.doesNotMatch(agent, /wave_cap/)
   assert.doesNotMatch(read('src/lib/agent-brief.ts'), /wave_cap/)
+  assert.doesNotMatch(read('src/components/campaigns/CampaignWaveSection.tsx'), /placeholder="30/)
 })

@@ -37,7 +37,6 @@ import {
 import {
   buildWaveSnapshot,
   copyPatchClearsConfirm,
-  parseWaveCap,
   summarizeWaveLeads,
   type WaveSnapshot
 } from '@/lib/campaign-wave'
@@ -184,7 +183,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     experiment_decision?: string | null
     expression_key?: string | null
     cta_type?: string | null
-    wave_cap?: number | null
     opener_reviewed_at?: string | null
     copy_confirmed_at?: string | null
   }
@@ -358,10 +356,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
     if (body.cta_type !== undefined) {
       patch.cta_type = normalizeCtaType(body.cta_type)
-    }
-    if (body.wave_cap !== undefined) {
-      const cap = parseWaveCap(body.wave_cap)
-      if (cap !== undefined) patch.wave_cap = cap
     }
     if (body.opener_reviewed_at !== undefined) {
       if (body.opener_reviewed_at === null || body.opener_reviewed_at === '') {

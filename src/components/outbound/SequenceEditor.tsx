@@ -1262,7 +1262,6 @@ export function SequenceEditor({
               className="min-h-0 flex-1 overflow-hidden"
               pipelineCampaignId={instantlyUnbound ? null : campaignId || campaign.id}
               instantlyCampaignId={campaign.instantly_campaign_id || instantlyCampaignId}
-              waveCap={campaign.wave_cap}
               onLeadSelect={setPreviewLead}
               onLeadsLoaded={(leads) => {
                 loadedLeadsRef.current = leads

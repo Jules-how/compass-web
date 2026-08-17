@@ -17,7 +17,6 @@ export type WaveCheckId =
   | 'copy'
   | 'bound'
   | 'cohort'
-  | 'cap'
   | 'openers'
   | 'reviewed'
   | 'bounce'
@@ -55,7 +54,6 @@ export type WaveInstantlyVolume = {
 }
 
 export type WaveSnapshot = {
-  cap: number | null
   cohort: number
   openers: number
   missingCompanyOrEmail: number
@@ -117,7 +115,6 @@ export function buildWaveSnapshot(input: {
     | 'offer_key'
     | 'copy_status'
     | 'instantly_campaign_id'
-    | 'wave_cap'
     | 'opener_reviewed_at'
     | 'copy_confirmed_at'
   >
@@ -125,10 +122,6 @@ export function buildWaveSnapshot(input: {
   instantly?: WaveInstantlyVolume | null
   includeCopyMatch?: boolean
 }): WaveSnapshot {
-  const cap =
-    typeof input.campaign.wave_cap === 'number' && Number.isFinite(input.campaign.wave_cap)
-      ? Math.max(0, Math.floor(input.campaign.wave_cap))
-      : null
   const copyStatus = normalizeCopyStatus(input.campaign.copy_status)
   const bound = Boolean((input.campaign.instantly_campaign_id || '').trim())
   const offer = Boolean((input.campaign.offer_key || '').trim())
@@ -170,18 +163,6 @@ export function buildWaveSnapshot(input: {
       ok: cohort > 0,
       blocking: true,
       detail: cohort > 0 ? `${cohort} lead${cohort === 1 ? '' : 's'}` : 'Attach leads to this campaign'
-    },
-    {
-      id: 'cap',
-      label: 'Wave cap',
-      ok: cap != null && cap > 0 && cohort <= cap,
-      blocking: true,
-      detail:
-        cap == null
-          ? 'Set a cap (30–50 for a first wave)'
-          : cohort > cap
-            ? `${cohort} leads over the cap of ${cap}`
-            : `${cohort} / ${cap}`
     },
     {
       id: 'openers',
@@ -232,7 +213,6 @@ export function buildWaveSnapshot(input: {
 
   const blocked = checks.some((c) => c.blocking && !c.ok)
   return {
-    cap,
     cohort,
     openers,
     missingCompanyOrEmail: input.leads.missingCompanyOrEmail,
@@ -253,16 +233,11 @@ export function buildWaveSnapshot(input: {
 export function wavePlannerBit(
   campaign: Pick<
     CompassCampaign,
-    'offer_key' | 'copy_status' | 'instantly_campaign_id' | 'wave_cap' | 'opener_reviewed_at'
+    'offer_key' | 'copy_status' | 'instantly_campaign_id' | 'opener_reviewed_at'
   >,
   cohort: number
 ): string | null {
-  const cap =
-    typeof campaign.wave_cap === 'number' && Number.isFinite(campaign.wave_cap)
-      ? Math.max(0, Math.floor(campaign.wave_cap))
-      : null
   if (
-    cap == null &&
     !campaign.offer_key &&
     normalizeCopyStatus(campaign.copy_status) === 'none' &&
     !campaign.instantly_campaign_id &&
@@ -283,13 +258,12 @@ export function wavePlannerBit(
     instantly: null,
     includeCopyMatch: false
   })
-  const capCheck = lite.checks.find((c) => c.id === 'cap')
   const coreBlocked = lite.checks
-    .filter((c) => c.id === 'offer' || c.id === 'copy' || c.id === 'bound' || c.id === 'cap' || c.id === 'reviewed')
+    .filter((c) => c.id === 'offer' || c.id === 'copy' || c.id === 'bound' || c.id === 'reviewed')
     .some((c) => !c.ok)
   if (coreBlocked) return 'Wave blocked'
-  if (cap != null) return `Wave ${cohort}/${cap}`
-  return capCheck?.detail ?? 'Wave'
+  if (cohort > 0) return `${cohort} lead${cohort === 1 ? '' : 's'}`
+  return 'Wave'
 }
 
 export function emptyWaveLeadSummary(): WaveLeadSummary {
@@ -353,7 +327,6 @@ export function tallyLeadsByCampaign(
 
 export function compactWaveForAgent(snapshot: WaveSnapshot) {
   return {
-    cap: snapshot.cap,
     cohort: snapshot.cohort,
     openers: snapshot.openers,
     blocked: snapshot.blocked,
@@ -395,13 +368,3 @@ export function copyPatchClearsConfirm(body: {
   return body.sequence_draft !== undefined || body.cold_expression !== undefined
 }
 
-export function parseWaveCap(value: unknown): number | null | undefined {
-  if (value === undefined) return undefined
-  if (value === null || value === '') return null
-  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, Math.floor(value))
-  if (typeof value === 'string' && value.trim()) {
-    const n = Number(value)
-    if (Number.isFinite(n)) return Math.max(0, Math.floor(n))
-  }
-  return undefined
-}

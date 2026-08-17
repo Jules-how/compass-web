@@ -56,7 +56,7 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/expressions/<id>" \
   -d '{"notes":"..."}'
 ```
 
-Campaign copy (brief of record): `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Wave fields: `wave_cap`, `opener_reviewed_at`, `copy_confirmed_at`. Changing sequence copy clears `copy_confirmed_at`. Compact `wave` is on `GET /api/agent/campaigns` — not on the brief.
+Campaign copy (brief of record): `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Changing sequence copy clears `copy_confirmed_at`. Compact `wave` is on `GET /api/agent/campaigns` — not on the brief.
 
 **Operating model:** Compass = workshop · vault agent = runner · Instantly = mail truck. Activate stays in Instantly. Do not invent vault `brief.md` for new campaigns.
 
@@ -145,13 +145,13 @@ curl -sS -X POST "$COMPASS_BASE_URL/api/agent/instantly/push-sequence" \
 
 Push marks Compass `in_instantly` / Instantly ids the same turn. Skip workspace dupes; Instantly verifies on import. Activate stays in Instantly after Jules sign-off.
 
-Wave on that list is compact (`cap`, `cohort`, `blocked`, `readyToActivate`). PATCH wave via campaign copy:
+Wave on that list is compact (`cohort`, `blocked`, `readyToActivate`). PATCH review flags via campaign copy:
 
 ```bash
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/campaigns/<id>/copy" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"wave_cap":40,"opener_reviewed_at":true}'
+  -d '{"opener_reviewed_at":true}'
 ```
 
 ## Daily cron
