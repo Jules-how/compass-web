@@ -89,7 +89,7 @@ Inbox Instantly classify writes `outbound_status` then marks triage done: positi
 curl -sS "$COMPASS_BASE_URL/api/agent/leads?limit=40" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 
-curl -sS "$COMPASS_BASE_URL/api/agent/leads/cohort?pipeline_campaign_id=campaign-au-brokers-growth-2026-08&enrich_status=none,queued&limit=50" \
+curl -sS "$COMPASS_BASE_URL/api/agent/leads/cohort?pipeline_campaign_id=campaign-au-brokers-growth-2026-08&enrich_status=none,queued&unverified_only=1&limit=50" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
@@ -106,6 +106,11 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"rows":[{"email":"ada@example.com","website":"https://example.com.au"}]}'
+
+curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"emails":["ada@example.com"],"email_verify_status":"valid"}'
 
 
 curl -sS "$COMPASS_BASE_URL/api/agent/campaigns" \

@@ -6,11 +6,11 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const COHORT_COLUMNS =
-  'id,name,email,company,city,state,linkedin,website,company_domain,vertical,enrich_status,lead_facts,opener,outbound_status,pipeline_campaign_id,cohort_tag'
+  'id,name,email,company,city,state,linkedin,website,company_domain,vertical,enrich_status,lead_facts,opener,outbound_status,pipeline_campaign_id,cohort_tag,email_verify_status,email_verified_at'
 
 /**
  * Harvest/attach input: contacts on a pipeline campaign.
- * Query: pipeline_campaign_id=… & enrich_status=none,queued & limit=50 & offset=0
+ * Query: pipeline_campaign_id=… & enrich_status=none,queued & unverified_only=1 & limit=50 & offset=0
  */
 export async function GET(request: Request) {
   const authError = requireAgentAuth(request)
@@ -41,6 +41,11 @@ export async function GET(request: Request) {
 
     if (statuses.length) {
       query = query.in('enrich_status', statuses)
+    }
+
+    const unverifiedOnly = url.searchParams.get('unverified_only') === '1'
+    if (unverifiedOnly) {
+      query = query.is('email_verified_at', null)
     }
 
     const { data, error, count } = await query

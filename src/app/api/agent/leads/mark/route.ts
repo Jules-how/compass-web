@@ -16,6 +16,15 @@ const ENRICH_STATUSES = new Set([
   'uploaded'
 ])
 
+const EMAIL_VERIFY_STATUSES = new Set([
+  'valid',
+  'catch_all',
+  'invalid',
+  'unknown',
+  'risky',
+  'none'
+])
+
 const OUTBOUND_STATUSES = new Set([
   'uncontacted',
   'in_instantly',
@@ -49,6 +58,9 @@ type SharedMarkBody = {
   instantly_campaign_name?: string | null
   instantly_campaign?: string | null
   instantly_uploaded_at?: string | null
+  email_verify_status?: string | null
+  email_verified?: boolean
+  email_verified_at?: string | null
 }
 
 function parseEnrichStatus(value: unknown): { ok: true; status: string } | { ok: false } {
@@ -107,6 +119,29 @@ function applySharedFields(patch: MarkPatch, body: SharedMarkBody): Response | n
     if (patch.instantly_uploaded_at === undefined) patch.instantly_uploaded_at = stamp
     patch.instantly_synced_at = stamp
   }
+  if (body.email_verify_status !== undefined) {
+    const status = parseOptionalText(body.email_verify_status)?.toLowerCase() || 'none'
+    if (!EMAIL_VERIFY_STATUSES.has(status)) {
+      return portalJson({ error: 'invalid_email_verify_status' }, { status: 400 })
+    }
+    patch.email_verify_status = status === 'none' ? null : status
+    if (status === 'valid' || status === 'catch_all') {
+      patch.email_verified_at = new Date().toISOString()
+    }
+  }
+  if (body.email_verified === true) {
+    patch.email_verified_at = new Date().toISOString()
+    if (patch.email_verify_status === undefined) patch.email_verify_status = 'valid'
+  } else if (body.email_verified === false) {
+    patch.email_verified_at = null
+  }
+  if (
+    body.email_verified_at !== undefined &&
+    body.email_verified !== true &&
+    body.email_verified !== false
+  ) {
+    patch.email_verified_at = parseOptionalText(body.email_verified_at)
+  }
   return null
 }
 
@@ -120,14 +155,17 @@ function sharedFromUnknown(row: Record<string, unknown>): SharedMarkBody {
     instantly_campaign_id: row.instantly_campaign_id as string | null | undefined,
     instantly_campaign_name: row.instantly_campaign_name as string | null | undefined,
     instantly_campaign: row.instantly_campaign as string | null | undefined,
-    instantly_uploaded_at: row.instantly_uploaded_at as string | null | undefined
+    instantly_uploaded_at: row.instantly_uploaded_at as string | null | undefined,
+    email_verify_status: row.email_verify_status as string | null | undefined,
+    email_verified: row.email_verified as boolean | undefined,
+    email_verified_at: row.email_verified_at as string | null | undefined
   }
 }
 
 /**
  * Mark leads: bulk campaign/cohort/status, or per-row facts/opener/Instantly land.
  * Bulk: { ids: string[] } or { emails: string[] } plus shared fields (max 500).
- * Rows: { rows: [{ id? or email, lead_facts?, opener?, website?, company_domain?, Instantly fields }] } (max 50).
+ * Rows: { rows: [{ id? or email, lead_facts?, opener?, website?, company_domain?, Instantly fields, email_verify_status?, email_verified? }] } (max 50).
  */
 export async function PATCH(request: Request) {
   const authError = requireAgentAuth(request)
@@ -146,6 +184,9 @@ export async function PATCH(request: Request) {
     instantly_campaign_name?: string | null
     instantly_campaign?: string | null
     instantly_uploaded_at?: string | null
+    email_verify_status?: string | null
+    email_verified?: boolean
+    email_verified_at?: string | null
     lead_facts?: unknown
     opener?: unknown
   }

@@ -33,8 +33,8 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 | `POST` | `/api/agent/sync` | `{ sources?: ['ads','instantly','instantly_leads'] }` |
 | `GET` | `/api/agent/leads` | Lean Instantly-hot leads (`status`, `limit`, `q`) |
 | `GET` | `/api/agent/leads/inventory` | Uncontacted counts by vertical × state (orient) |
-| `GET` | `/api/agent/leads/cohort` | Harvest input: contacts on a pipeline campaign (`pipeline_campaign_id` required; `enrich_status`, `limit`, `offset`) |
-| `PATCH` | `/api/agent/leads/mark` | Bulk `ids[]` or `emails[]` for campaign/cohort/`enrich_status` / Instantly land (max 500). Per-row `rows[]` for `lead_facts` / `opener` / `website` / `company_domain` / Instantly ids (max 50). Facts are `[{kind, claim, url}]`. Website is the company site, not an engager fact. |
+| `GET` | `/api/agent/leads/cohort` | Harvest input: contacts on a pipeline campaign (`pipeline_campaign_id` required; `enrich_status`, `unverified_only=1` skips `email_verified_at`, `limit`, `offset`) |
+| `PATCH` | `/api/agent/leads/mark` | Bulk `ids[]` or `emails[]` for campaign/cohort/`enrich_status` / Instantly land / `email_verify_status` / `email_verified` (max 500). Per-row `rows[]` for `lead_facts` / `opener` / `website` / `company_domain` / Instantly ids (max 50). Facts are `[{kind, claim, url}]`. Website is the company site, not an engager fact. `email_verify_status`: `valid` \| `catch_all` \| `invalid` \| `unknown` \| `risky` \| `none`. `valid` and `catch_all` stamp `email_verified_at`. `email_verified: true` stamps now and sets status `valid` if unset. |
 | `GET` | `/api/agent/campaigns` | Pipeline + Instantly glance. Compact `wave` per campaign (`cap`, `cohort`, `openers`, `blocked`, `readyToActivate`) |
 | `GET` | `/api/agent/outbound/summary` | Library counts + offer keys (~1–2KB) |
 | `GET` | `/api/agent/outbound/:kind` | Compact list (`limit` default 40 max 100; `full=1` for bodies/sequences) |

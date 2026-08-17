@@ -396,6 +396,8 @@ export interface LeadContact {
   opener?: string | null
   website?: string | null
   company_domain?: string | null
+  email_verify_status?: string | null
+  email_verified_at?: string | null
   lead_facts?: LeadFact[] | unknown | null
   created_at: string | null
   updated_at: string | null
