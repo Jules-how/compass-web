@@ -27,7 +27,26 @@ function pathKey(path: string) {
 }
 
 export function isHomeOrInboxPath(path: string) {
-  return path.startsWith('/home') || path.startsWith('/inbox')
+  const key = keepAliveKey(path)
+  return key === 'home' || key === 'inbox'
+}
+
+/** Surfaces kept mounted in the console shell after first visit. */
+export function keepAliveKey(
+  path: string
+): 'home' | 'inbox' | 'sales' | 'pipeline' | 'outbound' | 'leads' | null {
+  const p = path.split('?')[0] || path
+  if (p === '/home' || p.startsWith('/home/')) return 'home'
+  if (p === '/inbox' || p.startsWith('/inbox/')) return 'inbox'
+  if (p === '/sales') return 'sales'
+  if (p === '/sales/pipeline') return 'pipeline'
+  if (p === '/sales/outbound') return 'outbound'
+  if (p === '/leads') return 'leads'
+  return null
+}
+
+export function isKeepAlivePath(path: string) {
+  return keepAliveKey(path) !== null
 }
 
 export function ConsoleNavProvider({ children }: { children: ReactNode }) {
@@ -59,10 +78,10 @@ export function ConsoleNavProvider({ children }: { children: ReactNode }) {
       const current = pathKey(optimisticPath ?? pathname)
       if (next === current) return
 
-      // Instantly swap only when the destination is a keep-alive surface
-      // (Home/Inbox). Leaving those routes stays on the current panel until
-      // the real RSC children arrive — avoids a blank main canvas.
-      if (isHomeOrInboxPath(next)) {
+      // Instantly swap only when the destination is a keep-alive surface.
+      // Leaving those routes stays on the current panel until the real RSC
+      // children arrive — avoids a blank main canvas.
+      if (isKeepAlivePath(next)) {
         setOptimisticPath(next)
       } else {
         setOptimisticPath(null)

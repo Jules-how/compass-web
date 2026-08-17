@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 const required = [
-  'src/app/leads/page.tsx',
+  'src/app/(console)/leads/page.tsx',
   'src/app/inbox/page.tsx',
   'src/app/tasks/page.tsx',
   'src/app/projects/page.tsx',

@@ -49,15 +49,23 @@ test('operator pages still gate access and login supports open-operator fallback
     'src/app/(console)/functions/page.tsx',
     'src/app/(console)/functions/[id]/page.tsx',
     'src/app/(console)/inbox/page.tsx',
-    'src/app/leads/page.tsx'
+    'src/app/(console)/leads/page.tsx'
   ]) {
-    // Console pages inherit the shared layout gate; leads stays page-gated.
-    // Home/Inbox bodies live in ConsoleHomeInboxKeepAlive for instant tab switches.
-    if (page.includes('(console)/home') || page.includes('(console)/inbox')) {
+    // Console pages inherit the shared layout gate.
+    // Home/Inbox/Sales/CRM bodies live in ConsoleHomeInboxKeepAlive for instant tab switches.
+    if (
+      page.includes('(console)/home') ||
+      page.includes('(console)/inbox') ||
+      page.includes('(console)/leads')
+    ) {
       assert.match(read(page), /OperatorShell/)
       assert.match(
         read('src/components/ConsoleHomeInboxKeepAlive.tsx'),
-        page.includes('/home') ? /HomeDashboard/ : /InboxPanel/
+        page.includes('/home')
+          ? /HomeDashboard/
+          : page.includes('/inbox')
+            ? /InboxPanel/
+            : /LeadsPanel/
       )
     } else if (page.includes('(console)') && !page.includes('leads')) {
       assert.match(
@@ -160,13 +168,14 @@ test('operator console uses persistent layout with animated sidebar and sales ov
   assert.match(read('src/components/TaskList.tsx'), /role="tablist"/)
   assert.match(read('src/components/TaskList.tsx'), /tabular-nums/)
   assert.match(read('src/components/TaskList.tsx'), /min-w-\[11\.5rem\]/)
-  assert.match(read('src/components/ConsoleNav.tsx'), /isHomeOrInboxPath/)
-  assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /seenHome|seenInbox/)
+  assert.match(read('src/components/ConsoleNav.tsx'), /isKeepAlivePath/)
+  assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /seenHome|seenInbox|seenOverview|seenCrm/)
   assert.match(read('next.config.ts'), /staleTimes/)
   assert.match(read('src/lib/portal-access.ts'), /MEMBERSHIP_CACHE_TTL_MS/)
   assert.match(sidebar, /framer-motion|motion\./)
   assert.match(sidebar, /sticky top-0/)
-  assert.match(sales, /SalesOverview/)
+  assert.match(sales, /OperatorShell/)
+  assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /SalesOverview/)
   assert.match(overview, /EmailVolumeChart/)
   assert.match(overview, /Expected revenue|Deal flow|Campaign progress/)
   assert.match(chart, /Campaigns/)

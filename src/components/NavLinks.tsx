@@ -94,7 +94,8 @@ const OPERATOR_SECTIONS: NavSection[] = [
         href: '/sales/outbound',
         label: 'Outbound',
         key: 'outbound',
-        icon: OutboundIcon
+        icon: OutboundIcon,
+        api: '/api/instantly/outbound-campaigns'
       },
       {
         href: '/leads',
@@ -151,6 +152,9 @@ export function navKeyFromPathname(pathname: string | null): NavKey {
 function prefetchApi(api?: string, key?: NavKey) {
   if (typeof window === 'undefined') return
   if (api) prefetchJson(api, api)
+  if (key === 'outbound') {
+    prefetchJson('/api/campaigns', '/api/campaigns')
+  }
   if (key === 'leads') {
     prefetchJson('leads:summary:global', '/api/leads/summary')
     prefetchJson('leads:facets', '/api/leads/facets')

@@ -1,14 +1,8 @@
 import { OperatorShell } from '@/components/OperatorShell'
-import { SalesOverview } from '@/components/sales/SalesOverview'
 
+/**
+ * Overview is owned by ConsoleHomeInboxKeepAlive so Sales tab switches stay mounted.
+ */
 export default function SalesOverviewPage() {
-  return (
-    <OperatorShell
-      title="Sales"
-      subtitle="Overview · Instantly throughput, targeting map, replies, and deal flow"
-      width="full"
-    >
-      <SalesOverview />
-    </OperatorShell>
-  )
+  return <OperatorShell width="full">{null}</OperatorShell>
 }

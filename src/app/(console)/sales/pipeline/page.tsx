@@ -1,10 +1,8 @@
-import { CampaignPlanner } from '@/components/campaigns/CampaignPlanner'
 import { OperatorShell } from '@/components/OperatorShell'
 
+/**
+ * Pipeline calendar is owned by ConsoleHomeInboxKeepAlive so tab switches stay mounted.
+ */
 export default function PipelinePage() {
-  return (
-    <OperatorShell title="Campaign Planner" flush>
-      <CampaignPlanner />
-    </OperatorShell>
-  )
+  return <OperatorShell flush>{null}</OperatorShell>
 }

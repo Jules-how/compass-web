@@ -8,7 +8,7 @@ import { CompassMark } from '@/components/nav-icons'
 import { ConsoleHomeInboxKeepAlive } from '@/components/ConsoleHomeInboxKeepAlive'
 import {
   ConsoleNavProvider,
-  isHomeOrInboxPath,
+  isKeepAlivePath,
   useConsoleNav,
   useConsoleViewPath
 } from '@/components/ConsoleNav'
@@ -83,10 +83,10 @@ function ConsoleSidebarFrame({
 function ConsoleMain({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const viewPath = useConsoleViewPath()
-  const keepAliveRoute = isHomeOrInboxPath(viewPath)
+  const keepAliveRoute = isKeepAlivePath(viewPath)
   // Use the real pathname for page children so we don't flash a stale RSC
-  // tree while an optimistic Home/Inbox target is showing.
-  const showChildren = !isHomeOrInboxPath(pathname) && !keepAliveRoute
+  // tree while an optimistic keep-alive target is showing.
+  const showChildren = !isKeepAlivePath(pathname) && !keepAliveRoute
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col md:overflow-y-auto md:scrollbar-gutter-stable">
@@ -101,7 +101,7 @@ function ConsoleMain({ children }: { children: ReactNode }) {
       <div className="flex min-h-full flex-1 flex-col">
         <ConsoleHomeInboxKeepAlive />
         {showChildren ? (
-          <div className="flex min-h-full flex-1 flex-col animate-fade-up">{children}</div>
+          <div className="flex min-h-full flex-1 flex-col">{children}</div>
         ) : null}
       </div>
     </div>
