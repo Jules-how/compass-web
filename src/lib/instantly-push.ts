@@ -29,7 +29,7 @@ export const INSTANTLY_PUSH_CHUNK = 200
 export const INSTANTLY_PUSH_MAX = 1000
 
 export const PUSH_LEAD_COLUMNS =
-  'id,name,email,phone,company,role,city,state,linkedin,outbound_status,suppression_reason,recontact_ok,instantly_campaign_id,instantly_lead_id,opener,lead_facts,enrich_status,pipeline_campaign_id'
+  'id,name,email,phone,company,role,city,state,linkedin,website,company_domain,outbound_status,suppression_reason,recontact_ok,instantly_campaign_id,instantly_lead_id,opener,lead_facts,enrich_status,pipeline_campaign_id'
 
 export type PushSkipReason =
   | 'no_email'
@@ -110,6 +110,7 @@ export function leadContactToInstantlyLead(lead: LeadContact): InstantlyLeadPayl
   if (values.jobTitle) custom.jobTitle = values.jobTitle
   if (values.location) custom.location = values.location
   if (values.linkedIn) custom.linkedIn = values.linkedIn
+  if (values.website) custom.website = values.website
   if (values.opener) {
     custom.opener = values.opener
     custom.personalization = values.opener
@@ -122,6 +123,7 @@ export function leadContactToInstantlyLead(lead: LeadContact): InstantlyLeadPayl
   if (values.companyName) payload.company_name = values.companyName
   if (values.phone) payload.phone = values.phone
   if (values.opener) payload.personalization = values.opener
+  if (values.website) payload.website = values.website
   if (Object.keys(custom).length) payload.custom_variables = custom
   return payload
 }

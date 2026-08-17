@@ -30,6 +30,7 @@ export function leadPreviewValues(lead: LeadContact | null): Record<string, stri
     phone: (lead.phone || '').trim(),
     location,
     linkedIn: (lead.linkedin || '').trim(),
+    website: (lead.website || '').trim() || (lead.company_domain ? `https://${lead.company_domain}` : ''),
     opener,
     personalization: opener
   }

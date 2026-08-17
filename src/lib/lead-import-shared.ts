@@ -40,7 +40,8 @@ const COLUMN_ALIASES: Record<string, string[]> = {
   linkedin: ['Person LinkedIn URL', 'person linkedin url', 'LinkedIn', 'linkedin', 'Linkedin URL', 'linkedin url', 'LinkedIn URL'],
   city: ['Person city', 'person city', 'City', 'city', 'Location', 'location'],
   state: ['Person state', 'person state', 'State', 'state', 'Region', 'region', 'Province'],
-  vertical: ['Vertical', 'vertical', 'Industry', 'industry', 'Category', 'category']
+  vertical: ['Vertical', 'vertical', 'Industry', 'industry', 'Category', 'category'],
+  website: ['Website', 'website', 'Company website', 'company website', 'URL', 'url', 'Domain', 'domain', 'Company domain']
 }
 
 export interface MappedLeadRow {
@@ -53,6 +54,7 @@ export interface MappedLeadRow {
   city: string
   state: string
   vertical: string
+  website: string
 }
 
 function lookup(raw: Record<string, string | undefined>, aliases: string[]): string {
@@ -90,7 +92,8 @@ export function mapCsvRow(raw: Record<string, string | undefined>): MappedLeadRo
     linkedin: lookup(raw, COLUMN_ALIASES.linkedin),
     city: lookup(raw, COLUMN_ALIASES.city),
     state: lookup(raw, COLUMN_ALIASES.state),
-    vertical: lookup(raw, COLUMN_ALIASES.vertical)
+    vertical: lookup(raw, COLUMN_ALIASES.vertical),
+    website: lookup(raw, COLUMN_ALIASES.website)
   }
 }
 

@@ -7,6 +7,7 @@ import {
   requireSameOrigin
 } from '@/lib/portal-http'
 import { parseLeadFacts, type LeadFact } from '@/lib/lead-facts'
+import { parseCompanySite } from '@/lib/company-site'
 import { MAX_LEAD_OPENER } from '@/lib/campaigns'
 import { LEAD_LIST_COLUMNS } from '@/lib/list-columns'
 import type { LeadContact } from '@/lib/types'
@@ -31,7 +32,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const id = decodeURIComponent(rawId || '').trim()
   if (!id) return portalJson({ error: 'missing_id' }, { status: 400 })
 
-  let body: { opener?: unknown; lead_facts?: unknown; pipeline_campaign_id?: unknown }
+  let body: { opener?: unknown; lead_facts?: unknown; pipeline_campaign_id?: unknown; website?: unknown }
   try {
     body = (await readBoundedJson(request, 64 * 1024)) as typeof body
   } catch {
@@ -41,7 +42,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (
     body.opener === undefined &&
     body.lead_facts === undefined &&
-    body.pipeline_campaign_id === undefined
+    body.pipeline_campaign_id === undefined &&
+    body.website === undefined
   ) {
     return portalJson({ error: 'empty_patch' }, { status: 400 })
   }
@@ -61,6 +63,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const facts = parseLeadFacts(body.lead_facts)
     if (!facts.ok) return portalJson({ error: facts.error }, { status: 400 })
     patch.lead_facts = facts.facts as LeadFact[]
+  }
+
+  if (body.website !== undefined) {
+    if (body.website != null && typeof body.website !== 'string') {
+      return portalJson({ error: 'website_invalid' }, { status: 400 })
+    }
+    const site = parseCompanySite(body.website)
+    patch.website = site.website
+    patch.company_domain = site.company_domain
   }
 
   if (body.pipeline_campaign_id !== undefined) {

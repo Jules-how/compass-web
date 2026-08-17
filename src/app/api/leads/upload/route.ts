@@ -1,4 +1,5 @@
 import { type NextRequest } from 'next/server'
+import { siteFromEmailOrUrl } from '@/lib/company-site'
 import { normalizeEmail, normalizePhone, normalizeLinkedin, mapCsvRow, ingestSkipReason, isLeadSourceService } from '@/lib/lead-import-shared'
 import { normalizeVerticalSlug } from '@/lib/leads-meta'
 import type { LeadSourceService, LeadVertical } from '@/lib/types'
@@ -141,6 +142,7 @@ export async function POST(request: NextRequest) {
       const email = normalizeEmail(mapped.email ?? '')
       const phone = normalizePhone(mapped.phone ?? '')
       const linkedin = normalizeLinkedin(mapped.linkedin ?? '')
+      const site = siteFromEmailOrUrl({ email, website: mapped.website })
       const sourceRowId = `source-${crypto.randomUUID()}`
       const csvVertical = normalizeVerticalSlug(mapped.vertical)
       // Form vertical wins when the operator picked a real vertical. Leaving
@@ -160,7 +162,7 @@ export async function POST(request: NextRequest) {
         normalized_email: email || null,
         normalized_phone: phone || null,
         linkedin: linkedin || null,
-        company_domain: null,
+        company_domain: site.company_domain,
         decision: 'imported',
         contact_id: null,
         reason: null,
@@ -203,6 +205,8 @@ export async function POST(request: NextRequest) {
         city: mapped.city || null,
         state: mapped.state || null,
         linkedin: linkedin || null,
+        website: site.website,
+        company_domain: site.company_domain,
         list_ids: null,
         import_batch_id: batchId,
         outbound_status: 'uncontacted',

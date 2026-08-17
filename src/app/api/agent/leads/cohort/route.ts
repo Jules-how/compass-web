@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const COHORT_COLUMNS =
-  'id,name,email,company,city,state,linkedin,vertical,enrich_status,lead_facts,opener,outbound_status,pipeline_campaign_id,cohort_tag'
+  'id,name,email,company,city,state,linkedin,website,company_domain,vertical,enrich_status,lead_facts,opener,outbound_status,pipeline_campaign_id,cohort_tag'
 
 /**
  * Harvest/attach input: contacts on a pipeline campaign.

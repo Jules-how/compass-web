@@ -5,7 +5,7 @@
  */
 
 export const LEAD_COLUMN_STORAGE_KEY = 'compass.leadColumns.v4'
-export const CAMPAIGN_LEAD_COLUMN_STORAGE_KEY = 'compass.campaignLeadColumns.v1'
+export const CAMPAIGN_LEAD_COLUMN_STORAGE_KEY = 'compass.campaignLeadColumns.v2'
 export const LEAD_COLUMN_WIDTHS_KEY = 'compass.leadColumnWidths.v1'
 export const LEAD_COLUMN_PINNED_KEY = 'compass.leadColumnsPinned.v1'
 export const LEAD_COLUMN_HIDDEN_KEY = 'compass.leadColumnsHidden.v1'
@@ -81,6 +81,7 @@ export const CAMPAIGN_DEFAULT_COLUMNS: LeadColumnId[] = [
   'first_name',
   'last_name',
   'email',
+  'website',
   'opener',
   'lead_facts'
 ]

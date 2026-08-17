@@ -394,6 +394,8 @@ export interface LeadContact {
   cohort_tag?: string | null
   enrich_status?: string | null
   opener?: string | null
+  website?: string | null
+  company_domain?: string | null
   lead_facts?: LeadFact[] | unknown | null
   created_at: string | null
   updated_at: string | null

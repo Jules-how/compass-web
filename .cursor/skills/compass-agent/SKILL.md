@@ -102,6 +102,11 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   -H "Content-Type: application/json" \
   -d '{"rows":[{"id":"…","enrich_status":"enriched","lead_facts":[{"kind":"policy","claim":"No application fee on home loans","url":"https://example.com.au/about"}]}]}'
 
+curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"rows":[{"email":"ada@example.com","website":"https://example.com.au"}]}'
+
 
 curl -sS "$COMPASS_BASE_URL/api/agent/campaigns" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"

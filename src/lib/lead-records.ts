@@ -94,8 +94,10 @@ export function leadColumnValue(lead: LeadContact, column: LeadColumnId, now = n
       return { text: lead.company?.trim() || '' }
     case 'location':
       return { text: leadLocation(lead) }
-    case 'website':
-      return { text: '' }
+    case 'website': {
+      const href = lead.website?.trim() || (lead.company_domain ? `https://${lead.company_domain}` : '')
+      return { text: href.replace(/^https?:\/\//i, ''), href: href || undefined }
+    }
     case 'linkedin': {
       const href = leadLinkedinHref(lead)
       return { text: leadLinkedinLabel(lead), href }
@@ -136,7 +138,9 @@ export function leadColumnValue(lead: LeadContact, column: LeadColumnId, now = n
 }
 
 export function leadColumnOccupied(lead: LeadContact, column: LeadColumnId): boolean {
-  if (column === 'website') return false
+  if (column === 'website') {
+    return Boolean(lead.website?.trim() || lead.company_domain?.trim())
+  }
   if (column === 'lead_facts') {
     const parsed = parseLeadFacts(lead.lead_facts)
     return parsed.ok && parsed.facts.length > 0

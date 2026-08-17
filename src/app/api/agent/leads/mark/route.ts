@@ -1,5 +1,6 @@
 import { requireAgentAuth } from '@/lib/agent-auth'
 import { parseLeadFacts } from '@/lib/lead-facts'
+import { parseCompanySite } from '@/lib/company-site'
 import { getPortalAdminClient } from '@/lib/portal-admin'
 import { portalJson, readBoundedJson } from '@/lib/portal-http'
 
@@ -126,7 +127,7 @@ function sharedFromUnknown(row: Record<string, unknown>): SharedMarkBody {
 /**
  * Mark leads: bulk campaign/cohort/status, or per-row facts/opener/Instantly land.
  * Bulk: { ids: string[] } or { emails: string[] } plus shared fields (max 500).
- * Rows: { rows: [{ id? or email, lead_facts?, opener?, Instantly fields }] } (max 50).
+ * Rows: { rows: [{ id? or email, lead_facts?, opener?, website?, company_domain?, Instantly fields }] } (max 50).
  */
 export async function PATCH(request: Request) {
   const authError = requireAgentAuth(request)
@@ -201,6 +202,19 @@ export async function PATCH(request: Request) {
             return portalJson({ error: 'opener_too_long', id: id || email }, { status: 400 })
           }
           patch.opener = opener
+        }
+        if (row.website !== undefined || row.company_domain !== undefined) {
+          const site = parseCompanySite(
+            typeof row.website === 'string'
+              ? row.website
+              : typeof row.company_domain === 'string'
+                ? row.company_domain
+                : ''
+          )
+          if (row.website !== undefined) patch.website = site.website
+          if (row.company_domain !== undefined || row.website !== undefined) {
+            patch.company_domain = site.company_domain
+          }
         }
         if (Object.keys(patch).length <= 1) {
           return portalJson({ error: 'row_no_fields', id: id || email }, { status: 400 })
