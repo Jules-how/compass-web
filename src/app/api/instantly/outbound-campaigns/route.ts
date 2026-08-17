@@ -45,7 +45,7 @@ async function loadPipelineBinds(
   const ids = pipeline.map((row) => row.id)
   const { data: leads } = await supabase
     .from('lead_contacts')
-    .select('pipeline_campaign_id,outbound_status')
+    .select('pipeline_campaign_id,outbound_status,opener')
     .in('pipeline_campaign_id', ids)
     .limit(8000)
   return {

@@ -74,6 +74,8 @@ test('factor performance module + hub wiring exist', () => {
   const lib = read('src/lib/outbound-factor-performance.ts')
   assert.match(lib, /export function rollupOutboundByFactor/)
   assert.match(lib, /export function enrichOutboundCampaignFactors/)
+  assert.match(lib, /goLiveAt/)
+  assert.match(lib, /leadResearch/)
   assert.match(lib, /lengthBandFromStructure/)
   assert.match(lib, /expressionLabel/)
   assert.match(lib, /countFactorDifferences/)

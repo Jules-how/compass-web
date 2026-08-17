@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatGoLiveDate } from '@/lib/campaigns'
+import { researchState } from '@/lib/campaign-wave'
 import type { OutboundBoardCampaign } from '@/lib/instantly'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
@@ -42,6 +44,33 @@ function statusBadge(status: OutboundBoardCampaign['status']) {
   )
 }
 
+function researchChip(campaign: OutboundBoardCampaign) {
+  const research = campaign.leadResearch
+  if (!research || research.cohort <= 0) {
+    return <span className="text-[11px] text-neutral-400">—</span>
+  }
+  const state = researchState(research.openers, research.cohort)
+  if (state === 'done') {
+    return (
+      <Badge variant="success" appearance="light" size="sm">
+        Researched
+      </Badge>
+    )
+  }
+  if (state === 'partial') {
+    return (
+      <Badge variant="warning" appearance="light" size="sm">
+        {research.openers}/{research.cohort}
+      </Badge>
+    )
+  }
+  return (
+    <Badge variant="secondary" appearance="light" size="sm">
+      Not researched
+    </Badge>
+  )
+}
+
 function liveHref(campaign: OutboundBoardCampaign): string {
   if (campaign.pipelineCampaignId) {
     return `/sales/outbound/editor/${encodeURIComponent(campaign.pipelineCampaignId)}`
@@ -53,7 +82,7 @@ function LiveRow({ campaign }: { campaign: OutboundBoardCampaign }) {
   return (
     <Link
       href={liveHref(campaign)}
-      className="grid grid-cols-[minmax(0,1.6fr)_auto_minmax(4.5rem,0.7fr)_minmax(4rem,0.55fr)_minmax(4rem,0.55fr)_minmax(4.5rem,0.6fr)_minmax(4.5rem,0.7fr)] items-center gap-2 border-b border-stone-100 px-3 py-2 text-[13px] transition last:border-b-0 hover:bg-orange-50/50"
+      className="grid grid-cols-[minmax(0,1.6fr)_minmax(3.5rem,0.45fr)_auto_auto_minmax(4.5rem,0.7fr)_minmax(4rem,0.55fr)_minmax(4rem,0.55fr)_minmax(4.5rem,0.6fr)_minmax(4.5rem,0.7fr)] items-center gap-2 border-b border-stone-100 px-3 py-2 text-[13px] transition last:border-b-0 hover:bg-orange-50/50"
     >
       <div className="min-w-0">
         <div className="truncate font-medium text-neutral-900">{campaign.name}</div>
@@ -61,6 +90,10 @@ function LiveRow({ campaign }: { campaign: OutboundBoardCampaign }) {
           <div className="truncate text-[11px] text-neutral-500">{campaign.offer}</div>
         ) : null}
       </div>
+      <div className="tabular-nums text-neutral-700">
+        {formatGoLiveDate(campaign.goLiveAt || campaign.startedAt || null)}
+      </div>
+      <div>{researchChip(campaign)}</div>
       <div>{statusBadge(campaign.status)}</div>
       <div className="min-w-0">
         <div className="flex items-center gap-2">
@@ -88,8 +121,10 @@ function LiveRow({ campaign }: { campaign: OutboundBoardCampaign }) {
 
 function TableHead() {
   return (
-    <div className="grid grid-cols-[minmax(0,1.6fr)_auto_minmax(4.5rem,0.7fr)_minmax(4rem,0.55fr)_minmax(4rem,0.55fr)_minmax(4.5rem,0.6fr)_minmax(4.5rem,0.7fr)] items-center gap-2 border-b border-stone-200 bg-stone-50/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+    <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(3.5rem,0.45fr)_auto_auto_minmax(4.5rem,0.7fr)_minmax(4rem,0.55fr)_minmax(4rem,0.55fr)_minmax(4.5rem,0.6fr)_minmax(4.5rem,0.7fr)] items-center gap-2 border-b border-stone-200 bg-stone-50/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
       <div>Name</div>
+      <div>Live</div>
+      <div>Leads</div>
       <div>Status</div>
       <div>Progress</div>
       <div>Sent</div>

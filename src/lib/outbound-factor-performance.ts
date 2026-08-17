@@ -239,6 +239,13 @@ export function enrichOutboundCampaignFactors(
     expression,
     structure,
     pipelineCampaignId: bind?.id,
+    goLiveAt: bind?.go_live_at ?? campaign.goLiveAt ?? null,
+    leadResearch: bind
+      ? {
+          openers: bind.wave_opener_count ?? 0,
+          cohort: bind.wave_cohort_count ?? 0
+        }
+      : campaign.leadResearch,
     positiveReplies: outcome.positive,
     meetings: outcome.meetings,
     delivered: outcome.delivered,

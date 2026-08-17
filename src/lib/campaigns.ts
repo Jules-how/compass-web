@@ -21,7 +21,9 @@ export const EXPERIMENT_FACTORS = [
   'expression',
   'structure',
   'offer',
-  'audience'
+  'audience',
+  'subject',
+  'opener_mode'
 ] as const
 export type ExperimentFactor = (typeof EXPERIMENT_FACTORS)[number]
 
@@ -88,6 +90,7 @@ export interface CompassCampaign {
   wave_cohort_count?: number
   wave_positive_count?: number
   wave_meeting_count?: number
+  wave_opener_count?: number
   created_at: string
   updated_at: string
 }
@@ -189,7 +192,9 @@ export function projectCampaignCopy(row: CompassCampaign): CompassCampaign {
     wave_positive_count:
       typeof row.wave_positive_count === 'number' ? row.wave_positive_count : undefined,
     wave_meeting_count:
-      typeof row.wave_meeting_count === 'number' ? row.wave_meeting_count : undefined
+      typeof row.wave_meeting_count === 'number' ? row.wave_meeting_count : undefined,
+    wave_opener_count:
+      typeof row.wave_opener_count === 'number' ? row.wave_opener_count : undefined
   }
 }
 
@@ -268,6 +273,8 @@ export function experimentStatusLabel(status: string): string {
 export function experimentFactorLabel(factor: string): string {
   if (factor === 'none') return 'None'
   if (factor === 'cta') return 'CTA'
+  if (factor === 'opener_mode') return 'Opener mode'
+  if (factor === 'subject') return 'Subject'
   return factor.charAt(0).toUpperCase() + factor.slice(1)
 }
 
@@ -404,6 +411,14 @@ export function formatGoLiveAt(iso: string | null | undefined): string {
     hour: 'numeric',
     minute: '2-digit'
   })
+}
+
+/** Compact calendar day for outbound lists (e.g. 17 Aug). */
+export function formatGoLiveDate(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })
 }
 
 export function formatGoLiveTime(iso: string | null | undefined): string {

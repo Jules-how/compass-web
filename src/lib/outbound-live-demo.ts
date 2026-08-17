@@ -27,6 +27,8 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     positiveReplies: 42,
     meetings: 11,
     startedAt: '2026-07-28',
+    goLiveAt: '2026-07-28T09:00:00+10:00',
+    leadResearch: { openers: 2400, cohort: 2400 },
     updatedAt: '2026-08-07T04:12:00Z'
   },
   {
@@ -50,6 +52,8 @@ export const OUTBOUND_LIVE_DEMO: OutboundLiveCampaign[] = [
     positiveReplies: 31,
     meetings: 8,
     startedAt: '2026-07-30',
+    goLiveAt: '2026-07-30T09:00:00+10:00',
+    leadResearch: { openers: 900, cohort: 1850 },
     updatedAt: '2026-08-07T03:40:00Z'
   },
   {

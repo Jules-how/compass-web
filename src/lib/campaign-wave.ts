@@ -317,14 +317,36 @@ export function summarizeLeadsByCampaign(
   )
 }
 
+export type LeadTally = {
+  cohort: number
+  positive: number
+  meetings: number
+  openers: number
+}
+
+export function researchState(openers: number, cohort: number): 'none' | 'partial' | 'done' {
+  if (cohort <= 0 || openers <= 0) return 'none'
+  if (openers >= cohort) return 'done'
+  return 'partial'
+}
+
 export function tallyLeadsByCampaign(
-  rows: Array<{ pipeline_campaign_id?: string | null; outbound_status?: string | null }>
-): Record<string, { cohort: number; positive: number; meetings: number }> {
+  rows: Array<{
+    pipeline_campaign_id?: string | null
+    outbound_status?: string | null
+    opener?: string | null
+  }>
+): Record<string, LeadTally> {
   const grouped = summarizeLeadsByCampaign(rows)
   return Object.fromEntries(
     Object.entries(grouped).map(([id, summary]) => [
       id,
-      { cohort: summary.cohort, positive: summary.positive, meetings: summary.meetings }
+      {
+        cohort: summary.cohort,
+        positive: summary.positive,
+        meetings: summary.meetings,
+        openers: summary.openers
+      }
     ])
   )
 }
@@ -343,15 +365,23 @@ export function compactWaveForAgent(snapshot: WaveSnapshot) {
 
 export function applyLeadTallies<T extends { id: string }>(
   campaigns: T[],
-  tallies: Record<string, { cohort: number; positive: number; meetings: number }>
-): Array<T & { wave_cohort_count: number; wave_positive_count: number; wave_meeting_count: number }> {
+  tallies: Record<string, LeadTally>
+): Array<
+  T & {
+    wave_cohort_count: number
+    wave_positive_count: number
+    wave_meeting_count: number
+    wave_opener_count: number
+  }
+> {
   return campaigns.map((campaign) => {
     const tally = tallies[campaign.id]
     return {
       ...campaign,
       wave_cohort_count: tally?.cohort ?? 0,
       wave_positive_count: tally?.positive ?? 0,
-      wave_meeting_count: tally?.meetings ?? 0
+      wave_meeting_count: tally?.meetings ?? 0,
+      wave_opener_count: tally?.openers ?? 0
     }
   })
 }

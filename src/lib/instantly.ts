@@ -77,6 +77,9 @@ export type OutboundBoardCampaign = {
   meetingsPer100?: number
   startedAt: string
   updatedAt: string
+  /** Compass `go_live_at` when the Instantly row is bound to a pipeline campaign. */
+  goLiveAt?: string | null
+  leadResearch?: { openers: number; cohort: number }
   /** Compass pipeline campaign id when `instantly_campaign_id` is bound. */
   pipelineCampaignId?: string
 }

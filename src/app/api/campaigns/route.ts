@@ -57,7 +57,7 @@ export async function GET() {
         .order('name'),
       supabase
         .from('lead_contacts')
-        .select('pipeline_campaign_id,outbound_status')
+        .select('pipeline_campaign_id,outbound_status,opener')
         .not('pipeline_campaign_id', 'is', null)
         .limit(8000)
     ])

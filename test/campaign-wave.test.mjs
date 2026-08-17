@@ -203,6 +203,8 @@ test('wave files and sidecar Wave section are wired', () => {
 
   const lib = read('src/lib/campaign-wave.ts')
   assert.match(lib, /export function buildWaveSnapshot/)
+  assert.match(lib, /export function researchState/)
+  assert.match(lib, /wave_opener_count/)
   assert.match(lib, /copy_match/)
   assert.match(lib, /WAVE_BOUNCE_WARN_PCT/)
 
