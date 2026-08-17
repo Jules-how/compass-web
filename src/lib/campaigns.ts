@@ -405,6 +405,27 @@ export function formatGoLiveTime(iso: string | null | undefined): string {
   return date.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })
 }
 
+export function openerModeLabel(mode?: string | null): string | null {
+  const value = (mode || '').trim().toLowerCase()
+  if (!value || value === 'nick-tier') return null
+  if (value === 'none' || value === 'as-written' || value === 'written') return 'open as written'
+  return value.replaceAll('_', ' ')
+}
+
+export function campaignLeadCountLabel(campaign: Pick<CompassCampaign, 'wave_cohort_count' | 'wave_cap'>): string | null {
+  const count =
+    typeof campaign.wave_cohort_count === 'number' && Number.isFinite(campaign.wave_cohort_count)
+      ? Math.max(0, Math.floor(campaign.wave_cohort_count))
+      : 0
+  if (count <= 0) return null
+  const cap =
+    typeof campaign.wave_cap === 'number' && Number.isFinite(campaign.wave_cap)
+      ? Math.max(0, Math.floor(campaign.wave_cap))
+      : null
+  if (cap != null && cap > 0) return `${count} / ${cap} leads`
+  return `${count} lead${count === 1 ? '' : 's'}`
+}
+
 export function goLiveToDatetimeLocal(iso: string | null | undefined): string {
   if (!iso) return ''
   const date = new Date(iso)

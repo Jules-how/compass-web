@@ -84,6 +84,7 @@ export function CampaignCopyMeta({
             <option value="nick-tier">nick-tier</option>
             <option value="platten-hook">platten-hook</option>
             <option value="connor-intel">connor-intel</option>
+            <option value="as-written">open as written</option>
             <option value="none">none</option>
             <option value="custom">custom</option>
           </select>

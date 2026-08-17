@@ -112,11 +112,13 @@ export function weekDays(cursor: Date): Date[] {
 }
 
 /** Pixel height of one hour row in week/day calendars. */
-export const CALENDAR_HOUR_HEIGHT = 64
+export const CALENDAR_HOUR_HEIGHT = 80
 export const CALENDAR_HOURS = 24
 export const CALENDAR_GUTTER_PX = 64
 /** One campaign fills one hour row, with a small gap so stacked cards stay readable. */
-export const CALENDAR_EVENT_HEIGHT = 56
+export const CALENDAR_EVENT_HEIGHT = 72
+/** Week columns stay wide enough for name + tags instead of clipping. */
+export const CALENDAR_DAY_COL_MIN_PX = 248
 export const CALENDAR_SCROLL_HOUR = 7
 
 export function minutesFromMidnight(iso: string | null | undefined): number | null {

@@ -1,8 +1,16 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode
+} from 'react'
 import { createPortal } from 'react-dom'
 import {
+  CALENDAR_DAY_COL_MIN_PX,
   CALENDAR_EVENT_HEIGHT,
   CALENDAR_GUTTER_PX,
   CALENDAR_HOUR_HEIGHT,
@@ -28,8 +36,10 @@ import {
 } from '@/lib/campaign-calendar'
 import { addDays, startOfDay } from '@/lib/campaign-timeline'
 import {
+  campaignLeadCountLabel,
   formatGoLiveAt,
   formatGoLiveTime,
+  openerModeLabel,
   type CompassCampaign
 } from '@/lib/campaigns'
 
@@ -146,6 +156,19 @@ export function CampaignCalendar({
   )
 }
 
+function campaignPillTags(campaign: CompassCampaign): string[] {
+  const tags: string[] = []
+  const opener = openerModeLabel(campaign.opener_mode)
+  if (opener) tags.push(opener)
+  if (campaign.offer_key) tags.push(campaign.offer_key)
+  const leads = campaignLeadCountLabel(campaign)
+  if (leads) tags.push(leads)
+  for (const label of campaign.labels ?? []) {
+    if (label && !tags.includes(label)) tags.push(label)
+  }
+  return tags.slice(0, 3)
+}
+
 function EventChip({
   campaign,
   selected,
@@ -165,17 +188,21 @@ function EventChip({
 }) {
   const time = formatGoLiveTime(campaign.go_live_at)
   const color = campaign.color || '#E5570A'
+  const tags = campaignPillTags(campaign)
+  const leadTag = campaignLeadCountLabel(campaign)
   return (
     <button
       type="button"
       className={`relative pointer-events-auto flex w-full min-w-0 overflow-hidden rounded-xl border text-left shadow-soft ${
-        compact ? 'h-[22px] items-center gap-1.5 px-1.5 text-[11px]' : 'h-full flex-col justify-center gap-0.5 py-1.5 pl-3 pr-2'
+        compact
+          ? 'h-[22px] items-center gap-1.5 px-1.5 text-[11px]'
+          : 'h-full flex-col justify-center gap-0.5 py-1.5 pl-3.5 pr-2.5'
       } ${
         selected
           ? 'border-[var(--compass-accent)]/40 bg-white ring-1 ring-[var(--compass-accent)]/25'
           : 'border-stone-200/90 bg-white hover:border-stone-300'
       } ${dragging ? 'cursor-grabbing opacity-90 shadow-lift' : 'cursor-grab'}`}
-      title={`${campaign.name} · ${formatGoLiveAt(campaign.go_live_at)}`}
+      title={`${campaign.name} · ${formatGoLiveAt(campaign.go_live_at)}${leadTag ? ` · ${leadTag}` : ''}`}
       onClick={onSelect}
       onDoubleClick={onOpenPage}
       onPointerDown={onPointerDown}
@@ -190,11 +217,28 @@ function EventChip({
       ) : null}
       <span
         className={`min-w-0 font-medium text-neutral-800 ${
-          compact ? 'truncate text-[11px]' : 'line-clamp-2 text-[12px] leading-snug'
+          compact ? 'truncate text-[11px]' : 'truncate text-[12px] leading-snug'
         }`}
       >
         {campaign.name}
       </span>
+      {compact && leadTag ? (
+        <span className="ml-auto shrink-0 rounded-full bg-stone-100 px-1.5 py-px text-[9px] font-medium tabular-nums text-neutral-500">
+          {campaign.wave_cohort_count}
+        </span>
+      ) : null}
+      {!compact && tags.length > 0 ? (
+        <span className="mt-0.5 flex min-w-0 flex-wrap gap-1">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="max-w-full truncate rounded-full bg-stone-100 px-1.5 py-px text-[10px] font-medium text-neutral-600"
+            >
+              {tag}
+            </span>
+          ))}
+        </span>
+      ) : null}
     </button>
   )
 }
@@ -215,10 +259,10 @@ function DragGhost({
   if (typeof document === 'undefined') return null
   return createPortal(
     <div
-      className="pointer-events-none fixed z-[90] w-[200px]"
+      className="pointer-events-none fixed z-[90] w-[268px]"
       style={{ left: x + 12, top: y - 12 }}
     >
-      <div className={compact ? 'h-[22px]' : 'h-[56px]'}>
+      <div className={compact ? 'h-[22px]' : 'h-[72px]'}>
         <EventChip
           campaign={{ ...campaign, go_live_at: goLiveAt }}
           selected
@@ -583,6 +627,7 @@ function TimedBoard({
   selectedId,
   draftGoLiveAt,
   occupiedIsos,
+  header,
   onSelect,
   onOpenPage,
   onCreateSlot,
@@ -595,6 +640,7 @@ function TimedBoard({
   selectedId: string | null
   draftGoLiveAt?: string | null
   occupiedIsos: Array<string | null | undefined>
+  header?: ReactNode
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
   onCreateSlot: (day: Date, hour: number) => void
@@ -643,17 +689,26 @@ function TimedBoard({
     return () => window.clearInterval(handle)
   }, [drag?.moved, drag?.clientX, days, onCursorChange])
 
+  const boardMinWidth = CALENDAR_GUTTER_PX + days.length * CALENDAR_DAY_COL_MIN_PX
+
   return (
     <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
+      {header ? (
+        <div className="sticky top-0 z-30" style={{ minWidth: boardMinWidth }}>
+          {header}
+        </div>
+      ) : null}
       <div
         className="flex"
-        style={{ height: CALENDAR_HOURS * CALENDAR_HOUR_HEIGHT }}
+        style={{ height: CALENDAR_HOURS * CALENDAR_HOUR_HEIGHT, minWidth: boardMinWidth }}
       >
         <HourGutter />
         <div
           ref={gridRef}
           className="grid min-w-0 flex-1"
-          style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
+          style={{
+            gridTemplateColumns: `repeat(${days.length}, minmax(${CALENDAR_DAY_COL_MIN_PX}px, 1fr))`
+          }}
         >
           {days.map((day) => {
             const key = toDateOnly(day)
@@ -765,36 +820,6 @@ function WeekGrid({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white">
-      <div className="flex shrink-0 border-b border-neutral-200 bg-[#f7f8f9]">
-        <div className="shrink-0" style={{ width: CALENDAR_GUTTER_PX }} />
-        <div className="grid min-w-0 flex-1 grid-cols-7">
-          {days.map((day) => {
-            const key = toDateOnly(day)
-            const isToday = key === todayKey
-            return (
-              <button
-                type="button"
-                key={key}
-                onClick={() => onCreateSlot(day, 9)}
-                className={`border-r border-neutral-100 px-3 py-2 text-left last:border-r-0 hover:bg-[var(--compass-accent)]/[0.04] ${
-                  isToday ? 'bg-[#5e6ad2]/[0.06]' : 'bg-[#f7f8f9]'
-                }`}
-              >
-                <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                  {WEEKDAY_LABELS[(day.getDay() + 6) % 7]}
-                </div>
-                <div
-                  className={`text-[15px] tabular-nums ${
-                    isToday ? 'font-semibold text-[#5e6ad2]' : 'text-neutral-800'
-                  }`}
-                >
-                  {day.getDate()}
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      </div>
       <TimedBoard
         days={days}
         byId={byId}
@@ -807,6 +832,43 @@ function WeekGrid({
         onCreateSlot={onCreateSlot}
         onMoveCampaign={onMoveCampaign}
         onCursorChange={onCursorChange}
+        header={
+          <div className="flex border-b border-neutral-200 bg-[#f7f8f9]">
+            <div className="shrink-0" style={{ width: CALENDAR_GUTTER_PX }} />
+            <div
+              className="grid min-w-0 flex-1"
+              style={{
+                gridTemplateColumns: `repeat(7, minmax(${CALENDAR_DAY_COL_MIN_PX}px, 1fr))`
+              }}
+            >
+              {days.map((day) => {
+                const key = toDateOnly(day)
+                const isToday = key === todayKey
+                return (
+                  <button
+                    type="button"
+                    key={key}
+                    onClick={() => onCreateSlot(day, 9)}
+                    className={`border-r border-neutral-100 px-3 py-2 text-left last:border-r-0 hover:bg-[var(--compass-accent)]/[0.04] ${
+                      isToday ? 'bg-[#5e6ad2]/[0.06]' : 'bg-[#f7f8f9]'
+                    }`}
+                  >
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                      {WEEKDAY_LABELS[(day.getDay() + 6) % 7]}
+                    </div>
+                    <div
+                      className={`text-[15px] tabular-nums ${
+                        isToday ? 'font-semibold text-[#5e6ad2]' : 'text-neutral-800'
+                      }`}
+                    >
+                      {day.getDate()}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        }
       />
     </div>
   )
