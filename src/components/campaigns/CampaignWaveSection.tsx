@@ -28,10 +28,13 @@ export function CampaignWaveSection({
         </p>
       </div>
       <p className="text-[12px] text-neutral-600">
-        Openers {wave.openers} / {wave.cohort}
+        First lines {wave.openers} / {wave.cohort - (wave.thin || 0)} sendable
         {wave.missingCompanyOrEmail > 0
           ? ` · ${wave.missingCompanyOrEmail} missing company or email`
           : ''}
+      </p>
+      <p className="text-[12px] text-neutral-600">
+        signal {wave.signal || 0} / tension {wave.tension || 0} / thin {wave.thin || 0}
       </p>
 
       <ul className="space-y-1">

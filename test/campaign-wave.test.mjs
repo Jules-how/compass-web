@@ -71,7 +71,7 @@ function buildWaveSnapshot(input) {
     { id: 'copy', ok: copyOk, blocking: true },
     { id: 'bound', ok: bound, blocking: true },
     { id: 'cohort', ok: cohort > 0, blocking: true },
-    { id: 'openers', ok: cohort === 0 ? false : openers === cohort, blocking: true },
+    { id: 'openers', ok: cohort === 0 ? false : openers === cohort - (input.leads.thin || 0), blocking: true },
     { id: 'reviewed', ok: Boolean(reviewedAt), blocking: true }
   ]
 
@@ -111,7 +111,11 @@ function readyLeads(n = 12) {
     missingCompanyOrEmail: 0,
     enrichMix: { opener_ready: n },
     positive: 0,
-    meetings: 0
+    meetings: 0,
+    signal: n,
+    tension: 0,
+    thin: 0,
+    byKind: {}
   }
 }
 
@@ -160,6 +164,31 @@ test('wave snapshot blocks until openers are reviewed', () => {
   assert.equal(snap.blocked, true)
 })
 
+test('thin rows do not block First lines present', () => {
+  const snap = buildWaveSnapshot({
+    campaign: readyCampaign(),
+    leads: {
+      cohort: 10,
+      openers: 8,
+      missingCompanyOrEmail: 0,
+      enrichMix: { opener_ready: 8, thin: 2 },
+      positive: 0,
+      meetings: 0,
+      signal: 3,
+      tension: 5,
+      thin: 2,
+      byKind: {
+        review: { n: 3, positive: 1, meetings: 0 },
+        tension: { n: 5, positive: 0, meetings: 0 }
+      }
+    },
+    instantly: null
+  })
+  assert.equal(snap.checks.find((c) => c.id === 'openers').ok, true)
+  assert.equal(snap.blocked, false)
+  assert.equal(snap.readyToActivate, true)
+})
+
 test('wave snapshot requires live copy match confirmation', () => {
   const stale = buildWaveSnapshot({
     campaign: readyCampaign({ copy_confirmed_at: null }),
@@ -196,7 +225,18 @@ test('wave files and sidecar Wave section are wired', () => {
   assert.match(lib, /export function researchState/)
   assert.match(lib, /wave_opener_count/)
   assert.match(lib, /copy_match/)
-  assert.match(lib, /WAVE_BOUNCE_WARN_PCT/)
+  assert.match(lib, /First lines present/)
+  assert.match(lib, /cohort - /)
+  assert.match(lib, /byKind/)
+  assert.match(lib, /opener_track/)
+  assert.match(lib, /opener_kind/)
+  assert.match(read('supabase/migrations/0051_opener_track_kind.sql'), /opener_track/)
+  assert.match(read('src/app/api/agent/leads/mark/route.ts'), /opener_track/)
+  assert.match(read('src/app/api/agent/campaigns/route.ts'), /opener_track/)
+  assert.match(read('src/app/api/campaigns/[id]/route.ts'), /opener_track/)
+  assert.match(read('docs/AGENT_BRIDGE.md'), /opener_track/)
+  assert.match(read('src/components/campaigns/CampaignWaveSection.tsx'), /signal/)
+  assert.match(read('src/components/campaigns/CampaignWaveSection.tsx'), /First lines/)
   assert.doesNotMatch(lib, /wave_cap/)
   assert.doesNotMatch(lib, /parseWaveCap/)
 

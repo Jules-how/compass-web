@@ -37,6 +37,14 @@ export type WaveLeadRow = {
   email?: string | null
   company?: string | null
   outbound_status?: string | null
+  opener_track?: string | null
+  opener_kind?: string | null
+}
+
+export type KindStats = {
+  n: number
+  positive: number
+  meetings: number
 }
 
 export type WaveLeadSummary = {
@@ -46,6 +54,10 @@ export type WaveLeadSummary = {
   enrichMix: Record<string, number>
   positive: number
   meetings: number
+  signal: number
+  tension: number
+  thin: number
+  byKind: Record<string, KindStats>
 }
 
 export type WaveInstantlyVolume = {
@@ -60,9 +72,14 @@ export type WaveSnapshot = {
   enrichMix: Record<string, number>
   positive: number
   meetings: number
+  signal: number
+  tension: number
+  thin: number
+  byKind: Record<string, KindStats>
   openerReviewedAt: string | null
   copyConfirmedAt: string | null
   instantly: { sent: number; bounced: number; bounceRate: number } | null
+  positivesPer100Delivered: number | null
   checks: WaveCheck[]
   blocked: boolean
   readyToActivate: boolean
@@ -80,10 +97,14 @@ export function isMeetingOutboundStatus(status: string | null | undefined): bool
 
 export function summarizeWaveLeads(rows: WaveLeadRow[]): WaveLeadSummary {
   const enrichMix: Record<string, number> = {}
+  const byKind: Record<string, KindStats> = {}
   let openers = 0
   let missingCompanyOrEmail = 0
   let positive = 0
   let meetings = 0
+  let signal = 0
+  let tension = 0
+  let thin = 0
   for (const row of rows) {
     const enrich = (row.enrich_status || 'none').trim() || 'none'
     enrichMix[enrich] = (enrichMix[enrich] || 0) + 1
@@ -93,6 +114,21 @@ export function summarizeWaveLeads(rows: WaveLeadRow[]): WaveLeadSummary {
     if (!email || !company) missingCompanyOrEmail += 1
     if (isPositiveOutboundStatus(row.outbound_status)) positive += 1
     if (isMeetingOutboundStatus(row.outbound_status)) meetings += 1
+    const track = (row.opener_track || '').trim()
+    const isThin = enrich === 'thin' || track === 'none'
+    if (isThin) thin += 1
+    else if (track === 'signal') signal += 1
+    else if (track === 'tension') tension += 1
+    const kind = track === 'tension'
+      ? 'tension'
+      : ((row.opener_kind || '').trim() || (track && track !== 'none' ? track : ''))
+    if (kind && kind !== 'none') {
+      const stats = byKind[kind] || { n: 0, positive: 0, meetings: 0 }
+      stats.n += 1
+      if (isPositiveOutboundStatus(row.outbound_status)) stats.positive += 1
+      if (isMeetingOutboundStatus(row.outbound_status)) stats.meetings += 1
+      byKind[kind] = stats
+    }
   }
   return {
     cohort: rows.length,
@@ -100,7 +136,11 @@ export function summarizeWaveLeads(rows: WaveLeadRow[]): WaveLeadSummary {
     missingCompanyOrEmail,
     enrichMix,
     positive,
-    meetings
+    meetings,
+    signal,
+    tension,
+    thin,
+    byKind
   }
 }
 
@@ -166,13 +206,13 @@ export function buildWaveSnapshot(input: {
     },
     {
       id: 'openers',
-      label: 'Openers present',
-      ok: cohort === 0 ? false : openers === cohort,
+      label: 'First lines present',
+      ok: cohort === 0 ? false : openers === cohort - (input.leads.thin || 0),
       blocking: true,
       detail:
         cohort === 0
           ? 'No leads to research'
-          : `${openers} / ${cohort} have an opener`
+          : `${openers} / ${cohort - (input.leads.thin || 0)} sendable · ${input.leads.thin || 0} thin`
     },
     {
       id: 'reviewed',
@@ -211,6 +251,11 @@ export function buildWaveSnapshot(input: {
     })
   }
 
+  const delivered = volume ? Math.max(0, volume.sent - volume.bounced) : 0
+  const positivesPer100Delivered =
+    volume && delivered > 0
+      ? Math.round((1000 * input.leads.positive) / delivered) / 10
+      : null
   const blocked = checks.some((c) => c.blocking && !c.ok)
   return {
     cohort,
@@ -219,11 +264,16 @@ export function buildWaveSnapshot(input: {
     enrichMix: input.leads.enrichMix,
     positive: input.leads.positive,
     meetings: input.leads.meetings,
+    signal: input.leads.signal || 0,
+    tension: input.leads.tension || 0,
+    thin: input.leads.thin || 0,
+    byKind: input.leads.byKind || {},
     openerReviewedAt: reviewedAt,
     copyConfirmedAt: confirmedAt,
     instantly: volume
       ? { sent: volume.sent, bounced: volume.bounced, bounceRate: rate }
       : null,
+    positivesPer100Delivered,
     checks,
     blocked,
     readyToActivate: !blocked
@@ -253,7 +303,11 @@ export function wavePlannerBit(
       missingCompanyOrEmail: 0,
       enrichMix: {},
       positive: 0,
-      meetings: 0
+      meetings: 0,
+      signal: 0,
+      tension: 0,
+      thin: 0,
+      byKind: {}
     },
     instantly: null,
     includeCopyMatch: false
@@ -273,7 +327,11 @@ export function emptyWaveLeadSummary(): WaveLeadSummary {
     missingCompanyOrEmail: 0,
     enrichMix: {},
     positive: 0,
-    meetings: 0
+    meetings: 0,
+    signal: 0,
+    tension: 0,
+    thin: 0,
+    byKind: {}
   }
 }
 
@@ -332,7 +390,12 @@ export function compactWaveForAgent(snapshot: WaveSnapshot) {
     blocked: snapshot.blocked,
     readyToActivate: snapshot.readyToActivate,
     openerReviewedAt: snapshot.openerReviewedAt,
-    copyConfirmedAt: snapshot.copyConfirmedAt
+    copyConfirmedAt: snapshot.copyConfirmedAt,
+    signal: snapshot.signal,
+    tension: snapshot.tension,
+    thin: snapshot.thin,
+    by_kind: snapshot.byKind,
+    positivesPer100Delivered: snapshot.positivesPer100Delivered
   }
 }
 

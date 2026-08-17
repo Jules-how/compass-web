@@ -56,7 +56,7 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/expressions/<id>" \
   -d '{"notes":"..."}'
 ```
 
-Campaign copy (brief of record): `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Changing sequence copy clears `copy_confirmed_at`. Compact `wave` is on `GET /api/agent/campaigns` — not on the brief.
+Campaign copy (brief of record): `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact `wave` also has `signal` / `tension` / `thin` / `by_kind`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. Compact `wave` is on `GET /api/agent/campaigns` — not on the brief. Per-lead sentence is Hook compile + tension (`opener_track` / `opener_kind` on mark).
 
 **Operating model:** Compass = workshop · vault agent = runner · Instantly = mail truck. Activate stays in Instantly. Do not invent vault `brief.md` for new campaigns.
 
@@ -100,7 +100,7 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"rows":[{"id":"…","enrich_status":"enriched","lead_facts":[{"kind":"policy","claim":"No application fee on home loans","url":"https://example.com.au/about"}]}]}'
+  -d '{"rows":[{"id":"…","enrich_status":"opener_ready","opener":"…","opener_track":"signal","opener_kind":"review","lead_facts":[{"kind":"review","claim":"…","url":"https://example.com.au/reviews"}]}]}'
 
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \

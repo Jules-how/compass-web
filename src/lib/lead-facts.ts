@@ -1,4 +1,6 @@
-/** Atomic engager facts stored on lead_contacts.lead_facts (jsonb array). */
+/** Atomic engager facts stored on lead_contacts.lead_facts (jsonb array).
+ *  Hiring from Hook stores as kind `update`. `lead_contacts.opener_kind` carries `hiring`.
+ */
 
 export const LEAD_FACT_KINDS = [
   'specialty',

@@ -165,7 +165,7 @@ function sharedFromUnknown(row: Record<string, unknown>): SharedMarkBody {
 /**
  * Mark leads: bulk campaign/cohort/status, or per-row facts/opener/Instantly land.
  * Bulk: { ids: string[] } or { emails: string[] } plus shared fields (max 500).
- * Rows: { rows: [{ id? or email, lead_facts?, opener?, website?, company_domain?, Instantly fields, email_verify_status?, email_verified? }] } (max 50).
+ * Rows: { rows: [{ id? or email, lead_facts?, opener?, opener_track?, opener_kind?, website?, company_domain?, Instantly fields, email_verify_status?, email_verified? }] } (max 50).
  */
 export async function PATCH(request: Request) {
   const authError = requireAgentAuth(request)
@@ -243,6 +243,12 @@ export async function PATCH(request: Request) {
             return portalJson({ error: 'opener_too_long', id: id || email }, { status: 400 })
           }
           patch.opener = opener
+        }
+        if (row.opener_track !== undefined) {
+          patch.opener_track = parseOptionalText(row.opener_track)
+        }
+        if (row.opener_kind !== undefined) {
+          patch.opener_kind = parseOptionalText(row.opener_kind)
         }
         if (row.website !== undefined || row.company_domain !== undefined) {
           const site = parseCompanySite(
