@@ -104,10 +104,12 @@ function writeUnbound(campaign: CompassCampaign, sequence: OutboundSequence) {
 const BODY_SLOT_SKIP = new Set(['accountSignature', 'spam_act_opt_out', 'subject'])
 
 function stepBodyText(step: OutboundStep): string {
-  return step.slots
-    .filter((s) => !BODY_SLOT_SKIP.has(s.key) && s.body.trim())
-    .map((s) => s.body.trim())
-    .join('\n\n')
+  const bodies = step.slots
+    .filter((s) => !BODY_SLOT_SKIP.has(s.key))
+    .map((s) => s.body)
+  if (bodies.length <= 1) return bodies[0] ?? ''
+  const filled = bodies.filter((body) => body.length > 0)
+  return filled.length <= 1 ? (filled[0] ?? '') : filled.join('\n\n')
 }
 
 function writeStepBody(sequence: OutboundSequence, stepId: string, body: string): OutboundSequence {
@@ -119,19 +121,11 @@ function writeStepBody(sequence: OutboundSequence, stepId: string, body: string)
     step.slots.push({ key: 'custom', label: 'Body', body })
     return next
   }
-  const parts = body.split(/\n\n+/).map((p) => p.trim())
-  if (parts.length === contentSlots.length) {
-    contentSlots.forEach((slot, i) => {
-      slot.body = parts[i] ?? ''
-    })
-  } else {
-    const primary =
-      contentSlots.find((s) => s.key === 'cold_expression') ||
-      contentSlots.find((s) => s.key === 'custom') ||
-      contentSlots[0]
-    for (const slot of contentSlots) slot.body = ''
-    primary.body = body
-  }
+  const primary =
+    contentSlots.find((s) => s.key === 'custom') ||
+    contentSlots.find((s) => s.key === 'cold_expression') ||
+    contentSlots[0]
+  for (const slot of contentSlots) slot.body = slot === primary ? body : ''
   return next
 }
 
@@ -181,6 +175,9 @@ export function SequenceEditor({
   const persistInFlight = useRef(false)
   const persistQueued = useRef(false)
   const saveEpochRef = useRef(0)
+  const hydrateGenRef = useRef(0)
+  const routerRef = useRef(router)
+  routerRef.current = router
   componentsWidthRef.current = componentsWidth
   leadsHeightRef.current = leadsHeightVh
   campaignRef.current = campaign
@@ -252,12 +249,27 @@ export function SequenceEditor({
   }, [])
 
   const hydrate = useCallback(async () => {
+    const key = unbound
+      ? 'unbound'
+      : instantlyCampaignId && !campaignId
+        ? `instantly:${instantlyCampaignId}`
+        : campaignId
+          ? `campaign:${campaignId}`
+          : null
+    if (!key) return
+    const gen = ++hydrateGenRef.current
+    const keepStep = (steps: Array<{ id: string }>) => {
+      setActiveStepId((prev) =>
+        prev && steps.some((step) => step.id === prev) ? prev : (steps[0]?.id ?? null)
+      )
+    }
     if (unbound) {
       const existing = readUnbound()
       if (existing) {
+        if (gen !== hydrateGenRef.current) return
         setCampaign(existing.campaign)
         setSequence(existing.sequence)
-        setActiveStepId(existing.sequence.steps[0]?.id ?? null)
+        keepStep(existing.sequence.steps)
         setInstantlyUnbound(false)
         return
       }
@@ -283,9 +295,10 @@ export function SequenceEditor({
         updated_at: new Date().toISOString()
       }
       writeUnbound(draft, seq)
+      if (gen !== hydrateGenRef.current) return
       setCampaign(draft)
       setSequence(seq)
-      setActiveStepId(seq.steps[0]?.id ?? null)
+      keepStep(seq.steps)
       setInstantlyUnbound(false)
       return
     }
@@ -295,7 +308,7 @@ export function SequenceEditor({
         const pipeline = await listCampaigns()
         const bind = findBind({ id: instantlyCampaignId }, pipeline)
         if (bind) {
-          router.replace(`/sales/outbound/editor/${encodeURIComponent(bind.id)}`)
+          routerRef.current.replace(`/sales/outbound/editor/${encodeURIComponent(bind.id)}`)
           return
         }
         const boardRes = await fetch('/api/instantly/outbound-campaigns', {
@@ -308,6 +321,7 @@ export function SequenceEditor({
         const row = [...(board.live ?? []), ...(board.history ?? [])].find(
           (item) => item.id === instantlyCampaignId
         )
+        if (gen !== hydrateGenRef.current) return
         setCampaign({
           id: `instantly-${instantlyCampaignId}`,
           name: row?.name || 'Instantly campaign',
@@ -330,6 +344,7 @@ export function SequenceEditor({
         setSequence(null)
         setInstantlyUnbound(true)
       } catch (err) {
+        if (gen !== hydrateGenRef.current) return
         setError(err instanceof Error ? err.message : 'Campaign not found')
       }
       return
@@ -344,18 +359,20 @@ export function SequenceEditor({
         scaffoldSequence(detail.campaign.structure_id || 'nick-3step', {
           offerKey: detail.campaign.offer_key
         })
+      if (gen !== hydrateGenRef.current) return
       setCampaign(detail.campaign)
       setSequence(seq)
-      setActiveStepId(seq.steps[0]?.id ?? null)
+      keepStep(seq.steps)
       setInstantlyUnbound(false)
     } catch (err) {
+      if (gen !== hydrateGenRef.current) return
       setError(err instanceof Error ? err.message : 'Campaign not found')
     }
-  }, [campaignId, instantlyCampaignId, router, unbound])
+  }, [campaignId, instantlyCampaignId, unbound])
 
   useEffect(() => {
     void hydrate()
-  }, [hydrate])
+  }, [campaignId, instantlyCampaignId, unbound, hydrate])
 
   useEffect(() => {
     if (variant !== 'overlay') return
@@ -449,7 +466,16 @@ export function SequenceEditor({
     try {
       if (sequence) await persist()
       const ensured = await ensureInstantlyCampaign(campaignId, { pushSequence: true })
-      setCampaign(ensured.campaign)
+      setCampaign((current) =>
+        current
+          ? {
+              ...ensured.campaign,
+              sequence_draft: sequenceRef.current ?? current.sequence_draft,
+              name: current.name,
+              cold_expression: current.cold_expression
+            }
+          : ensured.campaign
+      )
       const pushed = await pushInstantlyLeads(campaignId, { dryRun: false })
       setError(null)
       window.alert(
@@ -1028,7 +1054,17 @@ export function SequenceEditor({
                   <div className="mt-3">
                     <CampaignInstantlyPanel
                       campaign={campaign}
-                      onCampaignChange={setCampaign}
+                      onCampaignChange={(next) => {
+                        const merged = {
+                          ...next,
+                          sequence_draft: sequenceRef.current ?? next.sequence_draft,
+                          name: campaignRef.current?.name ?? next.name,
+                          cold_expression:
+                            campaignRef.current?.cold_expression ?? next.cold_expression
+                        }
+                        campaignRef.current = merged
+                        setCampaign(merged)
+                      }}
                     />
                   </div>
                 </div>

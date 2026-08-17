@@ -84,9 +84,19 @@ export function CampaignReviewModal({
 
   useEffect(() => {
     if (!initialCampaign) return
-    setCampaign(initialCampaign)
+    setCampaign((current) => {
+      if (!current || current.id !== initialCampaign.id) return initialCampaign
+      return {
+        ...current,
+        go_live_at: initialCampaign.go_live_at,
+        start_date: initialCampaign.start_date,
+        end_date: initialCampaign.end_date,
+        status: initialCampaign.status,
+        name: current.name || initialCampaign.name
+      }
+    })
     setGoLiveLocal(goLiveToDatetimeLocal(initialCampaign.go_live_at))
-  }, [initialCampaign])
+  }, [campaignId, initialCampaign?.id, initialCampaign?.go_live_at])
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -178,10 +188,7 @@ export function CampaignReviewModal({
           body: JSON.stringify({ opener })
         })
           .then(async (res) => {
-            const body = (await res.json().catch(() => ({}))) as { lead?: LeadContact }
-            if (res.ok && body.lead) {
-              setLeads((rows) => rows.map((row) => (row.id === body.lead?.id ? body.lead : row)))
-            }
+            if (!res.ok) return
           })
           .catch(() => undefined)
       }, 400)

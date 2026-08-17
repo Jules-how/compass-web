@@ -422,7 +422,9 @@ function OpenerCell({
   onChange: (leadId: string, opener: string) => void
 }) {
   const [text, setText] = useState(value)
+  const focused = useRef(false)
   useEffect(() => {
+    if (focused.current) return
     setText(value)
   }, [value, leadId])
 
@@ -434,6 +436,12 @@ function OpenerCell({
       className="records-opener-input"
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
+      onFocus={() => {
+        focused.current = true
+      }}
+      onBlur={() => {
+        focused.current = false
+      }}
       onChange={(event) => {
         const next = event.target.value
         setText(next)
