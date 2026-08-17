@@ -15,6 +15,7 @@ import type { OutboundStep } from '@/lib/outbound-copy'
 import { SequenceEditor } from '@/components/outbound/SequenceEditor'
 import RecordsTable from '@/components/ui/records-table'
 import { useLeadGridColumns } from '@/components/LeadColumnPicker'
+import { useUndo } from '@/components/UndoProvider'
 
 const easeOut = [0.22, 1, 0.36, 1] as const
 const LEAD_PAGE_SIZE = 80
@@ -80,6 +81,8 @@ export function CampaignReviewModal({
   const [editorOpen, setEditorOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const openerTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const openerCommitted = useRef<Map<string, string>>(new Map())
+  const undo = useUndo()
 
   useEffect(() => {
     setMounted(true)
@@ -211,6 +214,10 @@ export function CampaignReviewModal({
   }, [editingName])
 
   function persistOpener(leadId: string, opener: string) {
+    const previous =
+      openerCommitted.current.get(leadId) ??
+      leads.find((row) => row.id === leadId)?.opener ??
+      ''
     setLeads((rows) => rows.map((row) => (row.id === leadId ? { ...row, opener } : row)))
     const timers = openerTimers.current
     const existing = timers.get(leadId)
@@ -225,6 +232,32 @@ export function CampaignReviewModal({
         })
           .then(async (res) => {
             if (!res.ok) return
+            openerCommitted.current.set(leadId, opener)
+            undo.push({
+              label: 'Opener',
+              undo: async () => {
+                openerCommitted.current.set(leadId, previous)
+                setLeads((rows) =>
+                  rows.map((row) => (row.id === leadId ? { ...row, opener: previous } : row))
+                )
+                await fetch(`/api/leads/${encodeURIComponent(leadId)}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                  body: JSON.stringify({ opener: previous })
+                })
+              },
+              redo: async () => {
+                openerCommitted.current.set(leadId, opener)
+                setLeads((rows) =>
+                  rows.map((row) => (row.id === leadId ? { ...row, opener } : row))
+                )
+                await fetch(`/api/leads/${encodeURIComponent(leadId)}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                  body: JSON.stringify({ opener })
+                })
+              }
+            })
           })
           .catch(() => undefined)
       }, 400)

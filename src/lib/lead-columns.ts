@@ -4,12 +4,12 @@
  * Empty columns stay hidden unless the operator pins them in the picker.
  */
 
-export const LEAD_COLUMN_STORAGE_KEY = 'compass.leadColumns.v4'
-export const CAMPAIGN_LEAD_COLUMN_STORAGE_KEY = 'compass.campaignLeadColumns.v2'
-export const LEAD_COLUMN_WIDTHS_KEY = 'compass.leadColumnWidths.v1'
+export const LEAD_COLUMN_STORAGE_KEY = 'compass.leadColumns.v5'
+export const CAMPAIGN_LEAD_COLUMN_STORAGE_KEY = 'compass.campaignLeadColumns.v3'
+export const LEAD_COLUMN_WIDTHS_KEY = 'compass.leadColumnWidths.v2'
 export const LEAD_COLUMN_PINNED_KEY = 'compass.leadColumnsPinned.v1'
 export const LEAD_COLUMN_HIDDEN_KEY = 'compass.leadColumnsHidden.v1'
-export const LEAD_COLUMN_ORDER_KEY = 'compass.leadColumnOrder.v1'
+export const LEAD_COLUMN_ORDER_KEY = 'compass.leadColumnOrder.v2'
 
 export type LeadColumnPreset = 'crm' | 'campaign'
 
@@ -40,8 +40,8 @@ export type LeadColumnDef = {
 }
 
 export const LEAD_COLUMN_DEFS: LeadColumnDef[] = [
-  { id: 'first_name', label: 'First name', defaultWidth: 140 },
-  { id: 'last_name', label: 'Last name', defaultWidth: 140 },
+  { id: 'first_name', label: 'First name', defaultWidth: 120 },
+  { id: 'last_name', label: 'Last name', defaultWidth: 110 },
   { id: 'email', label: 'Email', defaultWidth: 220 },
   { id: 'job_title', label: 'Job title', defaultWidth: 160 },
   { id: 'company', label: 'Company', defaultWidth: 180 },
@@ -49,10 +49,10 @@ export const LEAD_COLUMN_DEFS: LeadColumnDef[] = [
   { id: 'website', label: 'Website', defaultWidth: 160 },
   { id: 'linkedin', label: 'LinkedIn', defaultWidth: 180 },
   { id: 'phone', label: 'Phone', defaultWidth: 140 },
-  { id: 'opener', label: 'Opener', defaultWidth: 280 },
-  { id: 'lead_facts', label: 'Facts', defaultWidth: 240 },
+  { id: 'opener', label: 'Opener', defaultWidth: 260 },
+  { id: 'lead_facts', label: 'Facts', defaultWidth: 220 },
   { id: 'status', label: 'Status', defaultWidth: 140 },
-  { id: 'categories', label: 'Categories', defaultWidth: 220 },
+  { id: 'categories', label: 'Categories', defaultWidth: 320 },
   { id: 'last_touch', label: 'Last interaction', defaultWidth: 160 },
   { id: 'strength', label: 'Connection strength', defaultWidth: 170 },
   { id: 'source', label: 'Source', defaultWidth: 120 },
@@ -73,6 +73,9 @@ export const CRM_DEFAULT_COLUMNS: LeadColumnId[] = [
   'last_name',
   'company',
   'categories',
+  'opener',
+  'lead_facts',
+  'vertical',
   'last_touch',
   'strength'
 ]
@@ -88,8 +91,8 @@ export const CAMPAIGN_DEFAULT_COLUMNS: LeadColumnId[] = [
 
 export const DEFAULT_VISIBLE_LEAD_COLUMNS: LeadColumnId[] = [...CRM_DEFAULT_COLUMNS]
 
-export const MIN_LEAD_COLUMN_WIDTH = 80
-export const MAX_LEAD_COLUMN_WIDTH = 480
+export const MIN_LEAD_COLUMN_WIDTH = 72
+export const MAX_LEAD_COLUMN_WIDTH = 900
 
 export function isLeadColumnId(value: string): value is LeadColumnId {
   return LEAD_COLUMN_DEFS.some((c) => c.id === value)
@@ -211,15 +214,16 @@ export function resolveVisibleLeadColumns(opts: {
   order?: LeadColumnId[]
 }): LeadColumnId[] {
   const required = requiredColumnsFor(opts.preset)
+  const defaults = defaultColumnsFor(opts.preset)
   const occupied = new Set(opts.occupied)
   const pinned = new Set(opts.pinned)
   const hidden = new Set(opts.hidden)
   const visible = LEAD_COLUMN_DEFS.map((c) => c.id).filter((id) => {
     if (required.includes(id)) return true
     if (hidden.has(id)) return false
-    return pinned.has(id) || occupied.has(id)
+    return defaults.includes(id) || pinned.has(id) || occupied.has(id)
   })
-  return applyColumnOrder(visible, opts.order ?? defaultColumnsFor(opts.preset))
+  return applyColumnOrder(visible, opts.order ?? defaults)
 }
 
 export function loadLeadColumnWidths(): Partial<Record<LeadColumnId, number>> {

@@ -19,6 +19,7 @@ import {
 } from '@/lib/lead-columns'
 import { occupiedLeadColumns } from '@/lib/lead-records'
 import type { LeadContact } from '@/lib/types'
+import { useUndo } from '@/components/UndoProvider'
 
 export function LeadColumnPicker({
   phoneSparse,
@@ -165,6 +166,7 @@ export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[
   const [order, setOrder] = useState<LeadColumnId[]>(() => defaultColumnsFor(preset))
   const [widths, setWidths] = useState<Partial<Record<LeadColumnId, number>>>({})
   const [ready, setReady] = useState(false)
+  const undo = useUndo()
 
   useEffect(() => {
     setPinned(loadPinnedLeadColumns(preset))
@@ -186,18 +188,37 @@ export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[
     [preset, occupied, pinned, hidden, order]
   )
 
-  function setVisible(next: LeadColumnId[]) {
-    const required = requiredColumnsFor(preset)
-    const added = next.filter((id) => !visible.includes(id))
-    const removed = visible.filter((id) => !next.includes(id) && !required.includes(id))
-    const nextPinned = Array.from(new Set([...pinned.filter((id) => !removed.includes(id)), ...added]))
-    const nextHidden = Array.from(new Set([...hidden.filter((id) => !added.includes(id)), ...removed]))
+  function applyVisible(
+    next: LeadColumnId[],
+    nextPinned: LeadColumnId[],
+    nextHidden: LeadColumnId[]
+  ) {
     setPinned(nextPinned)
     setHidden(nextHidden)
     setOrder(next)
     persistPinnedLeadColumns(nextPinned, preset)
     persistHiddenLeadColumns(nextHidden, preset)
     persistLeadColumnOrder(next, preset)
+  }
+
+  function setVisible(next: LeadColumnId[]) {
+    const required = requiredColumnsFor(preset)
+    const added = next.filter((id) => !visible.includes(id))
+    const removed = visible.filter((id) => !next.includes(id) && !required.includes(id))
+    const nextPinned = Array.from(new Set([...pinned.filter((id) => !removed.includes(id)), ...added]))
+    const nextHidden = Array.from(new Set([...hidden.filter((id) => !added.includes(id)), ...removed]))
+    const prev = { order: visible, pinned, hidden }
+    applyVisible(next, nextPinned, nextHidden)
+    undo.push({
+      label: 'Column layout',
+      undo: () => applyVisible(prev.order, prev.pinned, prev.hidden),
+      redo: () => applyVisible(next, nextPinned, nextHidden)
+    })
+  }
+
+  function applyWidths(next: Partial<Record<LeadColumnId, number>>) {
+    setWidths(next)
+    persistLeadColumnWidths(next)
   }
 
   function resizeColumn(id: LeadColumnId, width: number) {
@@ -208,5 +229,28 @@ export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[
     })
   }
 
-  return { visible, occupied, widths, resizeColumn, setVisible, ready }
+  const resizeStarted = useRef<Partial<Record<LeadColumnId, number>> | null>(null)
+
+  function resizeColumnTracked(id: LeadColumnId, width: number) {
+    if (!resizeStarted.current) resizeStarted.current = widths
+    resizeColumn(id, width)
+  }
+
+  useEffect(() => {
+    function onUp() {
+      const before = resizeStarted.current
+      if (!before) return
+      resizeStarted.current = null
+      const after = loadLeadColumnWidths()
+      undo.push({
+        label: 'Column width',
+        undo: () => applyWidths(before),
+        redo: () => applyWidths(after)
+      })
+    }
+    window.addEventListener('mouseup', onUp)
+    return () => window.removeEventListener('mouseup', onUp)
+  }, [undo])
+
+  return { visible, occupied, widths, resizeColumn: resizeColumnTracked, setVisible, ready }
 }

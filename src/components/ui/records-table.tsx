@@ -232,6 +232,8 @@ export default function RecordsTable({
     key: 'first_name',
     dir: 1
   })
+  const [autoWidths, setAutoWidths] = useState<Partial<Record<LeadColumnId, number>>>({})
+  const effectiveWidths = { ...autoWidths, ...widths }
 
   const visibleRows = useMemo(() => {
     return [...leads].sort((a, b) => {
@@ -253,7 +255,24 @@ export default function RecordsTable({
     !allSelected && visibleRows.some((row) => selected.has(row.id))
 
   const minWidth =
-    84 + columns.reduce((sum, id) => sum + columnWidth(id, widths), 0)
+    84 + columns.reduce((sum, id) => sum + columnWidth(id, effectiveWidths), 0)
+
+  useEffect(() => {
+    if (!columns.includes('categories')) return
+    if (widths.categories != null) return
+    const nodes = document.querySelectorAll('.records-scroll .records-tags')
+    let max = 0
+    nodes.forEach((node) => {
+      max = Math.max(max, (node as HTMLElement).scrollWidth)
+    })
+    if (max <= 0) return
+    const needed = Math.min(MAX_LEAD_COLUMN_WIDTH, Math.max(MIN_LEAD_COLUMN_WIDTH, max + 28))
+    setAutoWidths((current) => {
+      const prev = current.categories ?? 0
+      if (needed <= prev + 8) return current
+      return { ...current, categories: needed }
+    })
+  }, [columns, leads, widths.categories])
 
   return (
     <div className={`records-shell ${fill ? 'records-shell-fill' : ''}`}>
@@ -266,7 +285,7 @@ export default function RecordsTable({
           <colgroup>
             <col style={{ width: 84 }} />
             {columns.map((id) => (
-              <col key={id} style={{ width: columnWidth(id, widths) }} />
+              <col key={id} style={{ width: columnWidth(id, effectiveWidths) }} />
             ))}
           </colgroup>
           <thead>
@@ -387,7 +406,9 @@ export default function RecordsTable({
                       return (
                         <td
                           key={column}
-                          className={`records-cell ${cell.muted ? 'records-muted' : ''}`}
+                          className={`records-cell ${cell.muted ? 'records-muted' : ''} ${
+                            column === 'lead_facts' ? 'records-cell-facts' : ''
+                          }`}
                         >
                           {column === 'opener' && onOpenerChange ? (
                             <OpenerCell
@@ -463,10 +484,9 @@ function CellBody({
     if (tags.length === 0) return <span className="records-muted">—</span>
     return (
       <div className="records-tags">
-        {tags.slice(0, 4).map((tag) => (
+        {tags.map((tag) => (
           <Tag key={tag} name={tag} />
         ))}
-        {tags.length > 4 ? <span className="records-more-tag">+{tags.length - 4}</span> : null}
       </div>
     )
   }
@@ -494,5 +514,6 @@ function CellBody({
     )
   }
   if (!cell.text) return <span className="records-muted">—</span>
+  if (column === 'lead_facts') return <span className="records-facts">{cell.text}</span>
   return <span className="records-clip">{cell.text}</span>
 }

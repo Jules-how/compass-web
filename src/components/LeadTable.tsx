@@ -24,6 +24,7 @@ import type { LeadBucket } from '@/lib/lead-buckets'
 import { LeadSidecar } from '@/components/LeadSidecar'
 import { useLeadGridColumns } from '@/components/LeadColumnPicker'
 import RecordsTable from '@/components/ui/records-table'
+import { useUndo } from '@/components/UndoProvider'
 import type { LeadColumnPreset } from '@/lib/lead-columns'
 
 interface LeadTableProps {
@@ -88,6 +89,7 @@ export default function LeadTable({
   const [segmentName, setSegmentName] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(() => leadFiltersNeedExactCount(filters))
   const grid = useLeadGridColumns(columnPreset, leads)
+  const undo = useUndo()
 
   const embed = variant === 'embed'
   const bucket: LeadBucket = filters.bucket === 'prospects' ? 'prospects' : 'leads'
@@ -226,6 +228,39 @@ export default function LeadTable({
     }
   }
 
+  async function postBulk(
+    action: 'suppress' | 'unsuppress' | 'set_status' | 'add_tag' | 'clear_tag',
+    ids: string[],
+    extra: Record<string, string> = {}
+  ) {
+    const res = await fetch('/api/leads/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ action, ids, ...extra })
+    })
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: string
+      updated?: number
+    }
+    if (!res.ok) throw new Error(body.error ?? `bulk failed (${res.status})`)
+    return body
+  }
+
+  async function restoreStatuses(
+    rows: Array<{ id: string; outbound_status: string | null }>
+  ) {
+    const groups = new Map<string, string[]>()
+    for (const row of rows) {
+      const status = row.outbound_status?.trim() || 'uncontacted'
+      const list = groups.get(status) ?? []
+      list.push(row.id)
+      groups.set(status, list)
+    }
+    for (const [status, ids] of groups) {
+      await postBulk('set_status', ids, { status })
+    }
+  }
+
   async function runBulk(
     action: 'suppress' | 'unsuppress' | 'set_status' | 'add_tag' | 'clear_tag',
     extra: Record<string, string> = {}
@@ -235,22 +270,33 @@ export default function LeadTable({
       setBulkNote('Select at least one lead')
       return
     }
+    const previous = leads
+      .filter((lead) => selected.has(lead.id))
+      .map((lead) => ({ id: lead.id, outbound_status: lead.outbound_status }))
     setBulkBusy(true)
     setBulkNote(null)
     try {
-      const res = await fetch('/api/leads/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ action, ids, ...extra })
-      })
-      const body = (await res.json().catch(() => ({}))) as {
-        error?: string
-        updated?: number
-      }
-      if (!res.ok) throw new Error(body.error ?? `bulk failed (${res.status})`)
+      const body = await postBulk(action, ids, extra)
       setBulkNote(`Updated ${body.updated ?? ids.length} lead(s).`)
       setSelected(new Set())
       onReload()
+      undo.push({
+        label: 'Lead update',
+        undo: async () => {
+          if (action === 'add_tag' && extra.tag) {
+            await postBulk('clear_tag', ids, { tag: extra.tag })
+          } else if (action === 'clear_tag' && extra.tag) {
+            await postBulk('add_tag', ids, { tag: extra.tag })
+          } else {
+            await restoreStatuses(previous)
+          }
+          onReload()
+        },
+        redo: async () => {
+          await postBulk(action, ids, extra)
+          onReload()
+        }
+      })
     } catch (err) {
       setBulkNote(err instanceof Error ? err.message : String(err))
     } finally {

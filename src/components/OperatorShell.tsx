@@ -14,6 +14,7 @@ import {
 } from '@/components/ConsoleNav'
 import { NavLinks, navKeyFromPathname, type NavKey, OPERATOR_PREFETCH } from '@/components/NavLinks'
 import SignOutButton from '@/components/SignOutButton'
+import { UndoProvider } from '@/components/UndoProvider'
 import { Sidebar, SidebarBody } from '@/components/ui/sidebar'
 import { INBOX_CACHE_KEY, type InboxPayload } from '@/lib/inbox-ui'
 import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
@@ -186,7 +187,9 @@ export function OperatorConsoleLayout({
 }) {
   return (
     <ConsoleNavProvider>
-      <OperatorConsoleLayoutInner role={role}>{children}</OperatorConsoleLayoutInner>
+      <UndoProvider>
+        <OperatorConsoleLayoutInner role={role}>{children}</OperatorConsoleLayoutInner>
+      </UndoProvider>
     </ConsoleNavProvider>
   )
 }

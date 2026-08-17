@@ -31,6 +31,7 @@ import { INSTANTLY_CLASSIFY_ACTIONS, classifyAction } from '@/lib/inbox-classify
 import { peekQueryCache, writeQueryCache } from '@/lib/query-cache'
 import { tasksHref } from '@/lib/task-organisation'
 import { useCachedJson } from '@/lib/use-cached-json'
+import { useUndo } from '@/components/UndoProvider'
 import { cn } from '@/lib/utils'
 
 const EMPTY_COPY: Record<InboxTab, { title: string; body: string }> = {
@@ -453,6 +454,7 @@ export function InboxPanel() {
   const [suggestion, setSuggestion] = useState<InboxSuggestion | null>(null)
   const [busy, startTransition] = useTransition()
   const [actionError, setActionError] = useState<string | null>(null)
+  const undo = useUndo()
 
   // One shared payload for all tabs — switching tabs is a local filter, not a refetch.
   const { data, error, loading, reload } = useCachedJson<InboxPayload>(
@@ -628,6 +630,41 @@ export function InboxPanel() {
           }
         }
         await patchTriage(selected, 'done')
+        const leadId = selected.sourceId
+        const prevStatus = selected.instantlyStatus || 'replied'
+        const tag = action.tag
+        const nextStatus = action.outboundStatus
+        undo.push({
+          label: 'Inbox classify',
+          undo: async () => {
+            await fetch('/api/leads/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify({ action: 'set_status', ids: [leadId], status: prevStatus })
+            })
+            if (tag) {
+              await fetch('/api/leads/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ action: 'clear_tag', ids: [leadId], tag })
+              })
+            }
+          },
+          redo: async () => {
+            await fetch('/api/leads/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify({ action: 'set_status', ids: [leadId], status: nextStatus })
+            })
+            if (tag) {
+              await fetch('/api/leads/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ action: 'add_tag', ids: [leadId], tag })
+              })
+            }
+          }
+        })
       })()
     })
   }
