@@ -140,3 +140,18 @@ test('campaign workspace wiring keeps one lead store', () => {
   assert.match(sidecar, /Research facts/)
   assert.match(sidecar, /No opener yet/)
 })
+
+test('campaign list GET skips sequence bodies and loads lead tallies in parallel', () => {
+  const campaigns = read('src/lib/campaigns.ts')
+  assert.match(campaigns, /CAMPAIGN_BOARD_COLUMNS/)
+  assert.match(campaigns, /CAMPAIGN_LIST_COLUMNS = `\$\{CAMPAIGN_CORE_COLUMNS\},cold_expression,sequence_draft`/)
+
+  const list = read('src/app/api/campaigns/route.ts')
+  assert.match(list, /CAMPAIGN_BOARD_COLUMNS/)
+  assert.match(list, /Promise\.all/)
+  assert.doesNotMatch(list, /select\(CAMPAIGN_LIST_COLUMNS\)/)
+
+  const planner = read('src/components/campaigns/CampaignPlanner.tsx')
+  assert.match(planner, /useCachedJson/)
+  assert.match(planner, /CAMPAIGNS_QUERY_KEY/)
+})

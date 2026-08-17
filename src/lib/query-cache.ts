@@ -10,6 +10,38 @@ const listeners = new Map<string, Set<() => void>>()
 /** Bumped on each load start and each local write so older in-flight loaders cannot clobber newer data. */
 const generations = new Map<string, number>()
 
+const SESSION_KEYS = new Set(['/api/campaigns'])
+const SESSION_PREFIX = 'compass.qc.v1:'
+
+function persistWrite(key: string, data: unknown, updatedAt: number) {
+  if (typeof window === 'undefined' || !SESSION_KEYS.has(key)) return
+  try {
+    window.sessionStorage.setItem(
+      SESSION_PREFIX + key,
+      JSON.stringify({ data, updatedAt })
+    )
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function persistRead<T>(key: string): CacheEntry<T> | null {
+  if (typeof window === 'undefined' || !SESSION_KEYS.has(key)) return null
+  try {
+    const raw = window.sessionStorage.getItem(SESSION_PREFIX + key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { data?: T; updatedAt?: number }
+    if (parsed?.data === undefined) return null
+    return {
+      data: parsed.data,
+      error: null,
+      updatedAt: typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0
+    }
+  } catch {
+    return null
+  }
+}
+
 function emit(key: string) {
   const set = listeners.get(key)
   if (!set) return
@@ -36,12 +68,19 @@ export function subscribeQueryCache(key: string, listener: () => void) {
 }
 
 export function peekQueryCache<T>(key: string): CacheEntry<T> | null {
-  return (store.get(key) as CacheEntry<T> | undefined) ?? null
+  const mem = store.get(key) as CacheEntry<T> | undefined
+  if (mem) return mem
+  const disk = persistRead<T>(key)
+  if (!disk) return null
+  store.set(key, disk)
+  return disk
 }
 
 export function writeQueryCache<T>(key: string, data: T) {
   bumpGeneration(key)
-  store.set(key, { data, error: null, updatedAt: Date.now() })
+  const updatedAt = Date.now()
+  store.set(key, { data, error: null, updatedAt })
+  persistWrite(key, data, updatedAt)
   emit(key)
 }
 
@@ -75,7 +114,9 @@ export async function loadQueryCache<T>(
     try {
       const data = await loader()
       if (generations.get(key) !== gen) return
-      store.set(key, { data, error: null, updatedAt: Date.now() })
+      const updatedAt = Date.now()
+      store.set(key, { data, error: null, updatedAt })
+      persistWrite(key, data, updatedAt)
     } catch (err) {
       if (generations.get(key) !== gen) return
       const message = err instanceof Error ? err.message : String(err)

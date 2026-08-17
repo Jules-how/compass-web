@@ -21,11 +21,12 @@ import {
 } from '@/lib/campaign-calendar'
 import { useTimelineWheelZoom } from '@/hooks/useTimelineWheelZoom'
 import {
+  CAMPAIGNS_QUERY_KEY,
   createCampaign as createCampaignRemote,
   deleteCampaign as deleteCampaignRemote,
-  listCampaigns,
   updateCampaign
 } from '@/lib/campaigns-client'
+import { useCachedJson } from '@/lib/use-cached-json'
 import {
   CAMPAIGN_HEALTHS,
   CAMPAIGN_STATUSES,
@@ -100,10 +101,15 @@ const DEFAULT_DISPLAY: DisplayProps = {
 
 const PRIORITY_OPTIONS = [0, 1, 2, 3, 4] as const
 
+type CampaignsPayload = { campaigns: CompassCampaign[] }
+
 export function CampaignPlanner() {
   const router = useRouter()
-  const [campaigns, setCampaigns] = useState<CompassCampaign[]>([])
-  const [ready, setReady] = useState(false)
+  const campaignsQuery = useCachedJson<CampaignsPayload>(CAMPAIGNS_QUERY_KEY, '/api/campaigns', {
+    staleMs: 30_000
+  })
+  const campaigns = campaignsQuery.data?.campaigns ?? []
+  const ready = Boolean(campaignsQuery.data) || !campaignsQuery.loading
   /** Continuous px/day — wheel zooms smoothly; named zoom is derived for chrome. */
   const [density, setDensity] = useState(() => pxPerDay('year'))
   const zoom = zoomFromPxPerDay(density)
@@ -136,20 +142,8 @@ export function CampaignPlanner() {
   }, [])
 
   const refresh = useCallback(() => {
-    void listCampaigns()
-      .then((rows) => {
-        setCampaigns(rows)
-        setReady(true)
-      })
-      .catch(() => {
-        setCampaigns([])
-        setReady(true)
-      })
-  }, [])
-
-  useEffect(() => {
-    refresh()
-  }, [refresh])
+    void campaignsQuery.reload(true)
+  }, [campaignsQuery.reload])
 
   const filtered = useMemo(() => {
     return campaigns.filter((c) => {
@@ -327,20 +321,11 @@ export function CampaignPlanner() {
 
   function persistGoLive(id: string, goLiveAt: string) {
     const day = localDateOnlyFromIso(goLiveAt)
-    setCampaigns((rows) =>
-      rows.map((row) =>
-        row.id === id
-          ? { ...row, go_live_at: goLiveAt, start_date: day ?? row.start_date, end_date: day ?? row.end_date }
-          : row
-      )
-    )
     void updateCampaign(id, {
       go_live_at: goLiveAt,
       start_date: day ?? undefined,
       end_date: day ?? undefined
-    })
-      .then(refresh)
-      .catch(refresh)
+    }).catch(refresh)
     setDraftGoLive((prev) => {
       const next = { ...prev }
       delete next[id]

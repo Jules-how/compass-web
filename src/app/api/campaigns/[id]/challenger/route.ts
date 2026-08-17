@@ -22,6 +22,7 @@ import {
   isValidSequence,
   type OutboundSequence
 } from '@/lib/outbound-copy'
+import { syncCampaignToGoogleCalendarQuiet } from '@/lib/campaign-google-calendar'
 
 export const dynamic = 'force-dynamic'
 
@@ -240,7 +241,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
     ])
 
-    return portalJson(projectCampaign(data as CompassCampaign), { status: 201 })
+    const created = projectCampaign(data as CompassCampaign)
+    await syncCampaignToGoogleCalendarQuiet(supabase, created)
+    return portalJson(created, { status: 201 })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'create_failed' }, { status: 500 })
   }

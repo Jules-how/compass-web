@@ -1,7 +1,11 @@
 import { OperatorShell } from '@/components/OperatorShell'
 import { AdAccountsSettings } from '@/components/settings/AdAccountsSettings'
 
-function bannerFromSearch(ads: string | undefined, count: string | undefined): string | null {
+function bannerFromSearch(
+  ads: string | undefined,
+  count: string | undefined,
+  calendar: string | undefined
+): string | null {
   switch (ads) {
     case 'meta_connected':
       return `Meta connected${count ? ` — ${count} account(s) saved` : ''}. Sync each account to refresh Home.`
@@ -13,6 +17,18 @@ function bannerFromSearch(ads: string | undefined, count: string | undefined): s
       return 'Set META_APP_ID and META_APP_SECRET to use Facebook OAuth, or paste a token below.'
     case 'meta_connect_failed':
       return 'Meta OAuth failed. Check app credentials and try again, or paste a token.'
+    default:
+      break
+  }
+  switch (calendar) {
+    case 'connected':
+      return 'Google Calendar connected. Campaign go-lives now appear as all-day items (not time blocks).'
+    case 'denied':
+      return 'Google Calendar access was cancelled.'
+    case 'state_mismatch':
+      return 'Google Calendar OAuth state mismatch — try Connect again.'
+    case 'connect_failed':
+      return 'Google Calendar connect failed. Check GOOGLE_CALENDAR_CLIENT_ID / SECRET and try again.'
     default:
       return null
   }
@@ -26,10 +42,11 @@ export default async function SettingsPage({
   const params = (await searchParams) ?? {}
   const ads = typeof params.ads === 'string' ? params.ads : undefined
   const count = typeof params.count === 'string' ? params.count : undefined
+  const calendar = typeof params.calendar === 'string' ? params.calendar : undefined
 
   return (
     <OperatorShell title="Settings" subtitle="Instantly, ad accounts, and workspace preferences">
-      <AdAccountsSettings initialBanner={bannerFromSearch(ads, count)} />
+      <AdAccountsSettings initialBanner={bannerFromSearch(ads, count, calendar)} />
     </OperatorShell>
   )
 }

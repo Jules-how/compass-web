@@ -42,6 +42,10 @@ import {
   type WaveSnapshot
 } from '@/lib/campaign-wave'
 import {
+  deleteCampaignGoogleCalendarEvent,
+  syncCampaignToGoogleCalendarQuiet
+} from '@/lib/campaign-google-calendar'
+import {
   fetchInstantlyCampaignAnalytics,
   resolveInstantlyApiKey
 } from '@/lib/instantly'
@@ -439,7 +443,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       )
     }
 
-    return portalJson(projectCampaign(data as CompassCampaign))
+    const updated = projectCampaign(data as CompassCampaign)
+    if (
+      patch.name !== undefined ||
+      patch.status !== undefined ||
+      patch.go_live_at !== undefined ||
+      patch.summary !== undefined
+    ) {
+      await syncCampaignToGoogleCalendarQuiet(supabase, updated)
+    }
+    return portalJson(updated)
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'update_failed' }, { status: 500 })
   }
@@ -452,6 +465,17 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
+    const existingRes = await supabase
+      .from('compass_pipeline_campaigns')
+      .select('google_calendar_event_id')
+      .eq('id', id)
+      .maybeSingle()
+    await deleteCampaignGoogleCalendarEvent(
+      supabase,
+      typeof existingRes.data?.google_calendar_event_id === 'string'
+        ? existingRes.data.google_calendar_event_id
+        : null
+    )
     const { error } = await supabase.from('compass_pipeline_campaigns').delete().eq('id', id)
     if (error) {
       return portalJson({ error: 'delete_failed', detail: error.message }, { status: 400 })

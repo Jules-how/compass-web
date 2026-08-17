@@ -65,6 +65,9 @@ export function CampaignReviewModal({
 }) {
   const [mounted, setMounted] = useState(false)
   const [campaign, setCampaign] = useState<CompassCampaign | null>(initialCampaign ?? null)
+  const [nameDraft, setNameDraft] = useState(initialCampaign?.name ?? '')
+  const [editingName, setEditingName] = useState(false)
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const [leads, setLeads] = useState<LeadContact[]>([])
   const [total, setTotal] = useState(0)
   const [loadingLeads, setLoadingLeads] = useState(true)
@@ -95,13 +98,14 @@ export function CampaignReviewModal({
         name: current.name || initialCampaign.name
       }
     })
+    if (!editingName) setNameDraft(initialCampaign.name)
     setGoLiveLocal(goLiveToDatetimeLocal(initialCampaign.go_live_at))
-  }, [campaignId, initialCampaign?.id, initialCampaign?.go_live_at])
+  }, [campaignId, initialCampaign?.id, initialCampaign?.go_live_at, initialCampaign?.name, editingName])
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        if (editorOpen) return
+        if (editorOpen || editingName) return
         onClose()
       }
     }
@@ -112,7 +116,7 @@ export function CampaignReviewModal({
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = previousOverflow
     }
-  }, [onClose, editorOpen])
+  }, [onClose, editorOpen, editingName])
 
   const loadLeads = useCallback(async () => {
     setLoadError(null)
@@ -173,6 +177,38 @@ export function CampaignReviewModal({
       })
       .catch(() => undefined)
   }
+
+  function beginEditName() {
+    setNameDraft(campaign?.name || '')
+    setEditingName(true)
+  }
+
+  function saveName() {
+    const next = nameDraft.trim()
+    setEditingName(false)
+    if (!next || next === campaign?.name) {
+      setNameDraft(campaign?.name || '')
+      return
+    }
+    setCampaign((current) => (current ? { ...current, name: next } : current))
+    void updateCampaign(campaignId, { name: next })
+      .then((row) => {
+        setCampaign(row)
+        setNameDraft(row.name)
+        onUpdated()
+      })
+      .catch(() => {
+        setNameDraft(campaign?.name || '')
+      })
+  }
+
+  useEffect(() => {
+    if (!editingName) return
+    const node = nameInputRef.current
+    if (!node) return
+    node.focus()
+    node.select()
+  }, [editingName])
 
   function persistOpener(leadId: string, opener: string) {
     setLeads((rows) => rows.map((row) => (row.id === leadId ? { ...row, opener } : row)))
@@ -235,12 +271,42 @@ export function CampaignReviewModal({
               <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
                 Campaign review
               </p>
-              <h2
-                id="campaign-review-title"
-                className="mt-0.5 truncate text-[17px] font-semibold tracking-tight text-neutral-900"
-              >
-                {campaign?.name || 'Campaign'}
-              </h2>
+              {editingName ? (
+                <input
+                  ref={nameInputRef}
+                  id="campaign-review-title"
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onBlur={saveName}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      saveName()
+                    }
+                    if (event.key === 'Escape') {
+                      event.preventDefault()
+                      setNameDraft(campaign?.name || '')
+                      setEditingName(false)
+                    }
+                  }}
+                  aria-label="Campaign name"
+                  className="mt-0.5 w-full min-w-0 bg-transparent text-[17px] font-semibold tracking-tight text-neutral-900 outline-none"
+                />
+              ) : (
+                <h2
+                  id="campaign-review-title"
+                  className="mt-0.5 truncate text-[17px] font-semibold tracking-tight text-neutral-900"
+                >
+                  <button
+                    type="button"
+                    onClick={beginEditName}
+                    className="-ml-1 max-w-full rounded-lg px-1 text-left hover:bg-stone-50"
+                    title="Click to rename"
+                  >
+                    {campaign?.name || 'Campaign'}
+                  </button>
+                </h2>
+              )}
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-neutral-500">
                 <span>{campaign ? campaignStatusLabel(campaign.status) : '…'}</span>
                 <span className="text-neutral-300">·</span>

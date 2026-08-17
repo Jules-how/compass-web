@@ -8,7 +8,7 @@ import {
   requireSameOrigin
 } from '@/lib/portal-http'
 import {
-  CAMPAIGN_LIST_COLUMNS,
+  CAMPAIGN_BOARD_COLUMNS,
   dateOnlyInZone,
   defaultGoLiveAt,
   emptyCampaignCopyFields,
@@ -27,6 +27,7 @@ import {
   type OutboundSequence
 } from '@/lib/outbound-copy'
 import { applyLeadTallies, tallyLeadsByCampaign } from '@/lib/campaign-wave'
+import { syncCampaignToGoogleCalendarQuiet } from '@/lib/campaign-google-calendar'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,29 +49,25 @@ function projectCampaign(row: CompassCampaign): CompassCampaign {
 export async function GET() {
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
-    const { data, error } = await supabase
-      .from('compass_pipeline_campaigns')
-      .select(CAMPAIGN_LIST_COLUMNS)
-      .order('go_live_at', { ascending: true })
-      .order('name')
-
-    if (error) {
-      return portalJson({ error: 'fetch_failed', detail: error.message }, { status: 500 })
-    }
-
-    const campaigns = ((data ?? []) as CompassCampaign[]).map(projectCampaign)
-    const ids = campaigns.map((row) => row.id)
-    let tallies: Record<string, { cohort: number; positive: number; meetings: number }> = {}
-    if (ids.length > 0) {
-      const leadsRes = await supabase
+    const [campaignRes, leadsRes] = await Promise.all([
+      supabase
+        .from('compass_pipeline_campaigns')
+        .select(CAMPAIGN_BOARD_COLUMNS)
+        .order('go_live_at', { ascending: true })
+        .order('name'),
+      supabase
         .from('lead_contacts')
         .select('pipeline_campaign_id,outbound_status')
-        .in('pipeline_campaign_id', ids)
+        .not('pipeline_campaign_id', 'is', null)
         .limit(8000)
-      if (!leadsRes.error) {
-        tallies = tallyLeadsByCampaign(leadsRes.data ?? [])
-      }
+    ])
+
+    if (campaignRes.error) {
+      return portalJson({ error: 'fetch_failed', detail: campaignRes.error.message }, { status: 500 })
     }
+
+    const campaigns = ((campaignRes.data ?? []) as CompassCampaign[]).map(projectCampaign)
+    const tallies = leadsRes.error ? {} : tallyLeadsByCampaign(leadsRes.data ?? [])
 
     return portalJsonCached({
       campaigns: applyLeadTallies(campaigns, tallies)
@@ -167,7 +164,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('compass_pipeline_campaigns')
       .insert(row)
-      .select(CAMPAIGN_LIST_COLUMNS)
+      .select(CAMPAIGN_BOARD_COLUMNS)
       .single()
 
     if (error) {
@@ -183,7 +180,9 @@ export async function POST(request: NextRequest) {
       created_at: stamp
     })
 
-    return portalJson(projectCampaign(data as CompassCampaign), { status: 201 })
+    const created = projectCampaign(data as CompassCampaign)
+    await syncCampaignToGoogleCalendarQuiet(supabase, created)
+    return portalJson(created, { status: 201 })
   } catch (err) {
     return portalAccessResponse(err) ?? portalJson({ error: 'create_failed' }, { status: 500 })
   }

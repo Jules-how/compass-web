@@ -72,6 +72,10 @@ export function AdAccountsSettings({
   const [instantlyKey, setInstantlyKey] = useState('')
   const [instantlyNotice, setInstantlyNotice] = useState<string | null>(null)
 
+  const [calendarConfigured, setCalendarConfigured] = useState<boolean | null>(null)
+  const [calendarConnected, setCalendarConnected] = useState(false)
+  const [calendarNotice, setCalendarNotice] = useState<string | null>(null)
+
   const [platform, setPlatform] = useState<AdPlatform>('meta')
   const [accessToken, setAccessToken] = useState('')
   const [externalAccountId, setExternalAccountId] = useState('')
@@ -102,6 +106,19 @@ export function AdAccountsSettings({
     }
   }, [])
 
+  const refreshCalendar = useCallback(async () => {
+    try {
+      const res = await fetch('/api/calendar/settings', { cache: 'no-store' })
+      if (!res.ok) throw new Error(`Failed to load calendar (${res.status})`)
+      const body = (await res.json()) as { configured?: boolean; connected?: boolean }
+      setCalendarConfigured(Boolean(body.configured))
+      setCalendarConnected(Boolean(body.connected))
+    } catch {
+      setCalendarConfigured(false)
+      setCalendarConnected(false)
+    }
+  }, [])
+
   const refresh = useCallback(async () => {
     setLoadError(null)
     try {
@@ -124,7 +141,8 @@ export function AdAccountsSettings({
   useEffect(() => {
     void refresh()
     void refreshInstantly()
-  }, [refresh, refreshInstantly])
+    void refreshCalendar()
+  }, [refresh, refreshInstantly, refreshCalendar])
 
   async function saveInstantlyKey() {
     setBusy('instantly')
@@ -172,6 +190,45 @@ export function AdAccountsSettings({
       setInstantlyNotice('Stored Instantly key cleared.')
     } catch (err) {
       setInstantlyNotice(err instanceof Error ? err.message : 'Clear failed')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function syncCalendar() {
+    setBusy('calendar')
+    setCalendarNotice(null)
+    try {
+      const res = await fetch('/api/calendar/settings', { method: 'POST' })
+      const body = (await res.json()) as {
+        error?: string
+        detail?: string
+        synced?: number
+        failed?: number
+      }
+      if (!res.ok) throw new Error(body.detail || body.error || 'Sync failed')
+      setCalendarNotice(
+        `Synced ${body.synced ?? 0} campaign${body.synced === 1 ? '' : 's'} as all-day calendar items${
+          body.failed ? ` (${body.failed} failed)` : ''
+        }.`
+      )
+    } catch (err) {
+      setCalendarNotice(err instanceof Error ? err.message : 'Sync failed')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function disconnectCalendar() {
+    setBusy('calendar')
+    setCalendarNotice(null)
+    try {
+      const res = await fetch('/api/calendar/settings', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Disconnect failed')
+      setCalendarConnected(false)
+      setCalendarNotice('Google Calendar disconnected. Existing all-day items stay until you delete them in Calendar.')
+    } catch (err) {
+      setCalendarNotice(err instanceof Error ? err.message : 'Disconnect failed')
     } finally {
       setBusy(null)
     }
@@ -357,6 +414,79 @@ export function AdAccountsSettings({
               >
                 Clear stored key
               </button>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Google Calendar (campaign go-lives)</CardTitle>
+            <CardDescription>
+              Each campaign shows as an all-day item on the go-live day, like a holiday, not a timed block
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-600">
+            <span>Status:</span>
+            {calendarConfigured == null ? (
+              <span className="text-neutral-400">Checking…</span>
+            ) : calendarConnected ? (
+              <Badge variant="success" appearance="light" size="sm">
+                Connected
+              </Badge>
+            ) : calendarConfigured ? (
+              <Badge variant="secondary" appearance="light" size="sm">
+                Ready to connect
+              </Badge>
+            ) : (
+              <Badge variant="secondary" appearance="light" size="sm">
+                Needs OAuth env
+              </Badge>
+            )}
+          </div>
+          {calendarNotice ? (
+            <div className="rounded-xl border border-stone-200 bg-stone-50/80 px-3.5 py-3 text-sm text-neutral-700">
+              {calendarNotice}
+            </div>
+          ) : null}
+          {calendarConfigured === false ? (
+            <p className="text-sm text-neutral-500">
+              Set <code className="text-xs">GOOGLE_CALENDAR_CLIENT_ID</code> and{' '}
+              <code className="text-xs">GOOGLE_CALENDAR_CLIENT_SECRET</code>, then add redirect{' '}
+              <code className="text-xs">/api/calendar/oauth/callback</code> on the Google Cloud OAuth client.
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {calendarConfigured ? (
+              <a
+                href="/api/calendar/oauth"
+                className="inline-flex items-center rounded-xl bg-[#e85d2a] px-4 py-2 text-sm font-medium text-white shadow-soft transition hover:bg-[#d14e1f]"
+              >
+                {calendarConnected ? 'Reconnect Google Calendar' : 'Connect Google Calendar'}
+              </a>
+            ) : null}
+            {calendarConnected ? (
+              <>
+                <button
+                  type="button"
+                  disabled={busy === 'calendar'}
+                  onClick={() => void syncCalendar()}
+                  className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:border-stone-300 disabled:opacity-50"
+                >
+                  {busy === 'calendar' ? 'Syncing…' : 'Sync campaigns now'}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy === 'calendar'}
+                  onClick={() => void disconnectCalendar()}
+                  className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:border-stone-300 disabled:opacity-50"
+                >
+                  Disconnect
+                </button>
+              </>
             ) : null}
           </div>
         </CardContent>

@@ -58,6 +58,7 @@ export interface CompassCampaign {
   start_date: string | null
   end_date: string | null
   go_live_at: string | null
+  google_calendar_event_id?: string | null
   color: string
   summary: string | null
   labels: string[]
@@ -112,8 +113,14 @@ export interface CompassCampaignActivity {
   created_at: string
 }
 
-export const CAMPAIGN_LIST_COLUMNS =
-  'id,name,status,priority,health,start_date,end_date,go_live_at,color,summary,labels,owner_label,instantly_campaign_id,offer_key,structure_id,opener_mode,vertical_tags,location_tags,cold_expression,sequence_draft,copy_status,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,wave_cap,opener_reviewed_at,copy_confirmed_at,created_at,updated_at'
+const CAMPAIGN_CORE_COLUMNS =
+  'id,name,status,priority,health,start_date,end_date,go_live_at,google_calendar_event_id,color,summary,labels,owner_label,instantly_campaign_id,offer_key,structure_id,opener_mode,vertical_tags,location_tags,copy_status,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,wave_cap,opener_reviewed_at,copy_confirmed_at,created_at,updated_at'
+
+/** Planner / list GET — skip bulky sequence JSON. */
+export const CAMPAIGN_BOARD_COLUMNS = CAMPAIGN_CORE_COLUMNS
+
+/** Single-campaign GET and Instantly bind — includes copy bodies. */
+export const CAMPAIGN_LIST_COLUMNS = `${CAMPAIGN_CORE_COLUMNS},cold_expression,sequence_draft`
 
 export const GO_LIVE_TIMEZONE = 'Australia/Sydney'
 export const MAX_LEAD_OPENER = 400
@@ -176,6 +183,7 @@ export function projectCampaignCopy(row: CompassCampaign): CompassCampaign {
     opener_reviewed_at: row.opener_reviewed_at ?? null,
     copy_confirmed_at: row.copy_confirmed_at ?? null,
     go_live_at: row.go_live_at ?? null,
+    google_calendar_event_id: row.google_calendar_event_id ?? null,
     wave_cohort_count:
       typeof row.wave_cohort_count === 'number' ? row.wave_cohort_count : undefined,
     wave_positive_count:
