@@ -171,6 +171,10 @@ Vercel hits `GET /api/cron/daily-sync` once per day (`vercel.json`). Auth with `
 - Pass `full=1` or dump all kinds unless the turn is editing that row.
 - Re-run ads/Instantly sync just to read/write copy libraries.
 - Pull unbounded lead lists — always pass `limit` and status filters.
-- Start a local MCP or Electron for this path.
-- Download CSVs to load Instantly. Use `/api/agent/instantly/push-leads`.
+- Use Instantly MCP to add or create leads. Land with Compass MCP `land` or `/api/agent/instantly/push-leads`.
+- Download CSVs to load Instantly.
 - Activate Instantly campaigns from the agent.
+
+## Cursor MCP
+
+Lean stdio server: `node mcp/server.mjs` (six tools: `brief`, `campaigns`, `leads`, `mark`, `copy`, `land`). Not an Instantly clone. `land.push_leads` defaults to dry-run. Vault workspace wires it in `.cursor/mcp.json`.

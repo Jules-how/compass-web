@@ -111,3 +111,7 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
 ## Agent skill
 
 See [`.cursor/skills/compass-agent/SKILL.md`](../.cursor/skills/compass-agent/SKILL.md).
+
+## Cursor MCP
+
+Lean stdio server at `mcp/server.mjs`. Six tools mapped to the routes above: `brief`, `campaigns`, `leads` (inventory|cohort), `mark`, `copy` (get|patch), `land` (ensure|push_sequence|push_leads). No ads, no library CRUD, no Instantly activate. `push_leads` is dry-run unless `dryRun=false`. Vault: `.cursor/mcp.json` server name `compass`.

@@ -12,6 +12,7 @@
     "deploy-guards": "node scripts/check-deploy-guards.mjs",
     "verify": "npm run deploy-guards && npm run typecheck",
     "smoke": "node scripts/operator-console-smoke.mjs",
+    "mcp": "node mcp/server.mjs",
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
