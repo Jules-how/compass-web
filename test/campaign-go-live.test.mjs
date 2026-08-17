@@ -125,3 +125,28 @@ test('timed calendar events stay on one day and stack into the next free hour', 
   assert.equal(tuesday.getDate(), 18)
   assert.equal(tuesday.getHours(), 11)
 })
+
+test('google calendar go-lives use an exclusive next-day all-day range', () => {
+  function dateOnlyInZone(iso, timeZone = 'Australia/Sydney') {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date(iso))
+    const year = parts.find((p) => p.type === 'year')?.value
+    const month = parts.find((p) => p.type === 'month')?.value
+    const day = parts.find((p) => p.type === 'day')?.value
+    return `${year}-${month}-${day}`
+  }
+  function addOneCalendarDay(dateOnly) {
+    const [year, month, day] = dateOnly.split('-').map(Number)
+    const next = new Date(Date.UTC(year, month - 1, day + 1))
+    return next.toISOString().slice(0, 10)
+  }
+  const goLive = '2026-08-17T09:00:00+10:00'
+  const start = dateOnlyInZone(goLive)
+  assert.equal(start, '2026-08-17')
+  assert.equal(addOneCalendarDay(start), '2026-08-18')
+})
+
