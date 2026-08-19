@@ -18,8 +18,10 @@ import {
   type ExperimentFactor
 } from '@/lib/campaigns'
 import {
+  applyOpenerModeToSequence,
   coldExpressionFromSequence,
   isValidSequence,
+  setStepSubject,
   type OutboundSequence
 } from '@/lib/outbound-copy'
 import { syncCampaignToGoogleCalendarQuiet } from '@/lib/campaign-google-calendar'
@@ -58,6 +60,8 @@ type ChallengerBody = {
   vertical_tags?: string[]
   location_tags?: string[]
   sequence_draft?: OutboundSequence | null
+  subject?: string | null
+  opener_mode?: string | null
 }
 
 /**
@@ -129,6 +133,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     let verticalTags = [...(parent.vertical_tags ?? [])]
     let locationTags = [...(parent.location_tags ?? [])]
     let ctaType = parent.cta_type ?? null
+    let openerMode = parent.opener_mode || copyDefaults.opener_mode
 
     applyFactorOverride(factor, body, {
       setCtaType: (v) => {
@@ -154,8 +159,25 @@ export async function POST(request: NextRequest, context: RouteContext) {
       },
       setSequenceDraft: (v) => {
         sequenceDraft = v
+      },
+      setOpenerMode: (v) => {
+        openerMode = v
       }
     })
+
+    if (factor === 'subject') {
+      const subject = body.subject?.trim()
+      if (subject && sequenceDraft) {
+        const email =
+          sequenceDraft.steps.find((s) => s.kind === 'email') ?? sequenceDraft.steps[0]
+        if (email) sequenceDraft = setStepSubject(sequenceDraft, email.id, subject)
+      }
+    }
+    if (factor === 'opener_mode') {
+      const mode = body.opener_mode?.trim() || 'none'
+      openerMode = mode
+      if (sequenceDraft) sequenceDraft = applyOpenerModeToSequence(sequenceDraft, mode)
+    }
 
     if (sequenceDraft) {
       const locked = coldExpressionFromSequence(sequenceDraft)
@@ -194,7 +216,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       instantly_campaign_id: null,
       offer_key: offerKey,
       structure_id: structureId,
-      opener_mode: parent.opener_mode || copyDefaults.opener_mode,
+      opener_mode: openerMode,
       vertical_tags: verticalTags,
       location_tags: locationTags,
       cold_expression: coldExpression,
@@ -261,6 +283,7 @@ function applyFactorOverride(
     setVerticalTags: (v: string[]) => void
     setLocationTags: (v: string[]) => void
     setSequenceDraft: (v: OutboundSequence | null) => void
+    setOpenerMode: (v: string | null) => void
   }
 ) {
   if (factor === 'cta') {
@@ -298,5 +321,10 @@ function applyFactorOverride(
     if (body.location_tags !== undefined) {
       setters.setLocationTags(normalizeOutboundTagList(body.location_tags))
     }
+    return
+  }
+  if (factor === 'subject') return
+  if (factor === 'opener_mode') {
+    setters.setOpenerMode(body.opener_mode?.trim() || 'none')
   }
 }

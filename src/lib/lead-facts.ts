@@ -11,7 +11,9 @@ export const LEAD_FACT_KINDS = [
   'milestone',
   'content',
   'update',
-  'location'
+  'location',
+  'after_hours',
+  'phone_pain'
 ] as const
 
 export type LeadFactKind = (typeof LEAD_FACT_KINDS)[number]

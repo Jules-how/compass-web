@@ -1,4 +1,5 @@
 import type { CompassCampaign } from '@/lib/campaigns'
+import { isIcpSkip } from '@/lib/lead-icp'
 import { normalizeCopyStatus } from '@/lib/outbound-copy'
 
 export const WAVE_BOUNCE_WARN_PCT = 2
@@ -39,6 +40,7 @@ export type WaveLeadRow = {
   outbound_status?: string | null
   opener_track?: string | null
   opener_kind?: string | null
+  icp_status?: string | null
 }
 
 export type KindStats = {
@@ -57,6 +59,7 @@ export type WaveLeadSummary = {
   signal: number
   tension: number
   thin: number
+  skip: number
   byKind: Record<string, KindStats>
 }
 
@@ -75,6 +78,7 @@ export type WaveSnapshot = {
   signal: number
   tension: number
   thin: number
+  skip: number
   byKind: Record<string, KindStats>
   openerReviewedAt: string | null
   copyConfirmedAt: string | null
@@ -105,10 +109,11 @@ export function summarizeWaveLeads(rows: WaveLeadRow[]): WaveLeadSummary {
   let signal = 0
   let tension = 0
   let thin = 0
+  let skip = 0
   for (const row of rows) {
     const enrich = (row.enrich_status || 'none').trim() || 'none'
     enrichMix[enrich] = (enrichMix[enrich] || 0) + 1
-    if ((row.opener || '').trim()) openers += 1
+    const skipped = isIcpSkip(row.icp_status)
     const email = (row.email || '').trim()
     const company = (row.company || '').trim()
     if (!email || !company) missingCompanyOrEmail += 1
@@ -116,9 +121,11 @@ export function summarizeWaveLeads(rows: WaveLeadRow[]): WaveLeadSummary {
     if (isMeetingOutboundStatus(row.outbound_status)) meetings += 1
     const track = (row.opener_track || '').trim()
     const isThin = enrich === 'thin' || track === 'none'
-    if (isThin) thin += 1
-    else if (track === 'signal') signal += 1
-    else if (track === 'tension') tension += 1
+    if (skipped) skip += 1
+    else if (isThin) thin += 1
+    else if ((row.opener || '').trim()) openers += 1
+    if (!skipped && !isThin && track === 'signal') signal += 1
+    else if (!skipped && !isThin && track === 'tension') tension += 1
     const kind = track === 'tension'
       ? 'tension'
       : ((row.opener_kind || '').trim() || (track && track !== 'none' ? track : ''))
@@ -140,6 +147,7 @@ export function summarizeWaveLeads(rows: WaveLeadRow[]): WaveLeadSummary {
     signal,
     tension,
     thin,
+    skip,
     byKind
   }
 }
@@ -207,12 +215,15 @@ export function buildWaveSnapshot(input: {
     {
       id: 'openers',
       label: 'First lines present',
-      ok: cohort === 0 ? false : openers === cohort - (input.leads.thin || 0),
+      ok:
+        cohort === 0
+          ? false
+          : openers === cohort - (input.leads.thin || 0) - (input.leads.skip || 0),
       blocking: true,
       detail:
         cohort === 0
           ? 'No leads to research'
-          : `${openers} / ${cohort - (input.leads.thin || 0)} sendable · ${input.leads.thin || 0} thin`
+          : `${openers} / ${cohort - (input.leads.thin || 0) - (input.leads.skip || 0)} sendable · ${input.leads.thin || 0} thin · ${input.leads.skip || 0} skip`
     },
     {
       id: 'reviewed',
@@ -267,6 +278,7 @@ export function buildWaveSnapshot(input: {
     signal: input.leads.signal || 0,
     tension: input.leads.tension || 0,
     thin: input.leads.thin || 0,
+    skip: input.leads.skip || 0,
     byKind: input.leads.byKind || {},
     openerReviewedAt: reviewedAt,
     copyConfirmedAt: confirmedAt,
@@ -307,6 +319,7 @@ export function wavePlannerBit(
       signal: 0,
       tension: 0,
       thin: 0,
+      skip: 0,
       byKind: {}
     },
     instantly: null,
@@ -331,6 +344,7 @@ export function emptyWaveLeadSummary(): WaveLeadSummary {
     signal: 0,
     tension: 0,
     thin: 0,
+    skip: 0,
     byKind: {}
   }
 }
@@ -394,6 +408,7 @@ export function compactWaveForAgent(snapshot: WaveSnapshot) {
     signal: snapshot.signal,
     tension: snapshot.tension,
     thin: snapshot.thin,
+    skip: snapshot.skip,
     by_kind: snapshot.byKind,
     positivesPer100Delivered: snapshot.positivesPer100Delivered
   }

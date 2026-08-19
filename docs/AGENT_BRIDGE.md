@@ -23,8 +23,12 @@ Apply migrations:
 - `0045_campaign_wave.sql` — `opener_reviewed_at`, `copy_confirmed_at` on pipeline campaigns
 - `0050_drop_wave_cap.sql` — drop unused campaign column
 - `0051_opener_track_kind.sql` — `opener_track` + `opener_kind` on `lead_contacts`
+- `0052_archive_stale_offers.sql` — archive growth/enablement/reporting; rewrite capture offer
+- `0053_lead_icp.sql` — `icp_status`, `review_count`, `hours_label`, `after_hours`, `capture_crack`, `email_origin`
 
-Per-lead first line is Hook compile (signal) or YAML tension. Instantly `{{personalization}}`. Hook PATCHes `opener` / `opener_track` / `opener_kind` / `lead_facts` only on `--stage full --write-compass`. Hook does not tick `opener_reviewed_at` and does not activate Instantly.
+Qualify before research. `icp_status=skip` (franchise, no inbound, thin reviews) never needs an opener and never uploads. Real shop + thin card: `icp_status=thin` and `enrich_status=thin`. Harvest pass-only: `GET /api/agent/leads/cohort?icp_status=pass`.
+
+Per-lead first line is Hook compile (signal) or YAML tension. Instantly `{{personalization}}`. Hook PATCHes `opener` / `opener_track` / `opener_kind` / `lead_facts` / ICP fields only on `--stage full --write-compass`. Hook does not tick `opener_reviewed_at` and does not activate Instantly. New campaigns use offer_key `ai-receptionist-system` only.
 
 Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/DELETE) for saved sequences with vertical tags, component breakdown, Instantly-style performance, and `last_used_at`.
 
@@ -36,9 +40,9 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 | `POST` | `/api/agent/sync` | `{ sources?: ['ads','instantly','instantly_leads'] }` |
 | `GET` | `/api/agent/leads` | Lean Instantly-hot leads (`status`, `limit`, `q`) |
 | `GET` | `/api/agent/leads/inventory` | Uncontacted counts by vertical × state (orient) |
-| `GET` | `/api/agent/leads/cohort` | Harvest input: contacts on a pipeline campaign (`pipeline_campaign_id` required; `enrich_status`, `unverified_only=1` skips `email_verified_at`, `limit`, `offset`) |
-| `PATCH` | `/api/agent/leads/mark` | Bulk `ids[]` or `emails[]` for campaign/cohort/`enrich_status` / Instantly land / `email_verify_status` / `email_verified` (max 500). Per-row `rows[]` for `lead_facts` / `opener` / `opener_track` / `opener_kind` / `website` / `company_domain` / Instantly ids (max 50). Facts are `[{kind, claim, url}]`. Website is the company site, not an engager fact. `opener_track`: `signal` \| `tension` \| `none`. `opener_kind`: `review` \| `hiring` \| `policy` \| `specialty` \| `location` \| `tension` \| `none`. Hiring facts store as kind `update`; `opener_kind` carries `hiring`. `email_verify_status`: `valid` \| `catch_all` \| `invalid` \| `unknown` \| `risky` \| `none`. `valid` and `catch_all` stamp `email_verified_at`. `email_verified: true` stamps now and sets status `valid` if unset. |
-| `GET` | `/api/agent/campaigns` | Pipeline + Instantly glance. Compact `wave` per campaign (`cohort`, `openers`, `signal`, `tension`, `thin`, `by_kind`, `blocked`, `readyToActivate`). Thin rows are not missing openers. |
+| `GET` | `/api/agent/leads/cohort` | Harvest input: contacts on a pipeline campaign (`pipeline_campaign_id` required; `enrich_status`, `icp_status=pass,thin`, `unverified_only=1` skips `email_verified_at`, `limit`, `offset`) |
+| `PATCH` | `/api/agent/leads/mark` | Bulk `ids[]` or `emails[]` for campaign/cohort/`enrich_status` / Instantly land / `email_verify_status` / `email_verified` (max 500). Per-row `rows[]` for `lead_facts` / `opener` / `opener_track` / `opener_kind` / ICP fields / `website` / `company_domain` / Instantly ids (max 50). Facts are `[{kind, claim, url}]`. Website is the company site, not an engager fact. `opener_track`: `signal` \| `tension` \| `none`. `opener_kind`: `review` \| `hiring` \| `policy` \| `specialty` \| `location` \| `tension` \| `after_hours` \| `phone_pain` \| `none`. Hiring facts store as kind `update`; `opener_kind` carries `hiring`. ICP: `icp_status` `none\|pass\|thin\|skip`, `review_count`, `hours_label`, `after_hours`, `capture_crack`, `email_origin` `unknown\|published\|guessed`. `email_verify_status`: `valid` \| `catch_all` \| `invalid` \| `unknown` \| `risky` \| `none`. `valid` and `catch_all` stamp `email_verified_at`. `email_verified: true` stamps now and sets status `valid` if unset. |
+| `GET` | `/api/agent/campaigns` | Pipeline + Instantly glance. Compact `wave` per campaign (`cohort`, `openers`, `signal`, `tension`, `thin`, `skip`, `by_kind`, `blocked`, `readyToActivate`). Thin and skip rows are not missing openers. Skip never uploads. |
 | `GET` | `/api/agent/outbound/summary` | Library counts + offer keys (~1–2KB) |
 | `GET` | `/api/agent/outbound/:kind` | Compact list (`limit` default 40 max 100; `full=1` for bodies/sequences) |
 | `POST` | `/api/agent/outbound/:kind` | Create library row |

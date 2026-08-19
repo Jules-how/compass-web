@@ -16,6 +16,7 @@ import {
   type OutboundSubject,
   type OutboundTemplate
 } from '@/lib/outbound-copy'
+import { isDoctrineOpener } from '@/lib/outbound-library-filter'
 
 const STAMP = '2026-08-10T00:00:00.000Z'
 
@@ -245,18 +246,24 @@ export function sourceSubjects(): OutboundSubject[] {
 }
 
 export function sourceOpeners(): OutboundOpener[] {
-  return (inventory.openers as InvOpener[]).map((item) => ({
-    id: item.id_slug,
-    label: `[Source · ${item.creator}] ${item.label}`,
-    opener_mode: item.opener_mode || 'custom',
-    body: item.body,
-    notes: [item.notes, `Source file: ${item.source_file}`].filter(Boolean).join(' · ') || null,
-    vertical_tags: [],
-    archived: false,
-    created_at: STAMP,
-    updated_at: STAMP,
-    ...provenanceMeta(item.creator, item.source_file)
-  }))
+  return (inventory.openers as InvOpener[]).map((item) => {
+    const doctrine = isDoctrineOpener({ label: item.label, body: item.body, notes: item.notes })
+    return {
+      id: item.id_slug,
+      label: `[Source · ${item.creator}] ${item.label}`,
+      opener_mode: item.opener_mode || 'custom',
+      body: item.body,
+      notes:
+        [item.notes, doctrine ? 'insertable:no' : '', `Source file: ${item.source_file}`]
+          .filter(Boolean)
+          .join(' · ') || null,
+      vertical_tags: [],
+      archived: false,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...provenanceMeta(item.creator, item.source_file)
+    }
+  })
 }
 
 export function sourceTemplates(): OutboundTemplate[] {

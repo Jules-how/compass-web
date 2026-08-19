@@ -21,6 +21,8 @@ function skipLabel(reason: string): string {
       return 'already in this Instantly campaign'
     case 'missing_opener':
       return 'missing opener'
+    case 'icp_skip':
+      return 'ICP skip'
     default:
       return reason
   }

@@ -17,10 +17,10 @@ import {
   parseLibraryDrag
 } from '@/components/outbound/LibraryPane'
 import { LibraryItemDetailSheet } from '@/components/outbound/LibraryItemDetailSheet'
+import { offerKeysForPicker } from '@/lib/lead-icp'
 import {
   LOCATION_TAG_HINTS,
   OUTBOUND_CTA_TYPES,
-  OUTBOUND_OFFER_KEYS,
   VERTICAL_TAG_HINTS,
   normalizeProvenance,
   provenanceBadgeLabel,
@@ -36,6 +36,13 @@ import type {
   OutboundSubject,
   OutboundTemplate
 } from '@/lib/outbound-copy'
+import {
+  applyLibraryBench,
+  isDoctrineOpener,
+  matchesCampaignLibrary,
+  passCampaignScope,
+  sortLibraryRows
+} from '@/lib/outbound-library-filter'
 import {
   ensureOutboundLibrarySeeded,
   listLibraryBundle,
@@ -74,36 +81,12 @@ const SECTIONS: {
   bgColor: string
 }[] = [
   {
-    key: 'offers',
-    title: 'Offers',
-    subtitle: 'Pack offer keys + summaries',
-    icon: Package,
-    textColor: 'text-[#e85d2a]',
-    bgColor: 'bg-[#e85d2a]/10'
-  },
-  {
-    key: 'expressions',
-    title: 'Expressions',
-    subtitle: 'Cold X-in-Y-or-Z lines',
-    icon: MessageSquareText,
-    textColor: 'text-amber-700',
-    bgColor: 'bg-amber-500/10'
-  },
-  {
     key: 'structures',
     title: 'Structures',
     subtitle: 'Slot-order skeletons',
     icon: Layers,
     textColor: 'text-stone-600',
     bgColor: 'bg-stone-500/10'
-  },
-  {
-    key: 'ctas',
-    title: 'CTAs',
-    subtitle: 'One ask per email',
-    icon: MousePointerClick,
-    textColor: 'text-emerald-700',
-    bgColor: 'bg-emerald-500/10'
   },
   {
     key: 'subjects',
@@ -116,10 +99,26 @@ const SECTIONS: {
   {
     key: 'openers',
     title: 'Openers',
-    subtitle: 'Opener modes',
+    subtitle: 'Insertable first lines',
     icon: Sparkles,
     textColor: 'text-violet-700',
     bgColor: 'bg-violet-500/10'
+  },
+  {
+    key: 'expressions',
+    title: 'Expressions',
+    subtitle: 'Cold X-in-Y-or-Z lines',
+    icon: MessageSquareText,
+    textColor: 'text-amber-700',
+    bgColor: 'bg-amber-500/10'
+  },
+  {
+    key: 'ctas',
+    title: 'CTAs',
+    subtitle: 'One ask per email',
+    icon: MousePointerClick,
+    textColor: 'text-emerald-700',
+    bgColor: 'bg-emerald-500/10'
   },
   {
     key: 'templates',
@@ -128,6 +127,14 @@ const SECTIONS: {
     icon: LayoutTemplate,
     textColor: 'text-rose-700',
     bgColor: 'bg-rose-500/10'
+  },
+  {
+    key: 'offers',
+    title: 'Offers',
+    subtitle: 'Pack offer keys + summaries',
+    icon: Package,
+    textColor: 'text-[#e85d2a]',
+    bgColor: 'bg-[#e85d2a]/10'
   }
 ]
 
@@ -159,24 +166,6 @@ function haystack(...parts: Array<string | null | undefined | string[]>): string
     .filter(Boolean)
     .join(' ')
     .toLowerCase()
-}
-
-function matchesCampaign(
-  row: {
-    offer_key?: string | null
-    vertical_tags?: string[]
-    location_tags?: string[]
-    structure_id?: string | null
-  },
-  ctx: CampaignLibraryContext
-): boolean {
-  if (ctx.offer_key && row.offer_key && row.offer_key === ctx.offer_key) return true
-  if (ctx.structure_id && row.structure_id && row.structure_id === ctx.structure_id) return true
-  const campaignVerticals = new Set(ctx.vertical_tags ?? [])
-  const campaignLocations = new Set(ctx.location_tags ?? [])
-  if ((row.vertical_tags ?? []).some((tag) => campaignVerticals.has(tag))) return true
-  if ((row.location_tags ?? []).some((tag) => campaignLocations.has(tag))) return true
-  return false
 }
 
 function FilterChip({
@@ -232,6 +221,7 @@ function LibraryRow({
   matchCampaign,
   provenance,
   payload,
+  insertable = true,
   onOpen,
   onInsert
 }: {
@@ -241,6 +231,7 @@ function LibraryRow({
   matchCampaign?: boolean
   provenance?: Partial<OutboundProvenanceFields>
   payload: LibraryDragPayload
+  insertable?: boolean
   onOpen: () => void
   onInsert: (payload: LibraryDragPayload) => void
 }) {
@@ -250,14 +241,18 @@ function LibraryRow({
     <div
       role="button"
       tabIndex={0}
-      draggable
-      onDragStart={(e) => {
-        draggedRef.current = true
-        const raw = JSON.stringify(payload)
-        e.dataTransfer.setData('application/x-outbound-library', raw)
-        e.dataTransfer.setData('text/plain', raw)
-        e.dataTransfer.effectAllowed = 'copy'
-      }}
+      draggable={insertable}
+      onDragStart={
+        insertable
+          ? (e) => {
+              draggedRef.current = true
+              const raw = JSON.stringify(payload)
+              e.dataTransfer.setData('application/x-outbound-library', raw)
+              e.dataTransfer.setData('text/plain', raw)
+              e.dataTransfer.effectAllowed = 'copy'
+            }
+          : undefined
+      }
       onDragEnd={() => {
         window.setTimeout(() => {
           draggedRef.current = false
@@ -319,16 +314,20 @@ function LibraryRow({
         >
           Open
         </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onInsert(payload)
-          }}
-          className="rounded-lg border border-stone-200 bg-white px-2 py-0.5 text-[11px] font-medium text-neutral-600 hover:border-stone-300 hover:bg-stone-50"
-        >
-          Use
-        </button>
+        {insertable ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onInsert(payload)
+            }}
+            className="rounded-lg border border-stone-200 bg-white px-2 py-0.5 text-[11px] font-medium text-neutral-600 hover:border-stone-300 hover:bg-stone-50"
+          >
+            Use
+          </button>
+        ) : (
+          <span className="rounded-lg px-2 py-0.5 text-[11px] text-neutral-400">Playbook</span>
+        )}
       </div>
     </div>
   )
@@ -352,10 +351,12 @@ export function EditorComponentsAccordion({
   const [ctaTypeFilter, setCtaTypeFilter] = useState<string>('')
   const [campaignOnly, setCampaignOnly] = useState(false)
   const [provenanceFilter, setProvenanceFilter] = useState<'all' | OutboundProvenance>('all')
+  const [benchOn, setBenchOn] = useState(true)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [activeSection, setActiveSection] = useState<SectionKey>('expressions')
+  const [activeSection, setActiveSection] = useState<SectionKey>('structures')
   const [detail, setDetail] = useState<{ kind: LibraryKind; id: string } | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
+  const campaignDefaultsApplied = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -387,12 +388,20 @@ export function EditorComponentsAccordion({
     }
   }, [reloadToken])
 
+  useEffect(() => {
+    if (campaignDefaultsApplied.current) return
+    if (!campaignContext?.offer_key) return
+    campaignDefaultsApplied.current = true
+    setCampaignOnly(true)
+    setProvenanceFilter('yours')
+  }, [campaignContext?.offer_key])
+
   const ctx: CampaignLibraryContext = campaignContext ?? {}
   const query = q.trim().toLowerCase()
 
   const offerOptions = useMemo(() => {
     const fromRows = bundle.offers.map((row) => row.offer_key)
-    return uniqueTags([...OUTBOUND_OFFER_KEYS, ...fromRows, ctx.offer_key])
+    return uniqueTags([...offerKeysForPicker(ctx.offer_key), ...fromRows])
   }, [bundle.offers, ctx.offer_key])
 
   const verticalOptions = useMemo(() => {
@@ -426,19 +435,14 @@ export function EditorComponentsAccordion({
       provenance?: OutboundProvenance | string | null
     }
 
-    function hasScope(row: Scoped) {
-      return Boolean(
-        row.offer_key || (row.vertical_tags ?? []).length || (row.location_tags ?? []).length
-      )
-    }
-
-    function passProvenance(row: Scoped) {
+    function passProvenance(row: Scoped, kind?: string) {
+      if (kind === 'structures') return true
       if (provenanceFilter === 'all') return true
       return normalizeProvenance(row.provenance) === provenanceFilter
     }
 
-    function passScope(row: Scoped, opts?: { requireOffer?: boolean }) {
-      if (!passProvenance(row)) return false
+    function passScope(row: Scoped, kind: string, opts?: { requireOffer?: boolean }) {
+      if (!passProvenance(row, kind)) return false
       if (opts?.requireOffer && offerFilter && row.offer_key !== offerFilter) return false
       if (!opts?.requireOffer && offerFilter && row.offer_key && row.offer_key !== offerFilter) {
         return false
@@ -449,34 +453,27 @@ export function EditorComponentsAccordion({
       if (locationFilter && (row.location_tags ?? []).length > 0 && !(row.location_tags ?? []).includes(locationFilter)) {
         return false
       }
-      if (campaignOnly && hasScope(row) && !matchesCampaign(row, ctx)) return false
-      return true
+      return passCampaignScope(row, ctx, campaignOnly, kind)
     }
 
-    // Source examples first; campaign fit is only a tie-breaker within the same provenance.
-    const sortRows = <T extends Scoped>(rows: T[]) =>
-      [...rows].sort((a, b) => {
-        const provA = normalizeProvenance(a.provenance)
-        const provB = normalizeProvenance(b.provenance)
-        if (provA !== provB) return provA === 'source' ? -1 : 1
-        return Number(matchesCampaign(b, ctx)) - Number(matchesCampaign(a, ctx))
-      })
+    const sortRows = <T extends Scoped>(rows: T[], kind: string) => sortLibraryRows(rows, ctx, kind)
 
     return {
       offers: sortRows(
         bundle.offers.filter(
           (row) =>
-            passScope(row, { requireOffer: true }) &&
+            passScope(row, 'offers', { requireOffer: true }) &&
             (!query ||
               haystack(row.name, row.offer_key, row.pack_summary, row.vertical_tags, row.location_tags).includes(
                 query
               ))
-        )
+        ),
+        'offers'
       ),
       expressions: sortRows(
         bundle.expressions.filter(
           (row) =>
-            passScope(row, { requireOffer: true }) &&
+            passScope(row, 'expressions', { requireOffer: true }) &&
             (!query ||
               haystack(
                 row.label,
@@ -486,50 +483,56 @@ export function EditorComponentsAccordion({
                 row.vertical_tags,
                 row.location_tags
               ).includes(query))
-        )
+        ),
+        'expressions'
       ),
       structures: sortRows(
         bundle.structures.filter(
           (row) =>
-            passProvenance(row) &&
+            passScope(row, 'structures') &&
             (!query || haystack(row.name, row.structure_id, row.description).includes(query))
-        )
+        ),
+        'structures'
       ),
       ctas: sortRows(
         bundle.ctas.filter(
           (row) =>
             (!ctaTypeFilter || row.cta_type === ctaTypeFilter) &&
-            passScope(row) &&
+            passScope(row, 'ctas') &&
             (!query ||
               haystack(row.label, row.cta_type, row.body, row.vertical_tags, row.location_tags).includes(
                 query
               ))
-        )
+        ),
+        'ctas'
       ),
       subjects: sortRows(
         bundle.subjects.filter(
           (row) =>
-            passScope(row) &&
+            passScope(row, 'subjects') &&
             (!query || haystack(row.label, row.pattern, row.notes, row.vertical_tags).includes(query))
-        )
+        ),
+        'subjects'
       ),
       openers: sortRows(
         bundle.openers.filter(
           (row) =>
-            passScope(row) &&
+            passScope(row, 'openers') &&
             (!query ||
               haystack(row.label, row.opener_mode, row.body, row.notes, row.vertical_tags).includes(query))
-        )
+        ),
+        'openers'
       ),
       templates: sortRows(
         bundle.templates.filter(
           (row) =>
-            passScope(row) &&
+            passScope(row, 'templates') &&
             (!query ||
               haystack(row.name, row.offer_key, row.structure_id, row.vertical_tags, row.location_tags).includes(
                 query
               ))
-        )
+        ),
+        'templates'
       )
     }
   }, [
@@ -544,15 +547,9 @@ export function EditorComponentsAccordion({
     verticalFilter
   ])
 
-  const activeFilterCount = [
-    offerFilter,
-    verticalFilter,
-    locationFilter,
-    ctaTypeFilter,
-    campaignOnly ? 'campaign' : '',
-    provenanceFilter !== 'all' ? provenanceFilter : '',
-    q.trim()
-  ].filter(Boolean).length
+  const activeFilterCount = [offerFilter, verticalFilter, locationFilter, ctaTypeFilter, q.trim()].filter(
+    Boolean
+  ).length
 
   function clearFilters() {
     setQ('')
@@ -560,8 +557,18 @@ export function EditorComponentsAccordion({
     setVerticalFilter('')
     setLocationFilter('')
     setCtaTypeFilter('')
-    setCampaignOnly(false)
-    setProvenanceFilter('all')
+    setCampaignOnly(Boolean(ctx.offer_key))
+    setProvenanceFilter(ctx.offer_key ? 'yours' : 'all')
+    setBenchOn(true)
+  }
+
+  const benchActive = campaignOnly && provenanceFilter === 'yours' && benchOn
+  const visible = {
+    ...filtered,
+    expressions: applyLibraryBench('expressions', filtered.expressions, benchActive),
+    ctas: applyLibraryBench('ctas', filtered.ctas, benchActive),
+    subjects: applyLibraryBench('subjects', filtered.subjects, benchActive),
+    openers: applyLibraryBench('openers', filtered.openers, benchActive)
   }
 
   function openDetail(kind: LibraryKind, id: string) {
@@ -570,13 +577,13 @@ export function EditorComponentsAccordion({
 
   function renderRows(key: SectionKey) {
     if (key === 'offers') {
-      return filtered.offers.map((row) => (
+      return visible.offers.map((row) => (
         <LibraryRow
           key={row.id}
           title={row.name}
           body={row.pack_summary || row.positioning_line || undefined}
           chips={uniqueTags([row.offer_key, ...(row.vertical_tags ?? []), ...(row.location_tags ?? [])])}
-          matchCampaign={matchesCampaign(row, ctx)}
+          matchCampaign={matchesCampaignLibrary(row, ctx)}
           provenance={row}
           payload={{ kind: 'offer', id: row.id, offer_key: row.offer_key, name: row.name }}
           onOpen={() => openDetail('offers', row.id)}
@@ -585,7 +592,7 @@ export function EditorComponentsAccordion({
       ))
     }
     if (key === 'expressions') {
-      return filtered.expressions.map((row) => (
+      return visible.expressions.map((row) => (
         <LibraryRow
           key={row.id}
           title={row.label}
@@ -596,7 +603,7 @@ export function EditorComponentsAccordion({
             ...(row.vertical_tags ?? []),
             ...(row.location_tags ?? [])
           ])}
-          matchCampaign={matchesCampaign(row, ctx)}
+          matchCampaign={matchesCampaignLibrary(row, ctx)}
           provenance={row}
           payload={{
             kind: 'expression',
@@ -611,13 +618,13 @@ export function EditorComponentsAccordion({
       ))
     }
     if (key === 'structures') {
-      return filtered.structures.map((row) => (
+      return visible.structures.map((row) => (
         <LibraryRow
           key={row.id}
           title={row.name}
           body={row.description ?? undefined}
           chips={uniqueTags([row.structure_id])}
-          matchCampaign={matchesCampaign(row, ctx)}
+          matchCampaign={matchesCampaignLibrary(row, ctx)}
           provenance={row}
           payload={{
             kind: 'structure',
@@ -631,7 +638,7 @@ export function EditorComponentsAccordion({
       ))
     }
     if (key === 'ctas') {
-      return filtered.ctas.map((row) => (
+      return visible.ctas.map((row) => (
         <LibraryRow
           key={row.id}
           title={row.label}
@@ -641,7 +648,7 @@ export function EditorComponentsAccordion({
             ...(row.vertical_tags ?? []),
             ...(row.location_tags ?? [])
           ])}
-          matchCampaign={matchesCampaign(row, ctx)}
+          matchCampaign={matchesCampaignLibrary(row, ctx)}
           provenance={row}
           payload={{
             kind: 'cta',
@@ -656,13 +663,13 @@ export function EditorComponentsAccordion({
       ))
     }
     if (key === 'subjects') {
-      return filtered.subjects.map((row) => (
+      return visible.subjects.map((row) => (
         <LibraryRow
           key={row.id}
           title={row.label}
           body={row.pattern}
           chips={uniqueTags([...(row.vertical_tags ?? [])])}
-          matchCampaign={matchesCampaign(row, ctx)}
+          matchCampaign={matchesCampaignLibrary(row, ctx)}
           provenance={row}
           payload={{
             kind: 'subject',
@@ -676,13 +683,13 @@ export function EditorComponentsAccordion({
       ))
     }
     if (key === 'openers') {
-      return filtered.openers.map((row) => (
+      return visible.openers.map((row) => (
         <LibraryRow
           key={row.id}
           title={row.label}
           body={row.body}
           chips={uniqueTags([row.opener_mode, ...(row.vertical_tags ?? [])])}
-          matchCampaign={matchesCampaign(row, ctx)}
+          matchCampaign={matchesCampaignLibrary(row, ctx)}
           provenance={row}
           payload={{
             kind: 'opener',
@@ -691,12 +698,13 @@ export function EditorComponentsAccordion({
             label: row.label,
             opener_mode: row.opener_mode
           }}
+          insertable={!isDoctrineOpener(row)}
           onOpen={() => openDetail('openers', row.id)}
           onInsert={onInsert}
         />
       ))
     }
-    return filtered.templates.map((row) => (
+    return visible.templates.map((row) => (
       <LibraryRow
         key={row.id}
         title={row.name}
@@ -707,7 +715,7 @@ export function EditorComponentsAccordion({
           ...(row.vertical_tags ?? []),
           ...(row.location_tags ?? [])
         ])}
-        matchCampaign={matchesCampaign(row, ctx)}
+        matchCampaign={matchesCampaignLibrary(row, ctx)}
         provenance={row}
         payload={{ kind: 'template', id: row.id, name: row.name }}
         onOpen={() => openDetail('templates', row.id)}
@@ -716,7 +724,7 @@ export function EditorComponentsAccordion({
     ))
   }
 
-  const activeMeta = SECTIONS.find((s) => s.key === activeSection) ?? SECTIONS[1]
+  const activeMeta = SECTIONS.find((s) => s.key === activeSection) ?? SECTIONS[0]
   const activeRows = renderRows(activeSection)
   const libraryEmpty =
     bundle.offers.length +
@@ -734,7 +742,7 @@ export function EditorComponentsAccordion({
         <div>
           <h2 className="text-[15px] font-semibold text-neutral-900">Components</h2>
           <p className="text-[12px] text-neutral-500">
-            Click to view/edit · Use or drag to insert into the draft
+            Yours is sendable. Source is playbooks. Default is this campaign + Yours.
           </p>
         </div>
         {loadError ? <p className="text-[11px] text-red-600">{loadError}</p> : null}
@@ -750,7 +758,7 @@ export function EditorComponentsAccordion({
           <div className="flex rounded-xl border border-stone-200 bg-white p-0.5">
             {(
               [
-                ['all', 'All'],
+                ['all', 'Playbooks'],
                 ['source', 'Source'],
                 ['yours', 'Yours']
               ] as const
@@ -771,17 +779,13 @@ export function EditorComponentsAccordion({
             ))}
           </div>
           <FilterChip
-            label={ctx.offer_key ? `This campaign` : 'Campaign match'}
+            label={ctx.offer_key ? 'This campaign' : 'Campaign match'}
             active={campaignOnly}
-            onClick={() => {
-              setCampaignOnly((v) => {
-                const next = !v
-                if (next && ctx.offer_key) setOfferFilter(ctx.offer_key)
-                if (!next && offerFilter === ctx.offer_key) setOfferFilter('')
-                return next
-              })
-            }}
+            onClick={() => setCampaignOnly((v) => !v)}
           />
+          {campaignOnly && provenanceFilter === 'yours' ? (
+            <FilterChip label="Bench" active={benchOn} onClick={() => setBenchOn((v) => !v)} />
+          ) : null}
           <button
             type="button"
             onClick={() => setFiltersOpen((v) => !v)}
@@ -902,7 +906,11 @@ export function EditorComponentsAccordion({
             <h3 className="text-[14px] font-semibold text-neutral-900">{activeMeta.title}</h3>
             <p className="text-[12px] text-neutral-500">{activeMeta.subtitle}</p>
           </div>
-          <p className="text-[11px] text-neutral-400">{activeRows.length} shown</p>
+          <p className="text-right text-[11px] text-neutral-400">
+            {benchActive && filtered[activeSection].length > activeRows.length
+              ? `Bench ${activeRows.length} of ${filtered[activeSection].length}`
+              : `${activeRows.length} shown`}
+          </p>
         </div>
 
         {activeRows.length === 0 ? (
@@ -917,7 +925,7 @@ export function EditorComponentsAccordion({
                 onClick={clearFilters}
                 className="text-[12px] font-medium text-[#c2410c] hover:underline"
               >
-                Clear filters to browse all styles
+                Clear extra filters
               </button>
             ) : null}
           </div>
@@ -932,6 +940,10 @@ export function EditorComponentsAccordion({
           id={detail.id}
           onClose={() => setDetail(null)}
           onInsert={(payload) => {
+            if (detail.kind === 'openers' && payload.kind === 'opener') {
+              const row = bundle.openers.find((item) => item.id === payload.id)
+              if (row && isDoctrineOpener(row)) return
+            }
             onInsert(payload)
             setDetail(null)
           }}

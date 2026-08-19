@@ -398,6 +398,12 @@ export interface LeadContact {
   company_domain?: string | null
   email_verify_status?: string | null
   email_verified_at?: string | null
+  icp_status?: string | null
+  review_count?: number | null
+  hours_label?: string | null
+  after_hours?: boolean | null
+  capture_crack?: string | null
+  email_origin?: string | null
   lead_facts?: LeadFact[] | unknown | null
   created_at: string | null
   updated_at: string | null
@@ -485,6 +491,11 @@ export interface LeadListFilters {
   cohort_tag?: string
   /** Enrichment readiness: none|queued|enriched|thin|opener_ready|uploaded */
   enrich_status?: string
+  /** ICP lane: none|pass|thin|skip */
+  icp_status?: string
+  after_hours?: '1' | '0'
+  email_origin?: string
+  min_reviews?: string
 }
 
 export interface LeadSummaryCounts {

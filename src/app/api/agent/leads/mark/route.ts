@@ -1,4 +1,5 @@
 import { requireAgentAuth } from '@/lib/agent-auth'
+import { applyLeadIcpFields } from '@/lib/lead-icp'
 import { parseLeadFacts } from '@/lib/lead-facts'
 import { parseCompanySite } from '@/lib/company-site'
 import { getPortalAdminClient } from '@/lib/portal-admin'
@@ -250,6 +251,10 @@ export async function PATCH(request: Request) {
         if (row.opener_kind !== undefined) {
           patch.opener_kind = parseOptionalText(row.opener_kind)
         }
+        const icp = applyLeadIcpFields(row, patch)
+        if (!icp.ok) {
+          return portalJson({ error: icp.error, id: id || email }, { status: 400 })
+        }
         if (row.website !== undefined || row.company_domain !== undefined) {
           const site = parseCompanySite(
             typeof row.website === 'string'
@@ -315,6 +320,8 @@ export async function PATCH(request: Request) {
     const patch: MarkPatch = { updated_at: new Date().toISOString() }
     const sharedError = applySharedFields(patch, body)
     if (sharedError) return sharedError
+    const icp = applyLeadIcpFields(body as Record<string, unknown>, patch)
+    if (!icp.ok) return portalJson({ error: icp.error }, { status: 400 })
     if (Object.keys(patch).length <= 1) {
       return portalJson({ error: 'no_fields' }, { status: 400 })
     }

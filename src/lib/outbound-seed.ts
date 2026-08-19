@@ -46,7 +46,7 @@ export function seedOffers(): OutboundOffer[] {
       vertical_tags: ['mortgage-brokers'],
       location_tags: ['au-national'],
       sort_order: 10,
-      archived: false,
+      archived: true,
       created_at: STAMP,
       updated_at: STAMP,
       ...yoursProvenance()
@@ -61,7 +61,7 @@ export function seedOffers(): OutboundOffer[] {
       vertical_tags: ['tradies', 'electricians'],
       location_tags: ['nsw', 'qld', 'au-national'],
       sort_order: 20,
-      archived: false,
+      archived: true,
       created_at: STAMP,
       updated_at: STAMP,
       ...yoursProvenance()
@@ -69,10 +69,12 @@ export function seedOffers(): OutboundOffer[] {
     {
       id: 'offer-ai-receptionist-system',
       offer_key: 'ai-receptionist-system',
-      name: 'AI Receptionist System',
-      pack_summary: 'Answer → qualify → book/SMS on their number 24/7',
-      positioning_line: null,
-      vertical_tags: ['tradies'],
+      name: 'After-hours booking',
+      pack_summary:
+        'Overflow voice + SMS so a job that already called books while they are on the tools',
+      positioning_line:
+        'Missed-call and after-hours booking for established local trades that already get inbound',
+      vertical_tags: ['tradies', 'plumber', 'hvac'],
       location_tags: ['au-national'],
       sort_order: 30,
       archived: false,
@@ -89,7 +91,7 @@ export function seedOffers(): OutboundOffer[] {
       vertical_tags: ['agencies'],
       location_tags: ['au-national'],
       sort_order: 40,
-      archived: false,
+      archived: true,
       created_at: STAMP,
       updated_at: STAMP,
       ...yoursProvenance()
@@ -108,7 +110,7 @@ function yoursExpressions(): OutboundExpression[] {
       location_tags: ['au-national', 'nsw'],
       status: 'approved',
       notes: null,
-      archived: false,
+      archived: true,
       created_at: STAMP,
       updated_at: STAMP,
       ...yoursProvenance()
@@ -122,7 +124,63 @@ function yoursExpressions(): OutboundExpression[] {
       location_tags: ['au-national'],
       status: 'campaign_gated',
       notes: 'No standing volume guarantee; N locked per campaign.',
+      archived: true,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
+    },
+    {
+      id: 'expr-proof-receptionist',
+      offer_key: 'ai-receptionist-system',
+      label: '[Yours] Proof · after-hours booking',
+      body: 'After-hours calls on a comparable shop still hit voicemail; [peer] now answers and offers a booking path. Swap [peer] for a named like-for-like before send. Do not promise lead volume.',
+      vertical_tags: ['tradies', 'electricians'],
+      location_tags: ['nsw', 'qld'],
+      status: 'draft',
+      notes: 'slot:proof_block. Campaign-gated; no named peer metric yet.',
       archived: false,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
+    },
+    {
+      id: 'expr-proof-growth',
+      offer_key: 'growth-system',
+      label: '[Yours] Proof · booked appointments',
+      body: '[N] booked borrower chats in the first 30 days after access and budget were live, on a comparable broker list. Lock N per campaign; no standing volume guarantee.',
+      vertical_tags: ['mortgage-brokers'],
+      location_tags: ['nsw', 'qld'],
+      status: 'campaign_gated',
+      notes: 'slot:proof_block. N locked per campaign.',
+      archived: true,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
+    },
+    {
+      id: 'expr-proof-enablement',
+      offer_key: 'ai-enablement',
+      label: '[Yours] Proof · in-house after install',
+      body: '[Peer shop] now runs the three starter agents in-house after install. Name the peer before send. Refund path is the install fee if they cannot run it.',
+      vertical_tags: ['tradies', 'electricians'],
+      location_tags: ['nsw', 'qld'],
+      status: 'draft',
+      notes: 'slot:proof_block. Campaign-gated; no named peer metric yet.',
+      archived: true,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
+    },
+    {
+      id: 'expr-proof-agency-reporting',
+      offer_key: 'agency-ai-reporting',
+      label: '[Yours] Proof · reporting commentary pass',
+      body: 'Monthly client reporting goes from hours of collection and formatting to a short commentary pass. From $2,500. Name a like-for-like agency before send.',
+      vertical_tags: ['agencies'],
+      location_tags: ['nsw', 'qld'],
+      status: 'draft',
+      notes: 'slot:proof_block. Campaign-gated; no named peer metric yet.',
+      archived: true,
       created_at: STAMP,
       updated_at: STAMP,
       ...yoursProvenance()
@@ -192,6 +250,32 @@ function yoursCtas(): OutboundCta[] {
       created_at: STAMP,
       updated_at: STAMP,
       ...yoursProvenance()
+    },
+    {
+      id: 'cta-right-person',
+      label: '[Yours] Right person',
+      body: 'Is the public number still landing on you, or whoever runs the office?',
+      cta_type: 'interest_check',
+      vertical_tags: ['tradies', 'electricians', 'agencies', 'mortgage-brokers'],
+      location_tags: ['nsw', 'qld'],
+      is_default: false,
+      archived: false,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
+    },
+    {
+      id: 'cta-consultative',
+      label: '[Yours] Consultative after-hours',
+      body: 'Worth a look at how after-hours calls run on your number?',
+      cta_type: 'permission',
+      vertical_tags: ['tradies', 'electricians'],
+      location_tags: ['nsw', 'qld'],
+      is_default: false,
+      archived: false,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
     }
   ]
 }
@@ -208,8 +292,8 @@ function yoursSubjects(): OutboundSubject[] {
       id: 'subj-colleague-register',
       label: '[Yours] Colleague register',
       pattern: '{{companyName}} / {{firstName}}',
-      notes: 'Plausible deniability — looks like an internal forward subject.',
-      vertical_tags: [],
+      notes: 'family:internal-note. Plausible deniability — looks like an internal forward subject.',
+      vertical_tags: ['electricians', 'tradies', 'family:internal-note'],
       archived: false,
       created_at: STAMP,
       updated_at: STAMP,
@@ -219,8 +303,8 @@ function yoursSubjects(): OutboundSubject[] {
       id: 'subj-outcome-stem',
       label: '[Yours] Outcome stem',
       pattern: '{{outcome}} for {{companyName}}',
-      notes: 'Outcome-led without “quick” stems.',
-      vertical_tags: [],
+      notes: 'family:outcome. Outcome-led without “quick” stems.',
+      vertical_tags: ['electricians', 'tradies', 'family:outcome'],
       archived: false,
       created_at: STAMP,
       updated_at: STAMP,
@@ -232,6 +316,17 @@ function yoursSubjects(): OutboundSubject[] {
       pattern: '{{subject}}',
       notes: 'Use when Instantly supplies per-lead subjects.',
       vertical_tags: [],
+      archived: false,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
+    },
+    {
+      id: 'subj-trigger-hiring',
+      label: '[Yours] Trigger · hiring',
+      pattern: '{{companyName}} hiring',
+      notes: 'family:trigger. Lowercase 4–7 words. Fill per campaign; skip if no hire.',
+      vertical_tags: ['electricians', 'tradies', 'agencies', 'family:trigger'],
       archived: false,
       created_at: STAMP,
       updated_at: STAMP,
@@ -248,11 +343,47 @@ function yoursOpeners(): OutboundOpener[] {
   return [
     {
       id: 'opener-none',
-      label: 'None (greeting + geo)',
+      label: 'Skip if no unique fact',
       opener_mode: 'none',
       body: '',
-      notes: 'Empty opener when personalisation is greeting + geo only (e.g. enablement NSW electricians).',
+      notes: 'Empty beats a scrape tell. Greeting + geo only when there is nothing unique.',
       vertical_tags: ['electricians', 'tradies'],
+      archived: false,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
+    },
+    {
+      id: 'opener-signal-hire',
+      label: 'Signal · hire',
+      opener_mode: 'nick-tier',
+      body: 'They just posted for a [role], which is usually when the public number starts leaking jobs.',
+      notes: 'Pattern only. Fill per campaign; skip if no hire.',
+      vertical_tags: ['electricians', 'tradies', 'agencies', 'mortgage-brokers'],
+      archived: false,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
+    },
+    {
+      id: 'opener-signal-specialty',
+      label: 'Signal · named specialty',
+      opener_mode: 'nick-tier',
+      body: 'Most shops on this list run general callouts; you still lead with [named specialty].',
+      notes: 'One shop-specific job type. No site, homepage, phone, or licence.',
+      vertical_tags: ['electricians', 'tradies'],
+      archived: false,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
+    },
+    {
+      id: 'opener-signal-content',
+      label: 'Signal · content they made',
+      opener_mode: 'custom',
+      body: 'That line in your [post/talk] about [specific claim] is the bit I actually wanted to ask about.',
+      notes: 'Skip if they do not publish. Stronger for agencies and enablement than tradies.',
+      vertical_tags: ['agencies', 'mortgage-brokers'],
       archived: false,
       created_at: STAMP,
       updated_at: STAMP,
@@ -298,6 +429,55 @@ function yoursTemplates(): OutboundTemplate[] {
       'If I trained you up so you could use AI for ads, the website, invoices, follow-ups, and a chunk of the office work, would that actually help {{companyName}}?'
   }
 
+  const fourTouch = scaffoldSequence('nick-3step', { withFollowUp: false })
+  const emailFour = fourTouch.steps[0]
+  const openerFour = emailFour.slots.find((s) => s.key === 'opener')
+  if (openerFour) openerFour.body = '{{personalization}}'
+  const exprFour = emailFour.slots.find((s) => s.key === 'cold_expression')
+  if (exprFour) exprFour.body = '{{cold_expression}}'
+  const ctaFour = emailFour.slots.find((s) => s.key === 'cta')
+  if (ctaFour) ctaFour.body = 'Worth a look at how after-hours calls run on your number?'
+  const fuAngle = emptyFollowUpStep(1, 3)
+  const bumpAngle = fuAngle.slots.find((s) => s.key === 'opener')
+  if (bumpAngle) {
+    bumpAngle.label = 'New angle'
+    bumpAngle.body =
+      "Different angle: the missed calls aren't the ads, it's the number after 5pm. That's the bit I'd show you."
+  }
+  const ctaAngle = fuAngle.slots.find((s) => s.key === 'cta')
+  if (ctaAngle) ctaAngle.body = 'Mind if I send a short outline of how I would run it for you?'
+  const fuProof = emptyFollowUpStep(2, 4)
+  const bumpProof = fuProof.slots.find((s) => s.key === 'opener')
+  if (bumpProof) {
+    bumpProof.label = 'Proof'
+    bumpProof.body =
+      'One-line proof when you have it: [peer] answers after hours and texts the owner inside a minute.'
+  }
+  const ctaProof2 = fuProof.slots.find((s) => s.key === 'cta')
+  if (ctaProof2) ctaProof2.body = 'If you want the outline, say yes.'
+  const fuBreak = emptyFollowUpStep(3, 4)
+  const bumpBreak = fuBreak.slots.find((s) => s.key === 'opener')
+  if (bumpBreak) {
+    bumpBreak.label = 'Breakup'
+    bumpBreak.body =
+      "I'll close this thread so it doesn't sit in your inbox. If after-hours calls become a problem later, reply and I'll send the short outline."
+  }
+  const ctaBreak = fuBreak.slots.find((s) => s.key === 'cta')
+  if (ctaBreak) ctaBreak.body = ''
+  fourTouch.steps.push(fuAngle, fuProof, fuBreak)
+
+  const reengage = scaffoldSequence('nick-3step', { withFollowUp: false })
+  const emailRe = reengage.steps[0]
+  const openerRe = emailRe.slots.find((s) => s.key === 'opener')
+  if (openerRe) openerRe.body = 'Last time you said later.'
+  const exprRe = emailRe.slots.find((s) => s.key === 'cold_expression')
+  if (exprRe) {
+    exprRe.body =
+      'One new proof if you have it: [peer] now answers after hours and texts the owner inside a minute.'
+  }
+  const ctaRe = emailRe.slots.find((s) => s.key === 'cta')
+  if (ctaRe) ctaRe.body = 'Worth a look now, or still later?'
+
   return [
     {
       id: 'tmpl-thin-proof-nick-3',
@@ -333,6 +513,32 @@ function yoursTemplates(): OutboundTemplate[] {
       vertical_tags: ['tradies', 'electricians'],
       location_tags: ['nsw', 'au-national'],
       sequence: enablement,
+      archived: false,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
+    },
+    {
+      id: 'tmpl-four-touch-breakup',
+      name: '[Yours] Four-touch breakup · nick-3step',
+      offer_key: 'ai-receptionist-system',
+      structure_id: 'nick-3step',
+      vertical_tags: ['tradies', 'electricians'],
+      location_tags: ['nsw', 'qld'],
+      sequence: fourTouch,
+      archived: false,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
+    },
+    {
+      id: 'tmpl-not-now-reengage',
+      name: '[Yours] Not now re-engage · nick-3step',
+      offer_key: null,
+      structure_id: 'nick-3step',
+      vertical_tags: ['tradies', 'electricians', 'agencies', 'mortgage-brokers'],
+      location_tags: ['nsw', 'qld'],
+      sequence: reengage,
       archived: false,
       created_at: STAMP,
       updated_at: STAMP,

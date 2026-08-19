@@ -17,12 +17,18 @@ import type { CompassCampaign } from '@/lib/campaigns'
 import { emptyCampaignCopyFields } from '@/lib/campaigns'
 import {
   applyStructureScaffold,
+  compileStepBody,
   copyTextIntoSlot,
+  editableContentSlots,
   emptyFollowUpStep,
   forkSequence,
+  inboxPreview,
   scaffoldSequence,
+  sequenceLintWarnings,
   setStepSubject,
   subjectLooksBanned,
+  usesSlotEditor,
+  wordCount,
   type OutboundSequence,
   type OutboundStep
 } from '@/lib/outbound-copy'
@@ -104,12 +110,7 @@ function writeUnbound(campaign: CompassCampaign, sequence: OutboundSequence) {
 const BODY_SLOT_SKIP = new Set(['accountSignature', 'spam_act_opt_out', 'subject'])
 
 function stepBodyText(step: OutboundStep): string {
-  const bodies = step.slots
-    .filter((s) => !BODY_SLOT_SKIP.has(s.key))
-    .map((s) => s.body)
-  if (bodies.length <= 1) return bodies[0] ?? ''
-  const filled = bodies.filter((body) => body.length > 0)
-  return filled.length <= 1 ? (filled[0] ?? '') : filled.join('\n\n')
+  return compileStepBody(step)
 }
 
 function writeStepBody(sequence: OutboundSequence, stepId: string, body: string): OutboundSequence {
@@ -162,7 +163,7 @@ export function SequenceEditor({
   const [leadsHeightVh, setLeadsHeightVh] = useState(LEADS_HEIGHT_DEFAULT)
   const [leadsCollapsed, setLeadsCollapsed] = useState(variant === 'overlay')
   const [instantlyUnbound, setInstantlyUnbound] = useState(false)
-  const [focusField, setFocusField] = useState<'subject' | 'body'>('body')
+  const [focusField, setFocusField] = useState<string>('body')
   const [componentsWidth, setComponentsWidth] = useState(COMPONENTS_WIDTH_DEFAULT)
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resizeDrag = useRef<{ startX: number; startWidth: number } | null>(null)
@@ -544,7 +545,8 @@ export function SequenceEditor({
         // Click applies immediately; matching slot bodies are preserved.
         next = applyStructureScaffold(sequence, payload.structure_id, {
           offerKey: campaign.offer_key,
-          preserveBodies: true
+          preserveBodies: true,
+          openerMode: campaign.opener_mode
         })
         patch = { structure_id: payload.structure_id }
         setActiveStepId(next.steps[0]?.id ?? null)
@@ -626,6 +628,11 @@ export function SequenceEditor({
     if (!step) return
     if (focusField === 'subject') {
       updateSequence(setStepSubject(sequence, activeStepId, `${step.subject}${token}`))
+      return
+    }
+    if (usesSlotEditor(step) && focusField !== 'body') {
+      const slot = step.slots.find((s) => s.key === focusField)
+      updateSequence(copyTextIntoSlot(sequence, activeStepId, focusField, `${slot?.body ?? ''}${token}`))
       return
     }
     updateSequence(writeStepBody(sequence, activeStepId, `${stepBodyText(step)}${token}`), {
@@ -994,6 +1001,44 @@ export function SequenceEditor({
                       <div className="mt-3 min-h-[8rem] rounded-xl border border-stone-200 bg-stone-50/60 px-3.5 py-3">
                         <SequencePreviewText text={stepBodyText(step)} lead={previewLead} />
                       </div>
+                    ) : usesSlotEditor(step) ? (
+                      <div className="mt-3 space-y-2.5">
+                        {editableContentSlots(step).map((slot) => (
+                          <label key={slot.key} className="block">
+                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+                              {slot.label}
+                            </span>
+                            <textarea
+                              value={slot.body}
+                              onFocus={() => {
+                                setActiveStepId(step.id)
+                                setFocusField(slot.key)
+                              }}
+                              onChange={(e) => {
+                                const next = copyTextIntoSlot(sequence, step.id, slot.key, e.target.value)
+                                const patch: Partial<CompassCampaign> = {}
+                                if (index === 0 && slot.key === 'cold_expression') {
+                                  patch.cold_expression = e.target.value
+                                }
+                                updateSequence(next, patch)
+                              }}
+                              rows={
+                                slot.key === 'opener'
+                                  ? 2
+                                  : previewDevice === 'mobile'
+                                    ? 4
+                                    : 5
+                              }
+                              placeholder={
+                                slot.key === 'opener'
+                                  ? '{{personalization}}'
+                                  : slot.label
+                              }
+                              className="w-full resize-none rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-[14px] leading-relaxed text-neutral-800 outline-none focus:border-[#e85d2a]/45"
+                            />
+                          </label>
+                        ))}
+                      </div>
                     ) : (
                     <textarea
                       value={stepBodyText(step)}
@@ -1012,6 +1057,21 @@ export function SequenceEditor({
                       className="mt-3 w-full resize-none rounded-xl border border-stone-200 bg-white px-3.5 py-3 text-[14px] leading-relaxed text-neutral-800 outline-none focus:border-[#e85d2a]/45"
                     />
                     )}
+                    {index === 0 ? (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-[11px] text-neutral-400">
+                          Inbox preview · {inboxPreview(stepBodyText(step)) || 'empty'}
+                          {stepBodyText(step)
+                            ? ` · ${wordCount(compileStepBody(step, { includeCompliance: true }))} words`
+                            : ''}
+                        </p>
+                        {sequenceLintWarnings(step).map((warning) => (
+                          <p key={warning} className="text-[11px] text-amber-700">
+                            {warning}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -1108,7 +1168,7 @@ export function SequenceEditor({
                     <Zap className="size-3.5 text-[#e85d2a]" />
                     Instantly variables
                     <span className="font-normal normal-case tracking-normal text-neutral-400">
-                      · insert into {focusField === 'subject' ? 'subject' : 'body'}
+                      · insert into {focusField === 'subject' ? 'subject' : focusField === 'body' ? 'body' : focusField}
                     </span>
                   </div>
                   <div className="flex items-center gap-0.5">
@@ -1292,7 +1352,7 @@ export async function saveActiveSlotToLibrary(
     const label = window.prompt('Save expression as', 'Campaign expression')
     if (!label) return
     await createLibraryItem('expressions', {
-      offer_key: campaign?.offer_key || 'growth-system',
+      offer_key: campaign?.offer_key || 'ai-receptionist-system',
       label,
       body: slot.body,
       status: 'draft',

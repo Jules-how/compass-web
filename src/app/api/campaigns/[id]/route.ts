@@ -77,7 +77,7 @@ async function loadWaveForCampaign(
 ): Promise<WaveSnapshot> {
   const leadsRes = await supabase
     .from('lead_contacts')
-    .select('enrich_status,opener,email,company,outbound_status,opener_track,opener_kind')
+    .select('enrich_status,opener,email,company,outbound_status,opener_track,opener_kind,icp_status')
     .eq('pipeline_campaign_id', campaign.id)
     .limit(5000)
   const rows = Array.isArray(leadsRes.data) ? leadsRes.data : []

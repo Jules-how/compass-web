@@ -13,6 +13,7 @@ import {
 } from '@/lib/outbound-copy'
 import { isHotOutboundStatus, isRecontactBlocked } from '@/lib/recontact-eligibility'
 import { leadPreviewValues, splitPersonName } from '@/lib/sequence-preview'
+import { isIcpSkip } from '@/lib/lead-icp'
 import type { LeadContact } from '@/lib/types'
 import { InstantlyApiError, getInstantlyTimezone } from '@/lib/instantly'
 import {
@@ -29,7 +30,7 @@ export const INSTANTLY_PUSH_CHUNK = 200
 export const INSTANTLY_PUSH_MAX = 1000
 
 export const PUSH_LEAD_COLUMNS =
-  'id,name,email,phone,company,role,city,state,linkedin,website,company_domain,outbound_status,suppression_reason,recontact_ok,instantly_campaign_id,instantly_lead_id,opener,lead_facts,enrich_status,pipeline_campaign_id'
+  'id,name,email,phone,company,role,city,state,linkedin,website,company_domain,outbound_status,suppression_reason,recontact_ok,instantly_campaign_id,instantly_lead_id,opener,lead_facts,enrich_status,pipeline_campaign_id,icp_status,email_origin'
 
 export type PushSkipReason =
   | 'no_email'
@@ -37,6 +38,7 @@ export type PushSkipReason =
   | 'hot'
   | 'already_in_campaign'
   | 'missing_opener'
+  | 'icp_skip'
 
 export type PushSkip = { id: string; email: string | null; reason: PushSkipReason }
 
@@ -134,6 +136,7 @@ export function classifyPushSkip(
 ): PushSkipReason | null {
   const email = trim(lead.email)
   if (!email || !email.includes('@')) return 'no_email'
+  if (isIcpSkip(lead.icp_status)) return 'icp_skip'
   const blocked = isRecontactBlocked(lead)
   if (blocked.blocked) return 'suppressed'
   if (isHotOutboundStatus(lead.outbound_status)) return 'hot'

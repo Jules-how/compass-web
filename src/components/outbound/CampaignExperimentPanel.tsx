@@ -12,6 +12,7 @@ import {
   type CompassCampaign
 } from '@/lib/campaigns'
 import { spawnChallenger } from '@/lib/campaigns-client'
+import { OUTBOUND_OPENER_MODES } from '@/lib/outbound-copy'
 import type { OutboundBoardCampaign } from '@/lib/instantly'
 import { computeOutcomeMetrics } from '@/lib/outbound-outcome-metrics'
 import { useCachedJson } from '@/lib/use-cached-json'
@@ -33,6 +34,8 @@ export function CampaignExperimentPanel({
   const [spawnOpen, setSpawnOpen] = useState(false)
   const [spawnFactor, setSpawnFactor] = useState('cta')
   const [spawnCtaType, setSpawnCtaType] = useState('timed_call')
+  const [spawnSubject, setSpawnSubject] = useState('')
+  const [spawnOpenerMode, setSpawnOpenerMode] = useState('nick-tier')
   const [spawnBusy, setSpawnBusy] = useState(false)
   const board = useCachedJson<{ live: OutboundBoardCampaign[]; history: OutboundBoardCampaign[] }>(
     '/api/instantly/outbound-campaigns',
@@ -283,6 +286,37 @@ export function CampaignExperimentPanel({
                   </select>
                 </label>
               ) : null}
+              {spawnFactor === 'subject' ? (
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-medium text-neutral-500">
+                    Challenger EMAIL 1 subject
+                  </span>
+                  <input
+                    value={spawnSubject}
+                    onChange={(e) => setSpawnSubject(e.target.value)}
+                    placeholder="{{companyName}} hiring"
+                    className={CONTROL}
+                  />
+                </label>
+              ) : null}
+              {spawnFactor === 'opener_mode' ? (
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-medium text-neutral-500">
+                    Challenger opener mode
+                  </span>
+                  <select
+                    value={spawnOpenerMode}
+                    onChange={(e) => setSpawnOpenerMode(e.target.value)}
+                    className={CONTROL}
+                  >
+                    {OUTBOUND_OPENER_MODES.map((mode) => (
+                      <option key={mode} value={mode}>
+                        {mode}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               <button
                 type="button"
                 disabled={spawnBusy}
@@ -291,6 +325,8 @@ export function CampaignExperimentPanel({
                   void spawnChallenger(campaign.id, {
                     factor: spawnFactor,
                     cta_type: spawnFactor === 'cta' ? spawnCtaType : undefined,
+                    subject: spawnFactor === 'subject' ? spawnSubject : undefined,
+                    opener_mode: spawnFactor === 'opener_mode' ? spawnOpenerMode : undefined,
                     hypothesis: campaign.hypothesis,
                     sample_size_target: campaign.sample_size_target
                   })

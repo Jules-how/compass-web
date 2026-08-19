@@ -41,7 +41,7 @@ curl -sS "$COMPASS_BASE_URL/api/agent/outbound/summary" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 
 # Compact list (no bodies/sequences)
-curl -sS "$COMPASS_BASE_URL/api/agent/outbound/expressions?offer_key=ai-enablement&limit=20" \
+curl -sS "$COMPASS_BASE_URL/api/agent/outbound/expressions?offer_key=ai-receptionist-system&limit=20" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 
 # Full row only when editing
@@ -89,7 +89,7 @@ Inbox Instantly classify writes `outbound_status` then marks triage done: positi
 curl -sS "$COMPASS_BASE_URL/api/agent/leads?limit=40" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 
-curl -sS "$COMPASS_BASE_URL/api/agent/leads/cohort?pipeline_campaign_id=campaign-au-brokers-growth-2026-08&enrich_status=none,queued&unverified_only=1&limit=50" \
+curl -sS "$COMPASS_BASE_URL/api/agent/leads/cohort?pipeline_campaign_id=campaign-au-plumbers-capture-2026-08&icp_status=pass&enrich_status=none,queued&unverified_only=1&limit=50" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
@@ -100,7 +100,7 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"rows":[{"id":"…","enrich_status":"opener_ready","opener":"…","opener_track":"signal","opener_kind":"review","lead_facts":[{"kind":"review","claim":"…","url":"https://example.com.au/reviews"}]}]}'
+  -d '{"rows":[{"id":"…","icp_status":"pass","review_count":82,"hours_label":"Open 24 hours","after_hours":true,"capture_crack":"Two reviews this month say they could not get through after 5","email_origin":"published","enrich_status":"opener_ready","opener":"…","opener_track":"signal","opener_kind":"review","lead_facts":[{"kind":"phone_pain","claim":"…","url":"https://example.com.au/reviews"}]}]}'
 
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \

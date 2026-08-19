@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     if (ids.length > 0) {
       const leadsRes = await admin
         .from('lead_contacts')
-        .select('pipeline_campaign_id,outbound_status,opener,enrich_status,email,company,opener_track,opener_kind')
+        .select('pipeline_campaign_id,outbound_status,opener,enrich_status,email,company,opener_track,opener_kind,icp_status')
         .in('pipeline_campaign_id', ids)
         .limit(8000)
       if (!leadsRes.error) {

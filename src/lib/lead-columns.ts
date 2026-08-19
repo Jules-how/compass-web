@@ -4,8 +4,8 @@
  * Empty columns stay hidden unless the operator pins them in the picker.
  */
 
-export const LEAD_COLUMN_STORAGE_KEY = 'compass.leadColumns.v5'
-export const CAMPAIGN_LEAD_COLUMN_STORAGE_KEY = 'compass.campaignLeadColumns.v3'
+export const LEAD_COLUMN_STORAGE_KEY = 'compass.leadColumns.v6'
+export const CAMPAIGN_LEAD_COLUMN_STORAGE_KEY = 'compass.campaignLeadColumns.v4'
 export const LEAD_COLUMN_WIDTHS_KEY = 'compass.leadColumnWidths.v2'
 export const LEAD_COLUMN_PINNED_KEY = 'compass.leadColumnsPinned.v1'
 export const LEAD_COLUMN_HIDDEN_KEY = 'compass.leadColumnsHidden.v1'
@@ -32,6 +32,11 @@ export type LeadColumnId =
   | 'source'
   | 'campaign'
   | 'vertical'
+  | 'icp_status'
+  | 'review_count'
+  | 'hours'
+  | 'capture_crack'
+  | 'email_origin'
 
 export type LeadColumnDef = {
   id: LeadColumnId
@@ -57,15 +62,19 @@ export const LEAD_COLUMN_DEFS: LeadColumnDef[] = [
   { id: 'strength', label: 'Connection strength', defaultWidth: 170 },
   { id: 'source', label: 'Source', defaultWidth: 120 },
   { id: 'campaign', label: 'Campaign', defaultWidth: 180 },
-  { id: 'vertical', label: 'Vertical', defaultWidth: 140 }
+  { id: 'vertical', label: 'Vertical', defaultWidth: 140 },
+  { id: 'icp_status', label: 'ICP', defaultWidth: 88 },
+  { id: 'review_count', label: 'Reviews', defaultWidth: 88 },
+  { id: 'hours', label: 'Hours', defaultWidth: 140 },
+  { id: 'capture_crack', label: 'Leak', defaultWidth: 220 },
+  { id: 'email_origin', label: 'Email origin', defaultWidth: 120 }
 ]
 
 export const CRM_REQUIRED_COLUMNS: LeadColumnId[] = ['first_name', 'last_name', 'company']
 export const CAMPAIGN_REQUIRED_COLUMNS: LeadColumnId[] = [
-  'first_name',
-  'last_name',
+  'company',
   'opener',
-  'lead_facts'
+  'icp_status'
 ]
 
 export const CRM_DEFAULT_COLUMNS: LeadColumnId[] = [
@@ -81,12 +90,15 @@ export const CRM_DEFAULT_COLUMNS: LeadColumnId[] = [
 ]
 
 export const CAMPAIGN_DEFAULT_COLUMNS: LeadColumnId[] = [
-  'first_name',
-  'last_name',
-  'email',
-  'website',
+  'company',
+  'location',
+  'vertical',
+  'review_count',
+  'hours',
+  'capture_crack',
   'opener',
-  'lead_facts'
+  'email',
+  'icp_status'
 ]
 
 export const DEFAULT_VISIBLE_LEAD_COLUMNS: LeadColumnId[] = [...CRM_DEFAULT_COLUMNS]

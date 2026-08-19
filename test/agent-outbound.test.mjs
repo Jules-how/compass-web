@@ -116,6 +116,7 @@ test('agent-outbound module maps kinds and omits heavy list fields', () => {
   assert.doesNotMatch(src, /wave_cap/)
   assert.match(src, /copy_confirmed_at/)
   assert.match(src, /copyPatchClearsConfirm/)
+  assert.match(src, /function insertId/)
 })
 
 test('AGENT_BRIDGE documents outbound agent endpoints', () => {

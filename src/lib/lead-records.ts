@@ -4,6 +4,7 @@ import {
   parseLeadFacts
 } from '@/lib/lead-facts'
 import { formatRelativeLeadDate, type LeadColumnId } from '@/lib/lead-columns'
+import { humanizeEmailOrigin, humanizeIcpStatus } from '@/lib/lead-icp'
 import { computeRecontactEligibility } from '@/lib/recontact-eligibility'
 import { humanizeStatus, humanizeVertical } from '@/lib/leads-meta'
 import { splitPersonName } from '@/lib/sequence-preview'
@@ -132,6 +133,18 @@ export function leadColumnValue(lead: LeadContact, column: LeadColumnId, now = n
       const label = humanizeVertical(lead.vertical)
       return { text: label === '—' ? '' : label }
     }
+    case 'icp_status':
+      return { text: humanizeIcpStatus(lead.icp_status) }
+    case 'review_count':
+      return {
+        text: lead.review_count == null ? '' : String(lead.review_count)
+      }
+    case 'hours':
+      return { text: lead.hours_label?.trim() || (lead.after_hours ? 'After hours' : '') }
+    case 'capture_crack':
+      return { text: lead.capture_crack?.trim() || '' }
+    case 'email_origin':
+      return { text: humanizeEmailOrigin(lead.email_origin) }
     default:
       return { text: '' }
   }
@@ -174,7 +187,12 @@ export function occupiedLeadColumns(leads: LeadContact[]): LeadColumnId[] {
     'strength',
     'source',
     'campaign',
-    'vertical'
+    'vertical',
+    'icp_status',
+    'review_count',
+    'hours',
+    'capture_crack',
+    'email_origin'
   ]
   return ids.filter((id) => leads.some((lead) => leadColumnOccupied(lead, id)))
 }

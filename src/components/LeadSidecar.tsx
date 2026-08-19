@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import type { LeadContact } from '@/lib/types'
 import { formatLeadFactsDetail, parseLeadFacts } from '@/lib/lead-facts'
+import { humanizeEmailOrigin, humanizeIcpStatus } from '@/lib/lead-icp'
 
 function humanizeStatus(status: string | null | undefined): string {
   if (!status) return 'Uncontacted'
@@ -114,6 +115,39 @@ export function LeadSidecar({
           <Field label="Campaign">{lead.instantly_campaign_name || lead.instantly_campaign}</Field>
           <Field label="Last outbound">{formatWhen(lead.last_outbound_at)}</Field>
           <Field label="Updated">{formatWhen(lead.updated_at || lead.mirrored_at)}</Field>
+        </dl>
+
+        <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+          Demand
+        </h3>
+        <dl>
+          <Field label="ICP">{humanizeIcpStatus(lead.icp_status) || '—'}</Field>
+          <Field label="Reviews">
+            {lead.review_count == null ? null : String(lead.review_count)}
+          </Field>
+          <Field label="Hours">{lead.hours_label}</Field>
+          <Field label="After hours">
+            {lead.after_hours == null ? null : lead.after_hours ? 'Yes' : 'No'}
+          </Field>
+        </dl>
+
+        <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+          Leak
+        </h3>
+        {lead.capture_crack?.trim() ? (
+          <p className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-[13px] leading-relaxed text-neutral-800">
+            {lead.capture_crack.trim()}
+          </p>
+        ) : (
+          <p className="text-[13px] text-neutral-400">No capture crack yet.</p>
+        )}
+
+        <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+          Compliance
+        </h3>
+        <dl>
+          <Field label="Email origin">{humanizeEmailOrigin(lead.email_origin) || '—'}</Field>
+          <Field label="Verify">{lead.email_verify_status}</Field>
         </dl>
 
         <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">

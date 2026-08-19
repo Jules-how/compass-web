@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const COHORT_COLUMNS =
-  'id,name,email,company,city,state,linkedin,website,company_domain,vertical,enrich_status,lead_facts,opener,outbound_status,pipeline_campaign_id,cohort_tag,email_verify_status,email_verified_at'
+  'id,name,email,company,city,state,linkedin,website,company_domain,vertical,enrich_status,lead_facts,opener,outbound_status,pipeline_campaign_id,cohort_tag,email_verify_status,email_verified_at,icp_status,review_count,hours_label,after_hours,capture_crack,email_origin'
 
 /**
  * Harvest/attach input: contacts on a pipeline campaign.
@@ -29,6 +29,11 @@ export async function GET(request: Request) {
     .split(',')
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean)
+  const icpParam = url.searchParams.get('icp_status')?.trim() || ''
+  const icpStatuses = icpParam
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
 
   try {
     const admin = getPortalAdminClient()
@@ -41,6 +46,9 @@ export async function GET(request: Request) {
 
     if (statuses.length) {
       query = query.in('enrich_status', statuses)
+    }
+    if (icpStatuses.length) {
+      query = query.in('icp_status', icpStatuses)
     }
 
     const unverifiedOnly = url.searchParams.get('unverified_only') === '1'

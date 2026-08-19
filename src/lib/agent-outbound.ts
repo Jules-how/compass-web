@@ -140,6 +140,12 @@ function optionalStr(value: unknown): string | null {
   return value.trim() || null
 }
 
+function insertId(prefix: string, body: Record<string, unknown>): string {
+  const requested = str(body.id)
+  if (requested && /^[a-z][a-z0-9-]{2,80}$/i.test(requested)) return requested
+  return `${prefix}-${crypto.randomUUID()}`
+}
+
 export type BuildResult =
   | { ok: true; row: Record<string, unknown> }
   | { ok: false; error: string }
@@ -158,7 +164,7 @@ export function buildOutboundInsert(
       return {
         ok: true,
         row: {
-          id: `offer-${crypto.randomUUID()}`,
+          id: insertId('offer', body),
           offer_key,
           name,
           pack_summary,
@@ -180,7 +186,7 @@ export function buildOutboundInsert(
       return {
         ok: true,
         row: {
-          id: `expr-${crypto.randomUUID()}`,
+          id: insertId('expr', body),
           offer_key,
           label,
           body: text,
@@ -201,7 +207,7 @@ export function buildOutboundInsert(
       return {
         ok: true,
         row: {
-          id: `struct-${crypto.randomUUID()}`,
+          id: insertId('struct', body),
           structure_id,
           name,
           description: optionalStr(body.description),
@@ -220,7 +226,7 @@ export function buildOutboundInsert(
       return {
         ok: true,
         row: {
-          id: `cta-${crypto.randomUUID()}`,
+          id: insertId('cta', body),
           label,
           body: text,
           cta_type: typeof body.cta_type === 'string' ? body.cta_type : 'permission',
@@ -240,7 +246,7 @@ export function buildOutboundInsert(
       return {
         ok: true,
         row: {
-          id: `subj-${crypto.randomUUID()}`,
+          id: insertId('subj', body),
           label,
           pattern,
           notes: optionalStr(body.notes),
@@ -257,7 +263,7 @@ export function buildOutboundInsert(
       return {
         ok: true,
         row: {
-          id: `opener-${crypto.randomUUID()}`,
+          id: insertId('opener', body),
           label,
           opener_mode: typeof body.opener_mode === 'string' ? body.opener_mode : 'custom',
           body: typeof body.body === 'string' ? body.body : '',
@@ -277,7 +283,7 @@ export function buildOutboundInsert(
       return {
         ok: true,
         row: {
-          id: `tmpl-${crypto.randomUUID()}`,
+          id: insertId('tmpl', body),
           name,
           offer_key: optionalStr(body.offer_key),
           structure_id,

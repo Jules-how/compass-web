@@ -431,13 +431,43 @@ export function structureSlots(structureId: string): OutboundSlot[] {
   return [...core, ...COMPLIANCE_FOOTER_SLOTS.map((s) => ({ ...s }))]
 }
 
-export function emptyEmailStep(label = 'Email 1', structureId = 'nick-3step'): OutboundStep {
+const NAMED_EDIT_SLOT_KEYS = new Set([
+  'opener',
+  'proof_block',
+  'cold_expression',
+  'cta',
+  'interest_mechanism',
+  'who_line',
+  'why_priorities_and_outcomes',
+  'availability_ask'
+])
+
+export function editableContentSlots(step: OutboundStep): OutboundSlot[] {
+  return (step.slots ?? []).filter((slot) => NAMED_EDIT_SLOT_KEYS.has(slot.key))
+}
+
+export function usesSlotEditor(step: OutboundStep): boolean {
+  return editableContentSlots(step).length > 0
+}
+
+function defaultOpenerBody(openerMode?: string | null): string {
+  return openerMode === 'none' ? '' : '{{personalization}}'
+}
+
+export function emptyEmailStep(
+  label = 'Email 1',
+  structureId = 'nick-3step',
+  openerMode?: string | null
+): OutboundStep {
+  const slots = structureSlots(structureId)
+  const opener = slots.find((slot) => slot.key === 'opener')
+  if (opener) opener.body = defaultOpenerBody(openerMode)
   return {
     id: newId('step'),
     kind: 'email',
     label,
     subject: '',
-    slots: structureSlots(structureId)
+    slots
   }
 }
 
@@ -458,10 +488,10 @@ export function emptyFollowUpStep(index = 1, delayDays = 3): OutboundStep {
 
 export function scaffoldSequence(
   structureId: string,
-  options?: { offerKey?: string | null; withFollowUp?: boolean }
+  options?: { offerKey?: string | null; withFollowUp?: boolean; openerMode?: string | null }
 ): OutboundSequence {
   const sid = isOutboundStructureId(structureId) ? structureId : 'nick-3step'
-  const steps: OutboundStep[] = [emptyEmailStep('Email 1', sid)]
+  const steps: OutboundStep[] = [emptyEmailStep('Email 1', sid, options?.openerMode)]
   if (options?.withFollowUp !== false) {
     steps.push(emptyFollowUpStep(1, 3))
   }
@@ -533,11 +563,12 @@ export function setStepSubject(sequence: OutboundSequence, stepId: string, subje
 export function applyStructureScaffold(
   sequence: OutboundSequence | null | undefined,
   structureId: string,
-  options?: { offerKey?: string | null; preserveBodies?: boolean }
+  options?: { offerKey?: string | null; preserveBodies?: boolean; openerMode?: string | null }
 ): OutboundSequence {
   const scaffold = scaffoldSequence(structureId, {
     offerKey: options?.offerKey ?? sequence?.offer_key ?? null,
-    withFollowUp: true
+    withFollowUp: true,
+    openerMode: options?.openerMode
   })
   if (!options?.preserveBodies || !sequence?.steps?.length) return scaffold
 
@@ -562,7 +593,27 @@ export function applyStructureScaffold(
       if (matched) slot.body = matched.body
     }
   })
+  const email = scaffold.steps.find((s) => s.kind === 'email')
+  const opener = email?.slots.find((s) => s.key === 'opener')
+  if (opener && !opener.body.trim()) opener.body = defaultOpenerBody(options?.openerMode)
   return scaffold
+}
+
+export function applyOpenerModeToSequence(
+  sequence: OutboundSequence,
+  openerMode: string | null | undefined
+): OutboundSequence {
+  const next = forkSequence(sequence)
+  const email = next.steps.find((s) => s.kind === 'email') ?? next.steps[0]
+  if (!email) return next
+  const opener = email.slots.find((s) => s.key === 'opener')
+  const body = defaultOpenerBody(openerMode)
+  if (opener) {
+    opener.body = openerMode === 'none' ? '' : opener.body.trim() || body
+  } else if (openerMode !== 'none') {
+    email.slots.unshift({ key: 'opener', label: 'Opener', body })
+  }
+  return next
 }
 
 export function coldExpressionFromSequence(sequence: OutboundSequence | null | undefined): string | null {
@@ -595,6 +646,72 @@ export function subjectLooksBanned(subject: string): boolean {
   if (normalized.includes('quick question')) return true
   if (/^quick\b/.test(normalized)) return true
   return false
+}
+
+export function compileStepBody(
+  step: OutboundStep,
+  options?: { includeCompliance?: boolean }
+): string {
+  const skip = options?.includeCompliance
+    ? new Set(['subject'])
+    : ARCHIVE_BODY_SLOT_SKIP
+  return (step.slots ?? [])
+    .filter((slot) => !skip.has(slot.key) && slot.body.trim())
+    .map((slot) => slot.body.trim())
+    .join('\n\n')
+}
+
+export function wordCount(text: string): number {
+  const trimmed = text.trim()
+  if (!trimmed) return 0
+  return trimmed.split(/\s+/).length
+}
+
+export function inboxPreview(text: string, max = 52): string {
+  const one = text.replace(/\s+/g, ' ').trim()
+  if (!one) return ''
+  if (one.length <= max) return one
+  return `${one.slice(0, Math.max(1, max - 1))}…`
+}
+
+export function openerLooksScrapeTell(text: string): boolean {
+  const normalized = text.trim().toLowerCase()
+  if (!normalized) return false
+  if (/\bhomepage\b/.test(normalized)) return true
+  if (/\bstill lists\b/.test(normalized)) return true
+  if (/\bi noticed\b/.test(normalized)) return true
+  if (/\bsaw that\b/.test(normalized)) return true
+  return false
+}
+
+export function subjectLooksSignalFragment(subject: string): boolean {
+  const trimmed = subject.trim()
+  if (!trimmed) return false
+  const words = trimmed.split(/\s+/).length
+  return words >= 2 && words <= 7 && !trimmed.includes('?')
+}
+
+export function sequenceLintWarnings(step: OutboundStep): string[] {
+  const compiled = compileStepBody(step)
+  const withFooter = compileStepBody(step, { includeCompliance: true })
+  const warnings: string[] = []
+  const words = wordCount(withFooter)
+  if (compiled && (words < 50 || words > 125)) {
+    warnings.push(
+      `Compiled body is ${words} words (research band is about 50–125, footer included).`
+    )
+  }
+  const opener = step.slots.find((slot) => slot.key === 'opener')?.body ?? ''
+  if (
+    subjectLooksSignalFragment(step.subject) &&
+    (!opener.trim() || openerLooksScrapeTell(opener))
+  ) {
+    warnings.push('Subject looks like a trigger fragment; opener is empty or a scrape tell.')
+  }
+  if (subjectLooksBanned(step.subject)) {
+    warnings.push('Avoid “quick” subject stems.')
+  }
+  return warnings
 }
 
 export function isValidSequence(value: unknown): value is OutboundSequence {
@@ -675,28 +792,28 @@ export const LIBRARY_FEATURED_EXAMPLES: Record<
 > = {
   offers: [
     {
-      id: 'offer-growth-system',
-      title: 'Growth System',
-      detail: 'Qualified booked appointments from paid ads — hybrid signup + retainer + performance'
+      id: 'offer-ai-receptionist-system',
+      title: 'After-hours booking',
+      detail:
+        'Overflow voice + SMS so a job that already called books while they are on the tools'
     },
     {
-      id: 'offer-ai-enablement',
-      title: 'AI enablement',
-      detail: 'Install marketing, quote follow-up, and review tools in-house; install fee refund path'
+      id: 'offer-growth-system',
+      title: 'Growth System (archived)',
+      detail: 'Paid-ads booked appointments. Archived. Do not pick for new waves.'
     }
   ],
   expressions: [
     {
-      id: 'expr-growth-mortgage',
-      title: 'Growth System · mortgage brokers',
+      id: 'expr-proof-receptionist',
+      title: 'After-hours booking · proof',
       detail:
-        "I'll get you {{bookedN}} booked borrower chats in the first 30 days after access and budget are live, or I refund the setup fee in full."
+        'After-hours calls on a comparable shop still hit voicemail; [peer] now answers and offers a booking path.'
     },
     {
-      id: 'expr-ai-enablement-tradies',
-      title: 'AI Enablement · tradies',
-      detail:
-        'Within 30 days of access, your marketing, quote follow-up, and review tools are set up and someone on your side can run them, or you get the install fee back.'
+      id: 'expr-growth-mortgage',
+      title: 'Growth System · mortgage brokers (archived)',
+      detail: 'Volume guarantee copy. Archived. Do not use on capture waves.'
     }
   ],
   structures: [

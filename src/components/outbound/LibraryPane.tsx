@@ -27,13 +27,13 @@ export type LibraryDragPayload =
   | { kind: 'template'; id: string; name: string }
 
 const TABS = [
-  'offers',
-  'expressions',
   'structures',
-  'ctas',
   'subjects',
   'openers',
-  'templates'
+  'expressions',
+  'ctas',
+  'templates',
+  'offers'
 ] as const
 
 type Tab = (typeof TABS)[number]
@@ -91,7 +91,7 @@ export function LibraryPane({
   offerKeyFilter?: string | null
   onOfferFilter?: (offerKey: string | null) => void
 }) {
-  const [tab, setTab] = useState<Tab>('offers')
+  const [tab, setTab] = useState<Tab>('structures')
   const [vertical, setVertical] = useState<string>('')
   const [location, setLocation] = useState<string>('')
   const [q, setQ] = useState('')

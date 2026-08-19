@@ -18,6 +18,7 @@ import {
   type OutboundSubject,
   type OutboundTemplate
 } from '@/lib/outbound-copy'
+import { isDoctrineOpener } from '@/lib/outbound-library-filter'
 import { ensureLibraryMutationUnlocked } from '@/lib/outbound-library-lock'
 import {
   getLibraryItem,
@@ -539,9 +540,13 @@ export function LibraryItemDetailSheet({
 
   function handleInsert() {
     if (!item || !onInsert) return
+    if (kind === 'openers' && isDoctrineOpener(item as OutboundOpener)) return
     const payload = buildInsertPayload(kind, item)
     if (payload) onInsert(payload)
   }
+
+  const canInsert =
+    Boolean(onInsert) && !(kind === 'openers' && item && isDoctrineOpener(item as OutboundOpener))
 
   if (!mounted) return null
 
@@ -663,7 +668,7 @@ export function LibraryItemDetailSheet({
                 >
                   Edit
                 </button>
-                {onInsert ? (
+                {canInsert ? (
                   <button
                     type="button"
                     onClick={handleInsert}

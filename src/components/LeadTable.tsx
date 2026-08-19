@@ -207,6 +207,12 @@ export default function LeadTable({
           recontact_ready: rc.recommendNewCampaign ? '1' : '0',
           instantly_campaign: l.instantly_campaign_name || l.instantly_campaign || '',
           opener: l.opener ?? '',
+          icp_status: l.icp_status ?? '',
+          review_count: l.review_count ?? '',
+          hours_label: l.hours_label ?? '',
+          after_hours: l.after_hours == null ? '' : l.after_hours ? '1' : '0',
+          capture_crack: l.capture_crack ?? '',
+          email_origin: l.email_origin ?? '',
           lead_facts:
             l.lead_facts == null
               ? ''
@@ -452,6 +458,40 @@ export default function LeadTable({
         {embed ? (
           <>
             <FilterSelect
+              label="ICP"
+              hideLabel
+              value={draftFilters.icp_status ?? ''}
+              onChange={(v) => patchFilters({ icp_status: v || undefined })}
+              options={[
+                { value: 'none', label: 'ICP none' },
+                { value: 'pass', label: 'Pass' },
+                { value: 'thin', label: 'Thin' },
+                { value: 'skip', label: 'Skip' }
+              ]}
+              className="w-32"
+            />
+            <FilterSelect
+              label="After hours"
+              hideLabel
+              value={draftFilters.after_hours ?? ''}
+              onChange={(v) =>
+                patchFilters({ after_hours: (v || undefined) as '1' | '0' | undefined })
+              }
+              options={[
+                { value: '1', label: 'After hours' },
+                { value: '0', label: 'No after hours' }
+              ]}
+              className="w-36"
+            />
+            <FilterSelect
+              label="Min reviews"
+              hideLabel
+              value={draftFilters.min_reviews ?? ''}
+              onChange={(v) => patchFilters({ min_reviews: v || undefined })}
+              options={[{ value: '25', label: '25+ reviews' }]}
+              className="w-32"
+            />
+            <FilterSelect
               label="Enrich"
               hideLabel
               value={draftFilters.enrich_status ?? ''}
@@ -626,6 +666,44 @@ export default function LeadTable({
               { value: 'thin', label: 'Thin' },
               { value: 'opener_ready', label: 'Opener ready' },
               { value: 'uploaded', label: 'Uploaded' }
+            ]}
+          />
+          <FilterSelect
+            label="ICP"
+            value={draftFilters.icp_status ?? ''}
+            onChange={(v) => patchFilters({ icp_status: v || undefined })}
+            options={[
+              { value: 'none', label: 'None' },
+              { value: 'pass', label: 'Pass' },
+              { value: 'thin', label: 'Thin' },
+              { value: 'skip', label: 'Skip' }
+            ]}
+          />
+          <FilterSelect
+            label="After hours"
+            value={draftFilters.after_hours ?? ''}
+            onChange={(v) =>
+              patchFilters({ after_hours: (v || undefined) as '1' | '0' | undefined })
+            }
+            options={[
+              { value: '1', label: 'Yes' },
+              { value: '0', label: 'No' }
+            ]}
+          />
+          <FilterSelect
+            label="Min reviews"
+            value={draftFilters.min_reviews ?? ''}
+            onChange={(v) => patchFilters({ min_reviews: v || undefined })}
+            options={[{ value: '25', label: '25+' }]}
+          />
+          <FilterSelect
+            label="Email origin"
+            value={draftFilters.email_origin ?? ''}
+            onChange={(v) => patchFilters({ email_origin: v || undefined })}
+            options={[
+              { value: 'published', label: 'Published' },
+              { value: 'guessed', label: 'Guessed' },
+              { value: 'unknown', label: 'Unknown' }
             ]}
           />
           <label className="block">

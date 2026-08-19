@@ -37,7 +37,14 @@ export function parseLeadListFilters(searchParams: URLSearchParams): LeadListFil
     pipeline_campaign_id: emptyToUndef(searchParams.get('pipeline_campaign_id')),
     instantly_campaign_id: emptyToUndef(searchParams.get('instantly_campaign_id')),
     cohort_tag: emptyToUndef(searchParams.get('cohort_tag')),
-    enrich_status: emptyToUndef(searchParams.get('enrich_status'))
+    enrich_status: emptyToUndef(searchParams.get('enrich_status')),
+    icp_status: emptyToUndef(searchParams.get('icp_status')),
+    after_hours:
+      searchParams.get('after_hours') === '1' || searchParams.get('after_hours') === '0'
+        ? (searchParams.get('after_hours') as '1' | '0')
+        : undefined,
+    email_origin: emptyToUndef(searchParams.get('email_origin')),
+    min_reviews: emptyToUndef(searchParams.get('min_reviews'))
   }
 }
 
@@ -125,6 +132,23 @@ export function applyLeadFilters<T extends LeadFilterQuery>(query: T, filters: L
   }
   if (filters.enrich_status) {
     q = q.eq('enrich_status', filters.enrich_status) as T
+  }
+  if (filters.icp_status) {
+    q = q.eq('icp_status', filters.icp_status) as T
+  }
+  if (filters.after_hours === '1') {
+    q = q.eq('after_hours', true) as T
+  } else if (filters.after_hours === '0') {
+    q = q.eq('after_hours', false) as T
+  }
+  if (filters.email_origin) {
+    q = q.eq('email_origin', filters.email_origin) as T
+  }
+  if (filters.min_reviews) {
+    const min = Number(filters.min_reviews)
+    if (Number.isFinite(min) && min >= 0) {
+      q = q.gte('review_count', min) as T
+    }
   }
   if (filters.outbound_status) {
     // Pipeline filter: exact match on outbound_status.
@@ -267,6 +291,10 @@ export function leadFiltersToSearchParams(filters: LeadListFilters, page?: numbe
   }
   if (filters.cohort_tag) params.set('cohort_tag', filters.cohort_tag)
   if (filters.enrich_status) params.set('enrich_status', filters.enrich_status)
+  if (filters.icp_status) params.set('icp_status', filters.icp_status)
+  if (filters.after_hours) params.set('after_hours', filters.after_hours)
+  if (filters.email_origin) params.set('email_origin', filters.email_origin)
+  if (filters.min_reviews) params.set('min_reviews', filters.min_reviews)
   if (filters.bucket === 'prospects') params.set('bucket', 'prospects')
   if (page && page > 1) params.set('page', String(page))
   return params
@@ -288,6 +316,10 @@ export function leadFiltersNeedExactCount(filters: LeadListFilters): boolean {
       filters.instantly_campaign_id ||
       filters.cohort_tag ||
       filters.enrich_status ||
+      filters.icp_status ||
+      filters.after_hours ||
+      filters.email_origin ||
+      filters.min_reviews ||
       filters.bucket === 'prospects'
   )
 }

@@ -46,13 +46,12 @@ test('local store / API / agent filters use scoped-only offer_key matching', () 
   }
 })
 
-test('editor components rail lists all library items without filters', () => {
+test('editor components rail filters by campaign and lists tag hints', () => {
   const src = read('src/components/outbound/EditorComponentsAccordion.tsx')
-  assert.doesNotMatch(src, /offerKeyFilter/)
-  assert.doesNotMatch(src, /VERTICAL_TAG_HINTS/)
-  assert.doesNotMatch(src, /setVertical/)
-  assert.match(src, /listLocalCtas\(\)/)
-  assert.match(src, /listLocalSubjects\(\)/)
+  assert.match(src, /VERTICAL_TAG_HINTS/)
+  assert.match(src, /This campaign/)
+  assert.match(src, /listLibraryBundle/)
+  assert.match(src, /campaignOnly/)
 })
 
 test('sequence editor exposes Instantly base variables for copy transfer', () => {

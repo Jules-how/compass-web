@@ -6,6 +6,7 @@ import {
   readBoundedJson,
   requireSameOrigin
 } from '@/lib/portal-http'
+import { applyLeadIcpFields } from '@/lib/lead-icp'
 import { parseLeadFacts, type LeadFact } from '@/lib/lead-facts'
 import { parseCompanySite } from '@/lib/company-site'
 import { MAX_LEAD_OPENER } from '@/lib/campaigns'
@@ -32,18 +33,28 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const id = decodeURIComponent(rawId || '').trim()
   if (!id) return portalJson({ error: 'missing_id' }, { status: 400 })
 
-  let body: { opener?: unknown; lead_facts?: unknown; pipeline_campaign_id?: unknown; website?: unknown }
+  let body: Record<string, unknown>
   try {
-    body = (await readBoundedJson(request, 64 * 1024)) as typeof body
+    body = (await readBoundedJson(request, 64 * 1024)) as Record<string, unknown>
   } catch {
     return portalJson({ error: 'invalid_request' }, { status: 400 })
   }
 
+  const icpKeys = [
+    'icp_status',
+    'review_count',
+    'hours_label',
+    'after_hours',
+    'capture_crack',
+    'email_origin'
+  ]
+  const hasIcp = icpKeys.some((key) => body[key] !== undefined)
   if (
     body.opener === undefined &&
     body.lead_facts === undefined &&
     body.pipeline_campaign_id === undefined &&
-    body.website === undefined
+    body.website === undefined &&
+    !hasIcp
   ) {
     return portalJson({ error: 'empty_patch' }, { status: 400 })
   }
@@ -64,6 +75,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (!facts.ok) return portalJson({ error: facts.error }, { status: 400 })
     patch.lead_facts = facts.facts as LeadFact[]
   }
+
+  const icp = applyLeadIcpFields(body, patch)
+  if (!icp.ok) return portalJson({ error: icp.error }, { status: 400 })
 
   if (body.website !== undefined) {
     if (body.website != null && typeof body.website !== 'string') {
