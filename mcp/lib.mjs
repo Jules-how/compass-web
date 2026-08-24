@@ -14,7 +14,7 @@ export const TOOLS = [
   {
     name: 'brief',
     description:
-      'Compact daily brief. Cached unless fresh=true. Start here. Not live Instantly counts unless fresh.',
+      'Compact daily brief plus currentWave (trade, cluster, remaining). Cached unless fresh=true. Start here. Live targeting is Compass, not markdown.',
     inputSchema: {
       type: 'object',
       properties: {

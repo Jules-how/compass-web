@@ -11,6 +11,7 @@ import {
   dateOnlyInZone,
   defaultGoLiveAt,
   emptyCampaignCopyFields,
+  parseGoLiveAt,
   type CompassCampaign
 } from '@/lib/campaigns'
 import { tallyLeadsByCampaign } from '@/lib/campaign-wave'
@@ -22,6 +23,7 @@ import {
   groupRecontactPool,
   mondayWeeksAhead,
   queueWeekBucket,
+  freshCampaignName,
   recontactCampaignName,
   type QueueCampaign,
   type QueuePayload
@@ -137,29 +139,87 @@ export async function GET() {
   }
 }
 
-// POST /api/campaigns/queue — promote a recontact cohort into a planned
-// campaign. Creates the campaign paused-in-Compass (status planned) and
-// attaches the ready leads. Copy + Instantly push stay in the existing flow.
+// POST /api/campaigns/queue — date a recontact cohort (`promote`) or a fresh
+// vertical slot (`schedule`) onto the calendar. Copy + Instantly push stay in
+// the campaign workspace. Activate stays in Instantly.
 export async function POST(request: NextRequest) {
   const originError = requireSameOrigin(request)
   if (originError) return originError
 
-  let body: { action?: string; vertical?: string; city?: string | null }
+  let body: {
+    action?: string
+    vertical?: string
+    city?: string | null
+    go_live_at?: string | null
+  }
   try {
     body = (await readBoundedJson(request, 64 * 1024)) as typeof body
   } catch {
     return portalJson({ error: 'invalid_request' }, { status: 400 })
   }
 
-  if (body.action !== 'promote') {
+  if (body.action !== 'promote' && body.action !== 'schedule') {
     return portalJson({ error: 'invalid_action' }, { status: 400 })
   }
   const vertical = body.vertical?.trim().toLowerCase()
   if (!vertical) return portalJson({ error: 'vertical_required' }, { status: 400 })
   const city = typeof body.city === 'string' ? body.city.trim() : ''
+  const parsedGoLive = parseGoLiveAt(
+    body.go_live_at === undefined ? defaultGoLiveAt() : body.go_live_at
+  )
+  if (!parsedGoLive.ok) return portalJson({ error: 'invalid_go_live_at' }, { status: 400 })
 
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
+    const stamp = new Date().toISOString()
+    const today = dateOnlyInZone(stamp)
+    const goLiveAt = parsedGoLive.iso || defaultGoLiveAt()
+    const dated = Boolean(body.go_live_at)
+    const startDate = dated ? dateOnlyInZone(goLiveAt) : mondayWeeksAhead(today, 1)
+
+    if (body.action === 'schedule') {
+      const row = {
+        id: `campaign-${crypto.randomUUID()}`,
+        name: freshCampaignName(vertical, city || null, today),
+        status: 'planned',
+        priority: 0,
+        health: 'no_updates',
+        start_date: startDate,
+        end_date: startDate,
+        go_live_at: goLiveAt,
+        color: '#94a3b8',
+        summary: `Fresh wave: ${vertical}${city ? ` · ${city}` : ''}. Attach sendable leads in the campaign workspace.`,
+        labels: [],
+        owner_label: null,
+        ...emptyCampaignCopyFields(),
+        instantly_campaign_id: null,
+        vertical_tags: [vertical],
+        location_tags: city ? [city.toLowerCase()] : [],
+        created_at: stamp,
+        updated_at: stamp
+      }
+
+      const { data, error } = await supabase
+        .from('compass_pipeline_campaigns')
+        .insert(row)
+        .select(QUEUE_CAMPAIGN_COLUMNS)
+        .single()
+      if (error) {
+        return portalJson({ error: 'create_failed', detail: error.message }, { status: 400 })
+      }
+
+      await supabase.from('compass_pipeline_activity').insert({
+        id: `cact-${crypto.randomUUID()}`,
+        campaign_id: row.id,
+        actor: 'operator',
+        action: 'created',
+        body: `Scheduled ${vertical} wave`,
+        created_at: stamp
+      })
+
+      await syncCampaignToGoogleCalendarQuiet(supabase, { ...row, ...data } as CompassCampaign)
+      return portalJson({ ok: true, campaign: data, assigned: 0, requested: 0 }, { status: 201 })
+    }
 
     let readyQuery = (applyRecontactReadyFilters(
       leadRowsQuery(supabase, 'id')
@@ -181,9 +241,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const stamp = new Date().toISOString()
-    const today = dateOnlyInZone(stamp)
-    const startDate = mondayWeeksAhead(today, 1)
     const row = {
       id: `campaign-${crypto.randomUUID()}`,
       name: recontactCampaignName(vertical, city || null, today),
@@ -192,7 +249,7 @@ export async function POST(request: NextRequest) {
       health: 'no_updates',
       start_date: startDate,
       end_date: startDate,
-      go_live_at: defaultGoLiveAt(),
+      go_live_at: goLiveAt,
       color: '#94a3b8',
       summary: `Recontact wave: ${ids.length} leads past the 90-day cooldown.`,
       labels: ['recontact'],

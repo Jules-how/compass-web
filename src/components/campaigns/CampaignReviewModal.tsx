@@ -13,6 +13,7 @@ import {
 import type { LeadContact } from '@/lib/types'
 import type { OutboundStep } from '@/lib/outbound-copy'
 import { SequenceEditor } from '@/components/outbound/SequenceEditor'
+import { CampaignInspectorFacts } from '@/components/campaigns/CampaignInspectorFacts'
 import RecordsTable from '@/components/ui/records-table'
 import { useLeadGridColumns } from '@/components/LeadColumnPicker'
 import { useUndo } from '@/components/UndoProvider'
@@ -395,6 +396,12 @@ export function CampaignReviewModal({
               </button>
             </div>
           </header>
+
+          {campaign ? (
+            <div className="shrink-0 border-b border-stone-200/80 bg-white px-5 py-3">
+              <CampaignInspectorFacts campaign={campaign} leadTotal={total} />
+            </div>
+          ) : null}
 
           {loadError ? (
             <p className="px-5 py-8 text-sm text-red-700">{loadError}</p>

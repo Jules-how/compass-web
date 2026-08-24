@@ -11,9 +11,14 @@ import {
   type ReactNode
 } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { CampaignCalendar } from '@/components/campaigns/CampaignCalendar'
 import { CampaignReviewModal } from '@/components/campaigns/CampaignReviewModal'
 import { CampaignSlotComposer } from '@/components/campaigns/CampaignSlotComposer'
+import {
+  OutboundInventoryRail,
+  placeInventoryCard
+} from '@/components/campaigns/OutboundInventoryRail'
 import {
   CALENDAR_GRAINS,
   shiftCursor,
@@ -103,7 +108,7 @@ const PRIORITY_OPTIONS = [0, 1, 2, 3, 4] as const
 
 type CampaignsPayload = { campaigns: CompassCampaign[] }
 
-export function CampaignPlanner() {
+export function CampaignPlanner({ deskSwitch }: { deskSwitch?: ReactNode }) {
   const router = useRouter()
   const campaignsQuery = useCachedJson<CampaignsPayload>(CAMPAIGNS_QUERY_KEY, '/api/campaigns', {
     staleMs: 30_000
@@ -380,7 +385,7 @@ export function CampaignPlanner() {
     <div className="flex h-full min-h-0 flex-1 flex-col bg-[#f7f8f9] text-neutral-900">
       <header className="relative z-40 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-neutral-200/80 bg-white px-4">
         <div className="flex min-w-0 items-center gap-2">
-          <h1 className="truncate text-[15px] font-semibold tracking-tight">Campaign Planner</h1>
+          <h1 className="truncate text-[15px] font-semibold tracking-tight">Outbound</h1>
           <span className="text-neutral-300">/</span>
           <button
             type="button"
@@ -391,7 +396,8 @@ export function CampaignPlanner() {
           </button>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {deskSwitch}
           <ToolbarIconButton
             label="Filter"
             active={filterOpen || statusFilter !== 'all' || priorityFilter !== 'all' || Boolean(query)}
@@ -510,6 +516,12 @@ export function CampaignPlanner() {
           >
             + Copy
           </button>
+          <Link
+            href="/sales/outbound/craft"
+            className="ml-1 flex h-7 items-center rounded-md px-2 text-[11px] font-medium text-neutral-600 hover:bg-neutral-100"
+          >
+            Craft
+          </Link>
         </div>
 
         {filterOpen ? (
@@ -643,6 +655,14 @@ export function CampaignPlanner() {
       </header>
 
       <div className="flex min-h-0 flex-1">
+        {view === 'calendar' ? (
+          <OutboundInventoryRail
+            onPlaced={(id) => {
+              refresh()
+              openCampaign(id)
+            }}
+          />
+        ) : null}
         <div className="relative flex min-w-0 flex-1 flex-col">
           {view === 'list' ? (
             <div className="min-h-0 flex-1 overflow-auto p-4">
@@ -1154,6 +1174,14 @@ export function CampaignPlanner() {
               }}
               onMoveCampaign={(id, goLiveAt) => persistGoLive(id, goLiveAt)}
               onCursorChange={(day) => setCalendarCursor(startOfDay(day))}
+              onDropInventory={(goLiveAt, card) => {
+                void placeInventoryCard(card, goLiveAt)
+                  .then((id) => {
+                    refresh()
+                    openCampaign(id)
+                  })
+                  .catch(() => refresh())
+              }}
             />
           ) : null}
         </div>

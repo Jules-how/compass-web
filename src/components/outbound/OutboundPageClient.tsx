@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { OperatorShell } from '@/components/OperatorShell'
 import { OutboundHub } from '@/components/outbound/OutboundHub'
 import { SequenceEditor } from '@/components/outbound/SequenceEditor'
 
@@ -11,31 +10,29 @@ export function OutboundPageClient() {
 
   return (
     <>
-      <OperatorShell
-        title="Outbound"
-        subtitle="Live campaign performance and history. Compose sequences in the Instantly-style editor — library components stay in the accordion on the right."
-        width="full"
-        actions={
-          <>
-            <button
-              type="button"
-              onClick={() => setEditorOpen(true)}
-              className="rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-[12px] font-semibold text-neutral-800 shadow-soft"
-            >
-              Editor
-            </button>
-            <Link
-              href="/sales/pipeline"
-              className="rounded-xl bg-[#e85d2a] px-3.5 py-2 text-[12px] font-semibold text-white shadow-soft"
-            >
-              Open planner
-            </Link>
-          </>
-        }
-      >
-        <OutboundHub onOpenEditor={() => setEditorOpen(true)} />
-      </OperatorShell>
-
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <Link
+            href="/sales/outbound"
+            className="text-[12px] font-medium text-[#c2410c] hover:underline"
+          >
+            ← Outbound
+          </Link>
+          <h1 className="compass-page-title mt-2 font-display text-2xl text-neutral-900">Craft</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            Workshop, live Instantly, experiments, and the copy library. Planning lives on the
+            calendar.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setEditorOpen(true)}
+          className="rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-[12px] font-semibold text-neutral-800 shadow-soft"
+        >
+          Editor
+        </button>
+      </div>
+      <OutboundHub onOpenEditor={() => setEditorOpen(true)} />
       {editorOpen ? (
         <SequenceEditor unbound variant="overlay" onClose={() => setEditorOpen(false)} />
       ) : null}

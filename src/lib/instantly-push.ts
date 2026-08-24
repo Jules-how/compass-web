@@ -100,6 +100,7 @@ export function outboundSequenceToInstantlySequences(
   ]
 }
 
+/** Instantly drops unknown top-level keys. Opener must be personalization + custom_variables.opener. */
 export function leadContactToInstantlyLead(lead: LeadContact): InstantlyLeadPayload | null {
   const email = trim(lead.email).toLowerCase()
   if (!email || !email.includes('@')) return null
@@ -119,7 +120,7 @@ export function leadContactToInstantlyLead(lead: LeadContact): InstantlyLeadPayl
   if (firstFact?.claim) custom.fact_claim = firstFact.claim
   if (firstFact?.url) custom.fact_url = firstFact.url
   const payload: InstantlyLeadPayload = { email }
-  if (firstName) payload.first_name = firstName
+  payload.first_name = firstName || 'team'
   if (lastName) payload.last_name = lastName
   if (values.companyName) payload.company_name = values.companyName
   if (values.phone) payload.phone = values.phone

@@ -102,22 +102,85 @@ test('queue route is planning-only and reuses recontact + wave helpers', () => {
   assert.match(route, /requireSameOrigin/)
   // Planning statuses only — active/completed campaigns stay out of the queue.
   assert.match(route, /'draft', 'planned', 'paused'/)
+  assert.match(route, /action !== 'promote' && body.action !== 'schedule'/)
+  assert.match(route, /go_live_at/)
 })
 
-test('queue section is mounted in the outbound hub and links to the campaign workspace', () => {
-  const hub = read('src/components/outbound/OutboundHub.tsx')
-  assert.match(hub, /OutboundQueueSection/)
+test('inventory rail owns 90-day cards and ranked slots on the outbound calendar', () => {
+  const planner = read('src/components/campaigns/CampaignPlanner.tsx')
+  assert.match(planner, /OutboundInventoryRail/)
+  assert.match(planner, /placeInventoryCard/)
+  assert.match(planner, /onDropInventory/)
+  assert.match(planner, /Outbound/)
+  assert.match(planner, /\/sales\/outbound\/craft/)
 
-  const section = read('src/components/outbound/OutboundQueueSection.tsx')
-  assert.match(section, /\/api\/campaigns\/queue/)
-  assert.match(section, /\/sales\/pipeline\/\$\{c\.id\}/)
-  // Reorder + reschedule go through the existing campaign PATCH.
-  assert.match(section, /method: 'PATCH'/)
-  assert.match(section, /start_date/)
-  // Thin cohorts cannot be promoted.
-  assert.match(section, /promotable/)
-  // Cards carry the launch checklist; week lanes carry the capacity line.
-  assert.match(section, /campaignReadiness/)
-  assert.match(section, /weekLoad/)
-  assert.match(section, /overbooked/)
+  const rail = read('src/components/campaigns/OutboundInventoryRail.tsx')
+  assert.match(rail, /\/api\/campaigns\/queue/)
+  assert.match(rail, /rankNextSlots/)
+  assert.match(rail, /inventoryPoolCards/)
+  assert.match(rail, /INVENTORY_DRAG_MIME/)
+  assert.match(rail, /90 day/)
+
+  const hub = read('src/components/outbound/OutboundHub.tsx')
+  assert.doesNotMatch(hub, /OutboundQueueSection/)
+})
+
+/** Mirror of rankNextSlots for node:test. */
+function rankNextSlots(input) {
+  const booked = new Set(input.thisWeekVerticals.map((v) => v.trim().toLowerCase()).filter(Boolean))
+  const room = Math.max(0, 5 - input.thisWeekSlots)
+  const need = Math.max(0, 3 - input.thisWeekSlots)
+  const take = Math.min(room, Math.max(need, Math.min(3, room)))
+  if (take <= 0) return []
+  const recs = []
+  const used = new Set(booked)
+  for (const group of input.recontactPool) {
+    if (recs.length >= take) break
+    if (!group.promotable) continue
+    const vertical = group.vertical.trim().toLowerCase()
+    if (!vertical || used.has(vertical)) continue
+    recs.push({ kind: 'recontact', vertical, city: group.city, count: group.count })
+    used.add(vertical)
+  }
+  for (const row of input.runway) {
+    if (recs.length >= take) break
+    const vertical = row.vertical.trim().toLowerCase()
+    if (!vertical || used.has(vertical)) continue
+    if (row.wavesLeft < 1) continue
+    recs.push({ kind: 'fresh', vertical, city: null, count: row.sendable })
+    used.add(vertical)
+  }
+  return recs
+}
+
+test('next slots prefer 90-day batches, skip booked trades, and stop at the weekly cap', () => {
+  const recs = rankNextSlots({
+    thisWeekSlots: 2,
+    thisWeekVerticals: ['locksmiths'],
+    recontactPool: [
+      { vertical: 'locksmiths', city: 'Newcastle', count: 80, promotable: true },
+      { vertical: 'plumbers', city: 'Sydney', count: 40, promotable: true },
+      { vertical: 'electricians', city: null, count: 12, promotable: false }
+    ],
+    runway: [
+      { vertical: 'hvac', sendable: 120, recontactReady: 0, wavesLeft: 2 },
+      { vertical: 'plumbers', sendable: 200, recontactReady: 0, wavesLeft: 4 }
+    ]
+  })
+  assert.deepEqual(
+    recs.map((row) => row.vertical),
+    ['plumbers', 'hvac']
+  )
+  assert.equal(recs[0].kind, 'recontact')
+  assert.equal(recs[1].kind, 'fresh')
+
+  assert.deepEqual(
+    rankNextSlots({
+      thisWeekSlots: 5,
+      thisWeekVerticals: [],
+      recontactPool: [{ vertical: 'plumbers', city: null, count: 40, promotable: true }],
+      runway: []
+    }),
+    []
+  )
 })

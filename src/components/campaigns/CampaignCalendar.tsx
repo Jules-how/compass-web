@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode
 } from 'react'
@@ -42,6 +43,12 @@ import {
   openerModeLabel,
   type CompassCampaign
 } from '@/lib/campaigns'
+import {
+  INVENTORY_DRAG_MIME,
+  campaignReadiness,
+  parseInventoryDrag,
+  type InventoryCard
+} from '@/lib/campaign-queue'
 
 type Props = {
   campaigns: CompassCampaign[]
@@ -54,6 +61,38 @@ type Props = {
   onCreateSlot: (goLiveAt: string) => void
   onMoveCampaign: (id: string, goLiveAt: string) => void
   onCursorChange: (day: Date) => void
+  onDropInventory?: (goLiveAt: string, card: InventoryCard) => void
+}
+
+function inventoryDropHandlers(
+  goLiveAt: string,
+  onDropInventory?: (goLiveAt: string, card: InventoryCard) => void
+) {
+  if (!onDropInventory) return {}
+  return {
+    onDragOver: (event: ReactDragEvent) => {
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'copy'
+    },
+    onDrop: (event: ReactDragEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      const card =
+        parseInventoryDrag(event.dataTransfer.getData(INVENTORY_DRAG_MIME)) ||
+        parseInventoryDrag(event.dataTransfer.getData('text/plain'))
+      if (card) onDropInventory(goLiveAt, card)
+    }
+  }
+}
+
+function campaignChipBlocked(campaign: CompassCampaign): boolean {
+  const status = campaign.status
+  if (status === 'active' || status === 'completed' || status === 'cancelled') return false
+  return !campaignReadiness({
+    cohort: campaign.wave_cohort_count ?? 0,
+    copy_status: campaign.copy_status || 'none',
+    bound: Boolean((campaign.instantly_campaign_id || '').trim())
+  }).ready
 }
 
 type CalendarDrag = {
@@ -78,7 +117,8 @@ export function CampaignCalendar({
   onOpenPage,
   onCreateSlot,
   onMoveCampaign,
-  onCursorChange
+  onCursorChange,
+  onDropInventory
 }: Props) {
   const items = useMemo(
     () => datedGoLiveCampaigns(campaigns.map((c) => ({ id: c.id, go_live_at: c.go_live_at }))),
@@ -119,6 +159,7 @@ export function CampaignCalendar({
           onCreateSlot={openSlot}
           onMoveCampaign={onMoveCampaign}
           onCursorChange={onCursorChange}
+          onDropInventory={onDropInventory}
         />
       ) : null}
 
@@ -135,6 +176,7 @@ export function CampaignCalendar({
           onCreateSlot={openSlot}
           onMoveCampaign={onMoveCampaign}
           onCursorChange={onCursorChange}
+          onDropInventory={onDropInventory}
         />
       ) : null}
 
@@ -150,6 +192,7 @@ export function CampaignCalendar({
           onCreateSlot={openSlot}
           onMoveCampaign={onMoveCampaign}
           onCursorChange={onCursorChange}
+          onDropInventory={onDropInventory}
         />
       ) : null}
     </div>
@@ -190,6 +233,7 @@ function EventChip({
   const color = campaign.color || '#E5570A'
   const tags = campaignPillTags(campaign)
   const leadTag = campaignLeadCountLabel(campaign)
+  const blocked = campaignChipBlocked(campaign)
   return (
     <button
       type="button"
@@ -200,9 +244,11 @@ function EventChip({
       } ${
         selected
           ? 'border-[var(--compass-accent)]/40 bg-white ring-1 ring-[var(--compass-accent)]/25'
-          : 'border-stone-200/90 bg-white hover:border-stone-300'
+          : blocked
+            ? 'border-stone-200 bg-stone-100'
+            : 'border-stone-200/90 bg-white hover:border-stone-300'
       } ${dragging ? 'cursor-grabbing opacity-90 shadow-lift' : 'cursor-grab'}`}
-      title={`${campaign.name} · ${formatGoLiveAt(campaign.go_live_at)}${leadTag ? ` · ${leadTag}` : ''}`}
+      title={`${campaign.name} · ${formatGoLiveAt(campaign.go_live_at)}${leadTag ? ` · ${leadTag}` : ''}${blocked ? ' · not ready' : ''}`}
       onClick={onSelect}
       onDoubleClick={onOpenPage}
       onPointerDown={onPointerDown}
@@ -216,9 +262,9 @@ function EventChip({
         <span className="shrink-0 text-[11px] font-medium tabular-nums text-neutral-500">{time}</span>
       ) : null}
       <span
-        className={`min-w-0 font-medium text-neutral-800 ${
-          compact ? 'truncate text-[11px]' : 'truncate text-[12px] leading-snug'
-        }`}
+        className={`min-w-0 font-medium ${
+          blocked ? 'text-neutral-500' : 'text-neutral-800'
+        } ${compact ? 'truncate text-[11px]' : 'truncate text-[12px] leading-snug'}`}
       >
         {campaign.name}
       </span>
@@ -288,7 +334,8 @@ function MonthGrid({
   onOpenPage,
   onCreateSlot,
   onMoveCampaign,
-  onCursorChange
+  onCursorChange,
+  onDropInventory
 }: {
   cursor: Date
   items: ReturnType<typeof datedGoLiveCampaigns>
@@ -301,6 +348,7 @@ function MonthGrid({
   onCreateSlot: (day: Date, hour: number) => void
   onMoveCampaign: (id: string, goLiveAt: string) => void
   onCursorChange: (day: Date) => void
+  onDropInventory?: (goLiveAt: string, card: InventoryCard) => void
 }) {
   const weeks = monthWeeks(cursor)
   const month = cursor.getMonth()
@@ -350,6 +398,7 @@ function MonthGrid({
                     key={key}
                     data-cal-day={key}
                     onClick={() => onCreateSlot(day, 9)}
+                    {...inventoryDropHandlers(nextOpenGoLiveAt(day, 9, occupiedIsos), onDropInventory)}
                     className={`group/slot w-full border-r border-neutral-100 text-left last:border-r-0 hover:bg-[var(--compass-accent)]/[0.04] ${
                       isToday ? 'bg-[#5e6ad2]/[0.06]' : ''
                     } ${dropHere ? 'bg-[var(--compass-accent)]/[0.08]' : ''}`}
@@ -464,10 +513,12 @@ function TimedDayColumn({
   isToday,
   draftGoLiveAt,
   drag,
+  occupiedIsos,
   onSelect,
   onOpenPage,
   onCreateSlot,
   onEventPointerDown,
+  onDropInventory,
   suppressClick
 }: {
   day: Date
@@ -476,10 +527,12 @@ function TimedDayColumn({
   isToday: boolean
   draftGoLiveAt?: string | null
   drag: CalendarDrag | null
+  occupiedIsos: Array<string | null | undefined>
   onSelect: (id: string) => void
   onOpenPage: (id: string) => void
   onCreateSlot: (day: Date, hour: number) => void
   onEventPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, campaign: CompassCampaign) => void
+  onDropInventory?: (goLiveAt: string, card: InventoryCard) => void
   suppressClick: { current: boolean }
 }) {
   return (
@@ -499,6 +552,7 @@ function TimedDayColumn({
             }
             onCreateSlot(day, hour)
           }}
+          {...inventoryDropHandlers(nextOpenGoLiveAt(day, hour, occupiedIsos), onDropInventory)}
           className="group/slot absolute left-0 right-0 border-t border-neutral-100 hover:bg-[var(--compass-accent)]/[0.05]"
           style={{ top: hour * CALENDAR_HOUR_HEIGHT, height: CALENDAR_HOUR_HEIGHT }}
           aria-label={`Add campaign ${day.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })} ${hourLabel(hour)}`}
@@ -632,7 +686,8 @@ function TimedBoard({
   onOpenPage,
   onCreateSlot,
   onMoveCampaign,
-  onCursorChange
+  onCursorChange,
+  onDropInventory
 }: {
   days: Date[]
   byId: Map<string, CompassCampaign>
@@ -646,6 +701,7 @@ function TimedBoard({
   onCreateSlot: (day: Date, hour: number) => void
   onMoveCampaign: (id: string, goLiveAt: string) => void
   onCursorChange: (day: Date) => void
+  onDropInventory?: (goLiveAt: string, card: InventoryCard) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
@@ -726,9 +782,11 @@ function TimedBoard({
                 isToday={key === todayKey}
                 draftGoLiveAt={draftGoLiveAt}
                 drag={drag}
+                occupiedIsos={occupiedIsos}
                 onSelect={onSelect}
                 onOpenPage={onOpenPage}
                 onCreateSlot={onCreateSlot}
+                onDropInventory={onDropInventory}
                 suppressClick={suppressClick}
                 onEventPointerDown={(event, campaign) => {
                   if (event.button !== 0) return
@@ -802,7 +860,8 @@ function WeekGrid({
   onOpenPage,
   onCreateSlot,
   onMoveCampaign,
-  onCursorChange
+  onCursorChange,
+  onDropInventory
 }: {
   cursor: Date
   byId: Map<string, CompassCampaign>
@@ -815,6 +874,7 @@ function WeekGrid({
   onCreateSlot: (day: Date, hour: number) => void
   onMoveCampaign: (id: string, goLiveAt: string) => void
   onCursorChange: (day: Date) => void
+  onDropInventory?: (goLiveAt: string, card: InventoryCard) => void
 }) {
   const days = weekDays(cursor)
 
@@ -832,6 +892,7 @@ function WeekGrid({
         onCreateSlot={onCreateSlot}
         onMoveCampaign={onMoveCampaign}
         onCursorChange={onCursorChange}
+        onDropInventory={onDropInventory}
         header={
           <div className="flex border-b border-neutral-200 bg-[#f7f8f9]">
             <div className="shrink-0" style={{ width: CALENDAR_GUTTER_PX }} />
@@ -849,6 +910,7 @@ function WeekGrid({
                     type="button"
                     key={key}
                     onClick={() => onCreateSlot(day, 9)}
+                    {...inventoryDropHandlers(nextOpenGoLiveAt(day, 9, occupiedIsos), onDropInventory)}
                     className={`border-r border-neutral-100 px-3 py-2 text-left last:border-r-0 hover:bg-[var(--compass-accent)]/[0.04] ${
                       isToday ? 'bg-[#5e6ad2]/[0.06]' : 'bg-[#f7f8f9]'
                     }`}
@@ -884,7 +946,8 @@ function DayList({
   onOpenPage,
   onCreateSlot,
   onMoveCampaign,
-  onCursorChange
+  onCursorChange,
+  onDropInventory
 }: {
   cursor: Date
   campaigns: CompassCampaign[]
@@ -896,6 +959,7 @@ function DayList({
   onCreateSlot: (day: Date, hour: number) => void
   onMoveCampaign: (id: string, goLiveAt: string) => void
   onCursorChange: (day: Date) => void
+  onDropInventory?: (goLiveAt: string, card: InventoryCard) => void
 }) {
   const todayKey = toDateOnly(new Date())
   const day = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate())
@@ -920,6 +984,7 @@ function DayList({
         onCreateSlot={onCreateSlot}
         onMoveCampaign={onMoveCampaign}
         onCursorChange={onCursorChange}
+        onDropInventory={onDropInventory}
       />
     </div>
   )

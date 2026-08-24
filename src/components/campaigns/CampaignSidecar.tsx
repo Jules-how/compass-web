@@ -42,6 +42,7 @@ import type { OutboundTemplate } from '@/lib/outbound-copy'
 import { SequenceEditor } from '@/components/outbound/SequenceEditor'
 import { CampaignInstantlyPanel } from '@/components/outbound/CampaignInstantlyPanel'
 import { CampaignWaveSection } from '@/components/campaigns/CampaignWaveSection'
+import { CampaignInspectorFacts } from '@/components/campaigns/CampaignInspectorFacts'
 import type { WaveSnapshot } from '@/lib/campaign-wave'
 
 const SIDECAR_WIDTH_KEY = 'compass.pipeline.sidecarWidth.v1'
@@ -315,10 +316,10 @@ export function CampaignSidecar({
       <div className="flex items-start gap-2 border-b border-stone-100 px-5 py-4">
         {isPage ? (
           <Link
-            href="/sales/pipeline"
+            href="/sales/outbound"
             className="mt-0.5 rounded-xl p-1.5 text-neutral-500 hover:bg-stone-50 hover:text-neutral-800"
-            aria-label="Back to Campaign Planner"
-            title="Back to planner"
+            aria-label="Back to Outbound"
+            title="Back to Outbound"
           >
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.75">
               <path d="M15 6l-6 6 6 6" />
@@ -393,7 +394,7 @@ export function CampaignSidecar({
                 onClick={() => {
                   void deleteCampaign(campaignId).then(() => {
                     onDeleted?.()
-                    if (isPage) router.push('/sales/pipeline')
+                    if (isPage) router.push('/sales/outbound')
                   })
                 }}
               >
@@ -442,6 +443,7 @@ export function CampaignSidecar({
           </div>
         ) : (
           <>
+            <CampaignInspectorFacts campaign={campaign} wave={wave} />
             <Section
               title="Wave"
               open={openSections.wave}
@@ -701,6 +703,12 @@ export function CampaignSidecar({
                     <p className="text-[11px] text-emerald-800">Copy match confirmed</p>
                   )}
                   <div className="flex flex-wrap gap-2 pt-1">
+                    <Link
+                      href={`/sales/outbound/editor/${encodeURIComponent(campaignId)}`}
+                      className="compass-btn-secondary text-[12px]"
+                    >
+                      Editor page
+                    </Link>
                     <button
                       type="button"
                       onClick={() => {

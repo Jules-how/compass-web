@@ -52,8 +52,9 @@ test('outbound nav and pages are wired under Sales', () => {
   assert.match(nav, /pathname\.startsWith\('\/sales\/outbound'\)/)
 
   assert.match(read('src/components/nav-icons.tsx'), /export function OutboundIcon/)
-  assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /OutboundPageClient/)
+  assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /OutboundDesk/)
   assert.match(read('src/app/(console)/sales/outbound/page.tsx'), /OperatorShell/)
+  assert.match(read('src/app/(console)/sales/outbound/craft/page.tsx'), /OutboundPageClient/)
   assert.match(read('src/components/outbound/OutboundPageClient.tsx'), /OutboundHub/)
   assert.match(read('src/components/outbound/OutboundPageClient.tsx'), /SequenceEditor/)
   assert.match(read('src/components/outbound/OutboundHub.tsx'), /OutboundLiveSection/)

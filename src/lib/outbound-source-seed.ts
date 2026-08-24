@@ -207,7 +207,7 @@ export function sourceStructures(): OutboundStructure[] {
     name: item.name,
     description: `${item.description} [Source · ${item.creator} · ${item.source_file}]`,
     slots: structureSlots(item.structure_id),
-    is_default_candidate: item.structure_id === 'nick-4step' || item.structure_id === 'nick-3step',
+    is_default_candidate: false,
     archived: false,
     created_at: STAMP,
     updated_at: STAMP,

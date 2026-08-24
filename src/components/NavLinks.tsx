@@ -11,7 +11,6 @@ import {
   InboxIcon,
   OutboundIcon,
   OverviewIcon,
-  PipelineIcon,
   ProjectsIcon,
   SettingsIcon,
   TasksIcon
@@ -30,7 +29,6 @@ export type NavKey =
   | 'functions'
   | 'clients'
   | 'sales-overview'
-  | 'pipeline'
   | 'outbound'
   | 'finances'
   | 'settings'
@@ -84,18 +82,11 @@ const OPERATOR_SECTIONS: NavSection[] = [
     items: [
       { href: '/sales', label: 'Overview', key: 'sales-overview', icon: OverviewIcon, api: '/api/instantly/sales-overview' },
       {
-        href: '/sales/pipeline',
-        label: 'Pipeline',
-        key: 'pipeline',
-        icon: PipelineIcon,
-        api: '/api/campaigns'
-      },
-      {
         href: '/sales/outbound',
         label: 'Outbound',
         key: 'outbound',
         icon: OutboundIcon,
-        api: '/api/instantly/outbound-campaigns'
+        api: '/api/campaigns'
       },
       {
         href: '/leads',
@@ -132,7 +123,7 @@ export const OPERATOR_PREFETCH = [
 export function navKeyFromPathname(pathname: string | null): NavKey {
   if (!pathname) return 'home'
   if (pathname === '/sales' || pathname.startsWith('/sales/')) {
-    if (pathname.startsWith('/sales/pipeline')) return 'pipeline'
+    if (pathname.startsWith('/sales/pipeline')) return 'outbound'
     if (pathname.startsWith('/sales/outbound')) return 'outbound'
     return 'sales-overview'
   }
@@ -154,6 +145,7 @@ function prefetchApi(api?: string, key?: NavKey) {
   if (api) prefetchJson(api, api)
   if (key === 'outbound') {
     prefetchJson('/api/campaigns', '/api/campaigns')
+    prefetchJson('/api/campaigns/queue', '/api/campaigns/queue')
   }
   if (key === 'leads') {
     prefetchJson('leads:summary:global', '/api/leads/summary')

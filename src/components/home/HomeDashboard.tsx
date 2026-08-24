@@ -687,10 +687,10 @@ export function HomeDashboard() {
                   <DemoMark show={coldDemo} />
                 </div>
                 <Link
-                  href="/sales/pipeline"
+                  href="/sales/outbound"
                   className="shrink-0 text-xs font-medium text-[#c2410c] transition hover:underline"
                 >
-                  Planner
+                  Outbound
                 </Link>
               </div>
 

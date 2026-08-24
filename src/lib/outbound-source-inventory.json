@@ -397,8 +397,8 @@
   "structures": [
     {
       "structure_id": "nick-4step",
-      "name": "Nick 4-step (default)",
-      "description": "When brief has approved peer-relevant proof. Order: opener → who/proof (1–2 lines peer+number+time) → offer (X in Y or Z) → CTA (permission default; timed call A/B). Follow-up: one short human ping; new subject; point back to email 1 / restate give.",
+      "name": "Nick 4-step",
+      "description": "When brief has approved peer-relevant proof. Order: opener → who/proof (1–2 lines peer+number+time) → offer (X in Y or Z) → CTA. Follow-up: one short human ping; new subject; point back to email 1 / restate give.",
       "creator": "Nick",
       "source_file": "context/playbooks/outbound/structures.md"
     },

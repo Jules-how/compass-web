@@ -1,8 +1,6 @@
-import { OperatorShell } from '@/components/OperatorShell'
+import { redirect } from 'next/navigation'
 
-/**
- * Pipeline calendar is owned by ConsoleHomeInboxKeepAlive so tab switches stay mounted.
- */
+/** Pipeline calendar now lives on Outbound. Campaign pages stay at /sales/pipeline/:id. */
 export default function PipelinePage() {
-  return <OperatorShell flush>{null}</OperatorShell>
+  redirect('/sales/outbound')
 }

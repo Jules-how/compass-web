@@ -1,13 +1,12 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
-import { CampaignPlanner } from '@/components/campaigns/CampaignPlanner'
+import { OutboundDesk } from '@/components/outbound/OutboundDesk'
 import { HomeDashboard } from '@/components/home/HomeDashboard'
 import { InboxPanel } from '@/components/InboxPanel'
 import { LeadsPanel } from '@/components/LeadsPanel'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { OperatorShell } from '@/components/OperatorShell'
-import { OutboundPageClient } from '@/components/outbound/OutboundPageClient'
 import { SalesOverview } from '@/components/sales/SalesOverview'
 import { keepAliveKey, useConsoleViewPath } from '@/components/ConsoleNav'
 import { cn } from '@/lib/utils'
@@ -55,13 +54,11 @@ export function ConsoleHomeInboxKeepAlive() {
   const showHome = key === 'home'
   const showInbox = key === 'inbox'
   const showOverview = key === 'sales'
-  const showPipeline = key === 'pipeline'
   const showOutbound = key === 'outbound'
   const showCrm = key === 'leads'
   const seenHome = useSeen(showHome)
   const seenInbox = useSeen(showInbox)
   const seenOverview = useSeen(showOverview)
-  const seenPipeline = useSeen(showPipeline)
   const seenOutbound = useSeen(showOutbound)
   const seenCrm = useSeen(showCrm)
 
@@ -69,7 +66,6 @@ export function ConsoleHomeInboxKeepAlive() {
     !seenHome &&
     !seenInbox &&
     !seenOverview &&
-    !seenPipeline &&
     !seenOutbound &&
     !seenCrm
   ) {
@@ -112,16 +108,9 @@ export function ConsoleHomeInboxKeepAlive() {
           </OperatorShell>
         </KeepAlivePane>
       ) : null}
-      {seenPipeline ? (
-        <KeepAlivePane active={showPipeline}>
-          <OperatorShell title="Campaign Planner" flush>
-            <CampaignPlanner />
-          </OperatorShell>
-        </KeepAlivePane>
-      ) : null}
       {seenOutbound ? (
         <KeepAlivePane active={showOutbound}>
-          <OutboundPageClient />
+          <OutboundDesk />
         </KeepAlivePane>
       ) : null}
       {seenCrm ? (

@@ -202,7 +202,7 @@ export function SalesOverview() {
               ? `${dealsWithValue.length} active deals`
               : `${model.deals.length} opportunities`
           }
-          href="/sales/pipeline"
+          href="/sales/outbound"
         />
       </div>
 
@@ -218,7 +218,7 @@ export function SalesOverview() {
               <CardDescription>What is live, launching, and how far through the sequence</CardDescription>
             </div>
             <Link
-              href="/sales/pipeline"
+              href="/sales/outbound"
               className="text-sm font-medium text-[#c2410c] hover:underline"
             >
               Open planner

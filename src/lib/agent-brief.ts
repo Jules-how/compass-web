@@ -4,6 +4,15 @@ import { loadHomeGlance } from '@/lib/ad-sync'
 import type { ColdEmailGlance } from '@/lib/home-demo-data'
 import { loadSyncSnapshot } from '@/lib/sync-snapshots'
 
+export type AgentCurrentWave = {
+  campaignId: string | null
+  campaignName: string | null
+  trade: string | null
+  cluster: string | null
+  uncontactedRemaining: number
+  lastImportAt: string | null
+}
+
 export type AgentBrief = {
   generatedAt: string
   lastSyncAt: string | null
@@ -57,8 +66,80 @@ export type AgentBrief = {
       instantlyCampaignId: string | null
     }>
   }
+  /** Live targeting ledger. Not markdown. */
+  currentWave: AgentCurrentWave
   /** One-line operator hint for agents — keep prompts short. */
   hint: string
+}
+
+export type WaveCampaignPick = {
+  id: string
+  name: string
+  status: string
+  priority: number
+  vertical_tags?: string[] | null
+  location_tags?: string[] | null
+}
+
+export type WaveLeadPick = {
+  vertical?: string | null
+  cohort_tag?: string | null
+  outbound_status?: string | null
+}
+
+const FOCUS_STATUS_RANK = ['active', 'planned', 'draft', 'paused'] as const
+
+function modeOf(values: Array<string | null | undefined>): string | null {
+  const counts = new Map<string, number>()
+  for (const raw of values) {
+    const value = (raw || '').trim()
+    if (!value) continue
+    counts.set(value, (counts.get(value) || 0) + 1)
+  }
+  let best: string | null = null
+  let n = 0
+  for (const [value, count] of counts) {
+    if (count > n) {
+      best = value
+      n = count
+    }
+  }
+  return best
+}
+
+export function isUncontactedOutbound(status: string | null | undefined): boolean {
+  const value = (status || '').trim()
+  return value === '' || value === 'uncontacted'
+}
+
+export function pickFocusCampaign(campaigns: WaveCampaignPick[]): WaveCampaignPick | null {
+  if (campaigns.length === 0) return null
+  return [...campaigns].sort((a, b) => {
+    const aRank = FOCUS_STATUS_RANK.indexOf(a.status as (typeof FOCUS_STATUS_RANK)[number])
+    const bRank = FOCUS_STATUS_RANK.indexOf(b.status as (typeof FOCUS_STATUS_RANK)[number])
+    const aOrder = aRank === -1 ? 99 : aRank
+    const bOrder = bRank === -1 ? 99 : bRank
+    if (aOrder !== bOrder) return aOrder - bOrder
+    return (b.priority ?? 0) - (a.priority ?? 0)
+  })[0]
+}
+
+export function deriveCurrentWave(input: {
+  campaign: WaveCampaignPick | null
+  leads: WaveLeadPick[]
+  lastImportAt: string | null
+}): AgentCurrentWave {
+  const campaign = input.campaign
+  const tradeFromTags = (campaign?.vertical_tags ?? []).map((t) => String(t).trim()).find(Boolean) || null
+  const clusterFromTags = (campaign?.location_tags ?? []).map((t) => String(t).trim()).find(Boolean) || null
+  return {
+    campaignId: campaign?.id ?? null,
+    campaignName: campaign?.name ?? null,
+    trade: tradeFromTags || modeOf(input.leads.map((row) => row.vertical)),
+    cluster: clusterFromTags || modeOf(input.leads.map((row) => row.cohort_tag)),
+    uncontactedRemaining: input.leads.filter((row) => isUncontactedOutbound(row.outbound_status)).length,
+    lastImportAt: input.lastImportAt
+  }
 }
 
 async function countExact(
@@ -87,7 +168,7 @@ async function countExact(
 export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBrief> {
   const generatedAt = new Date().toISOString()
 
-  const [adsGlance, instantlySnap, lastSync, pipelineRows, total, replied, interested, meetingBooked, inInstantly, needsReview] =
+  const [adsGlance, instantlySnap, lastSync, pipelineRows, focusCampaigns, lastBatch, total, replied, interested, meetingBooked, inInstantly, needsReview] =
     await Promise.all([
       loadHomeGlance(supabase),
       loadSyncSnapshot<ColdEmailGlance>(supabase, 'instantly_cold_email'),
@@ -98,6 +179,19 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
         .neq('status', 'archived')
         .order('priority', { ascending: false })
         .limit(12),
+      supabase
+        .from('compass_pipeline_campaigns')
+        .select('id,name,status,priority,vertical_tags,location_tags')
+        .neq('status', 'archived')
+        .neq('status', 'cancelled')
+        .neq('status', 'completed')
+        .order('priority', { ascending: false })
+        .limit(12),
+      supabase
+        .from('lead_import_batches')
+        .select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(1),
       countExact(supabase),
       countExact(supabase, (q) => q.eq('outbound_status', 'replied')),
       countExact(supabase, (q) => q.eq('outbound_status', 'interested')),
@@ -138,7 +232,49 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
     status: c.status
   }))
 
+  const lastImportAt =
+    lastBatch.data?.[0]?.created_at != null ? String(lastBatch.data[0].created_at) : null
+  const focus = pickFocusCampaign(
+    (focusCampaigns.data ?? []).map((row) => ({
+      id: String(row.id),
+      name: String(row.name ?? ''),
+      status: String(row.status ?? 'planned'),
+      priority: Number(row.priority ?? 0),
+      vertical_tags: Array.isArray(row.vertical_tags) ? row.vertical_tags.map(String) : [],
+      location_tags: Array.isArray(row.location_tags) ? row.location_tags.map(String) : []
+    }))
+  )
+
+  let waveLeads: WaveLeadPick[] = []
+  if (focus) {
+    const cohort = await supabase
+      .from('lead_contacts')
+      .select('vertical,cohort_tag,outbound_status')
+      .eq('pipeline_campaign_id', focus.id)
+      .limit(8000)
+    if (!cohort.error) waveLeads = cohort.data ?? []
+  } else {
+    const loose = await supabase
+      .from('lead_contacts')
+      .select('vertical,cohort_tag,outbound_status')
+      .or('outbound_status.eq.uncontacted,outbound_status.is.null')
+      .limit(2000)
+    if (!loose.error) waveLeads = loose.data ?? []
+  }
+
+  const currentWave = deriveCurrentWave({
+    campaign: focus,
+    leads: waveLeads,
+    lastImportAt
+  })
+
   const hintParts: string[] = []
+  if (currentWave.trade || currentWave.cluster) {
+    const bits = [currentWave.trade, currentWave.cluster].filter(Boolean)
+    hintParts.push(
+      `${bits.join(' · ')}${currentWave.uncontactedRemaining ? ` · ${currentWave.uncontactedRemaining} uncontacted` : ''}`
+    )
+  }
   if ((cold?.repliesWaiting ?? 0) > 0) {
     hintParts.push(`${cold!.repliesWaiting} Instantly replies waiting`)
   }
@@ -186,6 +322,7 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
       activeCampaigns: pipeline.length,
       campaigns: pipeline
     },
+    currentWave,
     hint: hintParts.join(' · ')
   }
 }

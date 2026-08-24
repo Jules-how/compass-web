@@ -201,22 +201,9 @@ function yoursCtas(): OutboundCta[] {
   return [
     {
       id: 'cta-permission-default',
-      label: '[Yours] Permission default',
+      label: '[Yours] Permission',
       body: 'Mind if I send over {{asset}}?',
       cta_type: 'permission',
-      vertical_tags: [],
-      location_tags: [],
-      is_default: true,
-      archived: false,
-      created_at: STAMP,
-      updated_at: STAMP,
-      ...yoursProvenance()
-    },
-    {
-      id: 'cta-timed-call',
-      label: '[Yours] Timed call',
-      body: 'Would you be open to 15 minutes? If so, I can ring at {{t1}} or {{t2}}.',
-      cta_type: 'timed_call',
       vertical_tags: [],
       location_tags: [],
       is_default: false,
@@ -281,8 +268,6 @@ function yoursCtas(): OutboundCta[] {
 }
 
 export function seedCtas(): OutboundCta[] {
-  // Keep Switchflow defaults; mark playbook defaults as yours only for enablement dream.
-  // Permission/timed/outline are also in source catalogues — keep yours copies labelled Yours as standing defaults.
   return mergeById(yoursCtas(), sourceCtas())
 }
 

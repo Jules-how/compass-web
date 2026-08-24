@@ -7,14 +7,12 @@ import { OutboundFactorSection } from '@/components/outbound/OutboundFactorSecti
 import { OutboundHistorySection } from '@/components/outbound/OutboundHistorySection'
 import { OutboundLibraryAccordion } from '@/components/outbound/OutboundLibraryAccordion'
 import { OutboundLiveSection } from '@/components/outbound/OutboundLiveSection'
-import { OutboundQueueSection } from '@/components/outbound/OutboundQueueSection'
 import { OutboundWorkshopSection } from '@/components/outbound/OutboundWorkshopSection'
 
 export function OutboundHub(_props: { onOpenEditor?: () => void } = {}) {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)]">
       <div className="min-w-0 space-y-6">
-        <OutboundQueueSection />
         <OutboundWorkshopSection />
         <OutboundLiveSection />
         <OutboundExperimentCompare />

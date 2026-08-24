@@ -6,11 +6,12 @@ Local and cloud Cursor agents connect to Compass over `/api/agent/*` (secret aut
 
 - Skill: [`.cursor/skills/compass-agent/SKILL.md`](.cursor/skills/compass-agent/SKILL.md)
 - Docs: [`docs/AGENT_BRIDGE.md`](docs/AGENT_BRIDGE.md)
-- Prefer `GET /api/agent/brief` before dumping data — keep prompts token-lean.
+- Prefer `GET /api/agent/brief` before dumping data — keep prompts token-lean. Brief includes `currentWave` (campaign, trade, cluster, remaining). Outbound doctrine is `cold-email/AGENTS.md`, not this app.
 - Instantly replied/interested/meeting/not-interested/OOO/wrong-person leads sync into `lead_contacts` so Inbox Instantly stays aligned.
 - Compass can create a paused Instantly campaign, push sequence copy, and push cohort leads with merge vars (`POST /api/campaigns/:id/instantly/*` and `/api/agent/instantly/*`). Activate stays in Instantly.
+- Instantly lead write: Instantly keeps `first_name`, `last_name`, `company_name`, `phone`, `website`, `personalization`, and `custom_variables.*`. Extra top-level keys (`opener`, `teamOrFirstName`, a nested `payload`) are dropped with no error. Put the first line in both `personalization` and `custom_variables.opener`. Sequence tokens: `{{firstName}}` plus `{{opener}}` (or `{{personalization}}`). Never guess a person name; mailbox is a person or `first_name` is `team`. Mapper: `src/lib/instantly-push.ts` `leadContactToInstantlyLead`. After a push, check one lead has `first_name` and `payload.opener` before calling it done.
 - Outbound craft UI persists campaigns + library to Supabase (same store as `/api/agent/outbound/*`). Unbound editor drafts stay browser-local until “save as campaign.”
-- Campaign brief of record = Compass campaign copy (`sequence_draft`, `cold_expression`, …), not vault `brief.md`.
+- Sequence body of record = Compass campaign copy (`sequence_draft`, `cold_expression`, …). Outbound doctrine = `cold-email/AGENTS.md`. Product and price lock = root `AGENTS.md`.
 
 ## UI aesthetic is locked
 
@@ -95,6 +96,6 @@ non-obvious bits for working in the Cursor Cloud environment.
 
 - Cold-email operating model: Compass = workshop (orient + craft sequences from library components/templates + leads); Compass or the vault agent pushes leads and copy into Instantly via API; Instantly = mail truck (activate after Jules sign-off). No CSV hop for Instantly.
 - Vault outbound `.md` files hold process and per-lead work, not a parallel offer/template warehouse.
-- Compass stores reusable opener formats/examples; per-lead openers stay vault enrich → Instantly merge vars.
+- Per-lead first line is stamped from `cold-email/AGENTS.md` into Instantly `personalization` and `custom_variables.opener`.
 - Outbound library rows carry provenance (`source` | `yours`) plus `source_creator` / `source_file`; source inventory seeds from vault playbooks (Nick Saraev Cold Email / ACC / Nick / Platten / Connor), and newly added UI rows default to yours.
 - Outbound library warm path skips full re-seed when the catalogue is already present (count/sentinel + session cache); craft UI loads kinds via a single `/api/outbound/library` bundle rather than per-kind fetches.

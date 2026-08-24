@@ -184,14 +184,20 @@ test('facets API discovers verticals for filters', () => {
   assert.match(facets, /verticals/)
 })
 
-test('upload skips rows missing email, name, or company and requires sourceService', () => {
+test('upload skips rows missing email or company and requires sourceService', () => {
   const upload = read('src/app/api/leads/upload/route.ts')
   const shared = read('src/lib/lead-import-shared.ts')
   const client = read('src/components/LeadUploadClient.tsx')
   const types = read('src/lib/types.ts')
   assert.match(shared, /export function ingestSkipReason/)
   assert.match(shared, /missing email/)
+  assert.match(shared, /trading_name/)
+  assert.match(shared, /published_email/)
   assert.match(shared, /'apify'/)
+  assert.match(shared, /cluster/)
+  assert.match(shared, /cohortTagForRow/)
+  assert.match(upload, /cohortTagForRow/)
+  assert.match(upload, /cohort_tag/)
   assert.match(upload, /source_service_required/)
   assert.match(upload, /ingestSkipReason/)
   assert.match(upload, /skipped/)
@@ -204,12 +210,11 @@ test('upload skips rows missing email, name, or company and requires sourceServi
   }
   function ingestSkipReason(mapped) {
     if (!normalizeEmail(mapped.email)) return 'missing email'
-    if (!mapped.name.trim()) return 'missing name'
     if (!mapped.company.trim()) return 'missing company'
     return null
   }
   assert.equal(ingestSkipReason({ email: '', name: 'Ada', company: 'Acme' }), 'missing email')
-  assert.equal(ingestSkipReason({ email: 'ada@x.com', name: '', company: 'Acme' }), 'missing name')
+  assert.equal(ingestSkipReason({ email: 'ada@x.com', name: '', company: 'Acme' }), null)
   assert.equal(ingestSkipReason({ email: 'ada@x.com', name: 'Ada', company: '' }), 'missing company')
   assert.equal(ingestSkipReason({ email: 'ada@x.com', name: 'Ada', company: 'Acme' }), null)
 })

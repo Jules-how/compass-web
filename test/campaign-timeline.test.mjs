@@ -46,7 +46,7 @@ test('campaign planner files and migration are wired', () => {
   assert.match(migration, /portal_is_operator/)
 
   const nav = read('src/components/NavLinks.tsx')
-  assert.match(nav, /sales\/pipeline/)
+  assert.match(nav, /sales\/outbound/)
   assert.match(nav, /My Tasks/)
   assert.match(nav, /Finances/)
 
@@ -154,7 +154,8 @@ test('campaign planner files and migration are wired', () => {
   assert.match(review, /CampaignReviewModal/)
   assert.match(review, /\/api\/leads\/list/)
   assert.match(review, /PATCH/)
-  assert.match(review, /lead_facts/)
+  assert.match(review, /opener/)
+  assert.match(review, /CampaignInspectorFacts/)
   assert.match(review, /SequenceEditor/)
   assert.match(review, /variant=\"overlay\"/)
   assert.match(review, /leadsPane=\"hidden\"/)

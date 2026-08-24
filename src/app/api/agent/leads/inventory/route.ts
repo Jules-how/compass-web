@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * Orient inventory: uncontacted counts by canonical vertical × state.
- * Caps: no per-contact dump. Optional ?vertical=mortgage-brokers to filter.
+ * Caps: no per-contact dump. Optional ?vertical=plumber to filter.
  */
 export async function GET(request: Request) {
   const authError = requireAgentAuth(request)

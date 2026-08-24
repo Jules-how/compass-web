@@ -389,9 +389,9 @@ const STRUCTURE_SLOT_MAP: Record<OutboundStructureId, Array<{ key: string; label
 
 export const STRUCTURE_DESCRIPTIONS: Record<OutboundStructureId, string> = {
   'nick-4step':
-    'Default when you have proof. Opener → proof → cold expression → CTA. Prefer for campaigns with standing proof.',
+    'When you have proof. Opener → proof → cold expression → CTA. Use when a real peer number exists.',
   'nick-3step':
-    'Thin-proof default. Opener → cold expression → CTA. Use when proof is light or still campaign-gated.',
+    'Opener → cold expression → CTA. Use when proof is light or still campaign-gated.',
   'platten-aida': 'AIDA-shaped: opener → interest mechanism → proof → expression → CTA.',
   'connor-3para':
     'Who → why/priorities → optional expression → availability ask. Assumptive CTA only valid here.'
@@ -779,7 +779,7 @@ export const LIBRARY_NAV = [
 
 export type LibraryNavKey = (typeof LIBRARY_NAV)[number]['key']
 
-/** Two most-relevant library examples shown when an Email components accordion row expands. */
+/** Most-relevant library examples shown when an Email components accordion row expands. */
 export type LibraryFeaturedExample = {
   id: string
   title: string
@@ -788,7 +788,7 @@ export type LibraryFeaturedExample = {
 
 export const LIBRARY_FEATURED_EXAMPLES: Record<
   LibraryNavKey,
-  readonly [LibraryFeaturedExample, LibraryFeaturedExample]
+  readonly LibraryFeaturedExample[]
 > = {
   offers: [
     {
@@ -820,7 +820,7 @@ export const LIBRARY_FEATURED_EXAMPLES: Record<
     {
       id: 'struct-nick-3step',
       title: 'Nick 3-step',
-      detail: 'Opener → cold expression → CTA — default thin-proof skeleton'
+      detail: 'Opener → cold expression → CTA — thin-proof skeleton'
     },
     {
       id: 'struct-nick-4step',
@@ -831,13 +831,8 @@ export const LIBRARY_FEATURED_EXAMPLES: Record<
   ctas: [
     {
       id: 'cta-permission-default',
-      title: 'Permission default',
+      title: 'Permission',
       detail: 'Mind if I send over {{asset}}?'
-    },
-    {
-      id: 'cta-timed-call',
-      title: 'Timed call',
-      detail: 'Would you be open to 15 minutes? If so, I can ring at {{t1}} or {{t2}}.'
     }
   ],
   subjects: [

@@ -26,7 +26,7 @@ function leadContactToInstantlyLead(lead) {
     custom.personalization = opener
   }
   const payload = { email }
-  if (firstName) payload.first_name = firstName
+  payload.first_name = firstName || 'team'
   if (lastName) payload.last_name = lastName
   if ((lead.company || '').trim()) payload.company_name = lead.company.trim()
   if (opener) payload.personalization = opener
@@ -71,6 +71,18 @@ test('lead mapper sends names, opener, and Instantly custom vars', () => {
   assert.equal(payload.custom_variables.opener, payload.personalization)
 })
 
+test('lead mapper uses team when no person name and still sends opener as a custom var', () => {
+  const payload = leadContactToInstantlyLead({
+    email: 'info@shop.com.au',
+    company: 'Shop',
+    opener: 'Shop in Auburn lists Hipages on the site.'
+  })
+  assert.equal(payload.first_name, 'team')
+  assert.equal(payload.personalization, 'Shop in Auburn lists Hipages on the site.')
+  assert.equal(payload.custom_variables.opener, payload.personalization)
+  assert.equal(payload.opener, undefined)
+})
+
 test('lead mapper skips rows without a usable email', () => {
   assert.equal(leadContactToInstantlyLead({ name: 'No Mail', email: '' }), null)
 })
@@ -105,6 +117,8 @@ test('Instantly write + push libs and routes are wired', () => {
   assert.match(write, /skip_if_in_workspace/)
   const push = read('src/lib/instantly-push.ts')
   assert.match(push, /leadContactToInstantlyLead/)
+  assert.match(push, /custom_variables/)
+  assert.match(push, /first_name = firstName \|\| 'team'/)
   assert.match(push, /outboundSequenceToInstantlySequences/)
   assert.match(push, /ensureInstantlyCampaign/)
   assert.match(push, /pushLeadsToInstantly/)

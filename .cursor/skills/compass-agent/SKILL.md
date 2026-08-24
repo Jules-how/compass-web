@@ -56,9 +56,9 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/expressions/<id>" \
   -d '{"notes":"..."}'
 ```
 
-Campaign copy (brief of record): `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact `wave` also has `signal` / `tension` / `thin` / `by_kind`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. Compact `wave` is on `GET /api/agent/campaigns` — not on the brief. Per-lead sentence is Hook compile + tension (`opener_track` / `opener_kind` on mark).
+Campaign sequence of record: `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Outbound doctrine is `cold-email/AGENTS.md`. Product/price for the site stay in `switchflow-offer/offer.md`. Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact readiness `wave` is on `GET /api/agent/campaigns`. Live targeting (`currentWave`: trade, cluster, remaining, last import) is on `GET /api/agent/brief`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. First line goes in `personalization` and `custom_variables.opener`.
 
-**Operating model:** Compass = workshop · vault agent = runner · Instantly = mail truck. Activate stays in Instantly. Do not invent vault `brief.md` for new campaigns.
+**Operating model:** Compass = workshop · Instantly = mail truck. Activate stays in Instantly. Outbound doctrine is `cold-email/AGENTS.md`.
 
 Kinds: `offers` | `expressions` | `structures` | `ctas` | `subjects` | `openers` | `templates`.
 
@@ -89,6 +89,12 @@ Inbox Instantly classify writes `outbound_status` then marks triage done: positi
 curl -sS "$COMPASS_BASE_URL/api/agent/leads?limit=40" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 
+# After landing keepers: attach campaign + ICP (company-only name is fine)
+curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"emails":["shop@example.com.au"],"pipeline_campaign_id":"campaign-au-plumbers-capture-2026-08","cohort_tag":"inner-west","icp_status":"pass","email_origin":"published"}'
+
 curl -sS "$COMPASS_BASE_URL/api/agent/leads/cohort?pipeline_campaign_id=campaign-au-plumbers-capture-2026-08&icp_status=pass&enrich_status=none,queued&unverified_only=1&limit=50" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 
@@ -100,7 +106,7 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"rows":[{"id":"…","icp_status":"pass","review_count":82,"hours_label":"Open 24 hours","after_hours":true,"capture_crack":"Two reviews this month say they could not get through after 5","email_origin":"published","enrich_status":"opener_ready","opener":"…","opener_track":"signal","opener_kind":"review","lead_facts":[{"kind":"phone_pain","claim":"…","url":"https://example.com.au/reviews"}]}]}'
+  -d '{"rows":[{"id":"…","icp_status":"pass","review_count":82,"hours_label":"Open 24 hours","after_hours":true,"capture_crack":"Two reviews this month say they could not get through after 5","email_origin":"published","opener":"…"}]}'
 
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
@@ -124,23 +130,23 @@ curl -sS "$COMPASS_BASE_URL/api/agent/campaigns" \
 curl -sS -X POST "$COMPASS_BASE_URL/api/agent/instantly/ensure" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"campaignId":"campaign-au-brokers-growth-2026-08","pushSequence":true}'
+  -d '{"campaignId":"campaign-au-plumbers-capture-2026-08","pushSequence":true}'
 
-# Dry-run then push cohort leads (names, opener → personalization, custom vars)
+# Dry-run then push cohort leads. Instantly drops unknown keys: first_name, personalization, custom_variables.opener.
 curl -sS -X POST "$COMPASS_BASE_URL/api/agent/instantly/push-leads" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"campaignId":"campaign-au-brokers-growth-2026-08","dryRun":true}'
+  -d '{"campaignId":"campaign-au-plumbers-capture-2026-08","dryRun":true}'
 
 curl -sS -X POST "$COMPASS_BASE_URL/api/agent/instantly/push-leads" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"campaignId":"campaign-au-brokers-growth-2026-08"}'
+  -d '{"campaignId":"campaign-au-plumbers-capture-2026-08"}'
 
 curl -sS -X POST "$COMPASS_BASE_URL/api/agent/instantly/push-sequence" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"campaignId":"campaign-au-brokers-growth-2026-08"}'
+  -d '{"campaignId":"campaign-au-plumbers-capture-2026-08"}'
 ```
 
 Push marks Compass `in_instantly` / Instantly ids the same turn. Skip workspace dupes; Instantly verifies on import. Activate stays in Instantly after Jules sign-off.

@@ -351,7 +351,7 @@ export function OutboundHistorySection() {
         {localCampaigns.some((c) => c.copy_status && c.copy_status !== 'none') ? (
           <div className="rounded-xl border border-stone-200/70 bg-stone-50/50 px-4 py-3 text-[12px] text-neutral-600">
             Pipeline drafts with copy still open in the{' '}
-            <Link href="/sales/pipeline" className="font-medium text-[#c2410c] hover:underline">
+            <Link href="/sales/outbound" className="font-medium text-[#c2410c] hover:underline">
               planner
             </Link>
             {' · '}

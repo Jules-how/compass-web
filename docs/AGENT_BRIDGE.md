@@ -36,7 +36,7 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 
 | Method | Path | Notes |
 |--------|------|-------|
-| `GET` | `/api/agent/brief` | Compact daily brief (~1–2KB). Cached snapshot unless `x-compass-fresh: 1` |
+| `GET` | `/api/agent/brief` | Compact daily brief (~1–2KB) plus `currentWave` (campaign, trade, cluster, uncontacted remaining, last import). Cached snapshot unless `x-compass-fresh: 1` |
 | `POST` | `/api/agent/sync` | `{ sources?: ['ads','instantly','instantly_leads'] }` |
 | `GET` | `/api/agent/leads` | Lean Instantly-hot leads (`status`, `limit`, `q`) |
 | `GET` | `/api/agent/leads/inventory` | Uncontacted counts by vertical × state (orient) |
@@ -82,22 +82,22 @@ Instantly volume: delivered ≈ sent − bounced. Compass ledger: positive = `in
 Example:
 
 ```bash
-curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/campaigns/campaign-au-brokers-growth-2026-08/copy" \
+curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/campaigns/campaign-au-plumbers-capture-2026-08/copy" \
   "${AUTH[@]}" -H "Content-Type: application/json" -H "Prefer: return=minimal" \
   -d '{"hypothesis":"Permission CTA beats timed ask","experiment_role":"control","experiment_status":"queued","cta_type":"permission"}'
 ```
 
 ```bash
-curl -sS "$COMPASS_BASE_URL/api/agent/leads/inventory?vertical=mortgage-brokers" "${AUTH[@]}"
+curl -sS "$COMPASS_BASE_URL/api/agent/leads/inventory?vertical=plumber" "${AUTH[@]}"
 ```
 
 ```bash
-curl -sS "$COMPASS_BASE_URL/api/agent/leads/cohort?pipeline_campaign_id=campaign-au-brokers-growth-2026-08&enrich_status=none,queued&limit=50" \
+curl -sS "$COMPASS_BASE_URL/api/agent/leads/cohort?pipeline_campaign_id=campaign-au-plumbers-capture-2026-08&enrich_status=none,queued&limit=50" \
   "${AUTH[@]}"
 
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   "${AUTH[@]}" -H "Content-Type: application/json" \
-  -d '{"ids":["…"],"pipeline_campaign_id":"campaign-au-brokers-growth-2026-08","cohort_tag":"wave-1-nsw","enrich_status":"queued"}'
+  -d '{"ids":["…"],"pipeline_campaign_id":"campaign-au-plumbers-capture-2026-08","cohort_tag":"inner-west","enrich_status":"queued"}'
 
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   "${AUTH[@]}" -H "Content-Type: application/json" \

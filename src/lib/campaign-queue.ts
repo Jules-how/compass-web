@@ -173,22 +173,155 @@ export function buildRunway(
     .sort((a, b) => b.sendable - a.sendable)
 }
 
+function titleCaseTrade(value: string): string {
+  return value
+    .split(/[\s-]+/)
+    .filter(Boolean)
+    .map((word) => word[0]!.toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+function monthYearLabel(todayOnly: string): string {
+  const when = new Date(`${todayOnly}T00:00:00Z`)
+  if (Number.isNaN(when.getTime())) return todayOnly
+  return when.toLocaleDateString('en-AU', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+}
+
 export function recontactCampaignName(
   vertical: string,
   city: string | null,
   todayOnly: string
 ): string {
-  const cap = (s: string) =>
-    s
-      .split(/[\s-]+/)
-      .filter(Boolean)
-      .map((w) => w[0]!.toUpperCase() + w.slice(1))
-      .join(' ')
-  const when = new Date(`${todayOnly}T00:00:00Z`)
-  const label = Number.isNaN(when.getTime())
-    ? todayOnly
-    : when.toLocaleDateString('en-AU', { month: 'short', year: 'numeric', timeZone: 'UTC' })
-  return ['Recontact', cap(vertical), city ? cap(city) : null, label]
+  return ['Recontact', titleCaseTrade(vertical), city ? titleCaseTrade(city) : null, monthYearLabel(todayOnly)]
     .filter(Boolean)
     .join(' | ')
+}
+
+export function freshCampaignName(
+  vertical: string,
+  city: string | null,
+  todayOnly: string
+): string {
+  return [titleCaseTrade(vertical), city ? titleCaseTrade(city) : null, monthYearLabel(todayOnly)]
+    .filter(Boolean)
+    .join(' | ')
+}
+
+export const INVENTORY_DRAG_MIME = 'application/x-compass-inventory'
+
+export type InventoryKind = 'recontact' | 'fresh'
+
+export type InventoryCard = {
+  id: string
+  kind: InventoryKind
+  vertical: string
+  city: string | null
+  count: number
+  reason: string
+}
+
+export function inventoryCardId(
+  kind: InventoryKind,
+  vertical: string,
+  city: string | null
+): string {
+  return `${kind}:${vertical.trim().toLowerCase()}:${(city || '').trim().toLowerCase()}`
+}
+
+export function parseInventoryDrag(raw: string | null | undefined): InventoryCard | null {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as Partial<InventoryCard>
+    if (parsed.kind !== 'recontact' && parsed.kind !== 'fresh') return null
+    const vertical = typeof parsed.vertical === 'string' ? parsed.vertical.trim() : ''
+    if (!vertical) return null
+    const city =
+      typeof parsed.city === 'string' && parsed.city.trim() ? parsed.city.trim() : null
+    const count = typeof parsed.count === 'number' && Number.isFinite(parsed.count) ? parsed.count : 0
+    return {
+      id: inventoryCardId(parsed.kind, vertical, city),
+      kind: parsed.kind,
+      vertical,
+      city,
+      count,
+      reason: typeof parsed.reason === 'string' ? parsed.reason : ''
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Ranked next launches. Promotable 90-day batches first, then fresh runway
+ * with at least one wave. One trade per week. Fills toward 3–5 slots, never past 5.
+ */
+export function rankNextSlots(input: {
+  runway: QueueRunwayRow[]
+  recontactPool: QueueRecontactGroup[]
+  thisWeekVerticals: string[]
+  thisWeekSlots: number
+}): InventoryCard[] {
+  const booked = new Set(
+    input.thisWeekVerticals.map((value) => value.trim().toLowerCase()).filter(Boolean)
+  )
+  const room = Math.max(0, QUEUE_WEEK_SLOT_MAX - input.thisWeekSlots)
+  const need = Math.max(0, QUEUE_WEEK_SLOT_MIN - input.thisWeekSlots)
+  const take = Math.min(room, Math.max(need, Math.min(3, room)))
+  if (take <= 0) return []
+
+  const recs: InventoryCard[] = []
+  const used = new Set(booked)
+
+  for (const group of input.recontactPool) {
+    if (recs.length >= take) break
+    if (!group.promotable) continue
+    const vertical = group.vertical.trim().toLowerCase()
+    if (!vertical || used.has(vertical)) continue
+    recs.push({
+      id: inventoryCardId('recontact', vertical, group.city),
+      kind: 'recontact',
+      vertical,
+      city: group.city,
+      count: group.count,
+      reason: `${group.count} past 90-day cooldown`
+    })
+    used.add(vertical)
+  }
+
+  for (const row of input.runway) {
+    if (recs.length >= take) break
+    const vertical = row.vertical.trim().toLowerCase()
+    if (!vertical || used.has(vertical)) continue
+    if (row.wavesLeft < 1) continue
+    recs.push({
+      id: inventoryCardId('fresh', vertical, null),
+      kind: 'fresh',
+      vertical,
+      city: null,
+      count: row.sendable,
+      reason: `${row.sendable} sendable · ≈${row.wavesLeft} waves`
+    })
+    used.add(vertical)
+  }
+
+  return recs
+}
+
+/** Promotable 90-day batches that are not already in the rec list. */
+export function inventoryPoolCards(
+  pool: QueueRecontactGroup[],
+  recs: InventoryCard[]
+): InventoryCard[] {
+  const recIds = new Set(recs.map((card) => card.id))
+  return pool
+    .filter((group) => group.promotable)
+    .map((group) => ({
+      id: inventoryCardId('recontact', group.vertical, group.city),
+      kind: 'recontact' as const,
+      vertical: group.vertical,
+      city: group.city,
+      count: group.count,
+      reason: `${group.count} past 90-day cooldown`
+    }))
+    .filter((card) => !recIds.has(card.id))
 }
