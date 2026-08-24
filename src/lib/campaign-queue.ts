@@ -10,6 +10,15 @@ export const RECONTACT_PROMOTE_MIN = 30
 /** Rough wave size used to express runway in campaign counts. */
 export const QUEUE_WAVE_SIZE = 50
 
+/** Weekly cadence band: aim for at least this many campaign launches per week. */
+export const QUEUE_WEEK_SLOT_MIN = 3
+
+/** Weekly cadence ceiling — more launches than this overloads inbox capacity. */
+export const QUEUE_WEEK_SLOT_MAX = 5
+
+/** Lead ceiling per week, derived from max launches at one wave each. */
+export const QUEUE_WEEK_LEAD_CAPACITY = QUEUE_WEEK_SLOT_MAX * QUEUE_WAVE_SIZE
+
 export type QueueWeekBucket = 'this_week' | 'next_week' | 'later' | 'unscheduled'
 
 /** Monday (YYYY-MM-DD) of the week containing the given date-only string. */
@@ -57,6 +66,50 @@ export type QueueCampaign = {
   bound: boolean
   cohort: number
   week: QueueWeekBucket
+}
+
+export type QueueReadiness = {
+  ready: boolean
+  /** Human-readable launch blockers, empty when ready. */
+  blockers: string[]
+}
+
+/**
+ * Launch checklist: a campaign is pushable when it has a big-enough cohort,
+ * finished copy, and an Instantly binding. Everything else is a named blocker.
+ */
+export function campaignReadiness(
+  c: Pick<QueueCampaign, 'cohort' | 'copy_status' | 'bound'>
+): QueueReadiness {
+  const blockers: string[] = []
+  if (c.cohort === 0) blockers.push('no leads')
+  else if (c.cohort < RECONTACT_PROMOTE_MIN) blockers.push(`thin cohort (<${RECONTACT_PROMOTE_MIN})`)
+  if (c.copy_status !== 'ready' && c.copy_status !== 'live') {
+    blockers.push(c.copy_status === 'draft' ? 'copy in draft' : 'no copy')
+  }
+  if (!c.bound) blockers.push('not bound')
+  return { ready: blockers.length === 0, blockers }
+}
+
+export type QueueWeekLoad = {
+  slots: number
+  leads: number
+  /** Below the 3-a-week cadence floor. */
+  underCadence: boolean
+  /** Above the 5-a-week ceiling or the weekly lead capacity. */
+  overCapacity: boolean
+}
+
+/** Booked slots and leads for one week lane, flagged against the cadence band. */
+export function weekLoad(lane: ReadonlyArray<Pick<QueueCampaign, 'cohort'>>): QueueWeekLoad {
+  const slots = lane.length
+  const leads = lane.reduce((sum, c) => sum + c.cohort, 0)
+  return {
+    slots,
+    leads,
+    underCadence: slots < QUEUE_WEEK_SLOT_MIN,
+    overCapacity: slots > QUEUE_WEEK_SLOT_MAX || leads > QUEUE_WEEK_LEAD_CAPACITY
+  }
 }
 
 export type QueueRunwayRow = {

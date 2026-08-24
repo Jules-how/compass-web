@@ -4,11 +4,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import type {
-  QueueCampaign,
-  QueuePayload,
-  QueueRecontactGroup,
-  QueueWeekBucket
+import {
+  campaignReadiness,
+  QUEUE_WEEK_LEAD_CAPACITY,
+  QUEUE_WEEK_SLOT_MAX,
+  QUEUE_WEEK_SLOT_MIN,
+  weekLoad,
+  type QueueCampaign,
+  type QueuePayload,
+  type QueueRecontactGroup,
+  type QueueWeekBucket
 } from '@/lib/campaign-queue'
 
 const WEEK_LABELS: Record<QueueWeekBucket, string> = {
@@ -29,12 +34,8 @@ function mondayFromToday(weeks: number): string {
   return monday.toISOString().slice(0, 10)
 }
 
-function copyChip(status: string): { label: string; className: string } {
-  if (status === 'live') return { label: 'copy live', className: 'bg-emerald-50 text-emerald-700' }
-  if (status === 'ready') return { label: 'copy ready', className: 'bg-emerald-50 text-emerald-700' }
-  if (status === 'draft') return { label: 'copy draft', className: 'bg-amber-50 text-amber-800' }
-  return { label: 'no copy', className: 'bg-stone-100 text-neutral-500' }
-}
+/** Lanes with a capacity budget — later/unscheduled are backlog, not a week. */
+const CAPACITY_WEEKS: ReadonlySet<QueueWeekBucket> = new Set(['this_week', 'next_week'])
 
 export function OutboundQueueSection() {
   const [data, setData] = useState<QueuePayload | null>(null)
@@ -181,15 +182,44 @@ export function OutboundQueueSection() {
           </div>
         ) : null}
 
-        {WEEK_ORDER.map((week) => {
+        {data === null ? null : WEEK_ORDER.map((week) => {
           const lane = grouped[week]
-          if (lane.length === 0) return null
+          const hasBudget = CAPACITY_WEEKS.has(week)
+          if (lane.length === 0 && !hasBudget) return null
+          const load = weekLoad(lane)
           return (
             <div key={week}>
-              <h4 className="compass-section-label mb-2">{WEEK_LABELS[week]}</h4>
+              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                <h4 className="compass-section-label">{WEEK_LABELS[week]}</h4>
+                {hasBudget ? (
+                  <span
+                    className={cn(
+                      'text-[11px] font-medium',
+                      load.overCapacity
+                        ? 'text-rose-700'
+                        : load.underCadence
+                          ? 'text-amber-700'
+                          : 'text-neutral-500'
+                    )}
+                  >
+                    {load.slots} of {QUEUE_WEEK_SLOT_MIN}–{QUEUE_WEEK_SLOT_MAX} launches ·{' '}
+                    {load.leads} of {QUEUE_WEEK_LEAD_CAPACITY} leads
+                    {load.overCapacity
+                      ? ' · overbooked'
+                      : load.underCadence
+                        ? ' · room to fill'
+                        : ''}
+                  </span>
+                ) : null}
+              </div>
+              {lane.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-stone-300 bg-stone-50/60 px-3 py-3 text-[12px] text-neutral-500">
+                  Open — nothing scheduled yet.
+                </div>
+              ) : (
               <div className="overflow-hidden rounded-xl border border-stone-200/80 bg-white">
                 {lane.map((c, idx) => {
-                  const chip = copyChip(c.copy_status)
+                  const readiness = campaignReadiness(c)
                   return (
                     <div
                       key={c.id}
@@ -209,18 +239,22 @@ export function OutboundQueueSection() {
                           <span>
                             {c.cohort > 0 ? `${c.cohort} leads` : 'no cohort'}
                           </span>
-                          <span className={cn('rounded-lg px-1.5 py-0.5 font-semibold', chip.className)}>
-                            {chip.label}
-                          </span>
                           <span
                             className={cn(
                               'rounded-lg px-1.5 py-0.5 font-semibold',
-                              c.bound
+                              readiness.ready
                                 ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-stone-100 text-neutral-500'
+                                : 'bg-amber-50 text-amber-800'
                             )}
+                            title={
+                              readiness.ready
+                                ? 'Cohort attached, copy finished, Instantly bound'
+                                : `Blockers: ${readiness.blockers.join(', ')}`
+                            }
                           >
-                            {c.bound ? 'instantly bound' : 'unbound'}
+                            {readiness.ready
+                              ? 'ready to push'
+                              : `needs: ${readiness.blockers.join(' · ')}`}
                           </span>
                           {[...c.vertical_tags, ...c.location_tags].map((tag) => (
                             <span key={tag} className="text-neutral-400">
@@ -269,6 +303,7 @@ export function OutboundQueueSection() {
                   )
                 })}
               </div>
+              )}
             </div>
           )
         })}

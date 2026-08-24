@@ -50,6 +50,45 @@ test('campaign queue lib enforces the 30-lead promote minimum and 50-lead waves'
   assert.match(lib, /count >= RECONTACT_PROMOTE_MIN/)
 })
 
+/** Mirror of src/lib/campaign-queue.ts campaignReadiness for node:test. */
+function campaignReadiness(c) {
+  const blockers = []
+  if (c.cohort === 0) blockers.push('no leads')
+  else if (c.cohort < 30) blockers.push('thin cohort (<30)')
+  if (c.copy_status !== 'ready' && c.copy_status !== 'live') {
+    blockers.push(c.copy_status === 'draft' ? 'copy in draft' : 'no copy')
+  }
+  if (!c.bound) blockers.push('not bound')
+  return { ready: blockers.length === 0, blockers }
+}
+
+test('campaign readiness names every launch blocker and clears when pushable', () => {
+  assert.deepEqual(campaignReadiness({ cohort: 50, copy_status: 'ready', bound: true }), {
+    ready: true,
+    blockers: []
+  })
+  assert.deepEqual(campaignReadiness({ cohort: 50, copy_status: 'live', bound: true }).ready, true)
+  assert.deepEqual(campaignReadiness({ cohort: 0, copy_status: 'none', bound: false }).blockers, [
+    'no leads',
+    'no copy',
+    'not bound'
+  ])
+  assert.deepEqual(campaignReadiness({ cohort: 12, copy_status: 'draft', bound: true }).blockers, [
+    'thin cohort (<30)',
+    'copy in draft'
+  ])
+})
+
+test('week capacity band is 3-5 launches and 250 leads, flagged both directions', () => {
+  const lib = read('src/lib/campaign-queue.ts')
+  assert.match(lib, /QUEUE_WEEK_SLOT_MIN = 3/)
+  assert.match(lib, /QUEUE_WEEK_SLOT_MAX = 5/)
+  assert.match(lib, /QUEUE_WEEK_SLOT_MAX \* QUEUE_WAVE_SIZE/)
+  // weekLoad flags both under-cadence and over-capacity.
+  assert.match(lib, /underCadence: slots < QUEUE_WEEK_SLOT_MIN/)
+  assert.match(lib, /slots > QUEUE_WEEK_SLOT_MAX \|\| leads > QUEUE_WEEK_LEAD_CAPACITY/)
+})
+
 test('queue route is planning-only and reuses recontact + wave helpers', () => {
   const route = read('src/app/api/campaigns/queue/route.ts')
   // Reads the ready pool through the shared 90-day filter, not a re-implementation.
@@ -77,4 +116,8 @@ test('queue section is mounted in the outbound hub and links to the campaign wor
   assert.match(section, /start_date/)
   // Thin cohorts cannot be promoted.
   assert.match(section, /promotable/)
+  // Cards carry the launch checklist; week lanes carry the capacity line.
+  assert.match(section, /campaignReadiness/)
+  assert.match(section, /weekLoad/)
+  assert.match(section, /overbooked/)
 })
