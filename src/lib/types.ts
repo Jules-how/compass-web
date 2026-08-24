@@ -518,6 +518,10 @@ export interface LeadUploadResult {
   rowCount: number
   imported: number
   dupes: number
+  /** Dupes matched on normalized email. */
+  emailDupes: number
+  /** Dupes matched on company domain or company name + city (one primary contact per company). */
+  companyDupes: number
   skipped: Array<{ row: number; reason: string }>
   errors: string[]
 }

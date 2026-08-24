@@ -1,6 +1,6 @@
 import { type NextRequest } from 'next/server'
 import { siteFromEmailOrUrl } from '@/lib/company-site'
-import { normalizeEmail, normalizePhone, normalizeLinkedin, mapCsvRow, ingestSkipReason, isLeadSourceService } from '@/lib/lead-import-shared'
+import { normalizeEmail, normalizePhone, normalizeLinkedin, mapCsvRow, ingestSkipReason, isLeadSourceService, cohortTagForRow } from '@/lib/lead-import-shared'
 import { normalizeVerticalSlug } from '@/lib/leads-meta'
 import type { LeadSourceService, LeadVertical } from '@/lib/types'
 import { requirePortalAccess } from '@/lib/portal-access'
@@ -125,6 +125,65 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 2b. Company-level dedupe guard. Same business, different contact still
+    //     counts as a dupe (one primary contact per company). Two identity keys:
+    //     company_domain (free-email hosts already excluded upstream, so a match
+    //     is a real business site) and lower(company)|lower(city) as a fallback
+    //     for rows without a resolvable domain.
+    const companyKey = (company: string, city: string): string =>
+      `${company.trim().toLowerCase()}|${city.trim().toLowerCase()}`
+
+    const mappedRows = rows.map((r) => mapCsvRow(r))
+    const domainsToCheck = Array.from(
+      new Set(
+        mappedRows
+          .map((m) =>
+            siteFromEmailOrUrl({ email: normalizeEmail(m.email ?? ''), website: m.website })
+              .company_domain
+          )
+          .filter((d): d is string => Boolean(d))
+      )
+    )
+    const companiesToCheck = Array.from(
+      new Set(mappedRows.map((m) => m.company.trim()).filter((c) => c.length > 2))
+    )
+
+    const existingByDomain = new Map<string, string>()
+    for (let i = 0; i < domainsToCheck.length; i += 300) {
+      const chunk = domainsToCheck.slice(i, i + 300)
+      const { data, error } = await supabase
+        .from('lead_contacts')
+        .select('id, company_domain')
+        .in('company_domain', chunk)
+      if (error) {
+        errors.push(`company domain lookup: ${error.message}`)
+        break
+      }
+      for (const row of data ?? []) {
+        const domain = String(row.company_domain ?? '').trim().toLowerCase()
+        if (domain && !existingByDomain.has(domain)) existingByDomain.set(domain, row.id)
+      }
+    }
+
+    const existingByCompanyKey = new Map<string, string>()
+    for (let i = 0; i < companiesToCheck.length; i += 200) {
+      const chunk = companiesToCheck.slice(i, i + 200)
+      const { data, error } = await supabase
+        .from('lead_contacts')
+        .select('id, company, city')
+        .in('company', chunk)
+      if (error) {
+        errors.push(`company name lookup: ${error.message}`)
+        break
+      }
+      for (const row of data ?? []) {
+        const company = String(row.company ?? '')
+        if (!company.trim()) continue
+        const key = companyKey(company, String(row.city ?? ''))
+        if (!existingByCompanyKey.has(key)) existingByCompanyKey.set(key, row.id)
+      }
+    }
+
     // 3. Iterate rows in memory to decide each row's fate and build the contact
     //    + source-row payloads. Contact IDs are generated up front so source rows
     //    can reference them; the dedupe map is updated in-memory so duplicate
@@ -132,9 +191,12 @@ export async function POST(request: NextRequest) {
     //    (mirrors lead-import.ts `byEmail` + `touch`).
     let imported = 0
     let dupes = 0
+    let emailDupes = 0
+    let companyDupes = 0
     const skipped: Array<{ row: number; reason: string }> = []
     const contactsToInsert: Record<string, unknown>[] = []
     const sourceRowsToInsert: Record<string, unknown>[] = []
+    const cohortStampById = new Map<string, string>()
 
     for (let i = 0; i < rows.length; i++) {
       const raw = rows[i]
@@ -171,7 +233,8 @@ export async function POST(request: NextRequest) {
         mirrored_at: now
       }
 
-      // Skip rows missing email, name, or company — record as skipped, not imported.
+      // Skip rows missing email or company — record as skipped, not imported.
+      // Tradie keepers often have no person name; contact name falls back to company.
       const skipReason = ingestSkipReason(mapped)
       if (skipReason) {
         baseSourceRow.decision = 'skipped'
@@ -181,13 +244,37 @@ export async function POST(request: NextRequest) {
         continue
       }
 
+      const cohortTag = cohortTagForRow(mapped, filename)
       const matchedId = email ? existingByEmail.get(email) : undefined
       if (matchedId) {
         baseSourceRow.decision = 'dupe'
         baseSourceRow.contact_id = matchedId
         baseSourceRow.reason = 'matched normalized email'
+        if (cohortTag) cohortStampById.set(matchedId, cohortTag)
         sourceRowsToInsert.push(baseSourceRow)
         dupes++
+        emailDupes++
+        continue
+      }
+
+      // Company guard: same business already on the ledger under a different
+      // contact. One primary contact per company — flag, don't insert.
+      const rowCompanyKey =
+        mapped.company.trim().length > 2 ? companyKey(mapped.company, mapped.city) : null
+      const domainMatch = site.company_domain
+        ? existingByDomain.get(site.company_domain)
+        : undefined
+      const nameMatch = rowCompanyKey ? existingByCompanyKey.get(rowCompanyKey) : undefined
+      const companyMatchId = domainMatch ?? nameMatch
+      if (companyMatchId) {
+        baseSourceRow.decision = 'dupe'
+        baseSourceRow.contact_id = companyMatchId
+        baseSourceRow.reason = domainMatch
+          ? 'matched company domain'
+          : 'matched company name + city'
+        sourceRowsToInsert.push(baseSourceRow)
+        dupes++
+        companyDupes++
         continue
       }
 
@@ -211,11 +298,18 @@ export async function POST(request: NextRequest) {
         import_batch_id: batchId,
         outbound_status: 'uncontacted',
         recontact_ok: 1,
+        cohort_tag: cohortTag || null,
         created_at: now,
         updated_at: now,
         mirrored_at: now
       })
       if (email) existingByEmail.set(email, contactId)
+      if (site.company_domain && !existingByDomain.has(site.company_domain)) {
+        existingByDomain.set(site.company_domain, contactId)
+      }
+      if (rowCompanyKey && !existingByCompanyKey.has(rowCompanyKey)) {
+        existingByCompanyKey.set(rowCompanyKey, contactId)
+      }
       baseSourceRow.contact_id = contactId
       sourceRowsToInsert.push(baseSourceRow)
       imported++
@@ -230,6 +324,22 @@ export async function POST(request: NextRequest) {
       const { error: contactError } = await supabase.from('lead_contacts').insert(chunk)
       if (contactError) {
         errors.push(`contacts batch ${Math.floor(i / 500) + 1}: ${contactError.message}`)
+      }
+    }
+
+    const stampEntries = Array.from(cohortStampById.entries())
+    for (let i = 0; i < stampEntries.length; i += 50) {
+      const chunk = stampEntries.slice(i, i + 50)
+      const results = await Promise.all(
+        chunk.map(([id, cohort_tag]) =>
+          supabase
+            .from('lead_contacts')
+            .update({ cohort_tag, updated_at: now, mirrored_at: now })
+            .eq('id', id)
+        )
+      )
+      for (const result of results) {
+        if (result.error) errors.push(`cohort_tag stamp: ${result.error.message}`)
       }
     }
 
@@ -251,7 +361,7 @@ export async function POST(request: NextRequest) {
     }
 
     return portalJson(
-      { batchId, rowCount: rows.length, imported, dupes, skipped, errors },
+      { batchId, rowCount: rows.length, imported, dupes, emailDupes, companyDupes, skipped, errors },
       { status: 201 }
     )
   } catch (err) {

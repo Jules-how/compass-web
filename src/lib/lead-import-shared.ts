@@ -32,16 +32,17 @@ export function normalizeLinkedin(raw: string): string {
 // Prospeo / Origami / Vibe exports plus shorter aliases. The first matching
 // header wins; unknown headers are ignored.
 const COLUMN_ALIASES: Record<string, string[]> = {
-  name: ['Full name', 'full name', 'Name', 'name', 'First name', 'first name'],
-  email: ['Email', 'email', 'Email address', 'email address', 'Work email', 'work email'],
+  name: ['Full name', 'full name', 'Name', 'name', 'First name', 'first name', 'first_name', 'owner_first', 'owner first name'],
+  email: ['Email', 'email', 'Email address', 'email address', 'Work email', 'work email', 'published_email', 'published email'],
   phone: ['Mobile', 'mobile', 'Phone', 'phone', 'Phone number', 'phone number', 'Mobile phone', 'mobile phone'],
-  company: ['Company name', 'company name', 'Company', 'company', 'Company Name', 'Employer'],
+  company: ['Company name', 'company name', 'Company', 'company', 'Company Name', 'Employer', 'trading_name', 'trading name'],
   role: ['Job title', 'job title', 'Role', 'role', 'Title', 'title', 'Position'],
   linkedin: ['Person LinkedIn URL', 'person linkedin url', 'LinkedIn', 'linkedin', 'Linkedin URL', 'linkedin url', 'LinkedIn URL'],
-  city: ['Person city', 'person city', 'City', 'city', 'Location', 'location'],
+  city: ['Person city', 'person city', 'City', 'city', 'Location', 'location', 'suburb', 'Suburb'],
   state: ['Person state', 'person state', 'State', 'state', 'Region', 'region', 'Province'],
   vertical: ['Vertical', 'vertical', 'Industry', 'industry', 'Category', 'category'],
-  website: ['Website', 'website', 'Company website', 'company website', 'URL', 'url', 'Domain', 'domain', 'Company domain']
+  website: ['Website', 'website', 'Company website', 'company website', 'URL', 'url', 'Domain', 'domain', 'Company domain'],
+  cluster: ['cluster', 'Cluster', 'cohort', 'cohort_tag', 'Cohort']
 }
 
 export interface MappedLeadRow {
@@ -55,6 +56,7 @@ export interface MappedLeadRow {
   state: string
   vertical: string
   website: string
+  cluster: string
 }
 
 function lookup(raw: Record<string, string | undefined>, aliases: string[]): string {
@@ -93,8 +95,29 @@ export function mapCsvRow(raw: Record<string, string | undefined>): MappedLeadRo
     city: lookup(raw, COLUMN_ALIASES.city),
     state: lookup(raw, COLUMN_ALIASES.state),
     vertical: lookup(raw, COLUMN_ALIASES.vertical),
-    website: lookup(raw, COLUMN_ALIASES.website)
+    website: lookup(raw, COLUMN_ALIASES.website),
+    cluster: lookup(raw, COLUMN_ALIASES.cluster)
   }
+}
+
+const TRADE_FILENAME_PREFIX =
+  /^(plumber|hvac|electrician|locksmith|pest|towing|garage)-(.+)$/i
+
+/** `{trade}-{cluster}.csv` → cluster slug. Empty if the name does not match. */
+export function clusterFromFilename(filename: string | null | undefined): string {
+  const base = String(filename ?? '')
+    .replace(/^.*[\\/]/, '')
+    .replace(/\.csv$/i, '')
+    .trim()
+  const match = base.match(TRADE_FILENAME_PREFIX)
+  return match?.[2]?.trim() || ''
+}
+
+export function cohortTagForRow(
+  mapped: Pick<MappedLeadRow, 'cluster'>,
+  filename?: string | null
+): string {
+  return mapped.cluster.trim() || clusterFromFilename(filename)
 }
 
 export const LEAD_SOURCE_SERVICES = [
@@ -116,7 +139,6 @@ export type IngestSkipRow = { row: number; reason: string }
 
 export function ingestSkipReason(mapped: MappedLeadRow): string | null {
   if (!normalizeEmail(mapped.email)) return 'missing email'
-  if (!mapped.name.trim()) return 'missing name'
   if (!mapped.company.trim()) return 'missing company'
   return null
 }

@@ -121,6 +121,8 @@ export default function LeadUploadClient() {
         rowCount: body.rowCount ?? parsed.rows.length,
         imported: body.imported ?? 0,
         dupes: body.dupes ?? 0,
+        emailDupes: body.emailDupes ?? 0,
+        companyDupes: body.companyDupes ?? 0,
         skipped: Array.isArray(body.skipped) ? body.skipped : [],
         errors: body.errors ?? []
       })
@@ -322,7 +324,14 @@ export default function LeadUploadClient() {
             </div>
             <div>
               <dt className="text-xs uppercase text-emerald-700">Dupes</dt>
-              <dd className="font-medium text-emerald-900">{result.dupes}</dd>
+              <dd className="font-medium text-emerald-900">
+                {result.dupes}
+                {result.dupes > 0 && (
+                  <span className="ml-1 text-xs font-normal text-emerald-700">
+                    ({result.emailDupes} email · {result.companyDupes} company)
+                  </span>
+                )}
+              </dd>
             </div>
             <div>
               <dt className="text-xs uppercase text-emerald-700">Skipped</dt>
