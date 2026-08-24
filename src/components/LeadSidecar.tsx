@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import type { LeadContact } from '@/lib/types'
 import { formatLeadFactsDetail, parseLeadFacts } from '@/lib/lead-facts'
 import { humanizeEmailOrigin, humanizeIcpStatus } from '@/lib/lead-icp'
+import { LeadRecontactPanel } from '@/components/LeadRecontactPanel'
 
 function humanizeStatus(status: string | null | undefined): string {
   if (!status) return 'Uncontacted'
@@ -116,6 +117,11 @@ export function LeadSidecar({
           <Field label="Last outbound">{formatWhen(lead.last_outbound_at)}</Field>
           <Field label="Updated">{formatWhen(lead.updated_at || lead.mirrored_at)}</Field>
         </dl>
+
+        <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+          Recontact
+        </h3>
+        <LeadRecontactPanel lead={lead} />
 
         <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
           Demand
