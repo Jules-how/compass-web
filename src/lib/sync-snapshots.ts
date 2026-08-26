@@ -4,6 +4,9 @@ export type SyncSnapshotId =
   | 'instantly_cold_email'
   | 'daily_brief'
   | 'last_daily_sync'
+  | 'daily_decision_digest'
+  | 'evidence_poller_watermark'
+  | 'instantly_backfill'
 
 export async function upsertSyncSnapshot(
   supabase: SupabaseClient,

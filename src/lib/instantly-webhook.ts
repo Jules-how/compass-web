@@ -7,6 +7,8 @@ import {
   shouldOverwriteOutbound
 } from '@/lib/instantly-leads-sync'
 import { lookupCopyForInstantlyCampaign, recordOutreachTouch } from '@/lib/lead-outreach'
+import { appendEvidence } from '@/lib/events'
+import { leadStageFromOutbound } from '@/lib/pipeline-spine'
 
 export type InstantlyWebhookPayload = {
   timestamp?: string
@@ -81,6 +83,31 @@ export function mapWebhookEventToOutboundStatus(eventType: string | null | undef
       return 'suppressed'
     case 'email_sent':
       return 'in_instantly'
+    default:
+      return null
+  }
+}
+
+function webhookEvidenceType(eventType: string): string | null {
+  switch (eventType.trim().toLowerCase()) {
+    case 'email_sent':
+      return 'email.sent'
+    case 'reply_received':
+    case 'auto_reply_received':
+    case 'lead_neutral':
+      return 'email.replied'
+    case 'lead_interested':
+    case 'custom_label_any_positive':
+      return 'lead.interested'
+    case 'lead_meeting_booked':
+    case 'lead_meeting_completed':
+      return 'lead.meeting_booked'
+    case 'lead_closed':
+      return 'lead.converted'
+    case 'email_bounced':
+      return 'email.bounced'
+    case 'lead_unsubscribed':
+      return 'lead.unsubscribed'
     default:
       return null
   }
@@ -233,6 +260,37 @@ export async function applyInstantlyWebhookEvent(
     })
   } catch {
     // best-effort
+  }
+
+  const evidenceType = webhookEvidenceType(eventType)
+  if (evidenceType) {
+    try {
+      const nativeId = `${eventType}:${instantlyLeadId || email || contactId}:${eventAt}`
+      await appendEvidence(supabase, {
+        source: 'instantly',
+        type: evidenceType,
+        lead_id: contactId,
+        ts: eventAt,
+        campaign: campaignId || campaignName || undefined,
+        native_id: nativeId,
+        payload: {
+          event_type: eventType,
+          email,
+          campaign_id: campaignId,
+          campaign_name: campaignName,
+          outbound_status: outbound
+        }
+      })
+      await supabase
+        .from('lead_contacts')
+        .update({
+          pipeline_stage: leadStageFromOutbound(outbound),
+          updated_at: stamp
+        })
+        .eq('id', contactId)
+    } catch {
+      // best-effort
+    }
   }
 
   return {

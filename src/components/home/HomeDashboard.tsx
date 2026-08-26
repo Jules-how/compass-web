@@ -3,242 +3,72 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import type { BrainDumpReorganizeResult, BrainDumpSuggestion } from '@/lib/brain-dump'
-import {
-  HOME_AD_DEMO,
-  HOME_COLD_EMAIL_DEMO,
-  type AdCreativeMetric,
-  type ColdEmailGlance,
-  type HomeAdGlance
-} from '@/lib/home-demo-data'
-import type { CompassProject, CompassTask } from '@/lib/types'
-import {
-  HomePriorityCheck,
-  HomePrioritySheet,
-  useHomePriorityActions
-} from '@/components/home/HomePriorityActions'
-import {
-  bucketPriorityPlate,
-  isOpenTask,
-  selectHomePriorities,
-  tasksHref
-} from '@/lib/task-organisation'
-import { taskPriorityLabel } from '@/lib/task-priority'
+import type { HomePayload } from '@/lib/home-data'
+import type { CompassTask } from '@/lib/types'
+import { HomePrioritySheet } from '@/components/home/HomePriorityActions'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
 const BRAIN_DUMP_KEY = 'compass.home.brainDump'
 
-type TasksPayload = {
-  topTasks: CompassTask[]
-  projects: CompassProject[]
-  clientsById?: Record<string, { id: string; name: string; priority: number; health: string }>
-}
-
-type InboxPayload = {
-  total?: number
-  badgeTotal?: number
-  leads?: unknown[]
-}
-
-type ColdEmailPayload = ColdEmailGlance & {
-  source?: 'instantly' | 'demo' | 'error'
-  warning?: string
-  error?: string
-}
-
-type AdsGlancePayload = HomeAdGlance & {
-  source?: 'live' | 'demo'
-  syncedAt?: string | null
-  connectedAccounts?: number
-  accountsNeedingToken?: number
-  migrationRequired?: boolean
-}
+type TasksPayload = { topTasks: CompassTask[] }
 
 const easeOut = [0.22, 1, 0.36, 1] as const
 
 const staggerContainer = {
   hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.06, delayChildren: 0.04 }
-  }
+  show: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.03 } }
 }
 
 const staggerItem = {
-  hidden: { opacity: 0, y: 10 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.32, ease: easeOut }
-  }
-}
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0
-  }).format(value)
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.28, ease: easeOut } }
 }
 
 function formatDayHeading(date: Date) {
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric'
-  })
+  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
-function creativeStatusBadge(status: AdCreativeMetric['status']) {
-  switch (status) {
-    case 'winning':
-      return (
-        <Badge variant="success" appearance="light" size="sm">
-          Winning
-        </Badge>
-      )
-    case 'learning':
-      return (
-        <Badge variant="primary" appearance="light" size="sm">
-          Learning
-        </Badge>
-      )
-    case 'fatigued':
-      return (
-        <Badge variant="warning" appearance="light" size="sm">
-          Fatigued
-        </Badge>
-      )
-    case 'needs-review':
-      return (
-        <Badge variant="destructive" appearance="light" size="sm">
-          Needs review
-        </Badge>
-      )
-  }
-}
-
-function campaignStatusBadge(status: 'live' | 'launching' | 'paused') {
-  switch (status) {
-    case 'live':
-      return (
-        <Badge variant="success" appearance="light" size="sm">
-          Live
-        </Badge>
-      )
-    case 'launching':
-      return (
-        <Badge variant="primary" appearance="light" size="sm">
-          Launching
-        </Badge>
-      )
-    case 'paused':
-      return (
-        <Badge variant="warning" appearance="light" size="sm">
-          Paused
-        </Badge>
-      )
-  }
-}
-
-function DemoMark({ show }: { show: boolean }) {
-  if (!show) return null
+function SectionHeader({ title, href, hint }: { title: string; href?: string; hint?: string }) {
   return (
-    <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-red-700 ring-1 ring-red-200/80">
-      Demo
-    </span>
-  )
-}
-
-function PulseStat({
-  href,
-  value,
-  label,
-  hot
-}: {
-  href: string
-  value: string
-  label: string
-  hot?: boolean
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        'flex items-baseline justify-between gap-3 rounded-xl px-3 py-2.5 transition hover:bg-stone-50/90',
-        hot && 'bg-amber-50/60 hover:bg-amber-50/90'
-      )}
-    >
-      <span className="text-sm text-neutral-500">{label}</span>
-      <span
-        className={cn(
-          'text-lg font-semibold tabular-nums tracking-tight text-neutral-900',
-          hot && 'text-amber-900'
-        )}
-      >
-        {value}
-      </span>
-    </Link>
-  )
-}
-
-function MiniMetric({ label, value, hot }: { label: string; value: string; hot?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-400">
-        {label}
+    <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="h-5 w-1 shrink-0 rounded-full bg-[#e85d2a]" aria-hidden />
+        <h2 className="text-sm font-semibold tracking-tight text-neutral-900">{title}</h2>
+        {hint ? <span className="text-xs text-neutral-400">{hint}</span> : null}
       </div>
-      <div
-        className={cn(
-          'mt-0.5 text-base font-semibold tabular-nums tracking-tight text-neutral-900',
-          hot && 'text-[#c2410c]'
-        )}
-      >
-        {value}
-      </div>
+      {href ? (
+        <Link href={href} className="text-xs font-medium text-[#c2410c] hover:underline">
+          Open
+        </Link>
+      ) : null}
     </div>
   )
 }
 
 export function HomeDashboard() {
+  const home = useCachedJson<HomePayload>('/api/home', '/api/home', { staleMs: 60_000 })
   const tasks = useCachedJson<TasksPayload>('/api/tasks', '/api/tasks')
-  const inbox = useCachedJson<InboxPayload>('/api/inbox', '/api/inbox')
-  const adsGlance = useCachedJson<AdsGlancePayload>('/api/ads/glance', '/api/ads/glance')
-  const ads = adsGlance.data ?? HOME_AD_DEMO
-  const adsSource = adsGlance.data?.source ?? 'demo'
-  const adsConnected = adsGlance.data?.connectedAccounts ?? 0
-  const adsNeedToken = (adsGlance.data?.accountsNeedingToken ?? 0) > 0
-  const coldEmail = useCachedJson<ColdEmailPayload>(
-    '/api/instantly/cold-email',
-    '/api/instantly/cold-email',
-    { staleMs: 60_000 }
-  )
-  const cold: ColdEmailGlance = coldEmail.data ?? HOME_COLD_EMAIL_DEMO
-  const coldLive = coldEmail.data?.source === 'instantly'
-  const coldDemo = !coldLive
 
   const [dump, setDump] = useState('')
   const [dumpHydrated, setDumpHydrated] = useState(false)
   const [dumpOpen, setDumpOpen] = useState(false)
-  const [plan, setPlan] = useState<(BrainDumpReorganizeResult & { source?: string }) | null>(
-    null
-  )
+  const [plan, setPlan] = useState<(BrainDumpReorganizeResult & { source?: string }) | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [reorganizing, setReorganizing] = useState(false)
   const [reorganizeError, setReorganizeError] = useState<string | null>(null)
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState<string | null>(null)
   const [applyNote, setApplyNote] = useState<string | null>(null)
-  const {
-    openTask: openPriority,
-    completingId,
-    setOpenTask: setOpenPriority,
-    completeTask
-  } = useHomePriorityActions((force) => tasks.reload(force))
+  const [undoingId, setUndoingId] = useState<string | null>(null)
+  const [openTask, setOpenTask] = useState<CompassTask | null>(null)
+
+  const data = home.data
+  const cold = data?.coldEmail
+  const digest = data?.digest
 
   useEffect(() => {
     try {
@@ -259,56 +89,6 @@ export function HomeDashboard() {
     }
   }, [dump, dumpHydrated])
 
-  useEffect(() => {
-    if (!dumpOpen) return
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setDumpOpen(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [dumpOpen])
-
-  const openTasks = useMemo(
-    () => (tasks.data?.topTasks ?? []).filter(isOpenTask),
-    [tasks.data]
-  )
-
-  /** Curated Focus slice — same membership + sort as My Tasks Focus. */
-  const priorityTasks = useMemo(() => selectHomePriorities(openTasks), [openTasks])
-
-  const activeProjects = useMemo(() => {
-    const list = (tasks.data?.projects ?? []).filter(
-      (p) => !['done', 'completed', 'cancelled', 'archived'].includes(p.status.toLowerCase())
-    )
-    return [...list]
-      .sort((a, b) => {
-        const rank = (p: number) => (p === 0 ? 99 : p)
-        return rank(a.priority) - rank(b.priority) || a.name.localeCompare(b.name)
-      })
-      .slice(0, 8)
-  }, [tasks.data])
-
-  const plateBuckets = useMemo(() => bucketPriorityPlate(priorityTasks), [priorityTasks])
-  const focus = priorityTasks[0] ?? null
-  const blockedCount = openTasks.filter((t) => t.status === 'blocked').length
-  const overdueCount = openTasks.filter(
-    (t) => t.due && Date.parse(t.due) < Date.now() && t.status !== 'completed'
-  ).length
-  const inboxCount =
-    typeof inbox.data?.badgeTotal === 'number'
-      ? inbox.data.badgeTotal
-      : typeof inbox.data?.total === 'number'
-        ? inbox.data.total
-        : Array.isArray(inbox.data?.leads)
-          ? inbox.data.leads.length
-          : null
-
-  const projectsById = useMemo(
-    () => Object.fromEntries((tasks.data?.projects ?? []).map((p) => [p.id, p])),
-    [tasks.data]
-  )
-
-  const clientsById = tasks.data?.clientsById ?? {}
   const dumpPending = dump.trim().length > 0
 
   const runReorganize = useCallback(async () => {
@@ -318,6 +98,9 @@ export function HomeDashboard() {
     setApplyError(null)
     setApplyNote(null)
     try {
+      const openTasks = (tasks.data?.topTasks ?? []).filter(
+        (t) => t.status !== 'completed' && t.status !== 'cancelled'
+      )
       const res = await fetch('/api/brain-dump/reorganize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -330,9 +113,7 @@ export function HomeDashboard() {
         source?: string
         error?: string
       }
-      if (!res.ok) {
-        throw new Error(body.error ?? `Reorganize failed (${res.status})`)
-      }
+      if (!res.ok) throw new Error(body.error ?? `Reorganize failed (${res.status})`)
       setPlan(body)
       setSelected(new Set((body.suggestions ?? []).map((s) => s.id)))
     } catch (err) {
@@ -342,25 +123,14 @@ export function HomeDashboard() {
     } finally {
       setReorganizing(false)
     }
-  }, [dump, openTasks, reorganizing])
-
-  function toggleSuggestion(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+  }, [dump, reorganizing, tasks.data])
 
   async function applySuggestions() {
     if (!plan) return
     const chosen = plan.suggestions.filter((s) => selected.has(s.id))
     if (chosen.length === 0) return
-
     setApplying(true)
     setApplyError(null)
-    setApplyNote(null)
     try {
       const creatable = chosen.filter((s) => s.kind === 'task' || s.kind === 'priority')
       for (const item of creatable) {
@@ -379,26 +149,9 @@ export function HomeDashboard() {
           throw new Error(body.error ?? `Failed to create task (${res.status})`)
         }
       }
-
-      const appliedLines = new Set(chosen.map((s) => s.sourceLine.toLowerCase()))
-      const remaining = dump
-        .split(/\r?\n/)
-        .filter((line) => {
-          const normalized = line.replace(/^[\s>*\-•\d.]+/, '').trim().toLowerCase()
-          return normalized && !appliedLines.has(normalized)
-        })
-        .join('\n')
-      setDump(remaining.trim())
-
-      const projectCues = chosen.filter((s) => s.kind === 'project').length
-      setApplyNote(
-        `Added ${creatable.length} task${creatable.length === 1 ? '' : 's'}` +
-          (projectCues
-            ? ` · ${projectCues} project cue${projectCues === 1 ? '' : 's'} parked`
-            : '')
-      )
       setPlan(null)
       setSelected(new Set())
+      setApplyNote(`Added ${creatable.length} task${creatable.length === 1 ? '' : 's'}`)
       await tasks.reload(true)
     } catch (err) {
       setApplyError(err instanceof Error ? err.message : String(err))
@@ -406,6 +159,45 @@ export function HomeDashboard() {
       setApplying(false)
     }
   }
+
+  async function undoDone(taskId: string) {
+    setUndoingId(taskId)
+    try {
+      const res = await fetch('/api/digest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'undo', task_id: taskId })
+      })
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(body.error ?? 'Undo failed')
+      }
+      await home.reload(true)
+      await tasks.reload(true)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setUndoingId(null)
+    }
+  }
+
+  const spineRows = useMemo(() => {
+    if (!data) return []
+    return [...data.spine.leads, ...data.spine.clients]
+  }, [data])
+
+  if (home.error && !data) {
+    return (
+      <div className="p-6 text-sm text-red-700">
+        {home.error}{' '}
+        <button type="button" className="underline" onClick={() => void home.reload(true)}>
+          Retry
+        </button>
+      </div>
+    )
+  }
+
+  if (home.loading && !data) return <LoadingBlock label="Loading home…" />
 
   return (
     <>
@@ -415,13 +207,10 @@ export function HomeDashboard() {
         initial="hidden"
         animate="show"
       >
-        <motion.div
-          variants={staggerItem}
-          className="flex shrink-0 flex-wrap items-center justify-between gap-3"
-        >
-          <div className="min-w-0">
+        <motion.div variants={staggerItem} className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+          <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-              On your plate
+              Operator home
             </p>
             <h1 className="mt-0.5 text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
               {formatDayHeading(new Date())}
@@ -430,10 +219,7 @@ export function HomeDashboard() {
           <button
             type="button"
             onClick={() => setDumpOpen(true)}
-            className={cn(
-              'compass-btn-secondary relative',
-              dumpPending && 'ring-1 ring-[#e85d2a]/35'
-            )}
+            className={cn('compass-btn-secondary relative', dumpPending && 'ring-1 ring-[#e85d2a]/35')}
           >
             Brain dump
             {dumpPending ? (
@@ -442,549 +228,254 @@ export function HomeDashboard() {
           </button>
         </motion.div>
 
-        {/* One composition: plate + pulse + engines in a single viewport */}
         <motion.div
           variants={staggerItem}
-          className="grid min-h-0 flex-1 gap-3 lg:grid-cols-3 lg:grid-rows-[minmax(0,1fr)_auto]"
+          className="grid min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain lg:grid-cols-2 xl:grid-cols-3"
         >
-          <Card className="min-h-0 overflow-hidden lg:col-span-2 lg:row-span-1">
-            <CardContent className="flex h-full min-h-0 flex-col p-4 sm:p-5">
-              <div className="mb-2.5 flex shrink-0 items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="h-5 w-1 shrink-0 rounded-full bg-[#e85d2a]" aria-hidden />
-                  <h2 className="text-sm font-semibold tracking-tight text-neutral-900">
-                    Priorities
-                  </h2>
-                  <span className="text-xs tabular-nums text-neutral-400">
-                    {priorityTasks.length}
-                  </span>
-                </div>
-                <Link
-                  href={tasksHref({ window: 'focus' })}
-                  className="text-xs font-medium text-[#c2410c] transition hover:text-[#9a3412] hover:underline"
-                >
-                  Focus in tasks
-                </Link>
-              </div>
-
-              {tasks.error && !tasks.data ? (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {tasks.error}{' '}
-                  <button
-                    type="button"
-                    className="underline"
-                    onClick={() => void tasks.reload(true)}
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : null}
-
-              {tasks.loading && !tasks.data ? (
-                <LoadingBlock label="Loading plate…" />
-              ) : null}
-
-              {!tasks.loading && priorityTasks.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-stone-300/80 bg-stone-50/40 px-4 py-8 text-center text-sm text-neutral-500">
-                  No focus priorities right now.{' '}
-                  <button
-                    type="button"
-                    onClick={() => setDumpOpen(true)}
-                    className="font-medium text-[#c2410c] hover:underline"
-                  >
-                    Capture a thought
-                  </button>{' '}
-                  or{' '}
-                  <Link href="/tasks" className="font-medium text-[#c2410c] hover:underline">
-                    browse all tasks
-                  </Link>
-                  .
-                </div>
-              ) : null}
-
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-0.5">
-                {focus && priorityTasks.length > 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.35, ease: easeOut, delay: 0.12 }}
-                    className="rounded-xl border border-[#e85d2a]/20 bg-gradient-to-br from-orange-50/70 to-white px-3.5 py-2.5"
-                  >
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#c2410c]">
-                      Focus
-                    </div>
-                    <div className="mt-1.5 flex items-start gap-2.5">
-                      <HomePriorityCheck
-                        task={focus}
-                        completing={completingId === focus.id}
-                        onComplete={completeTask}
-                        className="mt-1"
-                      />
+          <Card className="min-h-0">
+            <CardContent className="p-4 sm:p-5">
+              <SectionHeader title="Done" hint={digest?.completed.length ? String(digest.completed.length) : undefined} />
+              {(digest?.completed ?? []).length === 0 ? (
+                <p className="text-sm text-neutral-500">Digest will auto-complete proof tasks here.</p>
+              ) : (
+                <ul className="divide-y divide-stone-100 rounded-xl border border-stone-100 bg-stone-50/40">
+                  {digest!.completed.map((item) => (
+                    <li key={item.task_id} className="flex items-start justify-between gap-2 px-3 py-2.5">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium text-neutral-900">{item.title}</div>
+                        <div className="mt-0.5 text-[11px] text-neutral-500">{item.why}</div>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setOpenPriority(focus)}
-                        className="min-w-0 flex-1 text-left"
+                        disabled={undoingId === item.task_id}
+                        onClick={() => void undoDone(item.task_id)}
+                        className="compass-btn-ghost shrink-0 px-2 py-1 text-[11px]"
                       >
-                        <span className="block truncate text-base font-semibold tracking-tight text-neutral-900 hover:underline">
-                          {focus.title}
-                        </span>
-                        <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-neutral-500">
-                          <span className="capitalize">{focus.status.replace('-', ' ')}</span>
-                          {focus.project_id && projectsById[focus.project_id] ? (
-                            <span>· {projectsById[focus.project_id].name}</span>
-                          ) : null}
-                          {focus.due ? <span>· {focus.due.slice(0, 10)}</span> : null}
-                        </div>
+                        {undoingId === item.task_id ? '…' : 'Undo'}
                       </button>
-                    </div>
-                  </motion.div>
-                ) : null}
-
-                {plateBuckets.map((bucket) => {
-                  if (bucket.tasks.length === 0) return null
-                  return (
-                    <div key={bucket.key}>
-                      <div
-                        className={cn(
-                          'mb-1.5 text-[11px] font-semibold uppercase tracking-[0.1em]',
-                          bucket.key === 'overdue' ? 'text-amber-700' : 'text-neutral-400'
-                        )}
-                      >
-                        {bucket.label}
-                        <span className="ml-1.5 tabular-nums text-neutral-300">
-                          {bucket.tasks.length}
-                        </span>
-                      </div>
-                      <ul className="divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-100 bg-stone-50/40">
-                        {bucket.tasks.map((task) => {
-                          const project = task.project_id
-                            ? projectsById[task.project_id]
-                            : null
-                          return (
-                            <li key={task.id}>
-                              <div className="flex items-start gap-2.5 px-3 py-2 transition hover:bg-white">
-                                <HomePriorityCheck
-                                  task={task}
-                                  completing={completingId === task.id}
-                                  onComplete={completeTask}
-                                  className="mt-0.5"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setOpenPriority(task)}
-                                  className="min-w-0 flex-1 text-left"
-                                >
-                                  <div className="truncate text-sm font-medium text-neutral-900">
-                                    {task.title}
-                                  </div>
-                                  <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-neutral-500">
-                                    <span className="capitalize">
-                                      {task.status.replace('-', ' ')}
-                                    </span>
-                                    {project ? <span>{project.name}</span> : null}
-                                    {task.priority > 0 ? (
-                                      <span>{taskPriorityLabel(task.priority)}</span>
-                                    ) : null}
-                                  </div>
-                                </button>
-                              </div>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="min-h-0 overflow-hidden lg:row-span-1">
-            <CardContent className="flex h-full min-h-0 flex-col overflow-y-auto p-4 sm:p-5">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold tracking-tight text-neutral-900">Pulse</h2>
-                {(coldDemo || adsSource !== 'live') && (
-                  <div className="flex items-center gap-1.5">
-                    <DemoMark show={coldDemo || adsSource !== 'live'} />
-                  </div>
-                )}
-              </div>
-
-              <div className="divide-y divide-stone-100 rounded-xl border border-stone-100 bg-stone-50/40">
-                <PulseStat
-                  href="/inbox"
-                  label="Inbox"
-                  value={inboxCount == null ? '—' : String(inboxCount)}
-                  hot={Boolean(inboxCount && inboxCount > 0)}
-                />
-                <PulseStat
-                  href="/inbox?tab=instantly"
-                  label="Replies"
-                  value={
-                    coldEmail.loading && !coldEmail.data
-                      ? '—'
-                      : String(cold.repliesWaiting)
-                  }
-                  hot={cold.repliesWaiting > 0}
-                />
-                <PulseStat
-                  href="/tasks"
-                  label="Blocked"
-                  value={String(blockedCount)}
-                  hot={blockedCount > 0}
-                />
-                <PulseStat
-                  href="/tasks"
-                  label="Overdue"
-                  value={String(overdueCount)}
-                  hot={overdueCount > 0}
-                />
-              </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-3 border-t border-stone-100 pt-3">
-                <MiniMetric
-                  label="Sent today"
-                  value={
-                    coldEmail.loading && !coldEmail.data
-                      ? '—'
-                      : cold.emailsSentToday.toLocaleString()
-                  }
-                />
-                <MiniMetric label="Reply rate" value={`${cold.replyRate}%`} />
-                <MiniMetric
-                  label="Ad spend"
-                  value={
-                    adsGlance.loading && !adsGlance.data
-                      ? '—'
-                      : formatMoney(ads.spendToday)
-                  }
-                />
-                <MiniMetric
-                  label="ROAS"
-                  value={
-                    adsGlance.loading && !adsGlance.data ? '—' : `${ads.roas.toFixed(1)}x`
-                  }
-                  hot={ads.creativesNeedingReview > 0}
-                />
-              </div>
-
-              <p className="mt-auto pt-3 text-xs leading-relaxed text-neutral-400">
-                {overdueCount + blockedCount + (inboxCount ?? 0) + cold.repliesWaiting === 0
-                  ? 'Quiet morning — stack is clear.'
-                  : 'Pressure + engines in one glance.'}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Peer engines — pinned to bottom of composition */}
-          <Card className="min-h-0 lg:col-span-1">
-            <CardContent className="p-4">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-semibold tracking-tight text-neutral-900">
-                    Cold email
-                  </h2>
-                  <DemoMark show={coldDemo} />
-                </div>
-                <Link
-                  href="/sales/outbound"
-                  className="shrink-0 text-xs font-medium text-[#c2410c] transition hover:underline"
-                >
-                  Outbound
-                </Link>
-              </div>
-
-              {coldEmail.loading && !coldEmail.data ? (
-                <LoadingBlock label="Loading…" />
-              ) : (
-                <>
-                  <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1">
-                    <MiniMetric
-                      label="Sent"
-                      value={cold.emailsSentToday.toLocaleString()}
-                    />
-                    <MiniMetric
-                      label="Waiting"
-                      value={String(cold.repliesWaiting)}
-                      hot={cold.repliesWaiting > 0}
-                    />
-                    <MiniMetric label="Reply %" value={`${cold.replyRate}%`} />
-                  </div>
-                  <ul className="space-y-1">
-                    {cold.campaigns.length === 0 ? (
-                      <li className="rounded-xl border border-dashed border-stone-200 px-3 py-3 text-center text-xs text-neutral-500">
-                        No campaigns
-                      </li>
-                    ) : (
-                      cold.campaigns.slice(0, 2).map((campaign) => (
-                        <li
-                          key={campaign.id}
-                          className="flex items-center justify-between gap-2 rounded-xl border border-stone-100 bg-stone-50/50 px-2.5 py-1.5"
-                        >
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium text-neutral-900">
-                              {campaign.name}
-                            </div>
-                            <div className="text-[11px] tabular-nums text-neutral-500">
-                              {campaign.sent.toLocaleString()} · {campaign.replies} replies
-                            </div>
-                          </div>
-                          {campaignStatusBadge(campaign.status)}
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                </>
+                    </li>
+                  ))}
+                </ul>
               )}
             </CardContent>
           </Card>
 
           <Card className="min-h-0">
-            <CardContent className="p-4">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-semibold tracking-tight text-neutral-900">Ads</h2>
-                  <DemoMark show={adsSource !== 'live'} />
-                </div>
-                <Link
-                  href="/settings"
-                  className="shrink-0 text-xs font-medium text-[#c2410c] transition hover:underline"
-                >
-                  {adsSource === 'live' ? 'Accounts' : 'Connect'}
-                </Link>
-              </div>
-
-              {adsGlance.loading && !adsGlance.data ? (
-                <LoadingBlock label="Loading…" />
-              ) : (
-                <>
-                  <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1">
-                    <MiniMetric label="Spend" value={formatMoney(ads.spendToday)} />
-                    <MiniMetric label="ROAS" value={`${ads.roas.toFixed(1)}x`} />
-                    <MiniMetric
-                      label="Review"
-                      value={String(ads.creativesNeedingReview)}
-                      hot={ads.creativesNeedingReview > 0}
-                    />
-                  </div>
-                  {adsSource !== 'live' && adsConnected > 0 ? (
-                    <p className="mb-2 text-[11px] text-red-600">
-                      Connected — awaiting sync (demo figures)
-                    </p>
-                  ) : null}
-                  {adsSource === 'live' && adsNeedToken ? (
-                    <p className="mb-2 text-[11px] text-neutral-500">
-                      Live snapshot — paste a Meta token in Settings to refresh
-                    </p>
-                  ) : null}
-                  <ul className="space-y-1">
-                    {ads.creatives.slice(0, 2).map((creative) => (
-                      <li
-                        key={creative.id}
-                        className="flex items-center justify-between gap-2 rounded-xl border border-stone-100 bg-stone-50/50 px-2.5 py-1.5"
-                      >
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-medium text-neutral-900">
-                            {creative.name}
-                          </div>
-                          <div className="text-[11px] text-neutral-500">
-                            {creative.channel} · {creative.roas.toFixed(1)}x
-                          </div>
+            <CardContent className="p-4 sm:p-5">
+              <SectionHeader title="In flight" href="/tasks" />
+              <div className="space-y-3">
+                {(data?.inFlight ?? []).length > 0 ? (
+                  <ul className="divide-y divide-stone-100 rounded-xl border border-stone-100 bg-stone-50/40">
+                    {data!.inFlight.map((task) => (
+                      <li key={task.id} className="px-3 py-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate text-sm font-medium text-neutral-900">{task.title}</span>
+                          <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                            {task.proven} of {task.total} proven
+                          </span>
                         </div>
-                        {creativeStatusBadge(creative.status)}
                       </li>
                     ))}
                   </ul>
-                </>
-              )}
+                ) : (
+                  <p className="text-sm text-neutral-500">No partial proof tasks right now.</p>
+                )}
+                <div className="rounded-xl border border-stone-100 bg-stone-50/40 px-3 py-2.5 text-sm">
+                  <span className="text-neutral-500">Live campaigns </span>
+                  <span className="font-semibold tabular-nums text-neutral-900">
+                    {data?.liveCampaignCount ?? 0}
+                  </span>
+                  <Link href="/sales/outbound" className="ml-2 text-xs font-medium text-[#c2410c] hover:underline">
+                    Outbound
+                  </Link>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
           <Card className="min-h-0">
-            <CardContent className="p-4">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold tracking-tight text-neutral-900">
-                  Projects
-                </h2>
-                <Link
-                  href="/projects"
-                  className="shrink-0 text-xs font-medium text-[#c2410c] transition hover:underline"
-                >
-                  All
-                </Link>
+            <CardContent className="p-4 sm:p-5">
+              <SectionHeader title="Needed" href="/tasks" />
+              <div className="space-y-2">
+                {[...(digest?.proposed ?? []), ...(digest?.needs_you ?? [])].map((item) => (
+                  <div
+                    key={item.key}
+                    className="rounded-xl border border-stone-100 bg-stone-50/40 px-3 py-2.5"
+                  >
+                    <Link href={item.href} className="text-sm font-medium text-neutral-900 hover:underline">
+                      {item.title}
+                    </Link>
+                    <p className="mt-0.5 text-[11px] text-neutral-500">{item.reason}</p>
+                  </div>
+                ))}
+                {(data?.overdueTasks ?? []).map((task) => (
+                  <div
+                    key={task.id}
+                    className="rounded-xl border border-amber-200/80 bg-amber-50/50 px-3 py-2.5"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const full = tasks.data?.topTasks.find((t) => t.id === task.id)
+                        if (full) setOpenTask(full)
+                      }}
+                      className="text-sm font-medium text-amber-900 hover:underline"
+                    >
+                      {task.title}
+                    </button>
+                    <p className="text-[11px] text-amber-800">Overdue · {task.due?.slice(0, 10)}</p>
+                  </div>
+                ))}
+                {(digest?.proposed ?? []).length === 0 &&
+                (digest?.needs_you ?? []).length === 0 &&
+                (data?.overdueTasks ?? []).length === 0 ? (
+                  <p className="text-sm text-neutral-500">Nothing queued — stack is clear.</p>
+                ) : null}
               </div>
+            </CardContent>
+          </Card>
 
-              {tasks.loading && !tasks.data ? (
-                <LoadingBlock label="Loading…" />
-              ) : activeProjects.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-stone-200 px-3 py-3 text-center text-xs text-neutral-500">
-                  No active projects
+          <Card>
+            <CardContent className="p-4 sm:p-5">
+              <SectionHeader title="Emails going out" href="/sales/outbound" />
+              <div className="flex flex-wrap gap-4">
+                <div>
+                  <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-400">
+                    Sent today
+                  </div>
+                  <div className="text-2xl font-semibold tabular-nums text-neutral-900">
+                    {cold?.emailsSentToday?.toLocaleString() ?? '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-400">
+                    Reply rate
+                  </div>
+                  <div className="text-2xl font-semibold tabular-nums text-neutral-900">
+                    {cold ? `${cold.replyRate}%` : '—'}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-5">
+              <SectionHeader title="Replies coming in" href="/inbox?tab=instantly" />
+              <div className="flex items-baseline justify-between gap-3 rounded-xl bg-amber-50/60 px-3 py-2.5">
+                <span className="text-sm text-neutral-600">Waiting in Instantly</span>
+                <span
+                  className={cn(
+                    'text-2xl font-semibold tabular-nums',
+                    (cold?.repliesWaiting ?? 0) > 0 ? 'text-amber-900' : 'text-neutral-900'
+                  )}
+                >
+                  {cold?.repliesWaiting ?? '—'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-5">
+              <SectionHeader title="Pull next" href={data?.pullNext?.href ?? '/leads'} />
+              {data?.pullNext ? (
+                <div className="rounded-xl border border-[#e85d2a]/20 bg-gradient-to-br from-orange-50/70 to-white p-3.5">
+                  <div className="text-base font-semibold text-neutral-900">
+                    {data.pullNext.vertical}
+                    {data.pullNext.state ? ` · ${data.pullNext.state}` : ''}
+                  </div>
+                  <p className="mt-1 text-sm text-neutral-600">
+                    {data.pullNext.uncontacted.toLocaleString()} uncontacted with email
+                  </p>
+                  <p className="mt-2 text-xs text-neutral-500">
+                    Agent: {data.pullNext.agentQuery}
+                  </p>
+                  <Link
+                    href={data.pullNext.href}
+                    className="mt-3 inline-flex text-xs font-medium text-[#c2410c] hover:underline"
+                  >
+                    Open filtered leads
+                  </Link>
                 </div>
               ) : (
-                <ul className="divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-100 bg-stone-50/40">
-                  {activeProjects.slice(0, 4).map((project) => {
-                    const client = project.client_id
-                      ? clientsById[project.client_id]
-                      : null
-                    return (
-                      <li key={project.id}>
-                        <Link
-                          href={`/projects/${project.id}`}
-                          className="flex items-start justify-between gap-2 px-2.5 py-1.5 transition hover:bg-white"
-                        >
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium text-neutral-900">
-                              {project.name}
-                            </div>
-                            <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-neutral-500">
-                              <span className="capitalize">{project.status}</span>
-                              {client ? <span>{client.name}</span> : null}
-                            </div>
-                          </div>
-                        </Link>
-                      </li>
-                    )
-                  })}
-                </ul>
+                <p className="text-sm text-neutral-500">Inventory is thin — import or widen filters.</p>
               )}
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-2 xl:col-span-3">
+            <CardContent className="p-4 sm:p-5">
+              <SectionHeader title="Flow" href="/functions" />
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                {spineRows.map((row) => (
+                  <Link
+                    key={row.stage}
+                    href={row.href}
+                    className="rounded-xl border border-stone-100 bg-stone-50/40 px-3 py-2.5 transition hover:bg-white"
+                  >
+                    <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-400">
+                      {row.stage}
+                    </div>
+                    <div className="mt-1 text-xl font-semibold tabular-nums text-neutral-900">
+                      {row.count.toLocaleString()}
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </motion.div>
       </motion.div>
 
-      {openPriority ? (
+      {openTask ? (
         <HomePrioritySheet
-          task={openPriority}
-          project={
-            openPriority.project_id ? projectsById[openPriority.project_id] ?? null : null
-          }
-          completing={completingId === openPriority.id}
-          onClose={() => setOpenPriority(null)}
-          onComplete={completeTask}
+          task={openTask}
+          project={null}
+          completing={false}
+          onClose={() => setOpenTask(null)}
+          onComplete={async () => {}}
         />
       ) : null}
 
-      {/* Brain dump drawer */}
       <AnimatePresence>
         {dumpOpen ? (
-          <motion.div
-            className="fixed inset-0 z-50 flex justify-end"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-          >
-            <button
-              type="button"
-              className="absolute inset-0 bg-neutral-950/35"
-              aria-label="Close brain dump"
-              onClick={() => setDumpOpen(false)}
-            />
-            <motion.aside
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="brain-dump-title"
-              className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-stone-200/80 bg-white shadow-soft"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ duration: 0.28, ease: easeOut }}
-            >
+          <motion.div className="fixed inset-0 z-50 flex justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <button type="button" className="absolute inset-0 bg-neutral-950/35" aria-label="Close brain dump" onClick={() => setDumpOpen(false)} />
+            <motion.aside className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-stone-200/80 bg-white shadow-soft" initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}>
               <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-5 py-4">
                 <div>
-                  <h2
-                    id="brain-dump-title"
-                    className="text-base font-semibold tracking-tight text-neutral-900"
-                  >
-                    Brain dump
-                  </h2>
-                  <p className="mt-0.5 text-xs text-neutral-500">
-                    One thought per line — reorganize into priorities
-                  </p>
+                  <h2 className="text-base font-semibold text-neutral-900">Brain dump</h2>
+                  <p className="mt-0.5 text-xs text-neutral-500">Creates compass_tasks only</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setDumpOpen(false)}
-                  className="rounded-xl border border-stone-200 px-2.5 py-1.5 text-xs text-neutral-600 transition hover:bg-stone-50"
-                >
+                <button type="button" onClick={() => setDumpOpen(false)} className="compass-btn-ghost">
                   Close
                 </button>
               </div>
-
               <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
-                <textarea
-                  value={dump}
-                  onChange={(e) => {
-                    setDump(e.target.value)
-                    setApplyNote(null)
-                  }}
-                  placeholder="Follow-ups, half-ideas, blockers…"
-                  rows={8}
-                  className="compass-input min-h-[10rem] flex-1 resize-y"
-                  autoFocus
-                />
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void runReorganize()}
-                    disabled={!dump.trim() || reorganizing}
-                    className="compass-btn-primary"
-                  >
-                    {reorganizing ? 'Thinking…' : 'Reorganize with AI'}
-                  </button>
-                  {dump.trim() ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDump('')
-                        setPlan(null)
-                        setApplyNote(null)
-                        setReorganizeError(null)
-                      }}
-                      className="compass-btn-ghost"
-                    >
-                      Clear
-                    </button>
-                  ) : null}
-                </div>
-
+                <textarea value={dump} onChange={(e) => setDump(e.target.value)} placeholder="One thought per line…" rows={8} className="compass-input min-h-[10rem] flex-1 resize-y" autoFocus />
+                <button type="button" onClick={() => void runReorganize()} disabled={!dump.trim() || reorganizing} className="compass-btn-primary">
+                  {reorganizing ? 'Thinking…' : 'Reorganize with AI'}
+                </button>
                 {applyNote ? <p className="text-sm text-emerald-700">{applyNote}</p> : null}
-                {reorganizeError ? (
-                  <p className="text-sm text-red-600">{reorganizeError}</p>
-                ) : null}
+                {reorganizeError ? <p className="text-sm text-red-600">{reorganizeError}</p> : null}
                 {applyError ? <p className="text-sm text-red-600">{applyError}</p> : null}
-
                 {plan ? (
                   <div className="space-y-3 border-t border-stone-100 pt-3">
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <p className="text-sm text-neutral-700">{plan.summary}</p>
-                      {plan.source ? (
-                        <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-neutral-400">
-                          {plan.source === 'ai' ? 'AI' : 'Local'}
-                        </span>
-                      ) : null}
-                    </div>
-                    <ul className="divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-200/70 bg-white">
+                    <p className="text-sm text-neutral-700">{plan.summary}</p>
+                    <ul className="divide-y divide-stone-100 rounded-xl border border-stone-200/70">
                       {plan.suggestions.map((item) => (
-                        <SuggestionRow
-                          key={item.id}
-                          item={item}
-                          checked={selected.has(item.id)}
-                          onToggle={() => toggleSuggestion(item.id)}
-                        />
+                        <SuggestionRow key={item.id} item={item} checked={selected.has(item.id)} onToggle={() => {
+                          setSelected((prev) => {
+                            const next = new Set(prev)
+                            if (next.has(item.id)) next.delete(item.id)
+                            else next.add(item.id)
+                            return next
+                          })
+                        }} />
                       ))}
                     </ul>
-                    {plan.leftoverNotes.length > 0 ? (
-                      <p className="text-xs text-neutral-500">
-                        Parked: {plan.leftoverNotes.join(' · ')}
-                      </p>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => void applySuggestions()}
-                      disabled={applying || selected.size === 0}
-                      className="compass-btn-secondary"
-                    >
+                    <button type="button" onClick={() => void applySuggestions()} disabled={applying || selected.size === 0} className="compass-btn-secondary">
                       {applying ? 'Applying…' : 'Apply selected'}
                     </button>
                   </div>
@@ -1009,23 +500,9 @@ function SuggestionRow({
 }) {
   return (
     <li className="flex items-start gap-2.5 px-3 py-2.5">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onToggle}
-        className="mt-1 h-3.5 w-3.5 rounded border-stone-300 text-[#e85d2a] focus:ring-[#e85d2a]"
-        aria-label={`Select ${item.title}`}
-      />
+      <input type="checkbox" checked={checked} onChange={onToggle} className="mt-1 h-3.5 w-3.5 rounded border-stone-300" />
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-neutral-900">{item.title}</span>
-          <Badge variant="secondary" appearance="light" size="sm">
-            {item.kind}
-          </Badge>
-          <span className="text-[11px] tabular-nums text-neutral-400">
-            {taskPriorityLabel(item.suggestedPriority)}
-          </span>
-        </div>
+        <div className="text-sm font-medium text-neutral-900">{item.title}</div>
         <p className="mt-0.5 text-xs text-neutral-500">{item.rationale}</p>
       </div>
     </li>
