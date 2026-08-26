@@ -1,0 +1,316 @@
+{
+  "pack_id": "roofing",
+  "trade": "roofing",
+  "locale": "en-AU",
+  "default_match_types": ["PHRASE", "EXACT"],
+  "shared_negatives": [
+    "job",
+    "jobs",
+    "hiring",
+    "salary",
+    "career",
+    "apprentice",
+    "apprenticeship",
+    "resume",
+    "indeed",
+    "diy",
+    "how to",
+    "tutorial",
+    "youtube",
+    "wiki",
+    "reddit",
+    "forum",
+    "pdf",
+    "manual",
+    "wholesale",
+    "parts",
+    "supply",
+    "materials",
+    "course",
+    "school",
+    "certificate",
+    "training",
+    "tafe",
+    "nationwide",
+    "online",
+    "chat",
+    "virtual",
+    "pest",
+    "franchise"
+  ],
+  "clusters": [
+    {
+      "id": "emergency_leak",
+      "name": "Emergency roof leak",
+      "keywords": [
+        "roof leak repair",
+        "leaking roof",
+        "emergency roof repair",
+        "roof leak plumber",
+        "urgent roof leak"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Roof Leak {suburb}",
+            "{business} Roof Repair",
+            "Leaking Roof? Call Now",
+            "Emergency Roof Leak",
+            "Licensed Roofers",
+            "Same Day Roof Fix",
+            "Storm Damage Roof",
+            "{years} Yrs Experience",
+            "Fast Leak Repair",
+            "Local Roofer {suburb}",
+            "Call {business} Now",
+            "Roof Leak Specialists",
+            "Urgent Roof Help",
+            "Trusted {suburb}",
+            "24/7 Roof Leak"
+          ],
+          "descriptions": [
+            "Roof leaking in {suburb}? {business} provides emergency roof leak repair.",
+            "Storm damage and urgent leaks fixed fast. {years}+ years serving {suburb}.",
+            "Do not wait on a roof leak. Call {business} for same day repair in {suburb}.",
+            "Licensed roofers for emergency leaks. Upfront quotes from {business}."
+          ]
+        },
+        {
+          "headlines": [
+            "Emergency Roof Leak",
+            "{business} {suburb}",
+            "Leaking Roof Repair",
+            "Roof Leak Fix",
+            "Licensed Roofer",
+            "Storm Roof Repair",
+            "Urgent Leak {suburb}",
+            "{years} Years Local",
+            "Roof Leak Experts",
+            "Call for Roof Help",
+            "Local Roof Repair",
+            "Fast Leak Patch",
+            "Trusted Roofers",
+            "Same Day Leak Fix",
+            "Roof Emergency"
+          ],
+          "descriptions": [
+            "Emergency roof leak repair in {suburb}. Tile and metal roofs. {business}.",
+            "Leaking roof after rain? Licensed team with {years}+ years in {suburb}.",
+            "Roof leak specialists. Fast response across {suburb}. Call {business}.",
+            "Protect your home from water damage. {business} — {suburb} roofers."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "roof_repair",
+      "name": "Roof repair",
+      "keywords": [
+        "roof repair",
+        "tile roof repair",
+        "metal roof repair",
+        "broken roof tile",
+        "roof maintenance"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Roof Repair {suburb}",
+            "{business} Roofing",
+            "Tile Roof Repair",
+            "Metal Roof Repair",
+            "Licensed Roofers",
+            "Broken Tile Fix",
+            "Roof Maintenance",
+            "{years} Yrs Experience",
+            "Local Roof Experts",
+            "Call {business} Today",
+            "Roof Repairs Done Right",
+            "Trusted {suburb}",
+            "Storm Roof Fix",
+            "Professional Roofers",
+            "Get a Roof Quote"
+          ],
+          "descriptions": [
+            "Roof repair for tile and metal roofs in {suburb}. Licensed team at {business}.",
+            "Broken tiles and roof maintenance. {years}+ years serving {suburb} homes.",
+            "Professional roof repairs with upfront quotes. Call {business} in {suburb}.",
+            "Keep your roof watertight. {business} — trusted roofers in {suburb}."
+          ]
+        },
+        {
+          "headlines": [
+            "Roof Repairs",
+            "{business} {suburb}",
+            "Tile & Metal Roofs",
+            "Roof Fix {suburb}",
+            "Licensed Roofing",
+            "Broken Tile Repair",
+            "Roof Maintenance Pro",
+            "{years} Years Local",
+            "Local Roof Company",
+            "Call for Roof Quote",
+            "Trusted Roof Repair",
+            "Storm Damage Fix",
+            "Roof Specialists",
+            "Same Day Quotes",
+            "Upfront Pricing"
+          ],
+          "descriptions": [
+            "Roof repairs across {suburb}. {business} handles tile, metal and colourbond.",
+            "From broken tiles to ridge repairs. Licensed roofers with {years}+ years.",
+            "Roof maintenance and repairs. Quote from {business} in {suburb}.",
+            "Local roofing you can trust. Call {business} for repairs in {suburb}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "restoration",
+      "name": "Roof restoration",
+      "keywords": [
+        "roof restoration",
+        "roof painting",
+        "roof reseal",
+        "tile roof restoration",
+        "roof coating"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Roof Restoration",
+            "{business} {suburb}",
+            "Roof Painting",
+            "Tile Roof Restore",
+            "Licensed Roofers",
+            "Roof Reseal",
+            "Roof Coating {suburb}",
+            "{years} Yrs Experience",
+            "Restore Your Roof",
+            "Call {business} Now",
+            "Roof Makeover",
+            "Local Restoration",
+            "Trusted {suburb}",
+            "Roof Refresh",
+            "Free Roof Quote"
+          ],
+          "descriptions": [
+            "Roof restoration and painting in {suburb}. Extend roof life with {business}.",
+            "Tile roof restoration and resealing. {years}+ years experience in {suburb}.",
+            "Professional roof coating and painting. Quote from {business}.",
+            "Restore tired roofs in {suburb}. Licensed team at {business}."
+          ]
+        },
+        {
+          "headlines": [
+            "Roof Restore {suburb}",
+            "{business} Roofing",
+            "Roof Paint & Seal",
+            "Tile Restoration",
+            "Licensed {suburb}",
+            "Roof Coating Pros",
+            "Reseal Your Roof",
+            "{years} Years Local",
+            "Roof Restoration Pro",
+            "Call for Quote",
+            "Local Roof Experts",
+            "Roof Painting {suburb}",
+            "Trusted Restoration",
+            "Extend Roof Life",
+            "Upfront Quotes"
+          ],
+          "descriptions": [
+            "Roof restoration specialists in {suburb}. Painting, sealing and repairs.",
+            "Bring your roof back to life. {business} — {years}+ years in {suburb}.",
+            "Tile roof restoration with quality coatings. Call {business} for a quote.",
+            "Roof restoration without replacement. Serving {suburb} from {business}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gutters",
+      "name": "Gutters / downpipes",
+      "keywords": [
+        "gutter repair",
+        "gutter cleaning",
+        "downpipe repair",
+        "gutter replacement",
+        "blocked gutters"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Gutter Repair {suburb}",
+            "{business} Gutters",
+            "Gutter Cleaning",
+            "Downpipe Repair",
+            "Licensed Roofers",
+            "Gutter Replacement",
+            "Blocked Gutters?",
+            "{years} Yrs Experience",
+            "Gutter Experts",
+            "Call {business} Now",
+            "Local Gutter Fix",
+            "Gutter & Roof Team",
+            "Trusted {suburb}",
+            "Same Day Gutters",
+            "Gutter Service"
+          ],
+          "descriptions": [
+            "Gutter repair and cleaning in {suburb}. {business} keeps water flowing away.",
+            "Blocked gutters and downpipe repairs. {years}+ years local experience.",
+            "Gutter replacement and maintenance. Call {business} in {suburb}.",
+            "Protect your home from overflow. {business} — gutter specialists."
+          ]
+        },
+        {
+          "headlines": [
+            "Gutter Cleaning",
+            "{business} {suburb}",
+            "Downpipe Fix",
+            "Gutter Replacement",
+            "Licensed {suburb}",
+            "Blocked Gutter Clear",
+            "Gutter Repair Pro",
+            "{years} Years Local",
+            "Gutter Maintenance",
+            "Call for Gutters",
+            "Local Gutter Team",
+            "Roof & Gutter Pros",
+            "Trusted Gutter Fix",
+            "Same Day Service",
+            "Upfront Quotes"
+          ],
+          "descriptions": [
+            "Gutter cleaning and repairs across {suburb}. Licensed team at {business}.",
+            "Downpipes and gutters fixed properly. {years}+ years serving {suburb}.",
+            "Blocked or damaged gutters? Call {business} for service in {suburb}.",
+            "Gutter work with upfront quotes. {business} — local {suburb} roofers."
+          ]
+        }
+      ]
+    }
+  ],
+  "assets": {
+    "sitelinks": [
+      { "text": "Roof Leak Repair", "url": "{destination}", "description1": "Emergency response", "description2": "Licensed roofers" },
+      { "text": "Roof Restoration", "url": "{destination}", "description1": "Paint & reseal", "description2": "Extend roof life" },
+      { "text": "Gutter Repair", "url": "{destination}", "description1": "Clean & replace", "description2": "Same day" },
+      { "text": "Get a Quote", "url": "{destination}", "description1": "Upfront pricing", "description2": "{suburb} local" }
+    ],
+    "callouts": [
+      "Licensed Roofers",
+      "Local {suburb} Team",
+      "{years}+ Years Experience",
+      "Tile & Metal Roofs",
+      "Storm Damage Repair",
+      "Upfront Quotes"
+    ]
+  },
+  "conversion_action": {
+    "name": "Switchflow Lead — Roofing",
+    "type": "WEBPAGE",
+    "category": "SUBMIT_LEAD_FORM"
+  }
+}

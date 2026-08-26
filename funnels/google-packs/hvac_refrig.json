@@ -1,0 +1,383 @@
+{
+  "pack_id": "hvac_refrig",
+  "trade": "hvac_refrig",
+  "locale": "en-AU",
+  "default_match_types": ["PHRASE", "EXACT"],
+  "shared_negatives": [
+    "job",
+    "jobs",
+    "hiring",
+    "salary",
+    "career",
+    "apprentice",
+    "apprenticeship",
+    "resume",
+    "indeed",
+    "diy",
+    "how to",
+    "tutorial",
+    "youtube",
+    "wiki",
+    "reddit",
+    "forum",
+    "pdf",
+    "manual",
+    "wholesale",
+    "parts",
+    "supply",
+    "bunnings",
+    "course",
+    "school",
+    "certificate",
+    "training",
+    "tafe",
+    "nationwide",
+    "online",
+    "chat",
+    "virtual",
+    "window ac",
+    "portable ac",
+    "car ac",
+    "furnace",
+    "pest",
+    "franchise"
+  ],
+  "clusters": [
+    {
+      "id": "emergency_ac",
+      "name": "Emergency AC",
+      "keywords": [
+        "emergency air conditioning",
+        "ac not working",
+        "air con not cooling",
+        "emergency air con repair",
+        "no cooling repair"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "AC Not Working?",
+            "{business} {suburb}",
+            "Emergency Air Con",
+            "24/7 AC Repair",
+            "Licensed HVAC {suburb}",
+            "Same Day AC Fix",
+            "Air Con Not Cooling",
+            "{years} Yrs Experience",
+            "Fast AC Response",
+            "Emergency HVAC",
+            "Local Air Con Repair",
+            "Call {business} Now",
+            "Split System Repair",
+            "Cooling Emergency",
+            "AC Repair {suburb}"
+          ],
+          "descriptions": [
+            "AC not cooling in {suburb}? {business} provides emergency air conditioning repair.",
+            "Emergency air con repair. Licensed technicians. {years}+ years serving {suburb}.",
+            "No cooling on a hot day? Call {business} for same day AC repair in {suburb}.",
+            "Split system and ducted AC emergencies. {business} — trusted in {suburb}."
+          ]
+        },
+        {
+          "headlines": [
+            "Emergency AC {suburb}",
+            "{business} Air Con",
+            "Air Con Breakdown",
+            "AC Repair Today",
+            "Licensed Technicians",
+            "After Hours AC Help",
+            "Cooling Repair Fast",
+            "{years} Years Local",
+            "Split System Experts",
+            "Call for AC Repair",
+            "Trusted HVAC {suburb}",
+            "Air Con Specialists",
+            "Urgent AC Service",
+            "Local AC Technicians",
+            "Fast Air Con Fix"
+          ],
+          "descriptions": [
+            "Air conditioning breakdown in {suburb}? {business} responds fast with licensed techs.",
+            "Emergency split system and ducted repairs. Serving {suburb} for {years}+ years.",
+            "AC not working? Same day service from {business}. Heating and cooling specialists.",
+            "Licensed HVAC for urgent cooling problems in {suburb}. Call {business}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "split_install",
+      "name": "Split system install",
+      "keywords": [
+        "split system install",
+        "split system air conditioning",
+        "air con installation",
+        "split ac install",
+        "new air conditioner install"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Split System Install",
+            "{business} {suburb}",
+            "Air Con Installation",
+            "New Split System",
+            "Licensed Installers",
+            "Split AC {suburb}",
+            "Free Quote Air Con",
+            "{years} Yrs Experience",
+            "Supply & Install",
+            "Ductless Air Con",
+            "Call {business} Today",
+            "Air Con Experts",
+            "Split System Quote",
+            "Local HVAC Install",
+            "Cooling Install {suburb}"
+          ],
+          "descriptions": [
+            "Split system air conditioning install in {suburb}. Licensed team at {business}.",
+            "New split system supply and install. {years}+ years experience. Quote from {business}.",
+            "Professional air con installation for homes in {suburb}. Call {business}.",
+            "Split system specialists. Upfront quotes. {business} serving {suburb}."
+          ]
+        },
+        {
+          "headlines": [
+            "Air Con Install {suburb}",
+            "{business} HVAC",
+            "Split System Experts",
+            "New AC Install",
+            "Licensed {suburb}",
+            "Split AC Installation",
+            "Air Conditioning Quote",
+            "{years} Years Local",
+            "Cooling Installers",
+            "Call for Install Quote",
+            "Trusted Air Con Team",
+            "Split System Supply",
+            "Home Air Con Install",
+            "Professional Install",
+            "Get a Quote Today"
+          ],
+          "descriptions": [
+            "Need a new split system in {suburb}? {business} installs leading brands.",
+            "Air conditioning installation by licensed HVAC techs. {suburb} and surrounds.",
+            "Split system install with upfront pricing. {business} — {years}+ years local.",
+            "From quote to install. Call {business} for air con in {suburb}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ac_repair",
+      "name": "AC repair",
+      "keywords": [
+        "air conditioning repair",
+        "split system repair",
+        "air con repair",
+        "ac service repair",
+        "ducted air con repair"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Air Con Repair {suburb}",
+            "{business} AC Repair",
+            "Split System Repair",
+            "AC Service & Repair",
+            "Licensed HVAC",
+            "Same Day AC Repair",
+            "Ducted AC Repair",
+            "{years} Yrs Experience",
+            "Air Con Not Cold?",
+            "Local AC Technicians",
+            "Call {business} Now",
+            "Cooling Repair",
+            "Trusted {suburb} HVAC",
+            "AC Maintenance",
+            "Fast Air Con Fix"
+          ],
+          "descriptions": [
+            "Air conditioning repair in {suburb}. Split and ducted systems. Call {business}.",
+            "Licensed AC repair with {years}+ years experience. Serving {suburb} homes.",
+            "Split system not cooling? Same day repair from {business} in {suburb}.",
+            "Professional air con service and repair. Upfront quotes from {business}."
+          ]
+        },
+        {
+          "headlines": [
+            "AC Repair {suburb}",
+            "{business} Air Con",
+            "Fix My Air Con",
+            "Split AC Repair",
+            "Licensed Technicians",
+            "Ducted System Repair",
+            "Air Con Service",
+            "{years} Years Local",
+            "Cooling Specialists",
+            "Call for AC Repair",
+            "Local HVAC {suburb}",
+            "Air Con Experts",
+            "Same Day Service",
+            "Trusted AC Repair",
+            "Upfront AC Quotes"
+          ],
+          "descriptions": [
+            "Air con repair across {suburb}. {business} fixes split and ducted systems fast.",
+            "From refrigerant to compressor issues. Licensed HVAC at {business} in {suburb}.",
+            "AC repair you can trust. {years}+ years serving {suburb}. Call {business}.",
+            "Keep cool with professional AC repair. {business} — local {suburb} team."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "heating",
+      "name": "Heating",
+      "keywords": [
+        "heater repair",
+        "heating and cooling",
+        "gas heater service",
+        "reverse cycle repair",
+        "heating repair"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Heater Repair {suburb}",
+            "{business} Heating",
+            "Heating & Cooling",
+            "Gas Heater Service",
+            "Licensed HVAC",
+            "Reverse Cycle Repair",
+            "Heating Not Working?",
+            "{years} Yrs Experience",
+            "Winter Heating Fix",
+            "Local Heater Repair",
+            "Call {business} Now",
+            "Heating Specialists",
+            "Gas Heater Repair",
+            "Trusted {suburb}",
+            "Same Day Heating"
+          ],
+          "descriptions": [
+            "Heater not working in {suburb}? {business} repairs gas and reverse cycle heating.",
+            "Heating and cooling specialists. {years}+ years in {suburb}. Call {business}.",
+            "Gas heater service and repair. Licensed technicians serving {suburb}.",
+            "Stay warm with professional heater repair from {business} in {suburb}."
+          ]
+        },
+        {
+          "headlines": [
+            "Heating Repair",
+            "{business} {suburb}",
+            "Gas Heater Fix",
+            "Heating & Cooling Pro",
+            "Licensed {suburb}",
+            "Reverse Cycle Service",
+            "Heater Service Today",
+            "{years} Years Local",
+            "Heating Experts",
+            "Call for Heater Help",
+            "Local HVAC Team",
+            "Winter Comfort Fix",
+            "Heating Maintenance",
+            "Trusted Heating",
+            "Upfront Quotes"
+          ],
+          "descriptions": [
+            "Heating repair in {suburb}. {business} services gas heaters and reverse cycle units.",
+            "Heating and cooling in one team. Licensed HVAC with {years}+ years experience.",
+            "Cold home? Call {business} for heater repair and service in {suburb}.",
+            "Gas heater and reverse cycle repairs. {business} — trusted in {suburb}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "refrigeration",
+      "name": "Commercial refrigeration",
+      "keywords": [
+        "commercial fridge repair",
+        "cool room repair",
+        "refrigeration repair",
+        "display fridge repair",
+        "commercial refrigeration"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Fridge Repair {suburb}",
+            "{business} Refrigeration",
+            "Commercial Fridge Fix",
+            "Cool Room Repair",
+            "Licensed Refrigeration",
+            "Display Fridge Repair",
+            "Urgent Fridge Down?",
+            "{years} Yrs Experience",
+            "Commercial HVAC",
+            "Call {business} Now",
+            "Refrigeration {suburb}",
+            "Coolroom Specialists",
+            "Fast Fridge Service",
+            "Local Refrig Techs",
+            "Same Day Fridge Fix"
+          ],
+          "descriptions": [
+            "Commercial fridge or cool room down in {suburb}? {business} responds fast.",
+            "Refrigeration repair for cafes, shops and venues. Licensed techs in {suburb}.",
+            "Display fridge and cool room specialists. {years}+ years. Call {business}.",
+            "Commercial refrigeration you can rely on. {business} serving {suburb}."
+          ]
+        },
+        {
+          "headlines": [
+            "Commercial Fridge",
+            "{business} {suburb}",
+            "Cool Room Service",
+            "Refrigeration Repair",
+            "Licensed Techs",
+            "Fridge Not Cold?",
+            "Urgent Refrig Help",
+            "{years} Years Local",
+            "Coolroom Repair",
+            "Call for Fridge Fix",
+            "Trusted Commercial",
+            "Refrigeration Experts",
+            "Same Day Response",
+            "Local Refrig Team",
+            "Upfront Quotes"
+          ],
+          "descriptions": [
+            "Commercial refrigeration repair in {suburb}. Cool rooms and display fridges.",
+            "Fridge breakdown costing you stock? {business} provides urgent service in {suburb}.",
+            "Licensed refrigeration technicians. {years}+ years commercial experience.",
+            "Cool room and fridge repair from {business}. Serving {suburb} businesses."
+          ]
+        }
+      ]
+    }
+  ],
+  "assets": {
+    "sitelinks": [
+      { "text": "Emergency AC", "url": "{destination}", "description1": "24/7 cooling repair", "description2": "Licensed team" },
+      { "text": "Split System Install", "url": "{destination}", "description1": "Supply & install", "description2": "Free quote" },
+      { "text": "Heating Repair", "url": "{destination}", "description1": "Gas & reverse cycle", "description2": "Same day" },
+      { "text": "Get a Quote", "url": "{destination}", "description1": "Upfront pricing", "description2": "{suburb} local" }
+    ],
+    "callouts": [
+      "Licensed & Insured",
+      "Heating & Cooling",
+      "Local {suburb} Team",
+      "{years}+ Years Experience",
+      "Split & Ducted Systems",
+      "Same Day Service"
+    ]
+  },
+  "conversion_action": {
+    "name": "Switchflow Lead — HVAC",
+    "type": "WEBPAGE",
+    "category": "SUBMIT_LEAD_FORM"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "pack_id": "roofing",
+  "vertical": "roofing",
+  "trade_label": "Roofing",
+  "default_offer_cell": "emergency_call",
+  "offer_cells": {
+    "emergency_call": {
+      "label": "Storm damage call",
+      "messaging": "problem_call",
+      "destination_type": "WEBSITE",
+      "cta": "CALL_NOW",
+      "primary_texts": [
+        "Storm damage or a leak through the ceiling in {{city}}? {{business_name}} — roofers on the phone now.",
+        "Tiles lifted after wild weather? Local {{city}} roofers. {{business_name}} answers urgent calls today.",
+        "Active roof leak in {{city}}? Tarp and make-safe from {{business_name}}. Call before more damage spreads."
+      ],
+      "headlines": [
+        "Roof Leak? Call Now",
+        "Storm Damage {{city}}",
+        "Emergency Roofer",
+        "{{business_name}} Roofing",
+        "Leak Through Ceiling?"
+      ],
+      "descriptions": [
+        "Storm make-safe",
+        "Local roofers",
+        "Fast phone response"
+      ],
+      "creative_brief": {
+        "photo_direction": "Real storm damage: missing tiles, tarp on roof, water stain on ceiling — before/after video preferred for planned; emergency still needs real damage photo.",
+        "text_layers": {
+          "headline": "Roof leak {{city}}",
+          "subline": "Storm make-safe · call now",
+          "badge": "Urgent response"
+        },
+        "ratios": ["1:1", "4:5"],
+        "never": "AI perfect roof; stock drone-only hero"
+      },
+      "targeting_defaults": {
+        "geo_radius_km": 35,
+        "age_min": 30,
+        "age_max": 65,
+        "location_type": "home",
+        "notes": "Wider radius OK for roofing. Spike budget after named storms in geo."
+      },
+      "budget_default_daily": 30,
+      "negative_notes": [
+        "Do not promise insurance claim handling unless licensed to",
+        "Higher intent form optional — default website LP"
+      ]
+    },
+    "quote": {
+      "label": "Roof inspection special",
+      "messaging": "before_after",
+      "destination_type": "WEBSITE",
+      "cta": "GET_QUOTE",
+      "primary_texts": [
+        "$199 roof inspection in {{city}} — photos, report, fixed repair quote. {{business_name}}.",
+        "Thinking re-roof? {{business_name}} inspects across {{city}}. Before/after examples on site. Book inspection.",
+        "Tile or metal roof quote in {{city}}? {{business_name}} — on-roof inspect, clear price, no pressure."
+      ],
+      "headlines": [
+        "$199 Roof Inspection",
+        "Roof Quote {{city}}",
+        "Before/After Re-Roof",
+        "{{business_name}} Roofers",
+        "Free Inspection Special"
+      ],
+      "descriptions": [
+        "Photo report included",
+        "Local {{city}} crew",
+        "Clear fixed quote"
+      ],
+      "creative_brief": {
+        "photo_direction": "Before/after re-roof on real suburban home — drone or ground angle of same address if possible. Transformation is the proof.",
+        "text_layers": {
+          "headline": "Roof inspection {{city}}",
+          "subline": "Photo report · fixed quote",
+          "badge": "Book inspection"
+        },
+        "ratios": ["1:1", "4:5"],
+        "never": "AI roof restoration; flat PNG as editable master"
+      },
+      "targeting_defaults": {
+        "geo_radius_km": 30,
+        "age_min": 35,
+        "age_max": 65,
+        "location_type": "home",
+        "notes": "Homeowners 35+. Inspection price must match LP."
+      },
+      "budget_default_daily": 30,
+      "negative_notes": [
+        "Inspection price is the single offer — no storm hook on this cell",
+        "Video 4:5 strong for before/after"
+      ]
+    }
+  }
+}
