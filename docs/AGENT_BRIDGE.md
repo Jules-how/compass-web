@@ -64,6 +64,7 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 | `POST` | `/api/agent/instantly/push-leads` | Agent twin of lead push |
 | `POST` | `/api/agent/instantly/push-sequence` | Agent twin of sequence push |
 | `GET/POST` | `/api/cron/daily-sync` | Vercel Cron daily runner |
+| `GET/POST` | `/api/agent/cs` | Weekly retention run. GET = board counts. POST = recompute + persist drafts (`persist:false` to dry run). Review at `/operations/cs` |
 
 Kinds: `offers` | `expressions` | `structures` | `ctas` | `subjects` | `openers` | `templates`.
 

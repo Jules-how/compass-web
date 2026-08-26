@@ -20,6 +20,7 @@ import {
   type QboClientRecord
 } from '@/lib/qbo'
 import { sydneyTodayYmd } from '@/lib/qbo-invoice.mjs'
+import { spawnInstallOnSubmit } from '@/lib/delivery-dept/store'
 import { bookingGrantEmail, generateOnboardingToken } from '@/lib/onboarding-rate-limit'
 
 export type OnboardingFormRow = {
@@ -249,6 +250,11 @@ export async function processOnboardingSubmit(
   if (updateClientError) throw new Error(updateClientError.message)
 
   const projectId = await ensureDeliveryProject(admin, form.client_id, String(clientRow.name || ''))
+  await spawnInstallOnSubmit(admin, {
+    id: form.client_id,
+    name: String(clientPatch.name || clientRow.name || ''),
+    deal_terms: mergedDealTerms
+  })
   const taskNotes = buildOnboardingTaskNotes(delivery)
   for (const task of taskNotes) {
     await upsertOnboardingTask(admin, projectId, task)

@@ -46,6 +46,7 @@ import { ClientVoicePanel } from '@/components/ClientVoicePanel'
 import { ClientReactivationPanel } from '@/components/clients/ClientReactivationPanel'
 import { ClientMetaAttachPanel } from '@/components/clients/ClientMetaAttachPanel'
 import { ClientGoogleAttachPanel } from '@/components/clients/ClientGoogleAttachPanel'
+import { CsClientHealth } from '@/components/cs-dept/CsClientHealth'
 
 const clientDetailCacheKey = (id: string) => `/api/clients/${id}`
 
@@ -716,6 +717,7 @@ export function ClientDetailPanel({
           </section>
 
           <aside className="compass-panel space-y-4 p-4">
+            <CsClientHealth clientId={client.id} />
             <div>
               <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
                 Progress

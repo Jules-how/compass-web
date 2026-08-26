@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { LeadContact, LeadListFilters, LeadSummaryCounts } from '@/lib/types'
 import { exportToCsv } from '@/lib/csv'
+import { LEAD_EXPORT_MAX } from '@/lib/list-columns'
 import { leadFiltersNeedExactCount, leadFiltersToSearchParams } from '@/lib/leads-query'
 import {
   COMPLETENESS_OPTIONS,
@@ -174,7 +175,7 @@ export default function LeadTable({
         if (rows.length === 0) throw new Error('Select at least one lead')
       } else {
         const params = leadFiltersToSearchParams(filters)
-        params.set('limit', '5000')
+        params.set('limit', String(LEAD_EXPORT_MAX))
         const res = await fetch(`/api/leads/list?${params.toString()}`, { cache: 'no-store' })
         if (!res.ok) {
           const body = await res.json().catch(() => ({}))

@@ -6,6 +6,7 @@ Local and cloud Cursor agents connect to Compass over `/api/agent/*` (secret aut
 
 - Skill: [`.cursor/skills/compass-agent/SKILL.md`](.cursor/skills/compass-agent/SKILL.md)
 - Docs: [`docs/AGENT_BRIDGE.md`](docs/AGENT_BRIDGE.md)
+- List refill (query Compass, do not re-scrape): [`docs/LEAD_REFILL.md`](docs/LEAD_REFILL.md)
 - Prefer `GET /api/agent/brief` before dumping data — keep prompts token-lean. Brief includes `currentWave` (campaign, trade, cluster, remaining). Outbound doctrine is `cold-email/AGENTS.md`, not this app.
 - Instantly replied/interested/meeting/not-interested/OOO/wrong-person leads sync into `lead_contacts` so Inbox Instantly stays aligned.
 - Compass can create a paused Instantly campaign, push sequence copy, and push cohort leads with merge vars (`POST /api/campaigns/:id/instantly/*` and `/api/agent/instantly/*`). Activate stays in Instantly.

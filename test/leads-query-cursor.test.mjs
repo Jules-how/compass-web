@@ -71,6 +71,18 @@ test('legacy agent GET is only status/limit/q', () => {
   assert.equal(isLegacy('pipeline_campaign_id=none'), false)
 })
 
+test('UI export uses a 5000 row path, not the 100 row table cap', () => {
+  const search = read('src/lib/lead-search.ts')
+  const list = read('src/app/api/leads/list/route.ts')
+  const cols = read('src/lib/list-columns.ts')
+  assert.match(cols, /LEAD_EXPORT_MAX = 5000/)
+  assert.match(cols, /LEAD_UI_PAGE_MAX = 100/)
+  assert.match(search, /mode\?: 'ui' \| 'agent' \| 'export'/)
+  assert.match(search, /mode === 'export' \? LEAD_EXPORT_MAX/)
+  assert.match(list, /mode: exportLimit \? 'export' : 'ui'/)
+  assert.match(list, /LEAD_EXPORT_MAX/)
+})
+
 test('shared filter grammar includes state and unattached none', () => {
   const src = read('src/lib/leads-query.ts')
   assert.match(src, /state:/)

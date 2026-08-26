@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LeadListFilters, LeadSummaryCounts } from '@/lib/types'
-import { LEAD_LIST_COLUMNS, LEAD_PAGE_SIZE } from '@/lib/list-columns'
+import { LEAD_EXPORT_MAX, LEAD_LIST_COLUMNS, LEAD_PAGE_SIZE, LEAD_UI_PAGE_MAX } from '@/lib/list-columns'
 import {
   AGENT_LEAD_COHORT_COLUMNS,
   AGENT_LEAD_LEAN_COLUMNS,
@@ -33,8 +33,8 @@ export type LeadSearchOptions = {
   pageSize?: number
   /** Legacy cohort alias only. Ignored when cursor is set. */
   offset?: number
-  /** UI list: offset pages + mirrored_at order. Agent: keyset on email,id. */
-  mode?: 'ui' | 'agent'
+  /** UI list: offset pages + mirrored_at order. Export: same order, up to 5000. Agent: keyset on email,id. */
+  mode?: 'ui' | 'agent' | 'export'
 }
 
 export type LeadSearchResult = {
@@ -84,10 +84,11 @@ export async function searchLeadContacts(
   options: LeadSearchOptions = {}
 ): Promise<LeadSearchResult> {
   const mode = options.mode ?? 'agent'
-  if (mode === 'ui') {
+  if (mode === 'ui' || mode === 'export') {
     const page = options.page && options.page > 0 ? Math.floor(options.page) : 1
+    const maxSize = mode === 'export' ? LEAD_EXPORT_MAX : LEAD_UI_PAGE_MAX
     const pageSize = options.pageSize
-      ? Math.min(100, Math.max(1, Math.floor(options.pageSize)))
+      ? Math.min(maxSize, Math.max(1, Math.floor(options.pageSize)))
       : LEAD_PAGE_SIZE
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1

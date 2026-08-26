@@ -58,3 +58,5 @@ export const LEAD_LIST_COLUMNS =
 export const TOP_TASK_LIMIT = 100
 export const SUBTASK_LIMIT = 300
 export const LEAD_PAGE_SIZE = 50
+export const LEAD_UI_PAGE_MAX = 100
+export const LEAD_EXPORT_MAX = 5000

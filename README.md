@@ -101,6 +101,7 @@ Set `COMPASS_AGENT_SECRET` (and optional `CRON_SECRET`) so local/cloud Cursor
 agents can call the lean agent API and Vercel Cron can refresh ads + Instantly
 into Compass once per day. See [docs/AGENT_BRIDGE.md](docs/AGENT_BRIDGE.md) and
 [`.cursor/skills/compass-agent/SKILL.md`](.cursor/skills/compass-agent/SKILL.md).
+List refill from `lead_contacts` (do not re-scrape): [docs/LEAD_REFILL.md](docs/LEAD_REFILL.md).
 
 Apply migration `0035_compass_agent_sync.sql` for sync snapshots.
 Leave `COMPASS_PORTAL_V1` unset to keep the customer delivery slice disabled
@@ -162,6 +163,7 @@ tenant and rejects expiry, revocation, mismatch, and cross-user replay.
 | Tasks | `/tasks`, `/api/tasks/**` | Owner/operator only |
 | Projects | `/projects`, `/api/projects/**` | Owner/operator only |
 | Functions | `/functions`, `/api/functions/**` | Owner/operator only |
+| Retention (CS) | `/operations/cs`, `/api/cs`, `/api/agent/cs` | Owner/operator only |
 | Customer leads | `/leads` | Active customer membership |
 | Delivery list | `/delivery` | Active tenant member |
 | Delivery project | `/delivery/[projectId]` | Same-tenant member |

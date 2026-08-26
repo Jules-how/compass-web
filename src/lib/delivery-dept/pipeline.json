@@ -1,0 +1,94 @@
+{
+  "id": "missed_call_install",
+  "title": "Missed call install",
+  "capacity": 10,
+  "julesHoursCap": 2,
+  "timezone": "Australia/Sydney",
+  "columns": [
+    "intake_form",
+    "number_strategy",
+    "retell_agent",
+    "calendar_grant",
+    "test_call",
+    "go_live",
+    "checkpoint"
+  ],
+  "checkpoints": ["day_1", "day_7", "day_25"],
+  "steps": [
+    {
+      "id": "intake_form",
+      "title": "Intake form",
+      "column": "Intake",
+      "owner": "automated",
+      "slaHours": 2,
+      "julesMinutes": 0,
+      "blockedOnDefault": "owner",
+      "sms": "Hi {ownerFirst}, Jules at Switchflow. Got the form for {business}. Next I lock the number setup for your {carrier} {lineType}. I will text when the after hours line is ready. Reply if anything changed."
+    },
+    {
+      "id": "number_strategy",
+      "title": "Number strategy",
+      "column": "Number",
+      "owner": "jules",
+      "slaHours": 0.5,
+      "julesMinutes": 5,
+      "blockedOnDefault": null,
+      "sms": "Hi {ownerFirst}. Number plan for {business}: new booking line, your published number {publishedNumber} stays. You divert missed and busy calls with a short code when we sit down. Stay near the phone for a 15 minute window."
+    },
+    {
+      "id": "retell_agent",
+      "title": "Retell agent",
+      "column": "Agent",
+      "owner": "automated",
+      "slaHours": 0.25,
+      "julesMinutes": 2,
+      "blockedOnDefault": null,
+      "sms": "Hi {ownerFirst}. The after hours voice for {business} is built from the {packLabel} pack. Next I need your Google Calendar shared with {grantEmail} as Make changes to events. Then one test call."
+    },
+    {
+      "id": "calendar_grant",
+      "title": "Calendar grant",
+      "column": "Calendar",
+      "owner": "automated",
+      "slaHours": 1,
+      "julesMinutes": 5,
+      "blockedOnDefault": "owner",
+      "sms": "Hi {ownerFirst}. Calendar is connected for {business}. Bookings will land on the calendar you shared. Test call is next if we have not done it."
+    },
+    {
+      "id": "test_call",
+      "title": "Test call",
+      "column": "Test call",
+      "owner": "jules",
+      "slaHours": 2,
+      "julesMinutes": 25,
+      "blockedOnDefault": null,
+      "sms": "Hi {ownerFirst}. Ready to test {business}. I will miss-call {publishedNumber} so it diverts. Keep MessageBank off. About 15 minutes. When it books I switch you live."
+    },
+    {
+      "id": "go_live",
+      "title": "Go live",
+      "column": "Go live",
+      "owner": "jules",
+      "slaHours": 4,
+      "julesMinutes": 10,
+      "blockedOnDefault": null,
+      "sms": "Hi {ownerFirst}. {business} is live on {publishedNumber}. Do not turn MessageBank back on. Do not cancel the forwards. I will check in tomorrow."
+    },
+    {
+      "id": "checkpoint",
+      "title": "Checkpoints",
+      "column": "Checkpoints",
+      "owner": "jules",
+      "slaHours": 4,
+      "julesMinutes": 20,
+      "blockedOnDefault": null,
+      "sms": "Hi {ownerFirst}. {checkpointLabel} check for {business}. I count booked and showed jobs from go live, not ad clicks. If forwarding feels off, say so and I will miss-call to confirm."
+    }
+  ],
+  "checkpointMeta": {
+    "day_1": { "label": "Day 1", "offsetDays": 1, "julesMinutes": 15 },
+    "day_7": { "label": "Day 7", "offsetDays": 7, "julesMinutes": 20 },
+    "day_25": { "label": "Day 25", "offsetDays": 25, "julesMinutes": 20 }
+  }
+}

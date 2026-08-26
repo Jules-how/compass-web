@@ -114,6 +114,7 @@ test('agent bridge routes and cron are wired', () => {
   const cron = read('src/app/api/cron/daily-sync/route.ts')
   const vercel = read('vercel.json')
   const pushLeads = read('src/app/api/agent/instantly/push-leads/route.ts')
+  const cs = read('src/app/api/agent/cs/route.ts')
 
   assert.match(brief, /requireAgentAuth/)
   assert.match(sync, /runAgentSync/)
@@ -127,6 +128,8 @@ test('agent bridge routes and cron are wired', () => {
   assert.match(vercel, /\/api\/cron\/daily-sync/)
   assert.match(vercel, /15 20 \* \* \*/)
   assert.match(pushLeads, /pushLeadsToInstantly/)
+  assert.match(cs, /requireAgentAuth/)
+  assert.match(cs, /runCsDept/)
 })
 
 test('lead facts parser and per-row mark path are wired', () => {

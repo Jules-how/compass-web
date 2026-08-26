@@ -15,7 +15,13 @@ Append-only evidence, component stats, and ranked digest actions.
 | `invoice.created` / `invoice.paid` / `invoice.overdue` | `qbo` | doc | `qbo:{type}:{doc_id}` |
 | `form.submitted` | `onboarding` | form | `onboarding:form.submitted:{form_id}` |
 | `call.*` | `voice` | call | `voice:{type}:{call_id}` |
+| `job.showed` | `delivery` | call | `delivery:job.showed:{call_id}` |
+| `page_view` / `cta.tel_click` / `cta.sms_click` / `form.submit` | `sites` | hit | `sites:{type}:{native_id}` |
 | `pipeline.stage_changed` | `compass` | lead × stage | `compass:pipeline.stage_changed:{lead}:{stage}:{ts}` |
+| `cs.health_scored` | `cs` | client × week | `cs:cs.health_scored:{snapshot_id}` |
+| `cs.weekly_summary` / `cs.monday_sms` / `cs.monday_email` / `cs.save_play` / `cs.guarantee` / `cs.qbr` | `cs` | artifact | `cs:{type}:{artifact_id}` |
+
+Client results portal (switchflow-sites `/results/[slug]`) reads this spine. Captured = unique `call.*` call ids. Booked = `call.booked`. Showed = `job.showed`. Estimated recovered revenue = showed × the shop's average job value. Same snapshot writes the Monday SMS and email. Seeded demo: Harbour Pipe Rescue. Do not cite those counts as a live case study.
 
 Tags on Instantly events:
 
@@ -25,7 +31,7 @@ Tags on Instantly events:
 
 Positive outcomes = `lead.interested` + `lead.meeting_booked`. Ignore opens. Do not trust Instantly `total_opportunities`.
 
-Writers: `src/lib/instantly-webhook.ts` (live), `src/lib/instantly-backfill.ts` (history), `src/lib/evidence-poller.ts` (QBO/onboarding/voice/pipeline).
+Writers: `src/lib/instantly-webhook.ts` (live), `src/lib/instantly-backfill.ts` (history), `src/lib/evidence-poller.ts` (QBO/onboarding/voice/pipeline), `src/lib/cs-dept/store.ts` (retention snapshots).
 
 ## Instantly backfill runbook
 

@@ -130,6 +130,15 @@ export function CrmIcon(props: IconProps) {
   )
 }
 
+export function RetentionIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 5.5c2.8 0 5 2.1 5 4.7 0 3.3-3.4 6.4-5 7.3-1.6-.9-5-4-5-7.3 0-2.6 2.2-4.7 5-4.7Z" />
+      <path d="M10.2 10.1h1.4l.7 1.6.7-2.4.6.8h1.2" />
+    </Icon>
+  )
+}
+
 export function FinancesIcon(props: IconProps) {
   return (
     <Icon {...props}>

@@ -63,6 +63,7 @@ All must pass before `voice.live_at`:
 - Test call with outcome `booked` or `callback_captured` in `compass_voice_calls`
 - Test SMS booking completed
 - STOP honoured
+- Pack regression: `node voice-lab/bin/run.mjs --pack {trade_pack_id} --gate`
 
 Use **ClientVoicePanel** in the client detail view for the checklist.
 
@@ -92,6 +93,8 @@ Use **ClientVoicePanel** in the client detail view for the checklist.
 Canonical home: `voice-agents/packs/{plumbing_gas,hvac_refrig,electrical_av,roofing}.json`. New trade = new pack file, not code.
 
 Master agent spec: `voice-agents/master-agent.md`.
+
+Install board (owners, SLA, blocked on, SMS drafts): Compass `/operations/installs`. Engine: `delivery-dept/` (deploy copy in `src/lib/delivery-dept/`).
 
 ## UI mount
 

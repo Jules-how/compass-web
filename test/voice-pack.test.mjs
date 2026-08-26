@@ -41,6 +41,23 @@ test('pack recording disclosure matches compliance wording', () => {
   }
 })
 
+test('electrical and roofing emergency rules match trade protocol', () => {
+  const electrical = readPack('electrical_av')
+  const roofing = readPack('roofing')
+  const eTriggers = electrical.escalation.emergency.triggers.join(' ').toLowerCase()
+  const rTriggers = roofing.escalation.emergency.triggers.join(' ').toLowerCase()
+  assert.match(eTriggers, /sparking/)
+  assert.match(eTriggers, /burning smell/)
+  assert.match(rTriggers, /active leak/)
+  assert.match(rTriggers, /rain/)
+  const eExtra = (electrical.qualify_extra || []).join(' ')
+  const rExtra = (roofing.qualify_extra || []).join(' ')
+  assert.match(eExtra, /Never give a price or quote/)
+  assert.match(eExtra, /technical/)
+  assert.match(rExtra, /Never give a price or quote/)
+  assert.match(rExtra, /technical/)
+})
+
 test('emergency job types are not bookable', () => {
   const emergencyIds = {
     plumbing_gas: 'gas_leak',
