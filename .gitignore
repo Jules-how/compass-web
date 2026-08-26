@@ -24,5 +24,8 @@ next-env.d.ts
 artifacts/
 .env*
 
+# local SQLite lead mirror (real rows; never commit)
+data/
+
 # local Cursor hook runtime state (machine paths; not product)
 .cursor/hooks/state/
