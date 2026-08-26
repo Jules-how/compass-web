@@ -142,3 +142,109 @@ export function ingestSkipReason(mapped: MappedLeadRow): string | null {
   if (!mapped.company.trim()) return 'missing company'
   return null
 }
+
+/** Collapse legal suffixes and casing so company+city matches stay stable. */
+export function normalizeCompanyKey(raw: string | null | undefined): string {
+  let cleaned = String(raw ?? '')
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .trim()
+  if (!cleaned) return ''
+  cleaned = cleaned
+    .replace(/\s+(Pty\s*Ltd|Pty\s*Limited|Proprietary\s*Limited|Services|Group|Pty|Ltd|LLC|Co\b)\.?$/i, '')
+    .replace(/\s+(Pty\s*Ltd|Pty\s*Limited|Proprietary\s*Limited|Services|Group|Pty|Ltd|LLC)\b/gi, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return cleaned
+}
+
+export function normalizeCityKey(raw: string | null | undefined): string {
+  return String(raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function companyCityKey(
+  company: string | null | undefined,
+  city: string | null | undefined
+): string {
+  const companyKey = normalizeCompanyKey(company)
+  const cityKey = normalizeCityKey(city)
+  if (!companyKey) return ''
+  return `${companyKey}|${cityKey}`
+}
+
+export function mapLegacyEnrichStatus(value: string | null | undefined): string | null {
+  const raw = String(value ?? '').trim().toLowerCase()
+  if (!raw) return null
+  if (raw === 'ready') return 'enriched'
+  return raw
+}
+
+export function mapLegacyIcpStatus(value: string | null | undefined): string | null {
+  const raw = String(value ?? '').trim().toLowerCase()
+  if (!raw) return null
+  if (raw === 'qualified') return 'pass'
+  return raw
+}
+
+export function mapLegacyEmailOrigin(value: string | null | undefined): string | null {
+  const raw = String(value ?? '').trim().toLowerCase()
+  if (!raw) return null
+  if (raw === 'gmaps' || raw === 'google' || raw === 'maps') return 'published'
+  return raw
+}
+
+export function sqliteArchivedFlag(value: unknown): boolean {
+  return value === true || value === 1 || value === '1'
+}
+
+/** Clean trade company name (keep casing). Used on upload, not just dedupe keys. */
+export function cleanTradeCompanyName(raw: string): string {
+  let cleaned = (raw || '').trim()
+  if (!cleaned) return ''
+  cleaned = cleaned.replace(/^["']|["']$/g, '').trim()
+  cleaned = cleaned
+    .replace(/\s+(Pty\s*Ltd|Pty\s*Limited|Proprietary\s*Limited|Services|Group|Pty|Ltd|LLC|Co\b)\.?$/i, '')
+    .replace(/\s+(Pty\s*Ltd|Pty\s*Limited|Proprietary\s*Limited|Services|Group|Pty|Ltd|LLC)\b/gi, '')
+    .trim()
+  return cleaned
+}
+
+export function isEmailHandleOrCorrupted(name: string, email: string): boolean {
+  if (!name || !name.trim()) return true
+  const n = name.trim().toLowerCase()
+  const emailLocal = (email || '').split('@')[0]?.toLowerCase() || ''
+  if (emailLocal && n === emailLocal) return true
+  if (/\d/.test(n) && !n.includes(' ')) return true
+  if (['cpm', 'jobs', 'team', 'service', 'admin', 'info', 'reception', 'sales'].includes(n)) return true
+  return false
+}
+
+export function deriveCleanName(
+  rawName: string,
+  rawFirstName: string,
+  rawCompany: string,
+  email: string
+): string {
+  const companyClean = cleanTradeCompanyName(rawCompany)
+  const candidate = (rawFirstName || rawName || '').trim()
+  if (candidate.toLowerCase().endsWith('team')) return candidate
+  if (candidate && !isEmailHandleOrCorrupted(candidate, email)) {
+    const firstWord = candidate.split(/\s+/)[0]
+    if (firstWord && /^[A-Z][a-z'-]+$/i.test(firstWord) && !firstWord.toLowerCase().endsWith("'s")) {
+      return firstWord
+    }
+  }
+  if (companyClean) {
+    const shortCompany = companyClean.split(/\s+/).slice(0, 2).join(' ')
+    return `${shortCompany} team`
+  }
+  return 'team'
+}

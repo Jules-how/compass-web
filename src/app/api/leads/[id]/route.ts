@@ -1,7 +1,5 @@
 import type { NextRequest } from 'next/server'
-import { requirePortalAccess } from '@/lib/portal-access'
 import {
-  portalAccessResponse,
   portalJson,
   readBoundedJson,
   requireSameOrigin
@@ -10,8 +8,8 @@ import { applyLeadIcpFields } from '@/lib/lead-icp'
 import { parseLeadFacts, type LeadFact } from '@/lib/lead-facts'
 import { parseCompanySite } from '@/lib/company-site'
 import { MAX_LEAD_OPENER } from '@/lib/campaigns'
+import { getPortalAdminClient } from '@/lib/portal-admin'
 import { LEAD_LIST_COLUMNS } from '@/lib/list-columns'
-import type { LeadContact } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,9 +57,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return portalJson({ error: 'empty_patch' }, { status: 400 })
   }
 
+  const stamp = new Date().toISOString()
   const patch: Record<string, unknown> = {
-    updated_at: new Date().toISOString(),
-    mirrored_at: new Date().toISOString()
+    updated_at: stamp,
+    mirrored_at: stamp
   }
 
   if (body.opener !== undefined) {
@@ -73,6 +72,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (body.lead_facts !== undefined) {
     const facts = parseLeadFacts(body.lead_facts)
     if (!facts.ok) return portalJson({ error: facts.error }, { status: 400 })
+    // Supabase jsonb: store the array. SQLite WIP stringified this column.
     patch.lead_facts = facts.facts as LeadFact[]
   }
 
@@ -99,8 +99,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    const { supabase } = await requirePortalAccess({ operator: true })
-    const { data, error } = await supabase
+    const admin = getPortalAdminClient()
+    const { data: lead, error } = await admin
       .from('lead_contacts')
       .update(patch)
       .eq('id', id)
@@ -108,11 +108,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       .maybeSingle()
 
     if (error) {
-      return portalJson({ error: 'update_failed', detail: error.message }, { status: 400 })
+      return portalJson({ error: 'update_failed', detail: error.message }, { status: 500 })
     }
-    if (!data) return portalJson({ error: 'not_found' }, { status: 404 })
-    return portalJson({ lead: data as LeadContact })
+    if (!lead) return portalJson({ error: 'not_found' }, { status: 404 })
+    return portalJson({ lead })
   } catch (err) {
-    return portalAccessResponse(err) ?? portalJson({ error: 'update_failed' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'update_failed'
+    return portalJson({ error: 'update_failed', detail: message }, { status: 500 })
   }
 }

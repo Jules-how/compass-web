@@ -83,15 +83,63 @@ export type LeadInventoryPayload = {
   byVertical: InventoryVerticalRow[]
 }
 
-export function buildLeadInventory(
-  rows: Array<{
+export function addInventoryCount(
+  inventory: {
+    all: number
+    uncontacted: number
+    uncontactedWithEmail: number
+    byVertical: Map<
+      string,
+      {
+        uncontacted: number
+        uncontactedWithEmail: number
+        withState: number
+        blankState: number
+        byState: Record<string, number>
+      }
+    >
+  },
+  row: {
     vertical?: string | null
     outbound_status?: string | null
     email?: string | null
+    emailUsable?: boolean
     state?: string | null
-  }>
-): LeadInventoryPayload {
-  const byVertical = new Map<
+  },
+  n = 1
+) {
+  inventory.all += n
+  const vertical = canonicalizeVertical(row.vertical)
+  const bucket = inventory.byVertical.get(vertical) ?? {
+    uncontacted: 0,
+    uncontactedWithEmail: 0,
+    withState: 0,
+    blankState: 0,
+    byState: {}
+  }
+  if ((row.outbound_status || '') === 'uncontacted') {
+    inventory.uncontacted += n
+    bucket.uncontacted += n
+    const usable = row.emailUsable ?? hasUsableEmail(row.email)
+    if (usable) {
+      inventory.uncontactedWithEmail += n
+      bucket.uncontactedWithEmail += n
+      const state = canonicalizeState(row.state)
+      if (state === '(blank)') bucket.blankState += n
+      else {
+        bucket.withState += n
+        bucket.byState[state] = (bucket.byState[state] || 0) + n
+      }
+    }
+  }
+  inventory.byVertical.set(vertical, bucket)
+}
+
+export function finishLeadInventory(partial: {
+  all: number
+  uncontacted: number
+  uncontactedWithEmail: number
+  byVertical: Map<
     string,
     {
       uncontacted: number
@@ -100,40 +148,9 @@ export function buildLeadInventory(
       blankState: number
       byState: Record<string, number>
     }
-  >()
-
-  let all = 0
-  let uncontacted = 0
-  let uncontactedWithEmail = 0
-
-  for (const row of rows) {
-    all += 1
-    const vertical = canonicalizeVertical(row.vertical)
-    const bucket = byVertical.get(vertical) ?? {
-      uncontacted: 0,
-      uncontactedWithEmail: 0,
-      withState: 0,
-      blankState: 0,
-      byState: {}
-    }
-    if ((row.outbound_status || '') === 'uncontacted') {
-      uncontacted += 1
-      bucket.uncontacted += 1
-      if (hasUsableEmail(row.email)) {
-        uncontactedWithEmail += 1
-        bucket.uncontactedWithEmail += 1
-        const state = canonicalizeState(row.state)
-        if (state === '(blank)') bucket.blankState += 1
-        else {
-          bucket.withState += 1
-          bucket.byState[state] = (bucket.byState[state] || 0) + 1
-        }
-      }
-    }
-    byVertical.set(vertical, bucket)
-  }
-
-  const list: InventoryVerticalRow[] = [...byVertical.entries()]
+  >
+}): LeadInventoryPayload {
+  const list: InventoryVerticalRow[] = [...partial.byVertical.entries()]
     .map(([vertical, v]) => ({ vertical, ...v }))
     .sort(
       (a, b) =>
@@ -144,7 +161,38 @@ export function buildLeadInventory(
 
   return {
     generatedAt: new Date().toISOString(),
-    totals: { all, uncontacted, uncontactedWithEmail },
+    totals: {
+      all: partial.all,
+      uncontacted: partial.uncontacted,
+      uncontactedWithEmail: partial.uncontactedWithEmail
+    },
     byVertical: list
   }
+}
+
+export function buildLeadInventory(
+  rows: Array<{
+    vertical?: string | null
+    outbound_status?: string | null
+    email?: string | null
+    state?: string | null
+  }>
+): LeadInventoryPayload {
+  const partial = {
+    all: 0,
+    uncontacted: 0,
+    uncontactedWithEmail: 0,
+    byVertical: new Map<
+      string,
+      {
+        uncontacted: number
+        uncontactedWithEmail: number
+        withState: number
+        blankState: number
+        byState: Record<string, number>
+      }
+    >()
+  }
+  for (const row of rows) addInventoryCount(partial, row, 1)
+  return finishLeadInventory(partial)
 }
