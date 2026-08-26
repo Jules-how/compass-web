@@ -2,11 +2,10 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { callTool, clampLimit, handleRpc, parseEnvFile, resolveConfig, TOOLS } from '../mcp/lib.mjs'
 
-test('exactly six tools', () => {
-  assert.equal(TOOLS.length, 6)
+test('core tools plus leads.search / leads.commit', () => {
   assert.deepEqual(
     TOOLS.map((t) => t.name),
-    ['brief', 'campaigns', 'leads', 'mark', 'copy', 'land']
+    ['brief', 'campaigns', 'leads', 'leads.search', 'leads.commit', 'mark', 'copy', 'land']
   )
 })
 
@@ -101,7 +100,33 @@ test('copy patch sends Prefer minimal', async () => {
 
 test('rpc tools/list', async () => {
   const res = await handleRpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, { cfg, fetchImpl: mockFetch({}) })
-  assert.equal(res.result.tools.length, 6)
+  assert.equal(res.result.tools.length, 8)
+})
+
+test('leads.search hits unified GET', async () => {
+  const capture = {}
+  await callTool(
+    'leads.search',
+    { view: 'rows', pipeline_campaign_id: 'none', columns: 'cohort', limit: 2000 },
+    { cfg, fetchImpl: mockFetch(capture) }
+  )
+  const u = new URL(capture.url)
+  assert.match(u.pathname, /\/api\/agent\/leads$/)
+  assert.equal(u.searchParams.get('view'), 'rows')
+  assert.equal(u.searchParams.get('pipeline_campaign_id'), 'none')
+  assert.equal(u.searchParams.get('columns'), 'cohort')
+})
+
+test('leads.commit posts rows', async () => {
+  const capture = {}
+  await callTool(
+    'leads.commit',
+    { rows: [{ email: 'a@b.c', company: 'Acme' }], on_conflict: 'email' },
+    { cfg, fetchImpl: mockFetch(capture) }
+  )
+  assert.equal(capture.method, 'POST')
+  assert.match(capture.url, /\/api\/agent\/leads$/)
+  assert.deepEqual(JSON.parse(capture.body).rows[0].company, 'Acme')
 })
 
 test('rpc ignores notifications', async () => {

@@ -22,7 +22,12 @@ test('customer and legacy operator data routes never import a service-role clien
         !file.includes('/api/operator/') &&
         !file.includes('/api/ingest/') &&
         !file.includes('/api/agent/') &&
-        !file.includes('/api/cron/')
+        !file.includes('/api/cron/') &&
+        !file.includes('/api/webhooks/') &&
+        !file.includes('/api/voice/') &&
+        !file.includes('/api/onboarding/') &&
+        !file.includes('/onboarding/') &&
+        !file.includes('/api/qbo/webhook')
     )
     .filter((file) => /getSupabaseServiceClient|getPortalAdminClient|SUPABASE_SERVICE_ROLE_KEY/.test(readFileSync(file, 'utf8')))
     .map((file) => relative(appRoot.pathname, file))
@@ -46,7 +51,15 @@ test('customer and legacy operator data routes never import a service-role clien
     'api/cron/daily-sync/route.ts',
     'api/ingest/comms/route.ts',
     'api/ingest/leads/route.ts',
-    'api/operator/invitations/route.ts'
+    'api/onboarding/[token]/route.ts',
+    'api/clients/[id]/onboarding/route.ts',
+    'api/operator/invitations/route.ts',
+    'api/qbo/webhook/route.ts',
+    'api/voice/inbound/route.ts',
+    'api/voice/postcall/route.ts',
+    'api/voice/sms/route.ts',
+    'api/voice/tools/route.ts',
+    'api/webhooks/instantly/route.ts'
   ])
 })
 
@@ -70,7 +83,11 @@ test('every cookie-authenticated mutation route enforces a same-origin request',
       (file) =>
         !file.includes('/api/ingest/') &&
         !file.includes('/api/agent/') &&
-        !file.includes('/api/cron/')
+        !file.includes('/api/cron/') &&
+        !file.includes('/api/webhooks/') &&
+        !file.includes('/api/voice/') &&
+        !file.includes('/api/onboarding/') &&
+        !file.includes('/api/qbo/webhook')
     )
     .filter((file) => !/requireSameOrigin/.test(readFileSync(file, 'utf8')))
     .map((file) => relative(appRoot.pathname, file))

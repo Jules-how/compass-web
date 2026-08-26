@@ -1,14 +1,11 @@
 import type { NextRequest } from 'next/server'
-import { requirePortalAccess } from '@/lib/portal-access'
 import {
-  portalAccessResponse,
   portalJson,
   portalJsonCached,
   readBoundedJson,
   requireSameOrigin
 } from '@/lib/portal-http'
 import {
-  CAMPAIGN_BOARD_COLUMNS,
   dateOnlyInZone,
   defaultGoLiveAt,
   emptyCampaignCopyFields,
@@ -27,7 +24,12 @@ import {
   type OutboundSequence
 } from '@/lib/outbound-copy'
 import { applyLeadTallies, tallyLeadsByCampaign } from '@/lib/campaign-wave'
-import { syncCampaignToGoogleCalendarQuiet } from '@/lib/campaign-google-calendar'
+import {
+  getLocalDb,
+  getPipelineCampaigns,
+  upsertPipelineCampaign,
+  addPipelineActivity
+} from '@/lib/local-db'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,32 +50,23 @@ function projectCampaign(row: CompassCampaign): CompassCampaign {
 
 export async function GET() {
   try {
-    const { supabase } = await requirePortalAccess({ operator: true })
-    const [campaignRes, leadsRes] = await Promise.all([
-      supabase
-        .from('compass_pipeline_campaigns')
-        .select(CAMPAIGN_BOARD_COLUMNS)
-        .order('go_live_at', { ascending: true })
-        .order('name'),
-      supabase
-        .from('lead_contacts')
-        .select('pipeline_campaign_id,outbound_status,opener')
-        .not('pipeline_campaign_id', 'is', null)
-        .limit(8000)
-    ])
+    const db = getLocalDb()
+    const campaigns = getPipelineCampaigns().map(projectCampaign)
 
-    if (campaignRes.error) {
-      return portalJson({ error: 'fetch_failed', detail: campaignRes.error.message }, { status: 500 })
-    }
+    const leads = db.prepare(`
+      SELECT pipeline_campaign_id, outbound_status, opener
+      FROM lead_contacts
+      WHERE pipeline_campaign_id IS NOT NULL
+    `).all() as Array<{ pipeline_campaign_id: string; outbound_status: string; opener: string | null }>
 
-    const campaigns = ((campaignRes.data ?? []) as CompassCampaign[]).map(projectCampaign)
-    const tallies = leadsRes.error ? {} : tallyLeadsByCampaign(leadsRes.data ?? [])
+    const tallies = tallyLeadsByCampaign(leads)
 
     return portalJsonCached({
       campaigns: applyLeadTallies(campaigns, tallies)
-    })
+    }, {}, 5)
   } catch (err) {
-    return portalAccessResponse(err) ?? portalJson({ error: 'fetch_failed' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'fetch_failed'
+    return portalJson({ error: 'fetch_failed', detail: message }, { status: 500 })
   }
 }
 
@@ -117,18 +110,17 @@ export async function POST(request: NextRequest) {
   }
 
   const stamp = nowIso()
-  const parsedGoLive = parseGoLiveAt(body.go_live_at === undefined ? defaultGoLiveAt() : body.go_live_at)
-  if (!parsedGoLive.ok) return portalJson({ error: 'invalid_go_live_at' }, { status: 400 })
-  const goLiveAt = parsedGoLive.iso || defaultGoLiveAt()
-  const today = stamp.slice(0, 10)
-  const start = body.start_date || dateOnlyInZone(goLiveAt) || today
-  const end = body.end_date || start
-  const copyDefaults = emptyCampaignCopyFields()
-  const sequenceDraft = body.sequence_draft ?? null
-  const lockedExpression =
-    (sequenceDraft && coldExpressionFromSequence(sequenceDraft)) ||
-    body.cold_expression?.trim() ||
-    null
+  const parsedGoLiveRes = parseGoLiveAt(body.go_live_at === undefined ? defaultGoLiveAt() : body.go_live_at)
+  const parsedGoLive = parsedGoLiveRes.ok ? parsedGoLiveRes.iso : null
+  const inferredStartDate = parsedGoLive ? dateOnlyInZone(parsedGoLive) : null
+  const startDate = body.start_date !== undefined ? body.start_date : inferredStartDate
+
+  const inferredColdExpression =
+    body.cold_expression !== undefined
+      ? body.cold_expression
+      : body.sequence_draft
+        ? coldExpressionFromSequence(body.sequence_draft)
+        : null
 
   const row = {
     id: `campaign-${crypto.randomUUID()}`,
@@ -136,54 +128,35 @@ export async function POST(request: NextRequest) {
     status: normalizeCampaignStatus(body.status),
     priority: typeof body.priority === 'number' ? body.priority : 0,
     health: normalizeCampaignHealth(body.health),
-    start_date: start,
-    end_date: end < start ? start : end,
-    go_live_at: goLiveAt,
-    color: body.color?.trim() || '#94a3b8',
-    summary: body.summary?.trim() || null,
+    start_date: startDate,
+    end_date: body.end_date ?? null,
+    go_live_at: parsedGoLive,
+    color: body.color || '#94a3b8',
+    summary: body.summary ?? null,
     labels: normalizeLabels(body.labels),
-    owner_label: body.owner_label?.trim() || null,
-    ...copyDefaults,
+    owner_label: body.owner_label ?? null,
     instantly_campaign_id: body.instantly_campaign_id?.trim() || null,
-    offer_key: body.offer_key?.trim() || sequenceDraft?.offer_key || null,
-    structure_id: body.structure_id?.trim() || sequenceDraft?.structure_id || null,
-    opener_mode: body.opener_mode?.trim() || copyDefaults.opener_mode,
+    offer_key: body.offer_key?.trim() || null,
+    structure_id: body.structure_id?.trim() || null,
+    opener_mode: body.opener_mode?.trim() || null,
     vertical_tags: normalizeOutboundTagList(body.vertical_tags),
     location_tags: normalizeOutboundTagList(body.location_tags),
-    cold_expression: lockedExpression,
-    sequence_draft: sequenceDraft,
-    copy_status: normalizeCopyStatus(
-      body.copy_status || (sequenceDraft ? 'draft' : copyDefaults.copy_status)
-    ),
+    copy_status: normalizeCopyStatus(body.copy_status),
+    cold_expression: inferredColdExpression,
+    sequence_draft: body.sequence_draft ?? null,
     created_at: stamp,
     updated_at: stamp
   }
 
   try {
-    const { supabase } = await requirePortalAccess({ operator: true })
-    const { data, error } = await supabase
-      .from('compass_pipeline_campaigns')
-      .insert(row)
-      .select(CAMPAIGN_BOARD_COLUMNS)
-      .single()
-
-    if (error) {
-      return portalJson({ error: 'create_failed', detail: error.message }, { status: 400 })
-    }
-
-    await supabase.from('compass_pipeline_activity').insert({
-      id: `cact-${crypto.randomUUID()}`,
-      campaign_id: row.id,
-      actor: 'operator',
-      action: 'created',
-      body: `Created campaign “${name}”`,
-      created_at: stamp
+    const created = upsertPipelineCampaign(row)
+    addPipelineActivity(created.id, 'campaign_created', `Campaign "${created.name}" created`, {
+      name: created.name
     })
 
-    const created = projectCampaign(data as CompassCampaign)
-    await syncCampaignToGoogleCalendarQuiet(supabase, created)
-    return portalJson(created, { status: 201 })
+    return portalJson({ campaign: projectCampaign(created) })
   } catch (err) {
-    return portalAccessResponse(err) ?? portalJson({ error: 'create_failed' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'create_failed'
+    return portalJson({ error: 'create_failed', detail: message }, { status: 500 })
   }
 }

@@ -15,6 +15,7 @@ function loadFileMap(path) {
 }
 
 const cfg = resolveConfig(process.env, [loadFileMap(VAULT_ENV), loadFileMap(COMPASS_WEB_ENV)])
+// Tools: brief, campaigns, leads.search, leads.commit, plus deprecated leads/mark, copy, land.
 if (!cfg.secret) {
   console.error('compass-mcp: missing COMPASS_AGENT_SECRET (.env.compass or compass-web .env.local)')
   process.exit(1)

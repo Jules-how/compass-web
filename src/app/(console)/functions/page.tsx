@@ -5,7 +5,7 @@ export default function FunctionsPage() {
   return (
     <OperatorShell
       title="Functions"
-      subtitle="Business modules — open one to see its projects and tasks"
+      subtitle="System map — how modules connect to live routes and tables"
       width="full"
     >
       <FunctionsPanel />

@@ -19,13 +19,20 @@ import {
 } from '@/lib/instantly-leads-sync'
 import { upsertSyncSnapshot } from '@/lib/sync-snapshots'
 import { buildAgentBrief, type AgentBrief } from '@/lib/agent-brief'
+import { syncQboLedger, type QboSyncResult } from '@/lib/qbo-sync'
+import { generateDailyDigest } from '@/lib/evidence-poller'
+import { syncReactivationLists, type ReactivationSyncResult } from '@/lib/reactivation-runtime'
+import { recomputeComponentStats } from '@/lib/component-stats'
 
-export type AgentSyncSource = 'ads' | 'instantly' | 'instantly_leads'
+export type AgentSyncSource = 'ads' | 'instantly' | 'instantly_leads' | 'qbo' | 'evidence' | 'reactivation'
 
 export const ALL_AGENT_SYNC_SOURCES: AgentSyncSource[] = [
   'ads',
   'instantly',
-  'instantly_leads'
+  'instantly_leads',
+  'qbo',
+  'evidence',
+  'reactivation'
 ]
 
 export type AgentSyncResult = {
@@ -46,6 +53,8 @@ export type AgentSyncResult = {
     error?: string
   }
   instantlyLeads?: InstantlyLeadsSyncResult & { error?: string }
+  qbo?: QboSyncResult
+  reactivation?: ReactivationSyncResult
   brief?: AgentBrief
 }
 
@@ -174,6 +183,14 @@ export async function runAgentSync(
     result.instantly = instantly.result
     campaigns = instantly.campaigns
     if (!instantly.result.ok) result.ok = false
+    if (instantly.result.ok) {
+      try {
+        const apiKey = await resolveInstantlyApiKey(supabase)
+        await recomputeComponentStats(supabase, { apiKey, campaigns })
+      } catch (err) {
+        console.error('[agent-sync/component-stats]', err instanceof Error ? err.message : err)
+      }
+    }
   }
 
   if (sources.includes('instantly_leads')) {
@@ -201,6 +218,25 @@ export async function runAgentSync(
     }
   }
 
+  if (sources.includes('qbo')) {
+    result.qbo = await syncQboLedger(supabase)
+    if (!result.qbo.ok) result.ok = false
+  }
+
+  if (sources.includes('evidence')) {
+    try {
+      await generateDailyDigest(supabase)
+    } catch (err) {
+      console.error('[agent-sync/evidence]', err instanceof Error ? err.message : err)
+      result.ok = false
+    }
+  }
+
+  if (sources.includes('reactivation')) {
+    result.reactivation = await syncReactivationLists(supabase)
+    if (!result.reactivation.ok) result.ok = false
+  }
+
   if (options?.includeBrief !== false) {
     result.brief = await buildAgentBrief(supabase)
     await upsertSyncSnapshot(supabase, 'daily_brief', result.brief, 'live')
@@ -224,6 +260,23 @@ export async function runAgentSync(
             inserted: result.instantlyLeads.inserted,
             updated: result.instantlyLeads.updated,
             error: result.instantlyLeads.error
+          }
+        : undefined,
+      qbo: result.qbo
+        ? {
+            ok: result.qbo.ok,
+            invoices: result.qbo.invoices,
+            payments: result.qbo.payments,
+            monthlyCreated: result.qbo.monthlyCreated,
+            error: result.qbo.error
+          }
+        : undefined,
+      reactivation: result.reactivation
+        ? {
+            ok: result.reactivation.ok,
+            sent: result.reactivation.sent,
+            skipped: result.reactivation.skipped,
+            failed: result.reactivation.failed
           }
         : undefined
     },

@@ -6,6 +6,7 @@ import type {
   CompassBusinessFunctionWithStats,
   CompassProjectWithStats,
   CompassTask,
+  SystemMapMeta,
   TaskStatus
 } from '@/lib/types'
 import { TASK_STATUSES } from '@/lib/types'
@@ -279,6 +280,50 @@ export function FunctionDetailPanel({ functionId }: { functionId: string }) {
 
       {tab === 'overview' ? (
         <div className="space-y-5">
+          {(() => {
+            const map = (fn.system_map ?? {}) as SystemMapMeta
+            if (!map.why && !(map.influences?.length)) return null
+            return (
+              <section className="compass-panel p-5">
+                <h3 className="font-display text-base font-semibold text-neutral-900">System map</h3>
+                {map.why ? <p className="mt-2 text-sm leading-relaxed text-neutral-600">{map.why}</p> : null}
+                {map.influences && map.influences.length > 0 ? (
+                  <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+                    {map.influences.map((edge) => (
+                      <li key={`${edge.route}-${edge.table}`}>
+                        <Link
+                          href={edge.route}
+                          className="block rounded-xl border border-stone-200/80 bg-stone-50/50 px-3.5 py-2.5 transition hover:bg-white"
+                        >
+                          <div className="text-sm font-medium text-neutral-900">{edge.name}</div>
+                          <div className="mt-0.5 text-[11px] text-neutral-500">
+                            {edge.route} · {edge.table}
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {(map.inputs?.length || map.outputs?.length) ? (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm text-neutral-600">
+                    {map.inputs?.length ? (
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Inputs</div>
+                        <p className="mt-1">{map.inputs.join(', ')}</p>
+                      </div>
+                    ) : null}
+                    {map.outputs?.length ? (
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Outputs</div>
+                        <p className="mt-1">{map.outputs.join(', ')}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </section>
+            )
+          })()}
+
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               { label: 'Projects', value: stats.projectCount, hint: `${stats.activeProjectCount} active` },

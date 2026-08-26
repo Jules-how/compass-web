@@ -25,6 +25,11 @@ Apply migrations:
 - `0051_opener_track_kind.sql` — `opener_track` + `opener_kind` on `lead_contacts`
 - `0052_archive_stale_offers.sql` — archive growth/enablement/reporting; rewrite capture offer
 - `0053_lead_icp.sql` — `icp_status`, `review_count`, `hours_label`, `after_hours`, `capture_crack`, `email_origin`
+- `0055_lead_search_indexes.sql` — `lead_contacts` indexes for filter grammar + `(email, id)` keyset
+- `0056_lead_inventory_rpc.sql` — `lead_inventory_aggregate` + `lead_list_facets` SQL aggregates
+- `0057_lead_archived.sql` — `is_archived` on `lead_contacts` (Leads / Prospects hide archived)
+
+SQLite `data/compass.db` is no longer the operator lead store. UI `/leads` list + upload and `/api/agent/leads` share Supabase `lead_contacts`. One-time copy: `node scripts/migrate-sqlite-leads.mjs --dry-run` (do not run against production from an agent).
 
 Qualify before research. `icp_status=skip` (franchise, no inbound, thin reviews) never needs an opener and never uploads. Real shop + thin card: `icp_status=thin` and `enrich_status=thin`. Harvest pass-only: `GET /api/agent/leads/cohort?icp_status=pass`.
 
@@ -38,10 +43,11 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 |--------|------|-------|
 | `GET` | `/api/agent/brief` | Compact daily brief (~1–2KB) plus `currentWave` (campaign, trade, cluster, uncontacted remaining, last import). Cached snapshot unless `x-compass-fresh: 1` |
 | `POST` | `/api/agent/sync` | `{ sources?: ['ads','instantly','instantly_leads'] }` |
-| `GET` | `/api/agent/leads` | Lean Instantly-hot leads (`status`, `limit`, `q`) |
-| `GET` | `/api/agent/leads/inventory` | Uncontacted counts by vertical × state (orient) |
-| `GET` | `/api/agent/leads/cohort` | Harvest input: contacts on a pipeline campaign (`pipeline_campaign_id` required; `enrich_status`, `icp_status=pass,thin`, `unverified_only=1` skips `email_verified_at`, `limit`, `offset`) |
-| `PATCH` | `/api/agent/leads/mark` | Bulk `ids[]` or `emails[]` for campaign/cohort/`enrich_status` / Instantly land / `email_verify_status` / `email_verified` (max 500). Per-row `rows[]` for `lead_facts` / `opener` / `opener_track` / `opener_kind` / ICP fields / `website` / `company_domain` / Instantly ids (max 50). Facts are `[{kind, claim, url}]`. Website is the company site, not an engager fact. `opener_track`: `signal` \| `tension` \| `none`. `opener_kind`: `review` \| `hiring` \| `policy` \| `specialty` \| `location` \| `tension` \| `after_hours` \| `phone_pain` \| `none`. Hiring facts store as kind `update`; `opener_kind` carries `hiring`. ICP: `icp_status` `none\|pass\|thin\|skip`, `review_count`, `hours_label`, `after_hours`, `capture_crack`, `email_origin` `unknown\|published\|guessed`. `email_verify_status`: `valid` \| `catch_all` \| `invalid` \| `unknown` \| `risky` \| `none`. `valid` and `catch_all` stamp `email_verified_at`. `email_verified: true` stamps now and sets status `valid` if unset. |
+| `GET` | `/api/agent/leads` | Search. Legacy (`status`/`limit`/`q` only) still returns Instantly-hot lean rows. New: `view=rows\|counts`, shared filters (`q`, `vertical`, `state`, `city`, `cohort_tag`, `source`, `outbound_status` csv, `sync_state`, `pipeline_campaign_id` id or `none`, `instantly_campaign_id`, `enrich_status` csv, `icp_status` csv, `email_origin`, `after_hours`, `min_reviews`, `unverified_only`, `recontact_ready`, `bucket`, `completeness`), `columns=lean\|cohort\|full`, keyset `cursor`, `limit` default 2000 max 5000. Response `{ ok, filters, columns, count, total, next_cursor, leads }`. `Accept: application/x-ndjson` streams header then one lead per line. |
+| `POST` | `/api/agent/leads` | Bulk upsert-commit. `{ defaults?, rows[], on_conflict: "email", mark? }`. 8MB body, 500-row write chunks. Email match updates. Company domain or company+city → `company_dupe` (no insert). Never invent emails. Never downgrade hot outbound unless the row sets it. `icp_status=skip` stays skip. `ready`→`enriched`, `qualified`→`pass`. |
+| `GET` | `/api/agent/leads/inventory` | Deprecated alias of `GET /api/agent/leads?view=counts` (SQL aggregate, not a 50k load) |
+| `GET` | `/api/agent/leads/cohort` | Deprecated alias of `GET /api/agent/leads?view=rows&columns=cohort`. Still requires `pipeline_campaign_id`. New search allows `none` (unattached) and does not require a campaign. |
+| `PATCH` | `/api/agent/leads/mark` | Deprecated alias. Prefer `POST /api/agent/leads` + `mark`. Still: bulk `ids[]`/`emails[]` (max 500) or `rows[]` (max 50) for facts/opener/website/Instantly land. Facts are `[{kind, claim, url}]`. Website is the company site. `opener_track`: `signal` \| `tension` \| `none`. `opener_kind`: `review` \| `hiring` \| `policy` \| `specialty` \| `location` \| `tension` \| `after_hours` \| `phone_pain` \| `none`. ICP: `none\|pass\|thin\|skip`. `email_verify_status`: `valid` \| `catch_all` \| `invalid` \| `unknown` \| `risky` \| `none`. |
 | `GET` | `/api/agent/campaigns` | Pipeline + Instantly glance. Compact `wave` per campaign (`cohort`, `openers`, `signal`, `tension`, `thin`, `skip`, `by_kind`, `blocked`, `readyToActivate`). Thin and skip rows are not missing openers. Skip never uploads. |
 | `GET` | `/api/agent/outbound/summary` | Library counts + offer keys (~1–2KB) |
 | `GET` | `/api/agent/outbound/:kind` | Compact list (`limit` default 40 max 100; `full=1` for bodies/sequences) |
@@ -88,7 +94,16 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/campaigns/campaign-au-pl
 ```
 
 ```bash
-curl -sS "$COMPASS_BASE_URL/api/agent/leads/inventory?vertical=plumber" "${AUTH[@]}"
+curl -sS "$COMPASS_BASE_URL/api/agent/leads?view=counts&vertical=plumber" "${AUTH[@]}"
+```
+
+```bash
+curl -sS "$COMPASS_BASE_URL/api/agent/leads?view=rows&columns=cohort&pipeline_campaign_id=none&vertical=plumber&state=NSW&limit=2000" \
+  "${AUTH[@]}"
+
+curl -sS -X POST "$COMPASS_BASE_URL/api/agent/leads" \
+  "${AUTH[@]}" -H "Content-Type: application/json" \
+  -d '{"defaults":{"vertical":"plumber","source":"apify"},"rows":[{"email":"shop@example.com.au","company":"Example Plumbing","city":"Marrickville","state":"NSW"}],"on_conflict":"email"}'
 ```
 
 ```bash
@@ -120,4 +135,4 @@ See [`.cursor/skills/compass-agent/SKILL.md`](../.cursor/skills/compass-agent/SK
 
 ## Cursor MCP
 
-Lean stdio server at `mcp/server.mjs`. Six tools mapped to the routes above: `brief`, `campaigns`, `leads` (inventory|cohort), `mark`, `copy` (get|patch), `land` (ensure|push_sequence|push_leads). No ads, no library CRUD, no Instantly activate. `push_leads` is dry-run unless `dryRun=false`. Vault: `.cursor/mcp.json` server name `compass`.
+Lean stdio server at `mcp/server.mjs`. Tools: `brief`, `campaigns`, `leads.search`, `leads.commit`, `leads` (deprecated inventory|cohort), `mark` (deprecated), `copy` (get|patch), `land` (ensure|push_sequence|push_leads). No ads, no library CRUD, no Instantly activate. `push_leads` is dry-run unless `dryRun=false`. Vault: `.cursor/mcp.json` server name `compass`.
