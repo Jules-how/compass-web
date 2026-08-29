@@ -39,7 +39,10 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 | `GET` | `/api/agent/brief` | Compact daily brief (~1–2KB) plus `currentWave` (campaign, trade, cluster, uncontacted remaining, last import). Cached snapshot unless `x-compass-fresh: 1` |
 | `POST` | `/api/agent/sync` | `{ sources?: ['ads','instantly','instantly_leads'] }` |
 | `GET` | `/api/agent/leads` | Lean Instantly-hot leads (`status`, `limit`, `q`) |
+| `POST` | `/api/agent/leads` | Commit rows (email + company required, domain dupe). Max 200. `vertical` required. `import_batch_id` optional |
 | `GET` | `/api/agent/leads/inventory` | Uncontacted counts by vertical × state (orient) |
+| `GET` | `/api/agent/leads/ledger` | Vertical required. Status, state, last_outbound buckets (`blank`/`0-14`/`15-30`/`31-60`/`61-90`/`90+`), top campaign names. Optional `campaign_ids` vs `later_campaign_ids` overlap. Uses stored `last_outbound_at` |
+| `GET` | `/api/agent/leads/export` | Vertical required. Email required. Cursor page, max 200. Agent writes a file; never dump the table in chat |
 | `GET` | `/api/agent/leads/cohort` | Harvest input: contacts on a pipeline campaign (`pipeline_campaign_id` required; `enrich_status`, `icp_status=pass,thin`, `unverified_only=1` skips `email_verified_at`, `limit`, `offset`) |
 | `PATCH` | `/api/agent/leads/mark` | Bulk `ids[]` or `emails[]` for campaign/cohort/`enrich_status` / Instantly land / `email_verify_status` / `email_verified` (max 500). Per-row `rows[]` for `lead_facts` / `opener` / `opener_track` / `opener_kind` / ICP fields / `website` / `company_domain` / Instantly ids (max 50). Facts are `[{kind, claim, url}]`. Website is the company site, not an engager fact. `opener_track`: `signal` \| `tension` \| `none`. `opener_kind`: `review` \| `hiring` \| `policy` \| `specialty` \| `location` \| `tension` \| `after_hours` \| `phone_pain` \| `none`. Hiring facts store as kind `update`; `opener_kind` carries `hiring`. ICP: `icp_status` `none\|pass\|thin\|skip`, `review_count`, `hours_label`, `after_hours`, `capture_crack`, `email_origin` `unknown\|published\|guessed`. `email_verify_status`: `valid` \| `catch_all` \| `invalid` \| `unknown` \| `risky` \| `none`. `valid` and `catch_all` stamp `email_verified_at`. `email_verified: true` stamps now and sets status `valid` if unset. |
 | `GET` | `/api/agent/campaigns` | Pipeline + Instantly glance. Compact `wave` per campaign (`cohort`, `openers`, `signal`, `tension`, `thin`, `skip`, `by_kind`, `blocked`, `readyToActivate`). Thin and skip rows are not missing openers. Skip never uploads. |
@@ -120,4 +123,6 @@ See [`.cursor/skills/compass-agent/SKILL.md`](../.cursor/skills/compass-agent/SK
 
 ## Cursor MCP
 
-Lean stdio server at `mcp/server.mjs`. Six tools mapped to the routes above: `brief`, `campaigns`, `leads` (inventory|cohort), `mark`, `copy` (get|patch), `land` (ensure|push_sequence|push_leads). No ads, no library CRUD, no Instantly activate. `push_leads` is dry-run unless `dryRun=false`. Vault: `.cursor/mcp.json` server name `compass`.
+Lean stdio server at `mcp/server.mjs`. Env: `compass-web/.env.local` then process `COMPASS_BASE_URL` / `COMPASS_AGENT_SECRET`. Hosted default `https://compass-web-eosin.vercel.app`. Tools: `brief`, `campaigns`, `leads` (inventory|cohort), `mark`, `copy` (get|patch), `land` (ensure|push_sequence|push_leads), `commit`, `ledger`, `export`. No ads, no library CRUD, no Instantly activate. `push_leads` is dry-run unless `dryRun=false`. switchflow-os workspace: `.cursor/mcp.json` server name `compass` (`node compass-web/mcp/server.mjs`).
+
+Lead CRUD is this HTTP surface or Compass MCP. Not Supabase MCP, not PostgREST, not Instantly MCP create.

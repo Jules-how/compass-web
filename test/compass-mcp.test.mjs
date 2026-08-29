@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { callTool, clampLimit, handleRpc, parseEnvFile, resolveConfig, TOOLS } from '../mcp/lib.mjs'
+import { readFileSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { callTool, clampExportLimit, clampLimit, handleRpc, parseEnvFile, resolveConfig, TOOLS } from '../mcp/lib.mjs'
 
-test('exactly six tools', () => {
-  assert.equal(TOOLS.length, 6)
+test('exactly nine tools', () => {
+  assert.equal(TOOLS.length, 9)
   assert.deepEqual(
     TOOLS.map((t) => t.name),
-    ['brief', 'campaigns', 'leads', 'mark', 'copy', 'land']
+    ['brief', 'campaigns', 'leads', 'mark', 'copy', 'land', 'commit', 'ledger', 'export']
   )
 })
 
@@ -28,6 +31,25 @@ test('resolveConfig prefers process env', () => {
 test('clampLimit caps at 100', () => {
   assert.equal(clampLimit(500), 100)
   assert.equal(clampLimit(0), 1)
+})
+
+test('clampExportLimit caps at 200', () => {
+  assert.equal(clampExportLimit(50000), 200)
+  assert.equal(clampExportLimit(0), 1)
+})
+
+test('resolveConfig fills from compass-web env file when process env is empty', () => {
+  const cfg = resolveConfig(
+    {},
+    [{ COMPASS_AGENT_SECRET: 'from-file', COMPASS_BASE_URL: '' }]
+  )
+  assert.equal(cfg.secret, 'from-file')
+  assert.equal(cfg.baseUrl, 'https://compass-web-eosin.vercel.app')
+})
+
+test('mcp server loads this repo compass-web/.env.local first', () => {
+  const server = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../mcp/server.mjs'), 'utf8')
+  assert.match(server, /join\(MCP_DIR, '\.\.\/\.env\.local'\)/)
 })
 
 function mockFetch(capture) {
@@ -101,10 +123,59 @@ test('copy patch sends Prefer minimal', async () => {
 
 test('rpc tools/list', async () => {
   const res = await handleRpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, { cfg, fetchImpl: mockFetch({}) })
-  assert.equal(res.result.tools.length, 6)
+  assert.equal(res.result.tools.length, 9)
 })
 
 test('rpc ignores notifications', async () => {
   const res = await handleRpc({ jsonrpc: '2.0', method: 'notifications/initialized' }, { cfg })
   assert.equal(res, null)
+})
+
+test('ledger requires vertical', async () => {
+  const r = await callTool('ledger', {}, { cfg, fetchImpl: mockFetch({}) })
+  assert.equal(r.isError, true)
+})
+
+test('ledger query includes overlap ids', async () => {
+  const capture = {}
+  await callTool(
+    'ledger',
+    { vertical: 'broker', campaign_ids: 'a,b', later_campaign_ids: 'c' },
+    { cfg, fetchImpl: mockFetch(capture) }
+  )
+  const u = new URL(capture.url)
+  assert.match(capture.url, /\/api\/agent\/leads\/ledger/)
+  assert.equal(u.searchParams.get('vertical'), 'broker')
+  assert.equal(u.searchParams.get('campaign_ids'), 'a,b')
+  assert.equal(u.searchParams.get('later_campaign_ids'), 'c')
+})
+
+test('export pages with cursor', async () => {
+  const capture = {}
+  await callTool(
+    'export',
+    { vertical: 'broker', limit: 200, cursor: 'contact-1' },
+    { cfg, fetchImpl: mockFetch(capture) }
+  )
+  const u = new URL(capture.url)
+  assert.match(capture.url, /\/api\/agent\/leads\/export/)
+  assert.equal(u.searchParams.get('limit'), '200')
+  assert.equal(u.searchParams.get('cursor'), 'contact-1')
+})
+
+test('commit posts rows', async () => {
+  const capture = {}
+  await callTool(
+    'commit',
+    { vertical: 'mortgage-brokers', import_batch_id: 'agent-path-smoke', rows: [{ email: 'a@x.com', company: 'Acme' }] },
+    { cfg, fetchImpl: mockFetch(capture) }
+  )
+  assert.equal(capture.method, 'POST')
+  assert.match(capture.url, /\/api\/agent\/leads$/)
+  assert.deepEqual(JSON.parse(capture.body), {
+    vertical: 'mortgage-brokers',
+    sourceService: 'other',
+    import_batch_id: 'agent-path-smoke',
+    rows: [{ email: 'a@x.com', company: 'Acme' }]
+  })
 })

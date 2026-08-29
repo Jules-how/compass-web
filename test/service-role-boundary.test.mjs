@@ -22,7 +22,8 @@ test('customer and legacy operator data routes never import a service-role clien
         !file.includes('/api/operator/') &&
         !file.includes('/api/ingest/') &&
         !file.includes('/api/agent/') &&
-        !file.includes('/api/cron/')
+        !file.includes('/api/cron/') &&
+        !file.includes('/api/webhooks/')
     )
     .filter((file) => /getSupabaseServiceClient|getPortalAdminClient|SUPABASE_SERVICE_ROLE_KEY/.test(readFileSync(file, 'utf8')))
     .map((file) => relative(appRoot.pathname, file))
@@ -37,6 +38,14 @@ test('customer and legacy operator data routes never import a service-role clien
   assert.deepEqual(serviceRoleRoutes, [
     'api/agent/brief/route.ts',
     'api/agent/campaigns/route.ts',
+    'api/agent/instantly/ensure/route.ts',
+    'api/agent/instantly/push-leads/route.ts',
+    'api/agent/instantly/push-sequence/route.ts',
+    'api/agent/leads/cohort/route.ts',
+    'api/agent/leads/export/route.ts',
+    'api/agent/leads/inventory/route.ts',
+    'api/agent/leads/ledger/route.ts',
+    'api/agent/leads/mark/route.ts',
     'api/agent/leads/route.ts',
     'api/agent/outbound/[kind]/[id]/route.ts',
     'api/agent/outbound/[kind]/route.ts',
@@ -46,7 +55,8 @@ test('customer and legacy operator data routes never import a service-role clien
     'api/cron/daily-sync/route.ts',
     'api/ingest/comms/route.ts',
     'api/ingest/leads/route.ts',
-    'api/operator/invitations/route.ts'
+    'api/operator/invitations/route.ts',
+    'api/webhooks/instantly/route.ts'
   ])
 })
 
@@ -70,7 +80,8 @@ test('every cookie-authenticated mutation route enforces a same-origin request',
       (file) =>
         !file.includes('/api/ingest/') &&
         !file.includes('/api/agent/') &&
-        !file.includes('/api/cron/')
+        !file.includes('/api/cron/') &&
+        !file.includes('/api/webhooks/')
     )
     .filter((file) => !/requireSameOrigin/.test(readFileSync(file, 'utf8')))
     .map((file) => relative(appRoot.pathname, file))

@@ -22,6 +22,19 @@ Authorization: Bearer $COMPASS_AGENT_SECRET
 x-compass-agent-secret: $COMPASS_AGENT_SECRET
 ```
 
+## Lead ledger
+
+Compass is the lead store. Use `/api/agent/*` or Compass MCP. Do not query `lead_contacts` via Supabase MCP, PostgREST, or `SUPABASE_SERVICE_ROLE_KEY`.
+
+- Counts / recency / campaign-id overlap: `GET /api/agent/leads/ledger?vertical=broker` (optional `campaign_ids`, `later_campaign_ids`)
+- Page a local CSV: `GET /api/agent/leads/export?vertical=broker&limit=200&cursor=` (max 200, email required)
+- Insert: `POST /api/agent/leads` (`commit`). Email and company required. Domain dupe skipped. Never raw table insert.
+
+```bash
+curl -sS "$COMPASS_BASE_URL/api/agent/leads/ledger?vertical=broker" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
+```
+
 ## Token-efficient workflow
 
 1. **Start with the brief** (cached after daily sync):
@@ -173,14 +186,17 @@ Vercel hits `GET /api/cron/daily-sync` once per day (`vercel.json`). Auth with `
 ## Do not
 
 - Put `SUPABASE_SERVICE_ROLE_KEY` in agent prompts or chat.
+- Use Supabase MCP / `execute_sql` / PostgREST for lead CRUD. That is for migrations or a query the agent API does not have yet.
 - Call cookie-session `/api/outbound/*` from headless agents (use `/api/agent/outbound/*`).
 - Pass `full=1` or dump all kinds unless the turn is editing that row.
 - Re-run ads/Instantly sync just to read/write copy libraries.
-- Pull unbounded lead lists — always pass `limit` and status filters.
+- Pull unbounded lead lists — always pass `limit` and status filters. Export pages at 200; write a file.
 - Use Instantly MCP to add or create leads. Land with Compass MCP `land` or `/api/agent/instantly/push-leads`.
 - Download CSVs to load Instantly.
 - Activate Instantly campaigns from the agent.
 
 ## Cursor MCP
 
-Lean stdio server: `node mcp/server.mjs` (six tools: `brief`, `campaigns`, `leads`, `mark`, `copy`, `land`). Not an Instantly clone. `land.push_leads` defaults to dry-run. Vault workspace wires it in `.cursor/mcp.json`.
+Lean stdio server: `node mcp/server.mjs` from `compass-web/` (or `node compass-web/mcp/server.mjs` from switchflow-os). Loads `compass-web/.env.local` then `COMPASS_BASE_URL` / `COMPASS_AGENT_SECRET`. Hosted default `https://compass-web-eosin.vercel.app`.
+
+Tools: `brief`, `campaigns`, `leads` (inventory|cohort), `mark`, `copy`, `land`, `commit`, `ledger`, `export`. Not an Instantly clone. `land.push_leads` defaults to dry-run. This workspace wires it in `.cursor/mcp.json` as server `compass`.

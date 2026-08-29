@@ -1,14 +1,15 @@
 /**
- * Lean Compass agent MCP. Six tools. No Instantly clone, no ads, no library dump.
+ * Lean Compass agent MCP. Nine tools. No Instantly clone, no ads, no library dump.
  */
 
 export const SERVER_NAME = 'compass'
-export const SERVER_VERSION = '0.1.0'
+export const SERVER_VERSION = '0.2.0'
 export const PROTOCOL_VERSION = '2024-11-05'
 
 const DEFAULT_BASE = 'https://compass-web-eosin.vercel.app'
 const MAX_LIMIT = 100
 const DEFAULT_LIMIT = 50
+const EXPORT_MAX_LIMIT = 200
 
 export const TOOLS = [
   {
@@ -107,6 +108,53 @@ export const TOOLS = [
       },
       additionalProperties: false
     }
+  },
+  {
+    name: 'commit',
+    description:
+      'Insert lead rows through Compass (email, company, domain dupe). POST /api/agent/leads. Max 200. Never PostgREST.',
+    inputSchema: {
+      type: 'object',
+      required: ['vertical', 'rows'],
+      properties: {
+        vertical: { type: 'string', description: 'Required. Alias broker → mortgage-brokers.' },
+        sourceService: { type: 'string', description: 'apify | origami | vibe | manual | other. Default other.' },
+        import_batch_id: { type: 'string' },
+        filename: { type: 'string' },
+        rows: { type: 'array', items: { type: 'object' }, description: 'Mapped or CSV-shaped rows. Max 200.' }
+      },
+      additionalProperties: false
+    }
+  },
+  {
+    name: 'ledger',
+    description:
+      'Vertical ledger: outbound_status, state, last_outbound buckets, top campaign names. Optional campaign_ids vs later_campaign_ids overlap. Compact counts only.',
+    inputSchema: {
+      type: 'object',
+      required: ['vertical'],
+      properties: {
+        vertical: { type: 'string', description: 'Required. Alias broker → mortgage-brokers.' },
+        campaign_ids: { type: 'string', description: 'Comma list of older Instantly campaign ids.' },
+        later_campaign_ids: { type: 'string', description: 'Comma list of later Instantly campaign ids.' }
+      },
+      additionalProperties: false
+    }
+  },
+  {
+    name: 'export',
+    description:
+      'One page of lead export (max 200). Email required. Agent pages to a local CSV. Never dump the table in chat.',
+    inputSchema: {
+      type: 'object',
+      required: ['vertical'],
+      properties: {
+        vertical: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: EXPORT_MAX_LIMIT },
+        cursor: { type: 'string', description: 'Last id from the previous page.' }
+      },
+      additionalProperties: false
+    }
   }
 ]
 
@@ -114,6 +162,12 @@ export function clampLimit(n) {
   const v = Number(n)
   if (!Number.isFinite(v)) return DEFAULT_LIMIT
   return Math.min(MAX_LIMIT, Math.max(1, Math.trunc(v)))
+}
+
+export function clampExportLimit(n) {
+  const v = Number(n)
+  if (!Number.isFinite(v)) return DEFAULT_LIMIT
+  return Math.min(EXPORT_MAX_LIMIT, Math.max(1, Math.trunc(v)))
 }
 
 export function parseEnvFile(text) {
@@ -301,6 +355,55 @@ export async function callTool(name, args = {}, { cfg, fetchImpl }) {
         return toolOk(r.json)
       }
       return toolError('land.action must be ensure, push_sequence, or push_leads')
+    }
+    case 'commit': {
+      const rows = Array.isArray(args.rows) ? args.rows : []
+      if (!rows.length) return toolError('commit requires rows')
+      const vertical = typeof args.vertical === 'string' ? args.vertical.trim() : ''
+      if (!vertical) return toolError('commit requires vertical')
+      const r = await compassFetch(cfg, {
+        method: 'POST',
+        path: '/api/agent/leads',
+        body: {
+          vertical,
+          sourceService: typeof args.sourceService === 'string' ? args.sourceService : 'other',
+          import_batch_id: args.import_batch_id || undefined,
+          filename: args.filename || undefined,
+          rows
+        },
+        fetchImpl
+      })
+      return toolOk(r.json)
+    }
+    case 'ledger': {
+      const vertical = typeof args.vertical === 'string' ? args.vertical.trim() : ''
+      if (!vertical) return toolError('ledger requires vertical')
+      const r = await compassFetch(cfg, {
+        method: 'GET',
+        path: '/api/agent/leads/ledger',
+        query: {
+          vertical,
+          campaign_ids: args.campaign_ids || undefined,
+          later_campaign_ids: args.later_campaign_ids || undefined
+        },
+        fetchImpl
+      })
+      return toolOk(r.json)
+    }
+    case 'export': {
+      const vertical = typeof args.vertical === 'string' ? args.vertical.trim() : ''
+      if (!vertical) return toolError('export requires vertical')
+      const r = await compassFetch(cfg, {
+        method: 'GET',
+        path: '/api/agent/leads/export',
+        query: {
+          vertical,
+          limit: String(clampExportLimit(args.limit)),
+          cursor: args.cursor || undefined
+        },
+        fetchImpl
+      })
+      return toolOk(r.json)
     }
     default:
       return toolError(`unknown tool: ${name}`)

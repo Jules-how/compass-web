@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import { readFileSync, existsSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { handleRpc, parseEnvFile, resolveConfig } from './lib.mjs'
 
-const VAULT_ENV = '/Users/Jules/Switchflow-os-v3.5/.env.compass'
-const COMPASS_WEB_ENV = '/Users/Jules/Projects/compass-web/.env.local'
+const MCP_DIR = dirname(fileURLToPath(import.meta.url))
+const REPO_COMPASS_ENV = join(MCP_DIR, '../.env.local')
 
 function loadFileMap(path) {
   if (!existsSync(path)) return null
@@ -14,9 +16,11 @@ function loadFileMap(path) {
   }
 }
 
-const cfg = resolveConfig(process.env, [loadFileMap(VAULT_ENV), loadFileMap(COMPASS_WEB_ENV)])
+const cfg = resolveConfig(process.env, [loadFileMap(REPO_COMPASS_ENV)])
 if (!cfg.secret) {
-  console.error('compass-mcp: missing COMPASS_AGENT_SECRET (.env.compass or compass-web .env.local)')
+  console.error(
+    'compass-mcp: missing COMPASS_AGENT_SECRET (process env or compass-web/.env.local)'
+  )
   process.exit(1)
 }
 

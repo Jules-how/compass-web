@@ -1,6 +1,7 @@
 import { requireAgentAuth } from '@/lib/agent-auth'
+import { commitLeadRows } from '@/lib/lead-commit'
 import { getPortalAdminClient } from '@/lib/portal-admin'
-import { portalJson } from '@/lib/portal-http'
+import { portalJson, readBoundedJson } from '@/lib/portal-http'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -69,5 +70,50 @@ export async function GET(request: Request) {
   } catch (err) {
     console.error('[agent/leads]', err instanceof Error ? err.message : err)
     return portalJson({ error: 'list_failed' }, { status: 500 })
+  }
+}
+
+/**
+ * Commit rows through the same skip/dupe rules as CSV upload (email, company, domain).
+ * Body: { vertical, sourceService?, import_batch_id?, filename?, rows: [...] } max 200.
+ */
+export async function POST(request: Request) {
+  const authError = requireAgentAuth(request)
+  if (authError) return authError
+
+  let body: Record<string, unknown>
+  try {
+    body = (await readBoundedJson(request, 512 * 1024)) as Record<string, unknown>
+  } catch {
+    return portalJson({ error: 'invalid_json' }, { status: 400 })
+  }
+
+  const rows = Array.isArray(body.rows) ? body.rows : []
+  if (!rows.length) return portalJson({ error: 'no_rows' }, { status: 400 })
+  if (rows.length > 200) {
+    return portalJson({ error: 'too_many_rows', max: 200 }, { status: 413 })
+  }
+
+  const vertical = typeof body.vertical === 'string' ? body.vertical.trim() : ''
+  if (!vertical) return portalJson({ error: 'vertical_required' }, { status: 400 })
+
+  try {
+    const admin = getPortalAdminClient()
+    const result = await commitLeadRows(admin, {
+      rows: rows as Record<string, unknown>[],
+      vertical,
+      sourceService: typeof body.sourceService === 'string' ? body.sourceService : 'other',
+      filename: typeof body.filename === 'string' ? body.filename : null,
+      importBatchId:
+        typeof body.import_batch_id === 'string'
+          ? body.import_batch_id
+          : typeof body.importBatchId === 'string'
+            ? body.importBatchId
+            : null
+    })
+    return portalJson({ ok: true, ...result }, { status: 201 })
+  } catch (err) {
+    console.error('[agent/leads commit]', err instanceof Error ? err.message : err)
+    return portalJson({ error: 'commit_failed' }, { status: 500 })
   }
 }
