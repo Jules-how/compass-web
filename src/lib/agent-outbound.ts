@@ -7,6 +7,7 @@ import {
   type OutboundCopyStatus
 } from '@/lib/outbound-copy'
 import { copyPatchClearsConfirm } from '@/lib/campaign-wave'
+import { applyOfferSkuFields, emptyOfferSkuFields } from '@/lib/offer-sku'
 
 export const OUTBOUND_KINDS = [
   'offers',
@@ -38,7 +39,7 @@ export const LIST_LIMIT_DEFAULT = 40
 export const LIST_LIMIT_MAX = 100
 
 const COMPACT_OMIT: Record<OutboundKind, string[]> = {
-  offers: ['pack_summary'],
+  offers: ['pack_summary', 'lock', 'guarantee'],
   expressions: ['body', 'notes'],
   structures: ['slots', 'description'],
   ctas: ['body'],
@@ -161,22 +162,23 @@ export function buildOutboundInsert(
       const name = str(body.name)
       const pack_summary = str(body.pack_summary)
       if (!offer_key || !name || !pack_summary) return { ok: false, error: 'fields_required' }
-      return {
-        ok: true,
-        row: {
-          id: insertId('offer', body),
-          offer_key,
-          name,
-          pack_summary,
-          positioning_line: optionalStr(body.positioning_line),
-          vertical_tags: normalizeTags(body.vertical_tags),
-          location_tags: normalizeTags(body.location_tags),
-          sort_order: typeof body.sort_order === 'number' ? body.sort_order : 100,
-          archived: false,
-          created_at: stamp,
-          updated_at: stamp
-        }
+      const row: Record<string, unknown> = {
+        id: insertId('offer', body),
+        offer_key,
+        name,
+        pack_summary,
+        positioning_line: optionalStr(body.positioning_line),
+        vertical_tags: normalizeTags(body.vertical_tags),
+        location_tags: normalizeTags(body.location_tags),
+        sort_order: typeof body.sort_order === 'number' ? body.sort_order : 100,
+        archived: false,
+        created_at: stamp,
+        updated_at: stamp,
+        ...emptyOfferSkuFields()
       }
+      const sku = applyOfferSkuFields(body, row)
+      if (!sku.ok) return { ok: false, error: sku.error }
+      return { ok: true, row }
     }
     case 'expressions': {
       const offer_key = str(body.offer_key)
@@ -320,6 +322,10 @@ export function buildOutboundPatch(
       if (body.location_tags !== undefined) patch.location_tags = normalizeTags(body.location_tags)
       if (typeof body.sort_order === 'number') patch.sort_order = body.sort_order
       if (typeof body.archived === 'boolean') patch.archived = body.archived
+      {
+        const sku = applyOfferSkuFields(body, patch)
+        if (!sku.ok) return { ok: false, error: sku.error }
+      }
       break
     case 'expressions':
       setStr('offer_key', body.offer_key)

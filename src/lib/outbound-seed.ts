@@ -1,4 +1,9 @@
 import {
+  BOOKED_JOBS_LOCK,
+  MISSED_CALL_LOCK,
+  emptyOfferSkuFields
+} from '@/lib/offer-sku'
+import {
   deriveCopyArchiveComponents,
   emptyFollowUpStep,
   scaffoldSequence,
@@ -35,6 +40,7 @@ function mergeById<T extends { id: string }>(yours: T[], source: T[]): T[] {
 
 
 export function seedOffers(): OutboundOffer[] {
+  const retired = { ...emptyOfferSkuFields(), gtm_status: 'retired' as const }
   return [
     {
       id: 'offer-growth-system',
@@ -49,7 +55,8 @@ export function seedOffers(): OutboundOffer[] {
       archived: true,
       created_at: STAMP,
       updated_at: STAMP,
-      ...yoursProvenance()
+      ...yoursProvenance(),
+      ...retired
     },
     {
       id: 'offer-ai-enablement',
@@ -64,7 +71,30 @@ export function seedOffers(): OutboundOffer[] {
       archived: true,
       created_at: STAMP,
       updated_at: STAMP,
-      ...yoursProvenance()
+      ...yoursProvenance(),
+      ...retired
+    },
+    {
+      id: 'offer-booked-jobs-system',
+      offer_key: 'booked-jobs-system',
+      name: 'Fill and capture',
+      pack_summary:
+        'Paid demand into their number, then answer and book in minutes so jobs they paid for actually show',
+      positioning_line:
+        'Fill and capture for established local trades: ads into a number that answers',
+      vertical_tags: ['tradies', 'plumber', 'hvac'],
+      location_tags: ['au-national'],
+      sort_order: 25,
+      archived: false,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance(),
+      ...emptyOfferSkuFields(),
+      gtm_status: 'testing',
+      one_sentence:
+        'We fill and capture jobs for established trade shops: paid demand into their number, then answer and book in minutes, so the diary fills and the jobs they paid for actually show.',
+      dream_outcome: 'Showed jobs this month, not a lead count.',
+      lock: BOOKED_JOBS_LOCK
     },
     {
       id: 'offer-ai-receptionist-system',
@@ -77,10 +107,22 @@ export function seedOffers(): OutboundOffer[] {
       vertical_tags: ['tradies', 'plumber', 'hvac'],
       location_tags: ['au-national'],
       sort_order: 30,
-      archived: false,
+      archived: true,
       created_at: STAMP,
       updated_at: STAMP,
-      ...yoursProvenance()
+      ...yoursProvenance(),
+      ...emptyOfferSkuFields(),
+      gtm_status: 'retired',
+      one_sentence:
+        'We install missed-call and after-hours booking for established trade shops that already get inbound, so the job books while they are on the tools.',
+      dream_outcome: 'Kept jobs this month from calls they already paid to generate.',
+      install_aud: 1997,
+      retainer_low_aud: 1497,
+      retainer_high_aud: 1997,
+      term_days: 90,
+      guarantee:
+        'If they do not make the fees they paid back in 30 days from showed jobs this system booked, refund those fees in full. They must pass the inbound screen and leave routing on. Install is always collected.',
+      lock: MISSED_CALL_LOCK
     },
     {
       id: 'offer-agency-ai-reporting',
@@ -94,7 +136,8 @@ export function seedOffers(): OutboundOffer[] {
       archived: true,
       created_at: STAMP,
       updated_at: STAMP,
-      ...yoursProvenance()
+      ...yoursProvenance(),
+      ...retired
     }
   ]
 }

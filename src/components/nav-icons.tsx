@@ -87,6 +87,16 @@ export function ClientsIcon(props: IconProps) {
   )
 }
 
+export function OffersIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="4.5" y="5.5" width="15" height="4.5" rx="1.2" />
+      <rect x="6" y="11.25" width="12" height="4.25" rx="1.2" />
+      <rect x="7.5" y="16.75" width="9" height="2.75" rx="1" />
+    </Icon>
+  )
+}
+
 export function OverviewIcon(props: IconProps) {
   return (
     <Icon {...props}>

@@ -4,6 +4,7 @@ export const OUTBOUND_OFFER_KEYS = [
   'growth-system',
   'ai-enablement',
   'ai-receptionist-system',
+  'booked-jobs-system',
   'agency-ai-reporting'
 ] as const
 export type OutboundOfferKey = (typeof OUTBOUND_OFFER_KEYS)[number]
@@ -121,6 +122,15 @@ export type OutboundOffer = {
   archived: boolean
   created_at: string
   updated_at: string
+  gtm_status?: 'live' | 'testing' | 'retired'
+  one_sentence?: string | null
+  dream_outcome?: string | null
+  install_aud?: number | null
+  retainer_low_aud?: number | null
+  retainer_high_aud?: number | null
+  term_days?: number | null
+  guarantee?: string | null
+  lock?: unknown
 } & OutboundProvenanceFields
 
 export type OutboundExpression = {
@@ -796,6 +806,11 @@ export const LIBRARY_FEATURED_EXAMPLES: Record<
       title: 'After-hours booking',
       detail:
         'Overflow voice + SMS so a job that already called books while they are on the tools'
+    },
+    {
+      id: 'offer-booked-jobs-system',
+      title: 'Fill and capture',
+      detail: 'Paid demand into a number that answers. Testing. Not live outbound.'
     },
     {
       id: 'offer-growth-system',

@@ -34,11 +34,12 @@ export function isHomeOrInboxPath(path: string) {
 /** Surfaces kept mounted in the console shell after first visit. */
 export function keepAliveKey(
   path: string
-): 'home' | 'inbox' | 'sales' | 'outbound' | 'leads' | null {
+): 'home' | 'inbox' | 'sales' | 'offers' | 'outbound' | 'leads' | null {
   const p = path.split('?')[0] || path
   if (p === '/home' || p.startsWith('/home/')) return 'home'
   if (p === '/inbox' || p.startsWith('/inbox/')) return 'inbox'
   if (p === '/sales') return 'sales'
+  if (p === '/sales/offers' || p.startsWith('/sales/offers/')) return 'offers'
   if (p === '/sales/pipeline' || p === '/sales/outbound') return 'outbound'
   if (p === '/leads') return 'leads'
   return null

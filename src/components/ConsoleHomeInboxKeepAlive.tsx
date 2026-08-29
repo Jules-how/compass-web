@@ -6,6 +6,7 @@ import { HomeDashboard } from '@/components/home/HomeDashboard'
 import { InboxPanel } from '@/components/InboxPanel'
 import { LeadsPanel } from '@/components/LeadsPanel'
 import { LoadingBlock } from '@/components/LoadingBlock'
+import { OffersDesk } from '@/components/offers/OffersDesk'
 import { OperatorShell } from '@/components/OperatorShell'
 import { SalesOverview } from '@/components/sales/SalesOverview'
 import { keepAliveKey, useConsoleViewPath } from '@/components/ConsoleNav'
@@ -54,11 +55,13 @@ export function ConsoleHomeInboxKeepAlive() {
   const showHome = key === 'home'
   const showInbox = key === 'inbox'
   const showOverview = key === 'sales'
+  const showOffers = key === 'offers'
   const showOutbound = key === 'outbound'
   const showCrm = key === 'leads'
   const seenHome = useSeen(showHome)
   const seenInbox = useSeen(showInbox)
   const seenOverview = useSeen(showOverview)
+  const seenOffers = useSeen(showOffers)
   const seenOutbound = useSeen(showOutbound)
   const seenCrm = useSeen(showCrm)
 
@@ -66,6 +69,7 @@ export function ConsoleHomeInboxKeepAlive() {
     !seenHome &&
     !seenInbox &&
     !seenOverview &&
+    !seenOffers &&
     !seenOutbound &&
     !seenCrm
   ) {
@@ -105,6 +109,17 @@ export function ConsoleHomeInboxKeepAlive() {
             width="full"
           >
             <SalesOverview />
+          </OperatorShell>
+        </KeepAlivePane>
+      ) : null}
+      {seenOffers ? (
+        <KeepAlivePane active={showOffers}>
+          <OperatorShell
+            title="Offers"
+            subtitle="Live and testing SKUs. Results from the ledger, not CPL."
+            width="full"
+          >
+            <OffersDesk />
           </OperatorShell>
         </KeepAlivePane>
       ) : null}

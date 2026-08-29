@@ -69,7 +69,13 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/expressions/<id>" \
   -d '{"notes":"..."}'
 ```
 
-Campaign sequence of record: `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Outbound doctrine is `cold-email/AGENTS.md`. Product/price for the site stay in `switchflow-offer/offer.md`. Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact readiness `wave` is on `GET /api/agent/campaigns`. Live targeting (`currentWave`: trade, cluster, remaining, last import) is on `GET /api/agent/brief`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. First line goes in `personalization` and `custom_variables.opener`.
+```bash
+# SKU desk (live / testing / retired + campaign results)
+curl -sS "$COMPASS_BASE_URL/api/agent/offers/desk" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
+```
+
+Campaign sequence of record: `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Outbound doctrine is `cold-email/AGENTS.md`. Product/price lock is Compass: `GET /api/agent/offers/desk` (Offers tab). Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact readiness `wave` is on `GET /api/agent/campaigns`. Live targeting (`currentWave`: trade, cluster, remaining, last import) is on `GET /api/agent/brief`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. First line goes in `personalization` and `custom_variables.opener`.
 
 **Operating model:** Compass = workshop · Instantly = mail truck. Activate stays in Instantly. Outbound doctrine is `cold-email/AGENTS.md`.
 

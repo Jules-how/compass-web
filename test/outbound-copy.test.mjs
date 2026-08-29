@@ -64,8 +64,8 @@ test('outbound nav and pages are wired under Sales', () => {
   assert.match(read('src/components/outbound/OutboundLibraryAccordion.tsx'), /LIBRARY_FEATURED_EXAMPLES/)
   const featured = read('src/lib/outbound-copy.ts')
   assert.match(featured, /LIBRARY_FEATURED_EXAMPLES/)
-  assert.match(featured, /title: 'Growth System'/)
-  assert.match(featured, /title: 'AI enablement'/)
+  assert.match(featured, /title: 'After-hours booking'/)
+  assert.match(featured, /title: 'Fill and capture'/)
   assert.match(read('src/app/(console)/sales/outbound/editor/new/page.tsx'), /SequenceEditor/)
   assert.match(
     read('src/app/(console)/sales/outbound/editor/[campaignId]/page.tsx'),

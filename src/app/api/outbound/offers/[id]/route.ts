@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { requireSameOrigin } from '@/lib/portal-http'
 import { archiveLibraryItem, getLibraryItem, patchLibraryItem, tagsFromBody } from '@/lib/outbound-api'
+import { applyOfferSkuFields } from '@/lib/offer-sku'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,6 +31,8 @@ export async function PATCH(request: NextRequest, context: Ctx) {
     if (body.location_tags !== undefined) patch.location_tags = tagsFromBody(body.location_tags)
     if (typeof body.sort_order === 'number') patch.sort_order = body.sort_order
     if (typeof body.archived === 'boolean') patch.archived = body.archived
+    const sku = applyOfferSkuFields(body, patch)
+    if (!sku.ok) return { error: sku.error }
     return patch
   })
 }

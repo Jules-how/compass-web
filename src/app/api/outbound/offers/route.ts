@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { requireSameOrigin } from '@/lib/portal-http'
 import { createLibraryItem, listLibrary, tagsFromBody } from '@/lib/outbound-api'
+import { applyOfferSkuFields, emptyOfferSkuFields } from '@/lib/offer-sku'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
     const name = typeof body.name === 'string' ? body.name.trim() : ''
     const pack_summary = typeof body.pack_summary === 'string' ? body.pack_summary.trim() : ''
     if (!offer_key || !name || !pack_summary) return { error: 'fields_required' }
-    return {
+    const row: Record<string, unknown> = {
       id: `offer-${crypto.randomUUID()}`,
       offer_key,
       name,
@@ -31,7 +32,11 @@ export async function POST(request: NextRequest) {
       updated_at: stamp,
       provenance: 'yours',
       source_creator: null,
-      source_file: null
+      source_file: null,
+      ...emptyOfferSkuFields()
     }
+    const sku = applyOfferSkuFields(body, row)
+    if (!sku.ok) return { error: sku.error }
+    return row
   })
 }
