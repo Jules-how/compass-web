@@ -120,7 +120,7 @@ export function leadContactToInstantlyLead(lead: LeadContact): InstantlyLeadPayl
   if (firstFact?.claim) custom.fact_claim = firstFact.claim
   if (firstFact?.url) custom.fact_url = firstFact.url
   const payload: InstantlyLeadPayload = { email }
-  payload.first_name = firstName || 'team'
+  if (firstName) payload.first_name = firstName
   if (lastName) payload.last_name = lastName
   if (values.companyName) payload.company_name = values.companyName
   if (values.phone) payload.phone = values.phone
