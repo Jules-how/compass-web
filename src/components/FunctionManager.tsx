@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import type { CompassBusinessFunctionWithStats } from '@/lib/types'
+import type { CompassBusinessFunctionWithStats, SystemMapMeta } from '@/lib/types'
 import { emptyFunctionStats } from '@/lib/function-stats'
 import {
   functionAccentColor,
@@ -228,6 +228,7 @@ export function FunctionManager({
             const color = functionAccentColor(identity)
             const kind = resolveFunctionKind(identity)
             const recent = row.recentProjects ?? []
+            const map = (row.system_map ?? {}) as SystemMapMeta
             return (
               <Link
                 key={row.id}
@@ -267,7 +268,21 @@ export function FunctionManager({
                           /{row.slug}
                         </span>
                       </div>
-                      {recent.length > 0 ? (
+                      {map.why ? (
+                        <p className="mt-2 text-sm text-neutral-600">{map.why}</p>
+                      ) : null}
+                      {map.influences && map.influences.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {map.influences.slice(0, 3).map((edge) => (
+                            <span
+                              key={`${edge.route}-${edge.table}`}
+                              className="rounded-md bg-white/80 px-1.5 py-0.5 text-[10px] text-neutral-500 ring-1 ring-stone-200/80"
+                            >
+                              {edge.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : recent.length > 0 ? (
                         <p className="mt-2 truncate text-sm text-neutral-600">
                           <span className="text-neutral-400">Projects · </span>
                           {recent.map((project) => project.name).join(' · ')}

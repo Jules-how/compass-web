@@ -687,6 +687,39 @@ export async function fetchInstantlyUnreadCount(apiKey: string): Promise<number>
   return Math.max(0, Math.round(Number(body.count) || 0))
 }
 
+export type InstantlyEmailRow = {
+  id?: string
+  lead_id?: string
+  campaign_id?: string
+  timestamp_email?: string
+  sent_at?: string
+  reply_count?: number
+  email_type?: string
+  [key: string]: unknown
+}
+
+/** Paginated email list (read-only). Used by history backfill. */
+export async function fetchInstantlyEmailsPage(
+  apiKey: string,
+  options?: { campaignId?: string; startingAfter?: string; limit?: number }
+): Promise<{ items: InstantlyEmailRow[]; next: string | null }> {
+  const qs = new URLSearchParams()
+  const limit = Math.min(100, Math.max(1, options?.limit ?? 100))
+  qs.set('limit', String(limit))
+  if (options?.campaignId?.trim()) qs.set('campaign_id', options.campaignId.trim())
+  if (options?.startingAfter?.trim()) qs.set('starting_after', options.startingAfter.trim())
+
+  const json = await instantlyFetch<{
+    items?: InstantlyEmailRow[]
+    next_starting_after?: string | null
+  }>(`/emails?${qs}`, apiKey)
+
+  return {
+    items: Array.isArray(json.items) ? json.items : [],
+    next: json.next_starting_after || null
+  }
+}
+
 const COLD_EMAIL_CACHE_TTL_MS = 60_000
 
 type ColdEmailCacheEntry = {

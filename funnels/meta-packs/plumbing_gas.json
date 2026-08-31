@@ -1,0 +1,99 @@
+{
+  "pack_id": "plumbing_gas",
+  "vertical": "plumbing_gas",
+  "trade_label": "Plumbing & Gas",
+  "default_offer_cell": "emergency_call",
+  "offer_cells": {
+    "emergency_call": {
+      "label": "Emergency plumber call",
+      "messaging": "problem_call",
+      "destination_type": "WEBSITE",
+      "cta": "CALL_NOW",
+      "primary_texts": [
+        "Burst pipe or blocked drain? {{business_name}} answers fast across {{city}}. Licensed plumbers. Call now.",
+        "Water everywhere and no one picking up? Local {{city}} plumbers on the line today. {{business_name}}.",
+        "Emergency plumbing in {{city}} — same-day help when the mains won't wait. Speak to {{business_name}} now."
+      ],
+      "headlines": [
+        "Emergency Plumber {{city}}",
+        "Burst Pipe? Call Now",
+        "Blocked Drain Help Today",
+        "Licensed {{city}} Plumbers",
+        "{{business_name}} — Fast Response"
+      ],
+      "descriptions": [
+        "Local licensed team",
+        "Same-day emergency help",
+        "Trusted in {{city}}"
+      ],
+      "creative_brief": {
+        "photo_direction": "Real wet-area job photo: burst pipe under sink, water on floor, or plumber hands on copper — never stock smiles or AI scenes.",
+        "text_layers": {
+          "headline": "Emergency plumber {{city}}",
+          "subline": "Licensed · local · on the phone now",
+          "badge": "Same-day response"
+        },
+        "ratios": ["1:1", "4:5"],
+        "never": "Flat PNG as master; 100% AI hero; missed-call product copy"
+      },
+      "targeting_defaults": {
+        "geo_radius_km": 25,
+        "age_min": 25,
+        "age_max": 65,
+        "location_type": "home",
+        "notes": "Radius from service suburbs. No interest stacking for local service."
+      },
+      "budget_default_daily": 30,
+      "negative_notes": [
+        "Do not mention Switchflow or missed-call software",
+        "No finance on emergency cell",
+        "Page hours must match after-hours routing"
+      ]
+    },
+    "quote": {
+      "label": "Plumbing quote",
+      "messaging": "proof_years",
+      "destination_type": "WEBSITE",
+      "cta": "GET_QUOTE",
+      "primary_texts": [
+        "Leak, hot water, or renovation plumbing in {{city}}? Get a fixed-price quote from {{business_name}}. No call-out surprises.",
+        "Need a plumber you can book? {{business_name}} covers {{city}} suburbs. Request your quote online — we call back fast.",
+        "Blocked drain or new bathroom? Local {{city}} plumbers. Transparent quote before we roll. {{business_name}}."
+      ],
+      "headlines": [
+        "Get a Plumbing Quote",
+        "{{city}} Plumber — Free Quote",
+        "Leak? Request a Callback",
+        "Licensed Gas & Plumbing",
+        "{{business_name}} {{city}}"
+      ],
+      "descriptions": [
+        "Quote before we start",
+        "Licensed & insured",
+        "Local {{city}} team"
+      ],
+      "creative_brief": {
+        "photo_direction": "Van on suburban street, licence visible on uniform, or before/after drain clear — real crew or job site only.",
+        "text_layers": {
+          "headline": "Plumbing quote {{city}}",
+          "subline": "Licensed plumbers · clear pricing",
+          "badge": "Request a quote"
+        },
+        "ratios": ["1:1", "4:5"],
+        "never": "Flat PNG as master; 100% AI hero"
+      },
+      "targeting_defaults": {
+        "geo_radius_km": 20,
+        "age_min": 28,
+        "age_max": 65,
+        "location_type": "home",
+        "notes": "Homeowners 28–65 in service radius. Advantage+ off for interests."
+      },
+      "budget_default_daily": 30,
+      "negative_notes": [
+        "One offer per ad — quote only, no emergency hook",
+        "LP must repeat quote promise above the fold"
+      ]
+    }
+  }
+}

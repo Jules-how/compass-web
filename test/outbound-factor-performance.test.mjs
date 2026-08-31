@@ -130,12 +130,14 @@ test('experiment campaign columns + challenger route exist', () => {
   assert.match(challenger, /experiment_role: 'challenger'/)
 
   const inventory = read('src/app/api/agent/leads/inventory/route.ts')
-  assert.match(inventory, /buildLeadInventory/)
+  assert.match(inventory, /loadLeadInventory/)
 
   const mark = read('src/app/api/agent/leads/mark/route.ts')
-  assert.match(mark, /enrich_status/)
-  assert.match(mark, /pipeline_campaign_id/)
-  assert.match(mark, /parseLeadFacts/)
+  const markLib = read('src/lib/lead-mark.ts')
+  assert.match(mark, /markLeadContacts/)
+  assert.match(markLib, /enrich_status/)
+  assert.match(markLib, /pipeline_campaign_id/)
+  assert.match(markLib, /parseLeadFacts/)
 })
 
 test('length / CTA helpers match Compass structures and CTA phrasing', () => {

@@ -1,5 +1,6 @@
 /**
- * Lean Compass agent MCP. Nine tools. No Instantly clone, no ads, no library dump.
+ * Lean Compass agent MCP. Search/commit leads, ledger, export, campaign land.
+ * No Instantly clone, no ads, no library dump, no Instantly activate.
  */
 
 export const SERVER_NAME = 'compass'
@@ -8,8 +9,10 @@ export const PROTOCOL_VERSION = '2024-11-05'
 
 const DEFAULT_BASE = 'https://compass-web-eosin.vercel.app'
 const MAX_LIMIT = 100
+const SEARCH_MAX_LIMIT = 5000
 const DEFAULT_LIMIT = 50
 const EXPORT_MAX_LIMIT = 200
+const SEARCH_DEFAULT_LIMIT = 2000
 
 export const TOOLS = [
   {
@@ -32,7 +35,7 @@ export const TOOLS = [
   {
     name: 'leads',
     description:
-      'inventory = uncontacted counts by vertical×state. cohort = harvest rows for one campaign. Always limited.',
+      'Deprecated alias. inventory = counts. cohort = harvest rows (campaignId required). Prefer leads.search.',
     inputSchema: {
       type: 'object',
       required: ['view'],
@@ -49,9 +52,59 @@ export const TOOLS = [
     }
   },
   {
+    name: 'leads.search',
+    description:
+      'Filter lead_contacts. view=rows (keyset, default 2000 max 5000) or counts. pipeline_campaign_id=none for unattached. columns=lean|cohort|full. Never activates Instantly.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        view: { type: 'string', enum: ['rows', 'counts'] },
+        q: { type: 'string' },
+        vertical: { type: 'string' },
+        state: { type: 'string' },
+        city: { type: 'string' },
+        cohort_tag: { type: 'string' },
+        source: { type: 'string' },
+        outbound_status: { type: 'string', description: 'CSV ok' },
+        sync_state: { type: 'string' },
+        pipeline_campaign_id: { type: 'string', description: 'id or none' },
+        instantly_campaign_id: { type: 'string' },
+        enrich_status: { type: 'string' },
+        icp_status: { type: 'string' },
+        email_origin: { type: 'string' },
+        after_hours: { type: 'string', enum: ['0', '1'] },
+        min_reviews: { type: 'string' },
+        unverified_only: { type: 'boolean' },
+        recontact_ready: { type: 'string', enum: ['0', '1'] },
+        bucket: { type: 'string', enum: ['leads', 'prospects', 'archived'] },
+        completeness: { type: 'string' },
+        columns: { type: 'string', enum: ['lean', 'cohort', 'full'] },
+        cursor: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: SEARCH_MAX_LIMIT }
+      },
+      additionalProperties: false
+    }
+  },
+  {
+    name: 'leads.commit',
+    description:
+      'Bulk upsert lead_contacts. Email match updates; company domain/name+city is company_dupe (no insert). Never invents email. Never activates Instantly.',
+    inputSchema: {
+      type: 'object',
+      required: ['rows'],
+      properties: {
+        defaults: { type: 'object' },
+        rows: { type: 'array', items: { type: 'object' } },
+        on_conflict: { type: 'string', enum: ['email'] },
+        mark: { type: 'object' }
+      },
+      additionalProperties: false
+    }
+  },
+  {
     name: 'mark',
     description:
-      'PATCH lead_contacts. Bulk ids/emails (max 500) or rows[] (max 50) for facts/opener/website. Same-turn land stamps.',
+      'Deprecated alias of PATCH /api/agent/leads/mark. Prefer leads.commit. Bulk ids/emails (max 500) or rows[] (max 50).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -168,6 +221,12 @@ export function clampExportLimit(n) {
   const v = Number(n)
   if (!Number.isFinite(v)) return DEFAULT_LIMIT
   return Math.min(EXPORT_MAX_LIMIT, Math.max(1, Math.trunc(v)))
+}
+
+export function clampSearchLimit(n) {
+  const v = Number(n)
+  if (!Number.isFinite(v)) return SEARCH_DEFAULT_LIMIT
+  return Math.min(SEARCH_MAX_LIMIT, Math.max(1, Math.trunc(v)))
 }
 
 export function parseEnvFile(text) {
@@ -287,6 +346,56 @@ export async function callTool(name, args = {}, { cfg, fetchImpl }) {
       }
       return toolError('leads.view must be inventory or cohort')
     }
+    case 'leads.search': {
+      const view = args.view === 'counts' ? 'counts' : 'rows'
+      const r = await compassFetch(cfg, {
+        method: 'GET',
+        path: '/api/agent/leads',
+        query: {
+          view,
+          q: args.q,
+          vertical: args.vertical,
+          state: args.state,
+          city: args.city,
+          cohort_tag: args.cohort_tag,
+          source: args.source,
+          outbound_status: args.outbound_status,
+          sync_state: args.sync_state,
+          pipeline_campaign_id: args.pipeline_campaign_id,
+          instantly_campaign_id: args.instantly_campaign_id,
+          enrich_status: args.enrich_status,
+          icp_status: args.icp_status,
+          email_origin: args.email_origin,
+          after_hours: args.after_hours,
+          min_reviews: args.min_reviews,
+          unverified_only: args.unverified_only === true ? '1' : undefined,
+          recontact_ready: args.recontact_ready,
+          bucket: args.bucket,
+          completeness: args.completeness,
+          columns: args.columns,
+          cursor: args.cursor,
+          limit: args.limit != null ? String(clampSearchLimit(args.limit)) : undefined
+        },
+        fetchImpl
+      })
+      return toolOk(r.json)
+    }
+    case 'leads.commit': {
+      const rows = Array.isArray(args.rows) ? args.rows : []
+      if (!rows.length) return toolError('leads.commit requires rows')
+      const r = await compassFetch(cfg, {
+        method: 'POST',
+        path: '/api/agent/leads',
+        body: {
+          defaults: args.defaults && typeof args.defaults === 'object' ? args.defaults : undefined,
+          rows,
+          on_conflict: args.on_conflict || 'email',
+          mark: args.mark && typeof args.mark === 'object' ? args.mark : undefined
+        },
+        fetchImpl
+      })
+      return toolOk(r.json)
+    }
     case 'mark': {
       const body = { ...args }
       delete body.view
@@ -365,11 +474,12 @@ export async function callTool(name, args = {}, { cfg, fetchImpl }) {
         method: 'POST',
         path: '/api/agent/leads',
         body: {
-          vertical,
-          sourceService: typeof args.sourceService === 'string' ? args.sourceService : 'other',
-          import_batch_id: args.import_batch_id || undefined,
-          filename: args.filename || undefined,
-          rows
+          defaults: {
+            vertical,
+            source: typeof args.sourceService === 'string' ? args.sourceService : 'other'
+          },
+          rows,
+          on_conflict: 'email'
         },
         fetchImpl
       })

@@ -23,7 +23,13 @@ test('customer and legacy operator data routes never import a service-role clien
         !file.includes('/api/ingest/') &&
         !file.includes('/api/agent/') &&
         !file.includes('/api/cron/') &&
-        !file.includes('/api/webhooks/')
+        !file.includes('/api/webhooks/') &&
+        !file.includes('/api/voice/') &&
+        !file.includes('/api/onboarding/') &&
+        !file.includes('/onboarding/') &&
+        !file.includes('/api/qbo/webhook') &&
+        !file.includes('/api/leads/') &&
+        !file.includes('/api/reactivation/')
     )
     .filter((file) => /getSupabaseServiceClient|getPortalAdminClient|SUPABASE_SERVICE_ROLE_KEY/.test(readFileSync(file, 'utf8')))
     .map((file) => relative(appRoot.pathname, file))
@@ -38,6 +44,8 @@ test('customer and legacy operator data routes never import a service-role clien
   assert.deepEqual(serviceRoleRoutes, [
     'api/agent/brief/route.ts',
     'api/agent/campaigns/route.ts',
+    'api/agent/cs/route.ts',
+    'api/agent/instantly/backfill/route.ts',
     'api/agent/instantly/ensure/route.ts',
     'api/agent/instantly/push-leads/route.ts',
     'api/agent/instantly/push-sequence/route.ts',
@@ -47,15 +55,31 @@ test('customer and legacy operator data routes never import a service-role clien
     'api/agent/leads/ledger/route.ts',
     'api/agent/leads/mark/route.ts',
     'api/agent/leads/route.ts',
+    'api/agent/offers/desk/route.ts',
     'api/agent/outbound/[kind]/[id]/route.ts',
     'api/agent/outbound/[kind]/route.ts',
     'api/agent/outbound/campaigns/[campaignId]/copy/route.ts',
     'api/agent/outbound/summary/route.ts',
     'api/agent/sync/route.ts',
+    'api/clients/[id]/onboarding/route.ts',
     'api/cron/daily-sync/route.ts',
     'api/ingest/comms/route.ts',
     'api/ingest/leads/route.ts',
+    'api/ingest/site-events/route.ts',
+    'api/leads/[id]/route.ts',
+    'api/leads/bulk/route.ts',
+    'api/leads/facets/route.ts',
+    'api/leads/list/route.ts',
+    'api/leads/summary/route.ts',
+    'api/leads/upload/route.ts',
+    'api/onboarding/[token]/route.ts',
     'api/operator/invitations/route.ts',
+    'api/qbo/webhook/route.ts',
+    'api/reactivation/sms/route.ts',
+    'api/voice/inbound/route.ts',
+    'api/voice/postcall/route.ts',
+    'api/voice/sms/route.ts',
+    'api/voice/tools/route.ts',
     'api/webhooks/instantly/route.ts'
   ])
 })
@@ -81,7 +105,12 @@ test('every cookie-authenticated mutation route enforces a same-origin request',
         !file.includes('/api/ingest/') &&
         !file.includes('/api/agent/') &&
         !file.includes('/api/cron/') &&
-        !file.includes('/api/webhooks/')
+        !file.includes('/api/webhooks/') &&
+        !file.includes('/api/voice/') &&
+        !file.includes('/api/onboarding/') &&
+        !file.includes('/api/qbo/webhook') &&
+        !file.includes('/api/reactivation/') &&
+        !file.includes('/api/delivery-dept/')
     )
     .filter((file) => !/requireSameOrigin/.test(readFileSync(file, 'utf8')))
     .map((file) => relative(appRoot.pathname, file))

@@ -1,16 +1,18 @@
 import { requireAgentAuth } from '@/lib/agent-auth'
 import { getPortalAdminClient } from '@/lib/portal-admin'
 import { portalJson } from '@/lib/portal-http'
+import { parseLeadListFilters } from '@/lib/leads-query'
+import { searchLeadContacts } from '@/lib/lead-search'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const COHORT_COLUMNS =
-  'id,name,email,company,city,state,linkedin,website,company_domain,vertical,enrich_status,lead_facts,opener,outbound_status,pipeline_campaign_id,cohort_tag,email_verify_status,email_verified_at,icp_status,review_count,hours_label,after_hours,capture_crack,email_origin'
+const DEPRECATED =
+  'Use GET /api/agent/leads?view=rows&columns=cohort&pipeline_campaign_id=… (or none for unattached).'
 
 /**
- * Harvest/attach input: contacts on a pipeline campaign.
- * Query: pipeline_campaign_id=… & enrich_status=none,queued & unverified_only=1 & limit=50 & offset=0
+ * Alias: harvest/attach input. Same filters as GET /api/agent/leads (cohort columns).
+ * pipeline_campaign_id still required here so existing skill calls keep working.
  */
 export async function GET(request: Request) {
   const authError = requireAgentAuth(request)
@@ -24,49 +26,27 @@ export async function GET(request: Request) {
 
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') || 50) || 50))
   const offset = Math.max(0, Number(url.searchParams.get('offset') || 0) || 0)
-  const statusParam = url.searchParams.get('enrich_status')?.trim() || ''
-  const statuses = statusParam
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
-  const icpParam = url.searchParams.get('icp_status')?.trim() || ''
-  const icpStatuses = icpParam
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
+  const filters = parseLeadListFilters(url.searchParams)
+  filters.pipeline_campaign_id = campaignId
 
   try {
     const admin = getPortalAdminClient()
-    let query = admin
-      .from('lead_contacts')
-      .select(COHORT_COLUMNS, { count: 'exact' })
-      .eq('pipeline_campaign_id', campaignId)
-      .order('email', { ascending: true, nullsFirst: false })
-      .range(offset, offset + limit - 1)
-
-    if (statuses.length) {
-      query = query.in('enrich_status', statuses)
-    }
-    if (icpStatuses.length) {
-      query = query.in('icp_status', icpStatuses)
-    }
-
-    const unverifiedOnly = url.searchParams.get('unverified_only') === '1'
-    if (unverifiedOnly) {
-      query = query.is('email_verified_at', null)
-    }
-
-    const { data, error, count } = await query
-    if (error) return portalJson({ error: 'list_failed', detail: error.message }, { status: 500 })
+    const result = await searchLeadContacts(admin, filters, {
+      mode: 'agent',
+      columns: 'cohort',
+      limit,
+      offset
+    })
 
     return portalJson({
       ok: true,
+      deprecated: DEPRECATED,
       pipeline_campaign_id: campaignId,
-      count: data?.length ?? 0,
-      total: count ?? 0,
+      count: result.count,
+      total: result.total,
       offset,
       limit,
-      leads: data ?? []
+      leads: result.leads
     })
   } catch (err) {
     console.error('[agent/leads/cohort]', err instanceof Error ? err.message : err)

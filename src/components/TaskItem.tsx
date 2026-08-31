@@ -15,6 +15,7 @@ import {
   taskPriorityLabel,
   taskPriorityShort
 } from '@/lib/task-priority'
+import { proofProgress, taskHasProofClauses } from '@/lib/execution-contract'
 
 interface TaskItemProps {
   task: CompassTask
@@ -96,6 +97,8 @@ export default function TaskItem({
   const createdLabel = formatCreatedAt(task.created_at)
   const isCompleted = task.status === 'completed' || lingeringComplete
   const isCancelled = task.status === 'cancelled'
+  const hasProof = taskHasProofClauses(task)
+  const proof = proofProgress(task)
 
   return (
     <li>
@@ -107,25 +110,42 @@ export default function TaskItem({
       >
         <button
           type="button"
-          onClick={() => void onToggleDone(task)}
-          disabled={isCancelled}
-          aria-label={isCompleted ? 'Mark as not done' : 'Mark as done'}
+          onClick={() => {
+            if (!hasProof) void onToggleDone(task)
+          }}
+          disabled={isCancelled || hasProof}
+          aria-label={
+            hasProof
+              ? `${proof.proven} of ${proof.total} proven`
+              : isCompleted
+                ? 'Mark as not done'
+                : 'Mark as done'
+          }
+          title={hasProof ? `${proof.proven} of ${proof.total} evidence clauses satisfied` : undefined}
           className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
-            isCompleted
-              ? 'border-emerald-500 bg-emerald-500 text-white'
-              : 'border-stone-300 bg-white text-transparent hover:border-sf-orange'
+            hasProof
+              ? 'cursor-default border-stone-200 bg-stone-50'
+              : isCompleted
+                ? 'border-emerald-500 bg-emerald-500 text-white'
+                : 'border-stone-300 bg-white text-transparent hover:border-sf-orange'
           } ${isCancelled ? 'cursor-not-allowed opacity-40' : ''}`}
         >
-          <svg viewBox="0 0 16 16" className="h-3 w-3" aria-hidden>
-            <path
-              d="M3.5 8.2 6.4 11l6.1-6.4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          {hasProof ? (
+            <span className="text-[9px] font-semibold tabular-nums text-neutral-500">
+              {proof.proven}/{proof.total}
+            </span>
+          ) : (
+            <svg viewBox="0 0 16 16" className="h-3 w-3" aria-hidden>
+              <path
+                d="M3.5 8.2 6.4 11l6.1-6.4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
         </button>
 
         <button
@@ -161,9 +181,9 @@ export default function TaskItem({
                 Blocked
               </span>
             ) : null}
-            {task.status === 'in-progress' && !isCompleted ? (
+            {hasProof ? (
               <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-700">
-                In progress
+                {proof.proven} of {proof.total} proven
               </span>
             ) : null}
             {lingeringComplete ? (

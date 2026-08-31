@@ -1,10 +1,12 @@
 import { OperatorShell } from '@/components/OperatorShell'
 import { AdAccountsSettings } from '@/components/settings/AdAccountsSettings'
+import { QboSettings } from '@/components/settings/QboSettings'
 
 function bannerFromSearch(
   ads: string | undefined,
   count: string | undefined,
-  calendar: string | undefined
+  calendar: string | undefined,
+  qbo: string | undefined
 ): string | null {
   switch (ads) {
     case 'meta_connected':
@@ -30,6 +32,18 @@ function bannerFromSearch(
     case 'connect_failed':
       return 'Google Calendar connect failed. Check GOOGLE_CALENDAR_CLIENT_ID / SECRET and try again.'
     default:
+      break
+  }
+  switch (qbo) {
+    case 'connected':
+      return 'QuickBooks connected. Invoices and spend now read from the AU company file.'
+    case 'denied':
+      return 'QuickBooks access was cancelled.'
+    case 'state_mismatch':
+      return 'QuickBooks OAuth state mismatch. Try Connect again.'
+    case 'connect_failed':
+      return 'QuickBooks connect failed. Check QBO_CLIENT_ID, SECRET, REDIRECT_URI, and QBO_ENV.'
+    default:
       return null
   }
 }
@@ -43,10 +57,14 @@ export default async function SettingsPage({
   const ads = typeof params.ads === 'string' ? params.ads : undefined
   const count = typeof params.count === 'string' ? params.count : undefined
   const calendar = typeof params.calendar === 'string' ? params.calendar : undefined
+  const qbo = typeof params.qbo === 'string' ? params.qbo : undefined
 
   return (
     <OperatorShell title="Settings" subtitle="Instantly, ad accounts, and workspace preferences">
-      <AdAccountsSettings initialBanner={bannerFromSearch(ads, count, calendar)} />
+      <div className="space-y-6">
+        <QboSettings initialBanner={bannerFromSearch(undefined, undefined, undefined, qbo)} />
+        <AdAccountsSettings initialBanner={bannerFromSearch(ads, count, calendar, undefined)} />
+      </div>
     </OperatorShell>
   )
 }

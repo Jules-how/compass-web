@@ -7,11 +7,13 @@ import {
   CrmIcon,
   FinancesIcon,
   FunctionsIcon,
+  RetentionIcon,
   HomeIcon,
   InboxIcon,
   OffersIcon,
   OutboundIcon,
   OverviewIcon,
+  PipelineIcon,
   ProjectsIcon,
   SettingsIcon,
   TasksIcon
@@ -33,6 +35,8 @@ export type NavKey =
   | 'offers'
   | 'outbound'
   | 'finances'
+  | 'installs'
+  | 'retention'
   | 'settings'
   | 'leads'
   | 'delivery'
@@ -110,7 +114,15 @@ const OPERATOR_SECTIONS: NavSection[] = [
     id: 'operations',
     label: 'Operations',
     items: [
-      { href: '/operations/finances', label: 'Finances', key: 'finances', icon: FinancesIcon }
+      { href: '/operations/finances', label: 'Finances', key: 'finances', icon: FinancesIcon },
+      {
+        href: '/operations/installs',
+        label: 'Installs',
+        key: 'installs',
+        icon: PipelineIcon,
+        api: '/api/delivery-dept/installs'
+      },
+      { href: '/operations/cs', label: 'Retention', key: 'retention', icon: RetentionIcon, api: '/api/cs' }
     ]
   }
 ]
@@ -138,6 +150,8 @@ export function navKeyFromPathname(pathname: string | null): NavKey {
     return 'sales-overview'
   }
   if (pathname.startsWith('/operations/finances')) return 'finances'
+  if (pathname.startsWith('/operations/installs')) return 'installs'
+  if (pathname.startsWith('/operations/cs')) return 'retention'
   if (pathname.startsWith('/projects')) return 'projects'
   if (pathname.startsWith('/functions')) return 'functions'
   if (pathname.startsWith('/tasks')) return 'tasks'

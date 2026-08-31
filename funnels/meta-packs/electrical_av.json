@@ -1,0 +1,98 @@
+{
+  "pack_id": "electrical_av",
+  "vertical": "electrical_av",
+  "trade_label": "Electrical & AV",
+  "default_offer_cell": "emergency_call",
+  "offer_cells": {
+    "emergency_call": {
+      "label": "Urgent electrical call",
+      "messaging": "problem_call",
+      "destination_type": "WEBSITE",
+      "cta": "CALL_NOW",
+      "primary_texts": [
+        "Power out or sparking socket in {{city}}? {{business_name}} — licensed electricians on the phone now.",
+        "No lights and the switchboard tripped? Local {{city}} sparkies. {{business_name}} answers urgent calls.",
+        "Electrical emergency in {{city}}? Do not wait — speak to {{business_name}} licensed electricians today."
+      ],
+      "headlines": [
+        "Electrician {{city}} — Urgent",
+        "Power Out? Call Now",
+        "Licensed Sparkies Today",
+        "{{business_name}} Electrical",
+        "Emergency Electrician"
+      ],
+      "descriptions": [
+        "Licensed electricians",
+        "Urgent response",
+        "Local {{city}} team"
+      ],
+      "creative_brief": {
+        "photo_direction": "Real switchboard open with licensed tech in PPE, or sparking outlet photo from a real job (safe staging) — never AI lab scene.",
+        "text_layers": {
+          "headline": "Urgent electrician {{city}}",
+          "subline": "Licensed · on the phone",
+          "badge": "Call now"
+        },
+        "ratios": ["1:1", "4:5"],
+        "never": "100% AI switchboard; flat PNG master"
+      },
+      "targeting_defaults": {
+        "geo_radius_km": 25,
+        "age_min": 25,
+        "age_max": 65,
+        "location_type": "home",
+        "notes": "Geo from suburbs. No interest stacking."
+      },
+      "budget_default_daily": 30,
+      "negative_notes": [
+        "Safety: no DIY advice in copy",
+        "Wires down → LP must show 000 / utility line per voice pack"
+      ]
+    },
+    "quote": {
+      "label": "Safety check / upgrade quote",
+      "messaging": "proof_years",
+      "destination_type": "WEBSITE",
+      "cta": "GET_QUOTE",
+      "primary_texts": [
+        "Switchboard upgrade or safety check in {{city}}? {{business_name}} — licensed quote before we start.",
+        "LED downlights, EV charger, or AV install quote? {{business_name}} covers {{city}}. Request callback.",
+        "Older home wiring? {{business_name}} licensed electricians in {{city}}. Book your safety inspection quote."
+      ],
+      "headlines": [
+        "Electrical Quote {{city}}",
+        "Switchboard Upgrade Quote",
+        "EV Charger Install Quote",
+        "Licensed Electricians",
+        "{{business_name}} — Get Quote"
+      ],
+      "descriptions": [
+        "Licensed & insured",
+        "Clear quote first",
+        "Local {{city}} sparkies"
+      ],
+      "creative_brief": {
+        "photo_direction": "Real switchboard upgrade, EV charger on garage wall, or AV rack install — licence number on van if true.",
+        "text_layers": {
+          "headline": "Electrical quote {{city}}",
+          "subline": "Licensed electricians",
+          "badge": "Request quote"
+        },
+        "ratios": ["1:1", "4:5"],
+        "never": "AI-generated switchboard"
+      },
+      "targeting_defaults": {
+        "geo_radius_km": 20,
+        "age_min": 28,
+        "age_max": 65,
+        "location_type": "home",
+        "notes": "Homeowners planning upgrades. Proof device: licence/years if true."
+      },
+      "budget_default_daily": 30,
+      "negative_notes": [
+        "One offer: quote/inspection only",
+        "AV install is separate creative if run — do not stack"
+      ]
+    }
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "pack_id": "hvac_refrig",
+  "vertical": "hvac_refrig",
+  "trade_label": "HVAC & Refrigeration",
+  "default_offer_cell": "emergency_call",
+  "offer_cells": {
+    "emergency_call": {
+      "label": "AC breakdown call",
+      "messaging": "problem_call",
+      "destination_type": "WEBSITE",
+      "cta": "CALL_NOW",
+      "primary_texts": [
+        "AC died in {{city}} heat? {{business_name}} answers now — breakdown repairs across your area today.",
+        "No cool air and the house is roasting? Local {{city}} HVAC techs on the line. {{business_name}}.",
+        "System down before guests arrive? {{business_name}} — emergency air con repair in {{city}}. Call now."
+      ],
+      "headlines": [
+        "AC Broken? Call Now",
+        "Emergency HVAC {{city}}",
+        "No Cool Air? We Answer",
+        "{{business_name}} — Today",
+        "Breakdown Repair {{city}}"
+      ],
+      "descriptions": [
+        "Local HVAC team",
+        "Same-day breakdowns",
+        "Licensed technicians"
+      ],
+      "creative_brief": {
+        "photo_direction": "Real split-system outdoor unit, tech on roof with harness, or thermostat showing high temp — no AI comfort scenes.",
+        "text_layers": {
+          "headline": "AC breakdown {{city}}",
+          "subline": "Licensed HVAC · phone answered",
+          "badge": "Same-day repair"
+        },
+        "ratios": ["1:1", "4:5"],
+        "never": "Stock family on couch; generated plant room"
+      },
+      "targeting_defaults": {
+        "geo_radius_km": 30,
+        "age_min": 25,
+        "age_max": 65,
+        "location_type": "home",
+        "notes": "Geo lock to service suburbs. No interest stacking."
+      },
+      "budget_default_daily": 30,
+      "negative_notes": [
+        "Summer heat hook only on breakdown cell",
+        "Do not sell maintenance on emergency ad"
+      ]
+    },
+    "seasonal_tuneup": {
+      "label": "Seasonal tune-up",
+      "messaging": "seasonal_offer",
+      "destination_type": "WEBSITE",
+      "cta": "SIGN_UP",
+      "primary_texts": [
+        "Beat the {{city}} summer rush — $99 AC tune-up from {{business_name}}. Book before slots fill.",
+        "Pre-season air con service in {{city}}. Filter, gas check, safety inspect. {{business_name}}.",
+        "Comfort club tune-up: priority booking + seasonal check. {{business_name}} covers {{city}}."
+      ],
+      "headlines": [
+        "$99 AC Tune-Up {{city}}",
+        "Pre-Summer Service Special",
+        "Book Your Tune-Up Now",
+        "{{business_name}} HVAC",
+        "Beat the Heat — Book Early"
+      ],
+      "descriptions": [
+        "Limited seasonal slots",
+        "Licensed HVAC team",
+        "Priority booking"
+      ],
+      "creative_brief": {
+        "photo_direction": "Before/after coil clean or tech servicing indoor head unit — real equipment, branded van optional.",
+        "text_layers": {
+          "headline": "AC tune-up special",
+          "subline": "Pre-season service · {{city}}",
+          "badge": "Book your slot"
+        },
+        "ratios": ["1:1", "4:5"],
+        "never": "AI-generated technician; flat PNG master"
+      },
+      "targeting_defaults": {
+        "geo_radius_km": 25,
+        "age_min": 30,
+        "age_max": 65,
+        "location_type": "home",
+        "notes": "Run Sep–Nov and Jan pre-heat waves in AU. Homeowners only."
+      },
+      "budget_default_daily": 30,
+      "negative_notes": [
+        "Offer price must match LP and Canva layer",
+        "Finance mention only on install-scale LP, not tune-up"
+      ]
+    },
+    "quote": {
+      "label": "Install / upgrade quote",
+      "messaging": "proof_years",
+      "destination_type": "WEBSITE",
+      "cta": "GET_QUOTE",
+      "primary_texts": [
+        "New split system or ducted quote in {{city}}? {{business_name}} — site visit, clear price, licensed install.",
+        "Upgrading old AC? {{business_name}} designs and installs across {{city}}. Request your quote today.",
+        "Refrigeration or commercial cool room? {{business_name}} — {{city}} licensed techs. Get a quote online."
+      ],
+      "headlines": [
+        "New AC Quote {{city}}",
+        "Split System Install Quote",
+        "Upgrade Your Air Con",
+        "Licensed HVAC Installers",
+        "{{business_name}} Quote"
+      ],
+      "descriptions": [
+        "Site visit available",
+        "Licensed & insured",
+        "Finance options on LP"
+      ],
+      "creative_brief": {
+        "photo_direction": "Installed outdoor unit on real home, or commercial cool room — transformation visible.",
+        "text_layers": {
+          "headline": "AC install quote",
+          "subline": "Licensed · {{city}}",
+          "badge": "Get a quote"
+        },
+        "ratios": ["1:1", "4:5"],
+        "never": "AI room render as only image"
+      },
+      "targeting_defaults": {
+        "geo_radius_km": 25,
+        "age_min": 28,
+        "age_max": 65,
+        "location_type": "home",
+        "notes": "Planned demand — proof years on ad if true."
+      },
+      "budget_default_daily": 30,
+      "negative_notes": [
+        "Message match: LP shows finance only if licensed and true"
+      ]
+    }
+  }
+}

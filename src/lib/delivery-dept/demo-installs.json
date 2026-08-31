@@ -1,0 +1,79 @@
+{
+  "now": "2026-08-26T19:00:00+10:00",
+  "installs": [
+    {
+      "id": "demo-harbour-gas",
+      "source": "demo",
+      "clientId": "demo-client-harbour-gas",
+      "business": "Harbour Gas and Plumbing",
+      "ownerName": "Mick Brennan",
+      "ownerMobile": "+61422111001",
+      "city": "Sydney",
+      "trade": "plumbing / gas",
+      "packId": "plumbing_gas",
+      "publishedNumber": "0291112201",
+      "carrier": "telstra",
+      "lineType": "mobile",
+      "calendarId": "mick@harbourgas.example",
+      "createdAt": "2026-08-26T18:20:00+10:00",
+      "stage": "number_strategy",
+      "notes": "Form in. Jules picks the number plan."
+    },
+    {
+      "id": "demo-northside-air",
+      "source": "demo",
+      "clientId": "demo-client-northside-air",
+      "business": "Northside Air",
+      "ownerName": "Priya Nair",
+      "ownerMobile": "+61433111002",
+      "city": "Brisbane",
+      "trade": "HVAC / refrigeration",
+      "packId": "hvac_refrig",
+      "publishedNumber": "0732221100",
+      "carrier": "optus",
+      "lineType": "landline",
+      "calendarId": "jobs@northsideair.example",
+      "createdAt": "2026-08-26T10:00:00+10:00",
+      "stage": "calendar_grant",
+      "blockedOn": "owner",
+      "voice": {
+        "twilio_number": "+61480001002",
+        "retell_agent_id": "agent_master_demo",
+        "trade_pack_id": "hvac_refrig",
+        "calendar_id": "jobs@northsideair.example",
+        "calendar_grant_broken": true,
+        "probe_ok": false
+      },
+      "notes": "Agent bound. Calendar share still missing Make changes."
+    },
+    {
+      "id": "demo-summit-roofing",
+      "source": "demo",
+      "clientId": "demo-client-summit-roofing",
+      "business": "Summit Roofing",
+      "ownerName": "Dan Costa",
+      "ownerMobile": "+61444111003",
+      "city": "Melbourne",
+      "trade": "roofing",
+      "packId": "roofing",
+      "publishedNumber": "0393334400",
+      "carrier": "vodafone",
+      "lineType": "mobile",
+      "calendarId": "bookings@summitroofing.example",
+      "createdAt": "2026-08-19T09:00:00+10:00",
+      "stage": "checkpoint",
+      "liveAt": "2026-08-19T14:00:00+10:00",
+      "checkpoints": { "day_1": "2026-08-20T09:30:00+10:00" },
+      "voice": {
+        "twilio_number": "+61480001003",
+        "retell_agent_id": "agent_master_demo",
+        "trade_pack_id": "roofing",
+        "calendar_id": "bookings@summitroofing.example",
+        "probe_ok": true,
+        "live_at": "2026-08-19T14:00:00+10:00",
+        "forwarding_confirmed_at": "2026-08-19T13:40:00+10:00"
+      },
+      "notes": "Live. Day 7 is due today. Do not invent booked or showed counts."
+    }
+  ]
+}

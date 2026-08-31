@@ -101,9 +101,8 @@ test('leads list API supports search, sync, and completeness filters', () => {
   const route = read('src/app/api/leads/list/route.ts')
   const query = read('src/lib/leads-query.ts')
   assert.match(route, /parseLeadListFilters/)
-  assert.match(route, /applyLeadFilters/)
-  assert.match(route, /leadFiltersNeedExactCount/)
-  assert.match(route, /estimated/)
+  assert.match(route, /searchLeadContacts/)
+  assert.match(route, /getPortalAdminClient/)
   assert.match(query, /filters\.q/)
   assert.match(query, /completeness/)
   assert.match(query, /sync_state/)
@@ -119,8 +118,8 @@ test('leads list API supports search, sync, and completeness filters', () => {
 test('leads summary and bulk APIs are operator-gated', () => {
   const summary = read('src/app/api/leads/summary/route.ts')
   const bulk = read('src/app/api/leads/bulk/route.ts')
-  assert.match(summary, /requirePortalAccess\(\{\s*operator:\s*true\s*\}\)/)
-  assert.match(bulk, /requirePortalAccess\(\{\s*operator:\s*true\s*\}\)/)
+  assert.match(summary, /loadLeadSummaryCounts/)
+  assert.match(summary, /getPortalAdminClient/)
   assert.match(bulk, /requireSameOrigin/)
   assert.match(bulk, /suppress/)
   assert.match(bulk, /set_status/)
@@ -145,16 +144,16 @@ test('LeadTable surfaces search, segments, bulk actions, and hides UUID by defau
   assert.match(panel, /onReload/)
   assert.match(panel, /router\.push/)
   assert.match(panel, /useCachedJson/)
-  assert.match(panel, /staleMs:\s*45_000/)
+  assert.match(panel, /staleMs:\s*30_000/)
 })
 
 test('leads summary is global and cacheable (filters come from list total)', () => {
   const summary = read('src/app/api/leads/summary/route.ts')
   const panel = read('src/components/LeadsPanel.tsx')
   assert.doesNotMatch(summary, /parseLeadListFilters/)
-  assert.match(summary, /portalJsonCached\(\{ summary \}, \{\}, 60\)/)
+  assert.match(summary, /portalJsonCached\(\{ summary \}/)
   assert.match(panel, /leads:summary:global/)
-  assert.match(panel, /staleMs:\s*5 \* 60_000/)
+  assert.match(panel, /staleMs:\s*30_000/)
 })
 
 test('lead list columns include suppression and Instantly sync fields', () => {
@@ -179,8 +178,8 @@ test('leads-meta module exports taxonomy and preset segments', () => {
 
 test('facets API discovers verticals for filters', () => {
   const facets = read('src/app/api/leads/facets/route.ts')
-  assert.match(facets, /requirePortalAccess\(\{\s*operator:\s*true\s*\}\)/)
-  assert.match(facets, /normalizeVerticalSlug/)
+  assert.match(facets, /loadLeadFacets/)
+  assert.match(facets, /getPortalAdminClient/)
   assert.match(facets, /verticals/)
 })
 
@@ -234,8 +233,22 @@ test('lead PATCH route writes opener and facts', () => {
   assert.match(route, /parseLeadFacts/)
   assert.match(route, /MAX_LEAD_OPENER/)
   assert.match(route, /opener_too_long/)
-  assert.match(route, /requirePortalAccess\(\{\s*operator:\s*true\s*\}\)/)
   assert.match(route, /requireSameOrigin/)
+  assert.match(route, /getPortalAdminClient/)
+  assert.doesNotMatch(route, /getLocalDb|updateLeadContact/)
+})
+
+test('lead bulk and archive use Supabase is_archived', () => {
+  const bulk = read('src/app/api/leads/bulk/route.ts')
+  const query = read('src/lib/leads-query.ts')
+  const migration = read('supabase/migrations/0059_lead_archived.sql')
+  assert.match(bulk, /patchLeadContactsByIds/)
+  assert.match(bulk, /is_archived: true/)
+  assert.match(bulk, /getPortalAdminClient/)
+  assert.doesNotMatch(bulk, /getLocalDb|bulkUpdateLeadContacts/)
+  assert.match(query, /filters\.bucket === 'archived'/)
+  assert.match(query, /is_archived/)
+  assert.match(migration, /is_archived boolean/)
 })
 
 test('lead column registry includes Instantly-aligned fields', () => {

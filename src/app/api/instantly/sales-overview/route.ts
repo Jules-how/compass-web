@@ -10,6 +10,7 @@ import {
   loadSalesOverviewFromInstantly,
   type SalesOverviewCrmDealRow
 } from '@/lib/sales-overview'
+import { leadStagesInOrder, stageToolHref, type LeadPipelineStage } from '@/lib/pipeline-spine'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +34,23 @@ async function loadCrmDealRows(
   }
 }
 
+async function loadSpineCounts(
+  supabase: Awaited<ReturnType<typeof requirePortalAccess>>['supabase']
+): Promise<Array<{ stage: string; count: number; href: string }>> {
+  const stages = leadStagesInOrder()
+  const counts = new Map(stages.map((s) => [s, 0]))
+  const { data } = await supabase.from('lead_contacts').select('pipeline_stage')
+  for (const row of data ?? []) {
+    const stage = String(row.pipeline_stage || 'Lead')
+    counts.set(stage as LeadPipelineStage, (counts.get(stage as LeadPipelineStage) ?? 0) + 1)
+  }
+  return stages.map((stage) => ({
+    stage,
+    count: counts.get(stage) ?? 0,
+    href: stageToolHref(stage)
+  }))
+}
+
 /**
  * GET /api/instantly/sales-overview — Sales Overview KPIs, campaigns, daily
  * volume, and deal flow from Instantly (plus CRM opportunity rows when present).
@@ -51,8 +69,11 @@ export async function GET(_request: NextRequest) {
     }
 
     const crmDeals = await loadCrmDealRows(supabase)
-    const model = await loadSalesOverviewFromInstantly(apiKey, { crmDeals })
-    return portalJsonCached(model, {}, 60)
+    const [model, spineCounts] = await Promise.all([
+      loadSalesOverviewFromInstantly(apiKey, { crmDeals }),
+      loadSpineCounts(supabase)
+    ])
+    return portalJsonCached({ ...model, spineCounts }, {}, 60)
   } catch (err) {
     const access = portalAccessResponse(err)
     if (access) return access

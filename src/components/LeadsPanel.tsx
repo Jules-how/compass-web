@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { LeadContact, LeadListFilters, LeadSummaryCounts } from '@/lib/types'
 import LeadTable from '@/components/LeadTable'
@@ -8,6 +8,7 @@ import { LoadingBlock } from '@/components/LoadingBlock'
 import { LEAD_PAGE_SIZE } from '@/lib/list-columns'
 import { leadFiltersToSearchParams, parseLeadListFilters } from '@/lib/leads-query'
 import { prefetchJson, useCachedJson } from '@/lib/use-cached-json'
+import { RefreshCw } from 'lucide-react'
 
 type ListPayload = {
   leads: LeadContact[]
@@ -44,13 +45,24 @@ export function LeadsPanel() {
     return `/api/leads/list?${listParams.toString()}`
   }, [filters, page])
 
-  const list = useCachedJson<ListPayload>(listUrl, listUrl, { staleMs: 45_000 })
+  const list = useCachedJson<ListPayload>(listUrl, listUrl, { staleMs: 30_000 })
   const summary = useCachedJson<SummaryPayload>('leads:summary:global', '/api/leads/summary', {
-    staleMs: 5 * 60_000
+    staleMs: 30_000
   })
   const facets = useCachedJson<FacetsPayload>('leads:facets', '/api/leads/facets', {
-    staleMs: 60_000
+    staleMs: 30_000
   })
+
+  // Keep previous list data so the table is never unmounted during filter changes
+  const [cachedData, setCachedData] = useState<ListPayload | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (list.data) {
+      setCachedData(list.data)
+    }
+  }, [list.data])
 
   useEffect(() => {
     if (!list.data) return
@@ -80,7 +92,26 @@ export function LeadsPanel() {
     void reloadFacets(true)
   }, [reloadList, reloadSummary, reloadFacets])
 
-  if (list.error && !list.data) {
+  const handleLocalSync = async () => {
+    setSyncing(true)
+    setSyncMessage(null)
+    try {
+      const res = await fetch('/api/leads/local-sync', { credentials: 'same-origin', method: 'POST' })
+      if (!res.ok) throw new Error('Sync failed')
+      const data = await res.json()
+      setSyncMessage(`Synced ${data.total} leads from local files`)
+      reload()
+    } catch {
+      setSyncMessage('Failed to sync local files')
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncMessage(null), 4000)
+    }
+  }
+
+  const activeData = list.data || cachedData
+
+  if (list.error && !activeData) {
     return (
       <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 shadow-soft">
         {list.error}{' '}
@@ -91,10 +122,10 @@ export function LeadsPanel() {
     )
   }
 
-  if (!list.data) return <LoadingBlock label="Loading leads…" />
+  if (!activeData) return <LoadingBlock label="Loading leads…" />
 
-  const leads = list.data.leads ?? []
-  const total = list.data.total ?? 0
+  const leads = activeData.leads ?? []
+  const total = activeData.total ?? 0
   const from = (page - 1) * LEAD_PAGE_SIZE
   const totalShown = from + leads.length
   const hasMore = totalShown < total
@@ -106,13 +137,29 @@ export function LeadsPanel() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-sm text-neutral-500">
-          {total.toLocaleString()} lead{total === 1 ? '' : 's'}
-          {summaryCounts && summaryCounts.total !== total
-            ? ` matching filters · ${summaryCounts.total.toLocaleString()} total`
-            : ' in outbound database'}
-        </p>
-        {list.loading ? <span className="text-xs text-neutral-400">Updating…</span> : null}
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-neutral-500">
+            {total.toLocaleString()} {filters.bucket === 'archived' ? 'archived lead' : 'lead'}{total === 1 ? '' : 's'}
+            {summaryCounts && summaryCounts.total !== total && filters.bucket !== 'archived'
+              ? ` matching filters · ${summaryCounts.total.toLocaleString()} active total`
+              : ''}
+          </p>
+          {list.loading ? <span className="text-xs font-medium text-amber-600 animate-pulse">Updating…</span> : null}
+        </div>
+        <div className="flex items-center gap-2">
+          {syncMessage ? (
+            <span className="text-xs font-medium text-emerald-600">{syncMessage}</span>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleLocalSync}
+            disabled={syncing}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 shadow-sm transition hover:bg-stone-50 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing…' : 'Sync local files'}
+          </button>
+        </div>
       </div>
       <LeadTable
         leads={leads}

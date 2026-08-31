@@ -28,7 +28,12 @@ export function parseLeadListFilters(searchParams: URLSearchParams): LeadListFil
     sync_state: emptyToUndef(searchParams.get('sync_state')),
     completeness: isCompleteness(completeness) ? completeness : undefined,
     city: emptyToUndef(searchParams.get('city')),
+    state: emptyToUndef(searchParams.get('state')),
     q: emptyToUndef(searchParams.get('q')),
+    unverified_only:
+      searchParams.get('unverified_only') === '1' || searchParams.get('unverified_only') === '0'
+        ? (searchParams.get('unverified_only') as '1' | '0')
+        : undefined,
     recontact_ok: recontact === '1' || recontact === '0' ? recontact : undefined,
     suppressed: suppressed === '1' || suppressed === '0' ? suppressed : undefined,
     recontact_ready:
@@ -116,14 +121,17 @@ export function applyLeadFilters<T extends LeadFilterQuery>(query: T, filters: L
     }
   }
   if (filters.source) q = q.eq('source', filters.source) as T
-  const membershipOr = campaignMembershipOrClause(
-    filters.pipeline_campaign_id,
-    filters.instantly_campaign_id
-  )
+  const pipelineId = filters.pipeline_campaign_id?.trim()
+  const unattached = pipelineId?.toLowerCase() === 'none'
+  const membershipOr = unattached
+    ? null
+    : campaignMembershipOrClause(filters.pipeline_campaign_id, filters.instantly_campaign_id)
   if (membershipOr) {
     q = q.or(membershipOr) as T
-  } else if (filters.pipeline_campaign_id) {
-    q = q.eq('pipeline_campaign_id', filters.pipeline_campaign_id) as T
+  } else if (unattached) {
+    q = q.is('pipeline_campaign_id', null) as T
+  } else if (pipelineId) {
+    q = q.eq('pipeline_campaign_id', pipelineId) as T
   } else if (filters.instantly_campaign_id) {
     q = q.eq('instantly_campaign_id', filters.instantly_campaign_id) as T
   }
@@ -131,10 +139,10 @@ export function applyLeadFilters<T extends LeadFilterQuery>(query: T, filters: L
     q = q.eq('cohort_tag', filters.cohort_tag) as T
   }
   if (filters.enrich_status) {
-    q = q.eq('enrich_status', filters.enrich_status) as T
+    q = applyCsvOrEq(q, 'enrich_status', filters.enrich_status) as T
   }
   if (filters.icp_status) {
-    q = q.eq('icp_status', filters.icp_status) as T
+    q = applyCsvOrEq(q, 'icp_status', filters.icp_status) as T
   }
   if (filters.after_hours === '1') {
     q = q.eq('after_hours', true) as T
@@ -156,10 +164,16 @@ export function applyLeadFilters<T extends LeadFilterQuery>(query: T, filters: L
     if (filters.outbound_status === 'replied_or_interested') {
       q = q.in('outbound_status', ['replied', 'interested']) as T
     } else {
-      q = q.eq('outbound_status', filters.outbound_status) as T
+      q = applyCsvOrEq(q, 'outbound_status', filters.outbound_status) as T
     }
   }
   if (filters.city) q = q.ilike('city', `%${escapeIlike(filters.city)}%`) as T
+  if (filters.state) q = q.ilike('state', `%${escapeIlike(filters.state)}%`) as T
+  if (filters.unverified_only === '1') {
+    q = q.is('email_verified_at', null) as T
+  } else if (filters.unverified_only === '0') {
+    q = q.not('email_verified_at', 'is', null) as T
+  }
 
   if (filters.q) {
     const term = escapeIlike(filters.q)
@@ -200,13 +214,19 @@ export function applyLeadFilters<T extends LeadFilterQuery>(query: T, filters: L
     ) as T
   }
 
-  // Leads vs Prospects tabs. Explicit outbound_status still wins when set.
-  if (!filters.outbound_status) {
+  // Archive is orthogonal to pipeline stage. Agent search (no bucket) does not clip.
+  if (filters.bucket === 'archived') {
+    q = q.eq('is_archived', true) as T
+  } else if (filters.bucket === 'leads' || filters.bucket === 'prospects') {
+    q = q.or('is_archived.is.null,is_archived.eq.false') as T
+  }
+
+  // Leads vs Prospects tabs. Only when the caller names a bucket (UI defaults to leads).
+  if (!filters.outbound_status && filters.bucket) {
     const prospectList = PROSPECT_OUTBOUND_STATUSES.join(',')
     if (filters.bucket === 'prospects') {
       q = q.in('outbound_status', [...PROSPECT_OUTBOUND_STATUSES]) as T
-    } else {
-      // Default / leads tab: keep null, Instantly, unreplied, not-interested, etc.
+    } else if (filters.bucket === 'leads') {
       q = q.or(`outbound_status.is.null,outbound_status.not.in.(${prospectList})`) as T
     }
   }
@@ -214,7 +234,78 @@ export function applyLeadFilters<T extends LeadFilterQuery>(query: T, filters: L
   return q
 }
 
-function applyCompleteness(query: LeadFilterQuery, completeness: CompletenessFilter): LeadFilterQuery {
+export function splitCsvParam(value: string | null | undefined): string[] {
+  if (!value) return []
+  return value
+    .split(',')
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean)
+}
+
+function applyCsvOrEq(query: LeadFilterQuery, column: string, raw: string): LeadFilterQuery {
+  const values = splitCsvParam(raw)
+  if (values.length === 0) return query
+  if (values.length === 1) return query.eq(column, values[0])
+  return query.in(column, values)
+}
+
+export type LeadKeysetCursor = { email: string; id: string }
+
+export function encodeLeadCursor(email: string, id: string): string {
+  return Buffer.from(`${email}\t${id}`, 'utf8').toString('base64url')
+}
+
+export function decodeLeadCursor(raw: string | null | undefined): LeadKeysetCursor | null {
+  const value = String(raw ?? '').trim()
+  if (!value) return null
+  try {
+    const decoded = Buffer.from(value, 'base64url').toString('utf8')
+    const tab = decoded.indexOf('\t')
+    if (tab < 0) return null
+    const email = decoded.slice(0, tab)
+    const id = decoded.slice(tab + 1).trim()
+    if (!id) return null
+    return { email, id }
+  } catch {
+    return null
+  }
+}
+
+/** Keyset on (email, id) ascending. */
+export function applyLeadKeyset<T extends LeadFilterQuery>(query: T, cursor: LeadKeysetCursor): T {
+  const email = escapePostgrestOrValue(cursor.email)
+  const id = escapePostgrestOrValue(cursor.id)
+  return query.or(`email.gt.${email},and(email.eq.${email},id.gt.${id})`) as T
+}
+
+const LEGACY_AGENT_LEAD_PARAMS = new Set(['status', 'limit', 'q'])
+
+/** Old Instantly-hot list: only status / limit / q (plus empty). */
+export function isLegacyAgentLeadsRequest(searchParams: URLSearchParams): boolean {
+  for (const key of searchParams.keys()) {
+    if (!LEGACY_AGENT_LEAD_PARAMS.has(key)) return false
+  }
+  return true
+}
+
+export const AGENT_LEAD_LEAN_COLUMNS =
+  'id,name,email,company,role,outbound_status,interest_label,instantly_campaign_name,instantly_campaign_id,instantly_lead_id,instantly_synced_at,city,state,last_outbound_at,updated_at'
+
+export const AGENT_LEAD_COHORT_COLUMNS =
+  'id,name,email,company,city,state,linkedin,website,company_domain,vertical,enrich_status,lead_facts,opener,outbound_status,pipeline_campaign_id,cohort_tag,email_verify_status,email_verified_at,icp_status,review_count,hours_label,after_hours,capture_crack,email_origin'
+
+export type AgentLeadColumnSet = 'lean' | 'cohort' | 'full'
+
+export function parseAgentLeadColumns(
+  value: string | null | undefined,
+  fallback: AgentLeadColumnSet = 'lean'
+): AgentLeadColumnSet {
+  const raw = String(value ?? '').trim().toLowerCase()
+  if (raw === 'lean' || raw === 'cohort' || raw === 'full') return raw
+  return fallback
+}
+
+export function applyCompleteness(query: LeadFilterQuery, completeness: CompletenessFilter): LeadFilterQuery {
   switch (completeness) {
     case 'has_phone':
       return query.not('phone', 'is', null).neq('phone', '')
@@ -279,7 +370,9 @@ export function leadFiltersToSearchParams(filters: LeadListFilters, page?: numbe
     params.set('completeness', filters.completeness)
   }
   if (filters.city) params.set('city', filters.city)
+  if (filters.state) params.set('state', filters.state)
   if (filters.q) params.set('q', filters.q)
+  if (filters.unverified_only) params.set('unverified_only', filters.unverified_only)
   if (filters.recontact_ok) params.set('recontact_ok', filters.recontact_ok)
   if (filters.suppressed) params.set('suppressed', filters.suppressed)
   if (filters.recontact_ready) params.set('recontact_ready', filters.recontact_ready)
@@ -296,6 +389,7 @@ export function leadFiltersToSearchParams(filters: LeadListFilters, page?: numbe
   if (filters.email_origin) params.set('email_origin', filters.email_origin)
   if (filters.min_reviews) params.set('min_reviews', filters.min_reviews)
   if (filters.bucket === 'prospects') params.set('bucket', 'prospects')
+  else if (filters.bucket === 'archived') params.set('bucket', 'archived')
   if (page && page > 1) params.set('page', String(page))
   return params
 }
@@ -308,7 +402,9 @@ export function leadFiltersNeedExactCount(filters: LeadListFilters): boolean {
       filters.sync_state ||
       (filters.completeness && filters.completeness !== 'any') ||
       filters.city ||
+      filters.state ||
       filters.q ||
+      filters.unverified_only ||
       filters.recontact_ok ||
       filters.suppressed ||
       filters.recontact_ready ||
@@ -320,6 +416,7 @@ export function leadFiltersNeedExactCount(filters: LeadListFilters): boolean {
       filters.after_hours ||
       filters.email_origin ||
       filters.min_reviews ||
-      filters.bucket === 'prospects'
+      filters.bucket === 'prospects' ||
+      filters.bucket === 'archived'
   )
 }

@@ -5,11 +5,22 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { callTool, clampExportLimit, clampLimit, handleRpc, parseEnvFile, resolveConfig, TOOLS } from '../mcp/lib.mjs'
 
-test('exactly nine tools', () => {
-  assert.equal(TOOLS.length, 9)
+test('search, commit, ledger, and export tools', () => {
   assert.deepEqual(
     TOOLS.map((t) => t.name),
-    ['brief', 'campaigns', 'leads', 'mark', 'copy', 'land', 'commit', 'ledger', 'export']
+    [
+      'brief',
+      'campaigns',
+      'leads',
+      'leads.search',
+      'leads.commit',
+      'mark',
+      'copy',
+      'land',
+      'commit',
+      'ledger',
+      'export'
+    ]
   )
 })
 
@@ -123,7 +134,33 @@ test('copy patch sends Prefer minimal', async () => {
 
 test('rpc tools/list', async () => {
   const res = await handleRpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, { cfg, fetchImpl: mockFetch({}) })
-  assert.equal(res.result.tools.length, 9)
+  assert.equal(res.result.tools.length, 11)
+})
+
+test('leads.search hits unified GET', async () => {
+  const capture = {}
+  await callTool(
+    'leads.search',
+    { view: 'rows', pipeline_campaign_id: 'none', columns: 'cohort', limit: 2000 },
+    { cfg, fetchImpl: mockFetch(capture) }
+  )
+  const u = new URL(capture.url)
+  assert.match(u.pathname, /\/api\/agent\/leads$/)
+  assert.equal(u.searchParams.get('view'), 'rows')
+  assert.equal(u.searchParams.get('pipeline_campaign_id'), 'none')
+  assert.equal(u.searchParams.get('columns'), 'cohort')
+})
+
+test('leads.commit posts rows', async () => {
+  const capture = {}
+  await callTool(
+    'leads.commit',
+    { rows: [{ email: 'a@b.c', company: 'Acme' }], on_conflict: 'email' },
+    { cfg, fetchImpl: mockFetch(capture) }
+  )
+  assert.equal(capture.method, 'POST')
+  assert.match(capture.url, /\/api\/agent\/leads$/)
+  assert.deepEqual(JSON.parse(capture.body).rows[0].company, 'Acme')
 })
 
 test('rpc ignores notifications', async () => {
@@ -173,9 +210,8 @@ test('commit posts rows', async () => {
   assert.equal(capture.method, 'POST')
   assert.match(capture.url, /\/api\/agent\/leads$/)
   assert.deepEqual(JSON.parse(capture.body), {
-    vertical: 'mortgage-brokers',
-    sourceService: 'other',
-    import_batch_id: 'agent-path-smoke',
-    rows: [{ email: 'a@x.com', company: 'Acme' }]
+    defaults: { vertical: 'mortgage-brokers', source: 'other' },
+    rows: [{ email: 'a@x.com', company: 'Acme' }],
+    on_conflict: 'email'
   })
 })

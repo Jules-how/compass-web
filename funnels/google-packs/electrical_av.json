@@ -1,0 +1,318 @@
+{
+  "pack_id": "electrical_av",
+  "trade": "electrical_av",
+  "locale": "en-AU",
+  "default_match_types": ["PHRASE", "EXACT"],
+  "shared_negatives": [
+    "job",
+    "jobs",
+    "hiring",
+    "salary",
+    "career",
+    "apprentice",
+    "apprenticeship",
+    "resume",
+    "indeed",
+    "diy",
+    "how to",
+    "tutorial",
+    "youtube",
+    "wiki",
+    "reddit",
+    "forum",
+    "pdf",
+    "manual",
+    "wholesale",
+    "parts",
+    "supply",
+    "bunnings",
+    "course",
+    "school",
+    "certificate",
+    "training",
+    "tafe",
+    "nationwide",
+    "online",
+    "chat",
+    "virtual",
+    "diy electrical",
+    "free electrician guide",
+    "pest",
+    "franchise"
+  ],
+  "clusters": [
+    {
+      "id": "emergency",
+      "name": "Emergency electrician",
+      "keywords": [
+        "emergency electrician",
+        "24 hour electrician",
+        "power out electrician",
+        "urgent electrician",
+        "after hours electrician"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Emergency Electrician",
+            "{business} {suburb}",
+            "24/7 Electrician",
+            "Power Out? Call Now",
+            "Licensed {suburb}",
+            "After Hours Electrician",
+            "Urgent Electrical Help",
+            "{years} Yrs Experience",
+            "Same Day Response",
+            "Local Electrician",
+            "Call {business} Now",
+            "Electrical Emergency",
+            "Power Restoration",
+            "Licensed & Insured",
+            "Fast {suburb} Electrician"
+          ],
+          "descriptions": [
+            "Power out or electrical emergency in {suburb}? {business} responds 24/7.",
+            "Licensed emergency electricians. {years}+ years serving {suburb} homes.",
+            "After hours electrical help when you need it. Call {business} in {suburb}.",
+            "Urgent electrical repairs. Licensed team at {business} — {suburb} local."
+          ]
+        },
+        {
+          "headlines": [
+            "24 Hour Electrician",
+            "{business} {suburb}",
+            "Electrical Emergency",
+            "Power Out Repair",
+            "Licensed Electrician",
+            "Urgent {suburb} Help",
+            "After Hours Electrical",
+            "{years} Years Local",
+            "Emergency Call Out",
+            "Call for Electrician",
+            "Trusted Local Sparky",
+            "Power Fault Repair",
+            "Same Day Electrician",
+            "Fast Electrical Fix",
+            "Emergency Sparky"
+          ],
+          "descriptions": [
+            "Electrical emergency in {suburb}? {business} provides licensed 24 hour service.",
+            "Power outages and urgent faults fixed fast. {years}+ years in {suburb}.",
+            "Do not wait on a power fault. Call {business} for emergency electricians.",
+            "Licensed electricians for urgent jobs across {suburb}. Upfront quotes."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "switchboard",
+      "name": "Switchboard / safety switch",
+      "keywords": [
+        "switchboard upgrade",
+        "safety switch electrician",
+        "switchboard electrician",
+        "fuse box upgrade",
+        "rcd installation"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Switchboard Upgrade",
+            "{business} {suburb}",
+            "Safety Switch Install",
+            "Fuse Box Upgrade",
+            "Licensed Electrician",
+            "RCD Installation",
+            "Switchboard {suburb}",
+            "{years} Yrs Experience",
+            "Electrical Safety",
+            "Modern Switchboard",
+            "Call {business} Today",
+            "Switchboard Experts",
+            "Safety Switch {suburb}",
+            "Licensed & Certified",
+            "Get a Quote"
+          ],
+          "descriptions": [
+            "Switchboard upgrade and safety switches in {suburb}. Licensed electricians at {business}.",
+            "Upgrade your fuse box and RCDs. {years}+ years experience. Call {business}.",
+            "Electrical safety starts at the switchboard. {business} serves {suburb}.",
+            "Switchboard upgrades with upfront quotes. Licensed team in {suburb}."
+          ]
+        },
+        {
+          "headlines": [
+            "Safety Switch {suburb}",
+            "{business} Electrical",
+            "Switchboard Repair",
+            "Fuse Box Electrician",
+            "Licensed {suburb}",
+            "RCD Safety Switch",
+            "Switchboard Service",
+            "{years} Years Local",
+            "Electrical Upgrades",
+            "Call for Switchboard",
+            "Trusted Electrician",
+            "Safety Compliance",
+            "Modern Electrical",
+            "Local Sparky",
+            "Upfront Pricing"
+          ],
+          "descriptions": [
+            "Safety switch and switchboard work in {suburb}. {business} — licensed electricians.",
+            "Protect your home with RCDs and a modern switchboard. {years}+ years local.",
+            "Switchboard upgrades for {suburb} homes. Quote from {business} today.",
+            "Licensed switchboard specialists. Serving {suburb}. Call {business}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "name": "Install",
+      "keywords": [
+        "power point installation",
+        "ceiling fan install",
+        "smoke alarm electrician",
+        "light installation electrician",
+        "outdoor lighting install"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Power Point Install",
+            "{business} {suburb}",
+            "Ceiling Fan Install",
+            "Smoke Alarm Electrician",
+            "Licensed Installer",
+            "Light Installation",
+            "New Power Points",
+            "{years} Yrs Experience",
+            "Fan Install {suburb}",
+            "Call {business} Now",
+            "Electrical Install",
+            "Smoke Alarm Compliance",
+            "Local Electrician",
+            "Home Electrical",
+            "Get a Quote"
+          ],
+          "descriptions": [
+            "Power points, fans and smoke alarms installed in {suburb}. {business} — licensed.",
+            "Ceiling fan and lighting installation. {years}+ years serving {suburb}.",
+            "Smoke alarm compliance and new power points. Call {business} in {suburb}.",
+            "Professional electrical installs with upfront quotes. {business} local team."
+          ]
+        },
+        {
+          "headlines": [
+            "Electrician {suburb}",
+            "{business} Install",
+            "Ceiling Fan Electrician",
+            "Smoke Alarm Install",
+            "Licensed {suburb}",
+            "Power Point Electrician",
+            "Lighting Install",
+            "{years} Years Local",
+            "Home Electrical Work",
+            "Call for Install Quote",
+            "Trusted Installer",
+            "Fan & Light Install",
+            "Compliance Alarms",
+            "Local Sparky",
+            "Same Day Install"
+          ],
+          "descriptions": [
+            "Electrical installs across {suburb}. Power points, fans and smoke alarms.",
+            "Licensed installation by {business}. {years}+ years in {suburb}.",
+            "Ceiling fans and smoke alarms done right. Call {business} for a quote.",
+            "From power points to outdoor lighting. {business} serves {suburb}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "faults",
+      "name": "Faults / repairs",
+      "keywords": [
+        "electrician repairs",
+        "electrical fault",
+        "tripping safety switch",
+        "power point not working",
+        "light not working electrician"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Electrical Repairs",
+            "{business} {suburb}",
+            "Fault Finding",
+            "Safety Switch Tripping",
+            "Licensed Electrician",
+            "Power Point Repair",
+            "Light Not Working?",
+            "{years} Yrs Experience",
+            "Same Day Electrical",
+            "Local Fault Repair",
+            "Call {business} Now",
+            "Electrical Fault {suburb}",
+            "Trusted Sparky",
+            "Fast Electrical Fix",
+            "Repair Electrician"
+          ],
+          "descriptions": [
+            "Electrical faults and repairs in {suburb}. Licensed electricians at {business}.",
+            "Safety switch tripping? We find and fix faults fast. {years}+ years local.",
+            "Power points and lighting repairs. Call {business} in {suburb}.",
+            "Fault finding and repairs with upfront quotes. {business} — {suburb} team."
+          ]
+        },
+        {
+          "headlines": [
+            "Fault Electrician",
+            "{business} {suburb}",
+            "Electrical Fault Fix",
+            "Tripping RCD Repair",
+            "Licensed {suburb}",
+            "Power Fault Repair",
+            "Light Repair",
+            "{years} Years Local",
+            "Same Day Fault Fix",
+            "Call for Electrician",
+            "Local Electrical",
+            "Sparky {suburb}",
+            "Trusted Repairs",
+            "Electrical Experts",
+            "Upfront Quotes"
+          ],
+          "descriptions": [
+            "Electrical fault in {suburb}? {business} diagnoses and repairs licensed work.",
+            "From tripping RCDs to dead circuits. {years}+ years serving {suburb}.",
+            "Fast electrical repairs. Licensed team at {business} in {suburb}.",
+            "Stop living with electrical faults. Call {business} today."
+          ]
+        }
+      ]
+    }
+  ],
+  "assets": {
+    "sitelinks": [
+      { "text": "Emergency Electrician", "url": "{destination}", "description1": "24/7 response", "description2": "Licensed team" },
+      { "text": "Switchboard Upgrade", "url": "{destination}", "description1": "Safety switches", "description2": "Compliance" },
+      { "text": "Install & Repairs", "url": "{destination}", "description1": "Fans & power points", "description2": "Smoke alarms" },
+      { "text": "Get a Quote", "url": "{destination}", "description1": "Upfront pricing", "description2": "{suburb} local" }
+    ],
+    "callouts": [
+      "Licensed Electrician",
+      "Local {suburb} Team",
+      "{years}+ Years Experience",
+      "Safety Compliant",
+      "Same Day Service",
+      "Upfront Quotes"
+    ]
+  },
+  "conversion_action": {
+    "name": "Switchflow Lead — Electrical",
+    "type": "WEBPAGE",
+    "category": "SUBMIT_LEAD_FORM"
+  }
+}

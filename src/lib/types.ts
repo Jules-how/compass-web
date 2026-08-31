@@ -97,6 +97,45 @@ export interface CompassClient {
   mirrored_at: string
 }
 
+export type ClientVoiceConfig = {
+  twilio_number?: string | null
+  retell_agent_id?: string | null
+  trade_pack_id?: string | null
+  calendar_id?: string | null
+  forwarding_confirmed_at?: string | null
+  after_hours_mode?: 'no_answer' | 'unconditional' | string | null
+  transfer_enabled?: boolean | null
+  owner_alert_mode?: 'live' | 'post_call' | string | null
+  live_at?: string | null
+  calendar_grant_broken?: boolean | null
+  probe_at?: string | null
+  probe_ok?: boolean | null
+  owner_mobile?: string | null
+  public_number?: string | null
+  timezone?: string | null
+}
+
+export type VoiceCallRow = {
+  id: string
+  client_id: string
+  retell_call_id: string
+  from_number: string | null
+  to_number: string | null
+  started_at: string | null
+  ended_at: string | null
+  outcome: string | null
+  job_type: string | null
+  suburb: string | null
+  urgency: string | null
+  slot_start: string | null
+  calendar_event_id: string | null
+  recording_url: string | null
+  transcript: string | null
+  recording_refused: boolean
+  payload: Record<string, unknown>
+  created_at: string
+}
+
 export type CompassClientCard = CompassClient & {
   next_action: string | null
   open_issue_count: number
@@ -313,9 +352,23 @@ export interface CompassBusinessFunction {
   name: string
   slug: string
   sort_order: number
+  system_map?: SystemMapMeta | null
   created_at: string
   updated_at: string
   mirrored_at: string
+}
+
+export type SystemMapInfluence = {
+  name: string
+  route: string
+  table: string
+}
+
+export type SystemMapMeta = {
+  why?: string
+  inputs?: string[]
+  outputs?: string[]
+  influences?: SystemMapInfluence[]
 }
 
 export interface FunctionWorkStats {
@@ -405,6 +458,7 @@ export interface LeadContact {
   capture_crack?: string | null
   email_origin?: string | null
   lead_facts?: LeadFact[] | unknown | null
+  is_archived?: number | boolean | null
   created_at: string | null
   updated_at: string | null
   mirrored_at: string
@@ -473,8 +527,12 @@ export interface LeadListFilters {
   sync_state?: string
   completeness?: 'any' | 'has_phone' | 'no_phone' | 'has_email' | 'no_email'
   city?: string
+  /** AU state / region (NSW, VIC, …). */
+  state?: string
   /** Free-text search across name, email, company, phone. */
   q?: string
+  /** When `1`, only rows with a null `email_verified_at`. */
+  unverified_only?: '1' | '0'
   recontact_ok?: '1' | '0'
   suppressed?: '1' | '0'
   /**
@@ -482,8 +540,8 @@ export interface LeadListFilters {
    * a new cold campaign (not suppressed / not hot pipeline stages).
    */
   recontact_ready?: '1' | '0'
-  /** People list tab: cold/unreplied Leads vs interested Prospects. */
-  bucket?: 'leads' | 'prospects'
+  /** People list tab: cold/unreplied Leads vs interested Prospects vs Archived. */
+  bucket?: 'leads' | 'prospects' | 'archived'
   /** Compass pipeline campaign cohort. */
   pipeline_campaign_id?: string
   /** Instantly campaign membership (uploaded leads). */
@@ -511,6 +569,7 @@ export interface LeadSummaryCounts {
   needs_review: number
   /** Past 90-day cooldown + recontact allowed (cold re-outreach queue). */
   recontact_ready: number
+  archived: number
 }
 
 export interface LeadUploadResult {

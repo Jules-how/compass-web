@@ -294,8 +294,8 @@ test('source file wires Gmail-first replies and Home sheet', () => {
 
   const home = read('src/components/home/HomeDashboard.tsx')
   assert.match(home, /HomePrioritySheet/)
-  assert.match(home, /HomePriorityCheck/)
-  assert.match(home, /completeTask/)
+  assert.match(home, /\/api\/digest/)
+  assert.doesNotMatch(home, /HomePriorityCheck/)
 
   const actions = read('src/components/home/HomePriorityActions.tsx')
   assert.match(actions, /Mark done/)

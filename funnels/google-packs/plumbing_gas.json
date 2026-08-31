@@ -1,0 +1,381 @@
+{
+  "pack_id": "plumbing_gas",
+  "trade": "plumbing_gas",
+  "locale": "en-AU",
+  "default_match_types": ["PHRASE", "EXACT"],
+  "shared_negatives": [
+    "job",
+    "jobs",
+    "hiring",
+    "salary",
+    "career",
+    "apprentice",
+    "apprenticeship",
+    "resume",
+    "indeed",
+    "diy",
+    "how to",
+    "tutorial",
+    "youtube",
+    "wiki",
+    "reddit",
+    "forum",
+    "pdf",
+    "manual",
+    "wholesale",
+    "parts",
+    "supply",
+    "bunnings",
+    "course",
+    "school",
+    "certificate",
+    "training",
+    "tafe",
+    "nationwide",
+    "online",
+    "chat",
+    "virtual",
+    "snake rental",
+    "drain cleaner",
+    "pest",
+    "franchise"
+  ],
+  "clusters": [
+    {
+      "id": "emergency",
+      "name": "Emergency / After hours",
+      "keywords": [
+        "emergency plumber",
+        "24 hour plumber",
+        "after hours plumber",
+        "burst pipe plumber",
+        "urgent plumber"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "{business} Emergency Plumber",
+            "24/7 Plumber {suburb}",
+            "Burst Pipe? Call Now",
+            "Licensed {suburb} Plumber",
+            "Same Day Emergency Help",
+            "{years} Yrs Local Experience",
+            "After Hours Plumber",
+            "Fast Response {suburb}",
+            "Call {business} Now",
+            "Emergency Plumbing Help",
+            "Local Plumber Near You",
+            "Burst Pipe Repair",
+            "Urgent Plumbing {suburb}",
+            "Licensed & Insured",
+            "Book Emergency Plumber"
+          ],
+          "descriptions": [
+            "Burst pipe or urgent leak? {business} answers after hours. Licensed plumbers serving {suburb}. Call now.",
+            "24/7 emergency plumbing in {suburb}. Fast response, upfront pricing. {years}+ years serving local homes.",
+            "After hours plumber when you need one. Gas and plumbing emergencies handled by licensed trades.",
+            "Emergency plumber {suburb}. Same day service for burst pipes, leaks and blocked drains. Call {business}."
+          ]
+        },
+        {
+          "headlines": [
+            "Need a Plumber Now?",
+            "{business} {suburb}",
+            "24 Hour Plumbing",
+            "Emergency Pipe Repair",
+            "Licensed Emergency Plumber",
+            "After Hours {suburb}",
+            "Burst Pipe Specialists",
+            "Call for Fast Help",
+            "{years} Years Experience",
+            "Local Emergency Plumber",
+            "Urgent Leak Repair",
+            "Plumber Open Now",
+            "Same Day {suburb}",
+            "Trusted Local Plumber",
+            "Emergency Call Out"
+          ],
+          "descriptions": [
+            "Plumbing emergency in {suburb}? Licensed team at {business}. Burst pipes, leaks and urgent repairs.",
+            "After hours and weekend emergency plumber. Serving {suburb} with {years}+ years experience.",
+            "Do not wait on a burst pipe. Call {business} for fast emergency plumbing in {suburb}.",
+            "Licensed plumbers for urgent jobs. Emergency response across {suburb}. Upfront quotes."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "blocked_drains",
+      "name": "Blocked drains",
+      "keywords": [
+        "blocked drain plumber",
+        "blocked drain",
+        "blocked toilet plumber",
+        "drain unblocking",
+        "blocked sink plumber"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Blocked Drain {suburb}",
+            "{business} Drain Experts",
+            "Blocked Toilet Fixed Fast",
+            "Drain Unblocking Service",
+            "Licensed {suburb} Plumber",
+            "Same Day Drain Clear",
+            "Blocked Sink? Call Us",
+            "{years} Yrs Experience",
+            "CCTV Drain Inspection",
+            "Blocked Drain Specialist",
+            "Fast Drain Unblock",
+            "Local Plumber {suburb}",
+            "Blocked Shower Drain",
+            "Call {business} Today",
+            "Drain Clearing {suburb}"
+          ],
+          "descriptions": [
+            "Blocked drain or toilet in {suburb}? {business} clears drains fast with licensed plumbers.",
+            "Drain unblocking and CCTV inspection. Serving {suburb} homes. {years}+ years local experience.",
+            "Blocked sink, shower or toilet? Same day drain clearing from {business} in {suburb}.",
+            "Licensed plumbers for blocked drains. Upfront pricing. Call {business} in {suburb}."
+          ]
+        },
+        {
+          "headlines": [
+            "Blocked Drain Plumber",
+            "{business} {suburb}",
+            "Toilet Won't Flush?",
+            "Drain Unblock {suburb}",
+            "Licensed Drain Plumber",
+            "Same Day Service",
+            "Blocked Drain Help",
+            "Local Drain Experts",
+            "{years} Years Local",
+            "Fast Blocked Drain Fix",
+            "CCTV Drain Camera",
+            "Call for Drain Clear",
+            "Blocked Pipe Repair",
+            "Trusted {suburb} Plumber",
+            "Drain Specialist"
+          ],
+          "descriptions": [
+            "Slow or blocked drain? {business} serves {suburb} with professional drain clearing.",
+            "Blocked toilet or kitchen sink fixed same day. Licensed plumbers. {suburb} and surrounds.",
+            "Drain unblocking without the mess. {business} — {years}+ years in {suburb}.",
+            "From blocked showers to main lines. Call {business} for drain help in {suburb}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hot_water",
+      "name": "Hot water",
+      "keywords": [
+        "hot water plumber",
+        "hot water repair",
+        "hot water system",
+        "leaking hot water",
+        "hot water replacement"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Hot Water {suburb}",
+            "{business} Hot Water",
+            "Hot Water Repair",
+            "Leaking Hot Water?",
+            "Licensed Plumber",
+            "Same Day Hot Water",
+            "Hot Water System Fix",
+            "{years} Yrs Experience",
+            "Hot Water Replacement",
+            "No Hot Water? Call Us",
+            "Local {suburb} Plumber",
+            "Electric & Gas Systems",
+            "Hot Water Specialist",
+            "Call {business} Now",
+            "Fast Hot Water Service"
+          ],
+          "descriptions": [
+            "No hot water or a leak? {business} repairs and replaces hot water systems in {suburb}.",
+            "Hot water repair and replacement. Licensed plumbers. {years}+ years serving {suburb}.",
+            "Leaking hot water system? Same day service from {business}. Gas and electric systems.",
+            "Hot water plumber in {suburb}. Repairs, replacements and new installs. Call {business}."
+          ]
+        },
+        {
+          "headlines": [
+            "Hot Water Plumber",
+            "{business} {suburb}",
+            "Hot Water Not Working",
+            "System Replacement",
+            "Licensed {suburb}",
+            "Same Day Repair",
+            "Hot Water Experts",
+            "Leak Repair Fast",
+            "{years} Years Local",
+            "Gas Hot Water Fix",
+            "Call for Hot Water",
+            "Trusted Local Plumber",
+            "Hot Water Install",
+            "Emergency Hot Water",
+            "Upfront Quotes"
+          ],
+          "descriptions": [
+            "Hot water stopped working? {business} diagnoses and fixes systems across {suburb}.",
+            "Replace or repair your hot water system. Licensed team with {years}+ years experience.",
+            "Leaking hot water tank? Call {business} for fast service in {suburb}.",
+            "Hot water repairs and new systems. Serving {suburb}. Upfront pricing from {business}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gas",
+      "name": "Gas fitting",
+      "keywords": [
+        "gas fitter",
+        "gas leak plumber",
+        "gas cooktop install",
+        "licensed gas fitter",
+        "gas appliance install"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Licensed Gas Fitter",
+            "{business} {suburb}",
+            "Gas Leak? Call Now",
+            "Gas Cooktop Install",
+            "Gas Fitter {suburb}",
+            "Licensed & Certified",
+            "Gas Appliance Install",
+            "{years} Yrs Experience",
+            "Gas Line Repair",
+            "Local Gas Plumber",
+            "Emergency Gas Leak",
+            "Gas Heater Service",
+            "Call {business} Today",
+            "Gas Fitting {suburb}",
+            "Certified Gas Fitter"
+          ],
+          "descriptions": [
+            "Licensed gas fitter in {suburb}. Cooktops, heaters and gas leaks handled by {business}.",
+            "Gas leak or new appliance? Certified gas fitters. {years}+ years serving {suburb}.",
+            "Gas cooktop and appliance installation. Licensed gas fitting from {business} in {suburb}.",
+            "Smell gas? Call {business} immediately. Licensed gas fitters for {suburb} homes."
+          ]
+        },
+        {
+          "headlines": [
+            "Gas Fitter {suburb}",
+            "{business} Gas Experts",
+            "Gas Leak Response",
+            "Cooktop Installation",
+            "Licensed Gas Plumber",
+            "Gas Appliance Service",
+            "Certified Gas Fitter",
+            "Same Day Gas Help",
+            "{years} Years Local",
+            "Gas Heater Repair",
+            "Call for Gas Fitter",
+            "Trusted {suburb} Team",
+            "Gas Line Install",
+            "Gas Safety Checks",
+            "Local Gas Specialist"
+          ],
+          "descriptions": [
+            "Need a licensed gas fitter in {suburb}? {business} installs and repairs gas appliances.",
+            "Gas leaks and appliance installs by certified fitters. Serving {suburb} for {years}+ years.",
+            "From cooktops to gas heaters. Licensed gas fitting by {business} in {suburb}.",
+            "Gas fitting you can trust. Call {business} for licensed service in {suburb}."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "leaks_taps",
+      "name": "Leaks / taps",
+      "keywords": [
+        "leaking tap plumber",
+        "leaking toilet",
+        "leaking pipe plumber",
+        "tap repair plumber",
+        "dripping tap fix"
+      ],
+      "rsa_templates": [
+        {
+          "headlines": [
+            "Leaking Tap {suburb}",
+            "{business} Leak Repair",
+            "Dripping Tap Fixed",
+            "Leaking Toilet Repair",
+            "Licensed Plumber",
+            "Same Day Tap Repair",
+            "Pipe Leak {suburb}",
+            "{years} Yrs Experience",
+            "Leak Detection",
+            "Tap Washer Replacement",
+            "Call {business} Now",
+            "Local Leak Plumber",
+            "Toilet Leak Fix",
+            "Fast Leak Repair",
+            "Trusted {suburb}"
+          ],
+          "descriptions": [
+            "Leaking tap or toilet in {suburb}? {business} fixes leaks fast with licensed plumbers.",
+            "Dripping taps and pipe leaks repaired same day. {years}+ years in {suburb}.",
+            "Stop wasting water. {business} repairs taps, toilets and pipe leaks in {suburb}.",
+            "Licensed leak repair across {suburb}. Upfront quotes from {business}."
+          ]
+        },
+        {
+          "headlines": [
+            "Tap Repair {suburb}",
+            "{business} Plumber",
+            "Leaking Pipe Fix",
+            "Toilet Leak Plumber",
+            "Licensed {suburb}",
+            "Same Day Service",
+            "Dripping Tap Plumber",
+            "Leak Specialists",
+            "{years} Years Local",
+            "Fix Leaks Fast",
+            "Call for Tap Repair",
+            "Local Plumber",
+            "Water Leak Repair",
+            "Trusted Leak Fix",
+            "Upfront Pricing"
+          ],
+          "descriptions": [
+            "Leaking tap driving you mad? {business} serves {suburb} with quick tap and toilet repairs.",
+            "Pipe and tap leaks fixed by licensed plumbers. {business} — {years}+ years local.",
+            "From dripping taps to toilet leaks. Call {business} in {suburb} for same day help.",
+            "Leak repair without the hassle. Licensed plumbers at {business} in {suburb}."
+          ]
+        }
+      ]
+    }
+  ],
+  "assets": {
+    "sitelinks": [
+      { "text": "Emergency Plumber", "url": "{destination}", "description1": "24/7 response", "description2": "Licensed team" },
+      { "text": "Blocked Drains", "url": "{destination}", "description1": "Same day clear", "description2": "CCTV available" },
+      { "text": "Hot Water Repair", "url": "{destination}", "description1": "Gas & electric", "description2": "Fast service" },
+      { "text": "Get a Quote", "url": "{destination}", "description1": "Upfront pricing", "description2": "Local {suburb}" }
+    ],
+    "callouts": [
+      "Licensed & Insured",
+      "Same Day Service",
+      "Local {suburb} Team",
+      "{years}+ Years Experience",
+      "Upfront Quotes",
+      "Gas & Plumbing"
+    ]
+  },
+  "conversion_action": {
+    "name": "Switchflow Lead — Plumbing",
+    "type": "WEBPAGE",
+    "category": "SUBMIT_LEAD_FORM"
+  }
+}

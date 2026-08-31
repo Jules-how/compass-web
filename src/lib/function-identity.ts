@@ -57,7 +57,10 @@ const KIND_BY_KEY: Record<string, FunctionKind> = {
   operations: 'operations',
   ops: 'operations',
   finances: 'operations',
-  finance: 'operations'
+  finance: 'operations',
+  cs: 'operations',
+  retention: 'operations',
+  success: 'operations'
 }
 
 function normalizeFunctionKey(value: string): string {

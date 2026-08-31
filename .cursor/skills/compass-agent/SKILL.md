@@ -1,6 +1,6 @@
 ---
 name: compass-agent
-description: Connect Cursor local/cloud agents to Switchflow Compass (Compass-Web) for lean daily sync, campaign briefs, Instantly lead push/sync, ads data, and outbound offers/copy libraries. Use when syncing Instantly/Google/Meta, pushing cohort leads into Instantly (no CSV), reading/writing outbound offers expressions templates CTAs, or operator metrics without opening the UI.
+description: Connect Cursor local/cloud agents to Switchflow Compass (Compass-Web) for lean daily sync, campaign briefs, Instantly lead push/sync, ads data, and outbound offers/copy libraries. Use when syncing Instantly/Google/Meta, pushing cohort leads into Instantly (no CSV), reading/writing outbound offers expressions templates CTAs, running the weekly CS/retention board, or operator metrics without opening the UI.
 ---
 
 # Compass agent bridge
@@ -105,8 +105,19 @@ Inbox Instantly classify writes `outbound_status` then marks triage done: positi
 4. **Drill Instantly / pipeline only when needed**:
 
 ```bash
+# Legacy Instantly-hot lean list (status/limit/q only)
 curl -sS "$COMPASS_BASE_URL/api/agent/leads?limit=40" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
+
+# leads.search: unattached harvest (keyset, 2000/page)
+curl -sS "$COMPASS_BASE_URL/api/agent/leads?view=rows&columns=cohort&pipeline_campaign_id=none&vertical=plumber&state=NSW&limit=2000" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
+
+# Commit a list (email upsert; company dupe does not insert). Per-row lead_facts / opener go here or PATCH /mark rows.
+curl -sS -X POST "$COMPASS_BASE_URL/api/agent/leads" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"defaults":{"vertical":"plumber","source":"apify"},"rows":[{"email":"shop@example.com.au","company":"Example Plumbing","city":"Marrickville","state":"NSW"}],"on_conflict":"email"}'
 
 # After landing keepers: attach campaign + ICP (company-only name is fine)
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
@@ -196,7 +207,7 @@ Vercel hits `GET /api/cron/daily-sync` once per day (`vercel.json`). Auth with `
 - Call cookie-session `/api/outbound/*` from headless agents (use `/api/agent/outbound/*`).
 - Pass `full=1` or dump all kinds unless the turn is editing that row.
 - Re-run ads/Instantly sync just to read/write copy libraries.
-- Pull unbounded lead lists — always pass `limit` and status filters. Export pages at 200; write a file.
+- Pull unbounded lead lists — page with `cursor` / `limit` (transport cap 5000). Ledger export pages at 200; write a file.
 - Use Instantly MCP to add or create leads. Land with Compass MCP `land` or `/api/agent/instantly/push-leads`.
 - Download CSVs to load Instantly.
 - Activate Instantly campaigns from the agent.
@@ -205,4 +216,4 @@ Vercel hits `GET /api/cron/daily-sync` once per day (`vercel.json`). Auth with `
 
 Lean stdio server: `node mcp/server.mjs` from `compass-web/` (or `node compass-web/mcp/server.mjs` from switchflow-os). Loads `compass-web/.env.local` then `COMPASS_BASE_URL` / `COMPASS_AGENT_SECRET`. Hosted default `https://compass-web-eosin.vercel.app`.
 
-Tools: `brief`, `campaigns`, `leads` (inventory|cohort), `mark`, `copy`, `land`, `commit`, `ledger`, `export`. Not an Instantly clone. `land.push_leads` defaults to dry-run. This workspace wires it in `.cursor/mcp.json` as server `compass`.
+Tools: `brief`, `campaigns`, `leads.search`, `leads.commit`, deprecated `leads`/`mark`, `copy`, `land`, `commit`, `ledger`, `export`. Not an Instantly clone. `land.push_leads` defaults to dry-run. This workspace wires it in `.cursor/mcp.json` as server `compass`.

@@ -1,5 +1,5 @@
 import { requireAgentAuth } from '@/lib/agent-auth'
-import { buildLeadInventory } from '@/lib/leads-inventory'
+import { loadLeadInventory } from '@/lib/lead-search'
 import { getPortalAdminClient } from '@/lib/portal-admin'
 import { portalJson } from '@/lib/portal-http'
 
@@ -7,8 +7,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 /**
- * Orient inventory: uncontacted counts by canonical vertical × state.
- * Caps: no per-contact dump. Optional ?vertical=plumber to filter.
+ * Alias for GET /api/agent/leads?view=counts
  */
 export async function GET(request: Request) {
   const authError = requireAgentAuth(request)
@@ -19,29 +18,12 @@ export async function GET(request: Request) {
 
   try {
     const admin = getPortalAdminClient()
-    const { data, error } = await admin
-      .from('lead_contacts')
-      .select('vertical,outbound_status,email,state')
-      .limit(50000)
-
-    if (error) {
-      return portalJson({ error: 'inventory_failed', detail: error.message }, { status: 500 })
-    }
-
-    let inventory = buildLeadInventory(data ?? [])
-    if (verticalFilter) {
-      inventory = {
-        ...inventory,
-        byVertical: inventory.byVertical.filter(
-          (row) =>
-            row.vertical === verticalFilter ||
-            row.vertical.includes(verticalFilter) ||
-            verticalFilter.includes(row.vertical)
-        )
-      }
-    }
-
-    return portalJson({ ok: true, ...inventory })
+    const inventory = await loadLeadInventory(admin, verticalFilter)
+    return portalJson({
+      ok: true,
+      deprecated: 'Use GET /api/agent/leads?view=counts&vertical=…',
+      ...inventory
+    })
   } catch (err) {
     console.error('[agent/leads/inventory]', err instanceof Error ? err.message : err)
     return portalJson({ error: 'inventory_failed' }, { status: 500 })

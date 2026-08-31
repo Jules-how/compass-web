@@ -5,19 +5,20 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { EmailVolumeChart } from '@/components/sales/EmailVolumeChart'
+import { ComponentStatsBoard } from '@/components/sales/ComponentStatsBoard'
 import { TargetingSuccessMap } from '@/components/sales/TargetingSuccessMap'
 import {
-  SALES_OVERVIEW_DEMO,
   type SalesCampaignRef,
-  type SalesDeal,
   type SalesOverviewModel
 } from '@/lib/sales-demo-data'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
 type SalesOverviewPayload = SalesOverviewModel & {
+  source?: string
   warning?: string
   error?: string
+  spineCounts?: Array<{ stage: string; count: number; href: string }>
 }
 
 function formatMoney(value: number) {
@@ -54,19 +55,6 @@ function statusBadge(status: SalesCampaignRef['status']) {
           Completed
         </Badge>
       )
-  }
-}
-
-function stageLabel(stage: SalesDeal['stage']) {
-  switch (stage) {
-    case 'qualified':
-      return 'Qualified'
-    case 'meeting':
-      return 'Meeting'
-    case 'proposal':
-      return 'Proposal'
-    case 'won':
-      return 'Won'
   }
 }
 
@@ -115,6 +103,27 @@ function Kpi({
   return <div className="compass-panel p-4">{inner}</div>
 }
 
+const EMPTY_MODEL: SalesOverviewModel = {
+  kpis: {
+    emailsSent: 0,
+    emailsSentDelta: 0,
+    liveOffers: 0,
+    replies: 0,
+    replyRate: 0,
+    expectedRevenue: 0,
+    expectedRevenueDelta: 0,
+    meetingsBooked: 0,
+    positiveReplyRate: 0,
+    bounceRate: 0,
+    contactsRemaining: 0
+  },
+  campaigns: [],
+  deals: [],
+  series: [],
+  offers: [],
+  lists: []
+}
+
 export function SalesOverview() {
   const { data, error, loading } = useCachedJson<SalesOverviewPayload>(
     '/api/instantly/sales-overview',
@@ -122,13 +131,11 @@ export function SalesOverview() {
     { staleMs: 60_000 }
   )
 
-  const model = data ?? SALES_OVERVIEW_DEMO
+  const model = data ?? EMPTY_MODEL
   const live = model.campaigns.filter((c) => c.status === 'live')
-  const launching = model.campaigns.filter((c) => c.status === 'launching')
-  const dealFlowValue = model.deals.reduce((sum, deal) => sum + (deal.value ?? 0), 0)
-  const dealsWithValue = model.deals.filter((deal) => deal.value != null && deal.value > 0)
   const source = data?.source ?? 'demo'
   const isLive = source === 'instantly' || source === 'mixed'
+  const spine = data?.spineCounts ?? []
 
   if (loading && !data) {
     return <LoadingBlock label="Loading sales overview…" />
@@ -143,7 +150,7 @@ export function SalesOverview() {
           </span>
         ) : (
           <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">
-            Demo sample
+            Awaiting Instantly sync
           </span>
         )}
         {data?.warning || error ? (
@@ -151,7 +158,7 @@ export function SalesOverview() {
             {data?.warning === 'INSTANTLY_API_KEY is not configured'
               ? 'Add INSTANTLY_API_KEY to load live metrics'
               : error
-                ? 'Couldn’t refresh Instantly — showing last available figures'
+                ? 'Could not refresh Instantly — showing last available figures'
                 : data?.warning}
           </span>
         ) : null}
@@ -175,15 +182,13 @@ export function SalesOverview() {
           hint={`${model.kpis.replyRate}% reply rate`}
         />
         <Kpi
-          label="Expected revenue"
-          value={formatMoney(model.kpis.expectedRevenue)}
-          delta={model.kpis.expectedRevenueDelta}
-          hint="Open pipeline"
+          label="Meetings booked"
+          value={String(model.kpis.meetingsBooked)}
+          hint="From Instantly glance"
         />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi label="Meetings booked" value={String(model.kpis.meetingsBooked)} hint="Attributed" />
         <Kpi
           label="Positive reply rate"
           value={`${model.kpis.positiveReplyRate}%`}
@@ -191,135 +196,111 @@ export function SalesOverview() {
         />
         <Kpi label="Bounce rate" value={`${model.kpis.bounceRate}%`} hint="Across live sends" />
         <Kpi
-          label="Deal flow"
-          value={
-            dealFlowValue > 0
-              ? formatMoney(dealFlowValue)
-              : String(model.deals.length)
-          }
-          hint={
-            dealsWithValue.length > 0
-              ? `${dealsWithValue.length} active deals`
-              : `${model.deals.length} opportunities`
-          }
+          label="Contacts remaining"
+          value={model.kpis.contactsRemaining.toLocaleString()}
+          hint="Across live campaigns"
           href="/sales/outbound"
         />
+        <Kpi
+          label="Pipeline spine"
+          value={spine.reduce((sum, row) => sum + row.count, 0).toLocaleString()}
+          hint="Lead stages in Compass"
+          href="/leads"
+        />
       </div>
+
+      {spine.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pipeline spine</CardTitle>
+            <CardDescription>Lead stages — each links to its tool</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              {spine.map((row) => (
+                <Link
+                  key={row.stage}
+                  href={row.href}
+                  className="rounded-xl border border-stone-200/70 bg-stone-50/50 px-3 py-2.5 transition hover:bg-white"
+                >
+                  <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                    {row.stage}
+                  </div>
+                  <div className="mt-1 text-xl font-semibold tabular-nums text-neutral-900">
+                    {row.count.toLocaleString()}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <EmailVolumeChart model={model} />
 
       <TargetingSuccessMap />
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Campaign progress</CardTitle>
-              <CardDescription>What is live, launching, and how far through the sequence</CardDescription>
-            </div>
-            <Link
-              href="/sales/outbound"
-              className="text-sm font-medium text-[#c2410c] hover:underline"
-            >
-              Open planner
-            </Link>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {progressCampaigns(model).length === 0 ? (
-              <div className="rounded-xl border border-stone-200/70 bg-stone-50/50 px-3.5 py-4 text-sm text-neutral-600">
-                No active Instantly campaigns in this workspace yet.
-              </div>
-            ) : (
-              progressCampaigns(model).map((campaign) => (
-                <div
-                  key={campaign.id}
-                  className="rounded-xl border border-stone-200/70 bg-stone-50/50 p-3.5"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <div className="font-medium text-neutral-900">{campaign.name}</div>
-                      <div className="mt-0.5 text-xs text-neutral-500">
-                        {campaign.offer} · {campaign.list}
-                      </div>
-                    </div>
-                    {statusBadge(campaign.status)}
-                  </div>
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-200/80">
-                    <div
-                      className="h-full rounded-full bg-[#e85d2a]"
-                      style={{ width: `${campaign.progress}%` }}
-                    />
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-neutral-500">
-                    <span>
-                      <span className="font-medium text-neutral-800">
-                        {campaign.sent.toLocaleString()}
-                      </span>{' '}
-                      sent
-                    </span>
-                    <span>
-                      <span className="font-medium text-neutral-800">{campaign.replies}</span> replies
-                    </span>
-                    <span>
-                      <span className="font-medium text-neutral-800">{campaign.meetings}</span>{' '}
-                      meetings
-                    </span>
-                    <span>
-                      <span className="font-medium text-neutral-800">
-                        {formatMoney(campaign.expectedRevenue)}
-                      </span>{' '}
-                      expected
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+      <ComponentStatsBoard />
 
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Deal flow</CardTitle>
-              <CardDescription>Opportunities moving out of Instantly replies</CardDescription>
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Campaign progress</CardTitle>
+            <CardDescription>What is live, launching, and how far through the sequence</CardDescription>
+          </div>
+          <Link
+            href="/sales/outbound"
+            className="text-sm font-medium text-[#c2410c] hover:underline"
+          >
+            Open planner
+          </Link>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {progressCampaigns(model).length === 0 ? (
+            <div className="rounded-xl border border-stone-200/70 bg-stone-50/50 px-3.5 py-4 text-sm text-neutral-600">
+              No active Instantly campaigns in this workspace yet.
             </div>
-          </CardHeader>
-          <CardContent className="space-y-2.5">
-            {model.deals.length === 0 ? (
-              <div className="rounded-xl border border-stone-200/70 bg-stone-50/50 px-3.5 py-4 text-sm text-neutral-600">
-                No opportunities yet — positive replies will show up here.
-              </div>
-            ) : (
-              model.deals.map((deal) => (
-                <div
-                  key={deal.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-stone-200/70 px-3.5 py-3"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate font-medium text-neutral-900">{deal.company}</div>
-                    <div className="truncate text-xs text-neutral-500">
-                      {deal.name} · {deal.offer}
+          ) : (
+            progressCampaigns(model).map((campaign) => (
+              <div
+                key={campaign.id}
+                className="rounded-xl border border-stone-200/70 bg-stone-50/50 p-3.5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <div className="font-medium text-neutral-900">{campaign.name}</div>
+                    <div className="mt-0.5 text-xs text-neutral-500">
+                      {campaign.offer} · {campaign.list}
                     </div>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <div className="font-semibold tabular-nums text-neutral-900">
-                      {deal.value != null ? formatMoney(deal.value) : stageLabel(deal.stage)}
-                    </div>
-                    <div className="text-[11px] text-neutral-500">
-                      {deal.value != null ? stageLabel(deal.stage) : 'In pipeline'}
-                    </div>
-                  </div>
+                  {statusBadge(campaign.status)}
                 </div>
-              ))
-            )}
-            <div className="rounded-xl bg-stone-50 px-3.5 py-3 text-sm text-neutral-600">
-              Also worth watching next: best-performing offer, sequence step drop-off, and contacts
-              remaining in each list ({model.kpis.contactsRemaining.toLocaleString()} left across
-              live campaigns).
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-200/80">
+                  <div
+                    className="h-full rounded-full bg-[#e85d2a]"
+                    style={{ width: `${campaign.progress}%` }}
+                  />
+                </div>
+                <div className="mt-2 flex flex-wrap gap-3 text-xs text-neutral-500">
+                  <span>
+                    <span className="font-medium text-neutral-800">
+                      {campaign.sent.toLocaleString()}
+                    </span>{' '}
+                    sent
+                  </span>
+                  <span>
+                    <span className="font-medium text-neutral-800">{campaign.replies}</span> replies
+                  </span>
+                  <span>
+                    <span className="font-medium text-neutral-800">{campaign.meetings}</span>{' '}
+                    meetings
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

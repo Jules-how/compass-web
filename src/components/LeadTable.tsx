@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { LeadContact, LeadListFilters, LeadSummaryCounts } from '@/lib/types'
 import { exportToCsv } from '@/lib/csv'
+import { LEAD_EXPORT_MAX } from '@/lib/list-columns'
 import { leadFiltersNeedExactCount, leadFiltersToSearchParams } from '@/lib/leads-query'
 import {
   COMPLETENESS_OPTIONS,
@@ -20,7 +21,7 @@ import {
   type SavedLeadSegment
 } from '@/lib/leads-meta'
 import { computeRecontactEligibility } from '@/lib/recontact-eligibility'
-import type { LeadBucket } from '@/lib/lead-buckets'
+import { parseLeadBucket, type LeadBucket } from '@/lib/lead-buckets'
 import { LeadSidecar } from '@/components/LeadSidecar'
 import { useLeadGridColumns } from '@/components/LeadColumnPicker'
 import RecordsTable from '@/components/ui/records-table'
@@ -92,7 +93,7 @@ export default function LeadTable({
   const undo = useUndo()
 
   const embed = variant === 'embed'
-  const bucket: LeadBucket = filters.bucket === 'prospects' ? 'prospects' : 'leads'
+  const bucket: LeadBucket = parseLeadBucket(filters.bucket) ?? 'leads'
   const selectedLead = useMemo(
     () => leads.find((l) => l.id === selectedId) ?? null,
     [leads, selectedId]
@@ -174,7 +175,7 @@ export default function LeadTable({
         if (rows.length === 0) throw new Error('Select at least one lead')
       } else {
         const params = leadFiltersToSearchParams(filters)
-        params.set('limit', '5000')
+        params.set('limit', String(LEAD_EXPORT_MAX))
         const res = await fetch(`/api/leads/list?${params.toString()}`, { cache: 'no-store' })
         if (!res.ok) {
           const body = await res.json().catch(() => ({}))
@@ -235,7 +236,7 @@ export default function LeadTable({
   }
 
   async function postBulk(
-    action: 'suppress' | 'unsuppress' | 'set_status' | 'add_tag' | 'clear_tag',
+    action: 'suppress' | 'unsuppress' | 'set_status' | 'add_tag' | 'clear_tag' | 'archive' | 'unarchive',
     ids: string[],
     extra: Record<string, string> = {}
   ) {
@@ -268,7 +269,7 @@ export default function LeadTable({
   }
 
   async function runBulk(
-    action: 'suppress' | 'unsuppress' | 'set_status' | 'add_tag' | 'clear_tag',
+    action: 'suppress' | 'unsuppress' | 'set_status' | 'add_tag' | 'clear_tag' | 'archive' | 'unarchive',
     extra: Record<string, string> = {}
   ) {
     const ids = Array.from(selected)
@@ -293,6 +294,10 @@ export default function LeadTable({
             await postBulk('clear_tag', ids, { tag: extra.tag })
           } else if (action === 'clear_tag' && extra.tag) {
             await postBulk('add_tag', ids, { tag: extra.tag })
+          } else if (action === 'archive') {
+            await postBulk('unarchive', ids)
+          } else if (action === 'unarchive') {
+            await postBulk('archive', ids)
           } else {
             await restoreStatuses(previous)
           }
@@ -441,6 +446,22 @@ export default function LeadTable({
             }`}
           >
             Prospects
+          </button>
+          <button
+            type="button"
+            onClick={() => switchBucket('archived')}
+            className={`inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium transition ${
+              bucket === 'archived'
+                ? 'bg-white text-neutral-900 shadow-soft'
+                : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            Archived
+            {summary?.archived ? (
+              <span className="rounded-full bg-stone-200/90 px-1.5 py-0.5 text-[11px] font-semibold text-neutral-600">
+                {summary.archived.toLocaleString()}
+              </span>
+            ) : null}
           </button>
         </div>
         <input
@@ -829,6 +850,25 @@ export default function LeadTable({
       {selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm shadow-soft">
           <span className="font-medium text-neutral-800">{selected.size} selected</span>
+          {bucket === 'archived' ? (
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => void runBulk('unarchive')}
+              className="rounded-xl border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-60"
+            >
+              Restore to Leads
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => void runBulk('archive')}
+              className="rounded-xl border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-60"
+            >
+              Archive
+            </button>
+          )}
           <button
             type="button"
             disabled={bulkBusy}
@@ -922,8 +962,8 @@ export default function LeadTable({
         activeId={selectedId}
         rowStart={(page - 1) * pageSize + 1}
         fill={embed}
-        emptyMessage={`No ${bucket === 'prospects' ? 'prospects' : 'leads'} match these filters.`}
-        entityLabel={bucket === 'prospects' ? 'prospects' : 'leads'}
+        emptyMessage={`No ${bucket === 'archived' ? 'archived leads' : bucket === 'prospects' ? 'prospects' : 'leads'} match these filters.`}
+        entityLabel={bucket === 'archived' ? 'archived leads' : bucket === 'prospects' ? 'prospects' : 'leads'}
       />
       </div>
 
@@ -931,7 +971,7 @@ export default function LeadTable({
       <div className="flex items-center justify-between pt-0.5 text-xs text-neutral-500">
         <span>
           Showing {totalShown === 0 ? 0 : (page - 1) * pageSize + 1}–{totalShown} of{' '}
-          {total.toLocaleString()} {bucket === 'prospects' ? 'prospects' : 'leads'}
+          {total.toLocaleString()} {bucket === 'archived' ? 'archived leads' : bucket === 'prospects' ? 'prospects' : 'leads'}
           {summary && summary.filtered !== summary.total
             ? ` (${summary.filtered.toLocaleString()} match filters)`
             : ''}
