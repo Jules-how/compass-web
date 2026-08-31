@@ -97,6 +97,81 @@ function assembleOfferDesk(input) {
   }
 }
 
+function flattenOfferGallery(desk) {
+  return [...desk.live, ...desk.testing, ...desk.retired]
+}
+
+function offerKeyFromPath(path) {
+  const p = (path.split('?')[0] || path).replace(/\/+$/, '') || path
+  if (p === '/sales/offers') return null
+  const prefix = '/sales/offers/'
+  if (!p.startsWith(prefix)) return null
+  const key = decodeURIComponent(p.slice(prefix.length).split('/')[0] || '').trim()
+  return key || null
+}
+
+function asStringList(value) {
+  if (!Array.isArray(value)) return []
+  return value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean)
+}
+
+function parseOfferLock(value) {
+  const empty = {
+    icp: '',
+    antiIcp: [],
+    screen: [],
+    machine: { capture: '', fill: '', convert: '' },
+    walk: [],
+    mechanism: '',
+    category: '',
+    crowd: '',
+    verticalIn: [],
+    verticalOut: [],
+    vehicles: [],
+    relevance: []
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return empty
+  const machine =
+    value.machine && typeof value.machine === 'object' && !Array.isArray(value.machine) ? value.machine : {}
+  const vehicles = Array.isArray(value.vehicles)
+    ? value.vehicles
+        .filter((row) => row && typeof row === 'object')
+        .map((row) => ({
+          problem: typeof row.problem === 'string' ? row.problem.trim() : '',
+          vehicle: typeof row.vehicle === 'string' ? row.vehicle.trim() : ''
+        }))
+        .filter((row) => row.problem || row.vehicle)
+    : []
+  const relevance = Array.isArray(value.relevance)
+    ? value.relevance
+        .filter((row) => row && typeof row === 'object' && typeof row.fact === 'string' && row.fact.trim())
+        .map((row) => ({
+          fact: row.fact.trim(),
+          required: row.required === true,
+          source: typeof row.source === 'string' ? row.source.trim() : ''
+        }))
+    : []
+  return {
+    ...empty,
+    icp: typeof value.icp === 'string' ? value.icp.trim() : '',
+    antiIcp: asStringList(value.antiIcp),
+    screen: asStringList(value.screen),
+    machine: {
+      capture: typeof machine.capture === 'string' ? machine.capture.trim() : '',
+      fill: typeof machine.fill === 'string' ? machine.fill.trim() : '',
+      convert: typeof machine.convert === 'string' ? machine.convert.trim() : ''
+    },
+    walk: asStringList(value.walk),
+    mechanism: typeof value.mechanism === 'string' ? value.mechanism.trim() : '',
+    category: typeof value.category === 'string' ? value.category.trim() : '',
+    crowd: typeof value.crowd === 'string' ? value.crowd.trim() : '',
+    verticalIn: asStringList(value.verticalIn),
+    verticalOut: asStringList(value.verticalOut),
+    vehicles,
+    relevance
+  }
+}
+
 test('offer desk lanes split live testing retired and score bound campaigns', () => {
   const desk = assembleOfferDesk({
     offers: [
@@ -135,6 +210,36 @@ test('offer desk lanes split live testing retired and score bound campaigns', ()
   assert.equal(desk.live[0].results.outcomes.delivered, 200)
   assert.equal(desk.testing[0].results.campaigns, 0)
   assert.equal(desk.retired.length, 1)
+
+  const gallery = flattenOfferGallery(desk)
+  assert.deepEqual(
+    gallery.map((card) => card.offer.gtm_status),
+    ['live', 'testing', 'retired']
+  )
+  assert.equal(gallery[0].offer.offer_key, 'ai-receptionist-system')
+})
+
+test('offer gallery path and lock parse', () => {
+  assert.equal(offerKeyFromPath('/sales/offers'), null)
+  assert.equal(offerKeyFromPath('/sales/offers/'), null)
+  assert.equal(offerKeyFromPath('/sales/offers/new'), 'new')
+  assert.equal(offerKeyFromPath('/sales/offers/booked-jobs-system'), 'booked-jobs-system')
+  assert.equal(offerKeyFromPath('/sales/offers/booked-jobs-system/?x=1'), 'booked-jobs-system')
+
+  const parsed = parseOfferLock({
+    icp: ' shops ',
+    extra: 'ignored',
+    mechanism: 'Bolt onto their number',
+    verticalIn: ['plumbing', ''],
+    vehicles: [{ problem: 'Missed calls', vehicle: 'Voice' }, { problem: '', vehicle: '' }],
+    relevance: [{ fact: 'Published email', required: true, source: 'Maps' }, { fact: '  ' }]
+  })
+  assert.equal(parsed.mechanism, 'Bolt onto their number')
+  assert.equal(parsed.icp, 'shops')
+  assert.deepEqual(parsed.verticalIn, ['plumbing'])
+  assert.deepEqual(parsed.vehicles, [{ problem: 'Missed calls', vehicle: 'Voice' }])
+  assert.deepEqual(parsed.relevance, [{ fact: 'Published email', required: true, source: 'Maps' }])
+  assert.equal(parsed.crowd, '')
 })
 
 test('offer sku desk is wired in Compass not markdown', () => {
@@ -168,8 +273,29 @@ test('offer sku desk is wired in Compass not markdown', () => {
 
   const ui = read('src/components/offers/OffersDesk.tsx')
   assert.match(ui, /New testing SKU/)
-  assert.match(ui, /Make live/)
-  assert.match(ui, /lg:grid-cols-2/)
+  assert.match(ui, /xl:grid-cols-4/)
+  assert.match(ui, /sales\/offers\/new/)
+  assert.match(ui, /flattenOfferGallery/)
+  assert.match(ui, /offerKeyFromPath/)
+  assert.doesNotMatch(ui, /lg:grid-cols-2/)
   assert.doesNotMatch(ui, /switchflow-offer/)
   assert.doesNotMatch(ui, /Scoreboard is showed/)
+
+  const interior = read('src/components/offers/OfferInterior.tsx')
+  assert.match(interior, /Make live/)
+  assert.match(interior, /Primary copy/)
+  assert.match(interior, /Anti-ICP/)
+  assert.match(interior, /Open copy library/)
+
+  const nested = read('src/app/(console)/sales/offers/[offerKey]/page.tsx')
+  assert.match(nested, /OperatorShell/)
+
+  assert.match(desk, /flattenOfferGallery/)
+  assert.match(desk, /mechanism/)
+  assert.match(desk, /verticalIn/)
+  assert.match(desk, /relevance/)
+
+  const navKeep = read('src/components/ConsoleNav.tsx')
+  assert.match(navKeep, /p\.startsWith\('\/sales\/offers\/'\)/)
+  assert.doesNotMatch(keep, /Live and testing SKUs/)
 })

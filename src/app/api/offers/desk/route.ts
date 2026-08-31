@@ -10,7 +10,7 @@ import type { ColdEmailGlance } from '@/lib/home-demo-data'
 export const dynamic = 'force-dynamic'
 
 /**
- * GET /api/offers/desk — SKU lanes (live / testing / retired) plus campaign and CRM results.
+ * GET /api/offers/desk — SKU gallery (live / testing / retired) plus campaign and CRM results.
  */
 export async function GET(_request: NextRequest) {
   try {

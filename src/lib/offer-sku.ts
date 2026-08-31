@@ -5,6 +5,17 @@ import { normalizeProvenance, type OutboundOffer } from '@/lib/outbound-copy'
 export const GTM_STATUSES = ['live', 'testing', 'retired'] as const
 export type GtmStatus = (typeof GTM_STATUSES)[number]
 
+export type OfferVehicle = {
+  problem: string
+  vehicle: string
+}
+
+export type OfferRelevanceFact = {
+  fact: string
+  required: boolean
+  source: string
+}
+
 export type OfferLock = {
   icp: string
   antiIcp: string[]
@@ -15,6 +26,13 @@ export type OfferLock = {
     convert: string
   }
   walk: string[]
+  mechanism: string
+  category: string
+  crowd: string
+  verticalIn: string[]
+  verticalOut: string[]
+  vehicles: OfferVehicle[]
+  relevance: OfferRelevanceFact[]
 }
 
 export type OfferSkuFields = {
@@ -87,7 +105,14 @@ export function emptyOfferLock(): OfferLock {
     antiIcp: [],
     screen: [],
     machine: { capture: '', fill: '', convert: '' },
-    walk: []
+    walk: [],
+    mechanism: '',
+    category: '',
+    crowd: '',
+    verticalIn: [],
+    verticalOut: [],
+    vehicles: [],
+    relevance: []
   }
 }
 
@@ -135,6 +160,34 @@ function asStringList(value: unknown): string[] {
     .filter(Boolean)
 }
 
+function asVehicles(value: unknown): OfferVehicle[] {
+  if (!Array.isArray(value)) return []
+  const rows: OfferVehicle[] = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue
+    const raw = item as Record<string, unknown>
+    const problem = typeof raw.problem === 'string' ? raw.problem.trim() : ''
+    const vehicle = typeof raw.vehicle === 'string' ? raw.vehicle.trim() : ''
+    if (!problem && !vehicle) continue
+    rows.push({ problem, vehicle })
+  }
+  return rows
+}
+
+function asRelevance(value: unknown): OfferRelevanceFact[] {
+  if (!Array.isArray(value)) return []
+  const rows: OfferRelevanceFact[] = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue
+    const raw = item as Record<string, unknown>
+    const fact = typeof raw.fact === 'string' ? raw.fact.trim() : ''
+    if (!fact) continue
+    const source = typeof raw.source === 'string' ? raw.source.trim() : ''
+    rows.push({ fact, required: raw.required === true, source })
+  }
+  return rows
+}
+
 export function parseOfferLock(value: unknown): OfferLock {
   const empty = emptyOfferLock()
   if (!value || typeof value !== 'object' || Array.isArray(value)) return empty
@@ -152,8 +205,42 @@ export function parseOfferLock(value: unknown): OfferLock {
       fill: typeof machine.fill === 'string' ? machine.fill.trim() : '',
       convert: typeof machine.convert === 'string' ? machine.convert.trim() : ''
     },
-    walk: asStringList(raw.walk)
+    walk: asStringList(raw.walk),
+    mechanism: typeof raw.mechanism === 'string' ? raw.mechanism.trim() : '',
+    category: typeof raw.category === 'string' ? raw.category.trim() : '',
+    crowd: typeof raw.crowd === 'string' ? raw.crowd.trim() : '',
+    verticalIn: asStringList(raw.verticalIn ?? raw.vertical_in),
+    verticalOut: asStringList(raw.verticalOut ?? raw.vertical_out),
+    vehicles: asVehicles(raw.vehicles),
+    relevance: asRelevance(raw.relevance)
   }
+}
+
+export function flattenOfferGallery(desk: Pick<OfferDeskModel, 'live' | 'testing' | 'retired'>): OfferDeskCard[] {
+  return [...desk.live, ...desk.testing, ...desk.retired]
+}
+
+export function offerKeyFromPath(path: string): string | null {
+  const p = (path.split('?')[0] || path).replace(/\/+$/, '') || path
+  if (p === '/sales/offers') return null
+  const prefix = '/sales/offers/'
+  if (!p.startsWith(prefix)) return null
+  const key = decodeURIComponent(p.slice(prefix.length).split('/')[0] || '').trim()
+  return key || null
+}
+
+export function commercialLocked(offer: {
+  install_aud: number | null
+  retainer_low_aud: number | null
+  retainer_high_aud: number | null
+  term_days: number | null
+}): boolean {
+  return (
+    offer.install_aud != null ||
+    offer.retainer_low_aud != null ||
+    offer.retainer_high_aud != null ||
+    offer.term_days != null
+  )
 }
 
 export function slugifyOfferKey(name: string): string {
@@ -382,6 +469,7 @@ export function indexInstantlySent(
 }
 
 export const MISSED_CALL_LOCK: OfferLock = {
+  ...emptyOfferLock(),
   icp: 'Established residential trades whose phone already rings and who lose jobs while they are on the tools.',
   antiIcp: [
     'Solo tradie with a quiet phone',
@@ -410,6 +498,7 @@ export const MISSED_CALL_LOCK: OfferLock = {
 }
 
 export const BOOKED_JOBS_LOCK: OfferLock = {
+  ...emptyOfferLock(),
   icp: 'Established shops that already buy inbound or need more of it, and lose the enquiry before it becomes a showed job.',
   antiIcp: [
     'CPL buyer who will not change answering',

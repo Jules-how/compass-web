@@ -114,13 +114,7 @@ export function ConsoleHomeInboxKeepAlive() {
       ) : null}
       {seenOffers ? (
         <KeepAlivePane active={showOffers}>
-          <OperatorShell
-            title="Offers"
-            subtitle="Live and testing SKUs. Results from the ledger, not CPL."
-            width="full"
-          >
-            <OffersDesk />
-          </OperatorShell>
+          <OffersDesk />
         </KeepAlivePane>
       ) : null}
       {seenOutbound ? (

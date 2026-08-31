@@ -70,7 +70,7 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/expressions/<id>" \
 ```
 
 ```bash
-# SKU desk (live / testing / retired + campaign results)
+# SKU desk (live / testing / retired gallery + campaign results)
 curl -sS "$COMPASS_BASE_URL/api/agent/offers/desk" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 ```
