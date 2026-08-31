@@ -312,6 +312,8 @@ export function applyOfferSkuFields(
   if (dream !== undefined) target.dream_outcome = dream
   const guarantee = optionalText(body.guarantee)
   if (guarantee !== undefined) target.guarantee = guarantee
+  const sourceFile = optionalText(body.source_file)
+  if (sourceFile !== undefined) target.source_file = sourceFile
   if (body.install_aud !== undefined) {
     const n = body.install_aud === null || body.install_aud === '' ? null : parseMoneyAud(body.install_aud)
     if (body.install_aud !== null && body.install_aud !== '' && n == null) {
@@ -499,27 +501,60 @@ export const MISSED_CALL_LOCK: OfferLock = {
 
 export const BOOKED_JOBS_LOCK: OfferLock = {
   ...emptyOfferLock(),
-  icp: 'Established shops that already buy inbound or need more of it, and lose the enquiry before it becomes a showed job.',
+  icp: 'Owner-led residential trades in major AU cities, 2 to 8 vans, that already pay for demand or whose phone already rings, and that lose book-now jobs if a new lead is not booked in minutes.',
   antiIcp: [
-    'CPL buyer who will not change answering',
-    'Empty diary with no spend and no inbound',
+    'Quiet phone and will not fund fill',
+    'Wants leads with no capture (ads into voicemail)',
+    'CPL or lead volume as the scoreboard',
     'Sparkies commercial BD',
-    'Full-stack ads + web as the product'
+    '60-person contractor, franchise, 1800 desk',
+    'Will not point number and forms at the path',
+    'Tilers, kitchens, cleaning, handyman'
   ],
   screen: [
-    'Where do enquiries come from today (Google, LSA, Hipages, phone)?',
-    'How fast do you call a new lead back?',
-    'What happens when a call comes in while you are on a job?',
-    'Will you leave routing and the calendar pointed at this path for 90 days?'
+    'What do you already pay for demand (Google, LSA, Hipages, nothing)? If nothing, will you fund Google / LSA at a floor we name today?',
+    'When a new lead comes in (call or form), what happens in the first 10 minutes?',
+    'Last month, how many enquiries did you not action the same day?',
+    'Rough contribution margin on a typical book-now job vs a replacement (not revenue).',
+    'Will you point the public number and forms at this booking path for 90 days, and let fill run into that same path?'
   ],
   machine: {
-    capture: 'Inbound booking: overflow voice, miss SMS, calendar, handoff rules.',
-    fill: 'Lead gen only after capture is closed, or in the same install if they already spend and leak.',
-    convert: 'Speed-to-lead in minutes on new enquiries. Same conversion job as capture.'
+    capture: 'Voice/SMS that books in minutes. Overflow / after hours on their number. SMS on miss or form. Calendar. Handoff. Not nurture.',
+    fill: 'LSA and branded search into that path. Meta only if search intent is thin. They pay media. Kill switch if enquiries do not book.',
+    convert: 'Landing page only if paid traffic or booking UX is the bottleneck. Never the first conversation.'
   },
   walk: [
-    'Wants 40 leads and will not talk about missed inbound or callback lag',
-    'Will not give number or calendar access',
-    'Success metric is cheapest CPL'
+    'Franchise, 1800, store, FM, tiler in the name',
+    'No published email after verify + finder',
+    'Wrong in-trade for this campaign',
+    'CPL buyer who will not change answering'
+  ],
+  mechanism:
+    'Most shops buy more leads and leave voicemail or next-day callback in place. Extra leads walk at the same rate. We put paid demand into a path that answers and books in minutes. Fill and capture are one install.',
+  category: 'Demand in, showed job out. Not an ads shop. Not a receptionist shop.',
+  crowd:
+    'Owner-led residential trades in major AU cities, 2 to 8 vans, owner can say yes this week, book-now inbound, already pay for demand or the phone already rings.',
+  verticalIn: ['plumber', 'hvac', 'electrical', 'locksmith', 'roofing', 'pest'],
+  verticalOut: ['tilers', 'kitchens', 'cleaning', 'handyman'],
+  vehicles: [
+    { problem: 'Call while on a job goes to voicemail', vehicle: 'Overflow voice on their public number' },
+    { problem: 'After hours is nobody', vehicle: 'After hours voice + SMS' },
+    { problem: 'Form or Hipages lead, callback tomorrow, job gone', vehicle: 'Speed-to-lead SMS on miss or form' },
+    { problem: 'Google ads into voicemail', vehicle: 'Fill only into the capture path. Kill switch if it does not book.' },
+    { problem: 'Do not want a robot quoting licensed work', vehicle: 'Handoff script. Human for anything licensed.' },
+    { problem: 'Do not know if ads work', vehicle: 'Weekly note: new, missed, booked, showed. Metric is showed jobs.' },
+    { problem: 'No-shows', vehicle: 'Factual appointment SMS. No promo copy.' },
+    { problem: 'Ads without pickup (Meta lesson)', vehicle: 'Capture on before spend scales' },
+    { problem: 'Next need after yes', vehicle: 'Same machine, more hours, more campaigns. Not a website offer.' }
+  ],
+  relevance: [
+    { fact: 'Published work email', required: true, source: 'Site or Maps. Never invent.' },
+    { fact: 'Trading name', required: true, source: 'Maps' },
+    { fact: 'Suburb', required: true, source: 'Maps / address' },
+    { fact: 'Trade on the in-table for this campaign', required: true, source: 'Maps category' },
+    { fact: 'Demand proxy (reviews or years trading or visible Google/LSA/Hipages)', required: true, source: 'Maps, site' },
+    { fact: 'Paid demand (Hipages, Google Ads, LSA)', required: false, source: 'Site extract, not Origami' },
+    { fact: 'Hours / close time / after hours claim', required: false, source: 'Maps hours' },
+    { fact: 'Specialty', required: false, source: 'Services' }
   ]
 }

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { InstallSopGraph } from './InstallSopGraph'
+import type { SopPlan } from '@/lib/delivery-dept/sop-template'
 
 type BoardCard = {
   id: string
@@ -31,6 +33,7 @@ type BoardCard = {
   numberStrategy: { notes?: string; packLabel?: string } | null
   testCall: { runner?: string; note?: string; passed?: boolean } | null
   steps: Record<string, { status: string; owner: string; blockedOn: string | null }>
+  sopPlan?: SopPlan
 }
 
 type BoardPayload = {
@@ -40,6 +43,7 @@ type BoardPayload = {
     steps: Array<{ id: string; title: string; column: string; owner: string }>
     checkpointMeta: Record<string, { label: string }>
   }
+  sopTemplate?: SopPlan
   columns: Array<{ id: string; title: string; owner: string; cards: BoardCard[] }>
   capacity: {
     liveActive: number
@@ -157,12 +161,18 @@ export function InstallKanban() {
     <div className="space-y-5">
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
+      <InstallSopGraph
+        board={board}
+        selectedInstallId={openId}
+        onSelectInstall={setOpenId}
+      />
+
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Live capacity</CardTitle>
-              <CardDescription>Ten concurrent. Solo. Stop taking yes if this is full.</CardDescription>
+              <CardTitle>Voice setup capacity</CardTitle>
+              <CardDescription>Legacy voice setup queue only.</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -171,7 +181,7 @@ export function InstallKanban() {
               <span className="text-base font-medium text-neutral-500"> / {cap.cap}</span>
             </p>
             <p className="mt-2 text-sm text-neutral-500">
-              {cap.full ? 'Full. Do not take another yes this week.' : `${cap.remaining} slots open.`}
+              {cap.full ? 'Configured capacity is full.' : `${cap.remaining} slots open.`}
             </p>
           </CardContent>
         </Card>
@@ -179,7 +189,7 @@ export function InstallKanban() {
           <CardHeader>
             <div>
               <CardTitle>Jules time left</CardTitle>
-              <CardDescription>Live installs only. Cap is 2 hours each.</CardDescription>
+              <CardDescription>Current voice setup work only.</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -191,7 +201,7 @@ export function InstallKanban() {
           <CardHeader>
             <div>
               <CardTitle>Demo</CardTitle>
-              <CardDescription>Three fictional shops. No booked or showed numbers.</CardDescription>
+              <CardDescription>Legacy voice setup examples.</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="flex items-end justify-between gap-3">
@@ -206,6 +216,13 @@ export function InstallKanban() {
             </button>
           </CardContent>
         </Card>
+      </div>
+
+      <div>
+        <p className="compass-section-label">Existing install queue</p>
+        <p className="mt-1 text-sm text-neutral-500">
+          These cards run the legacy voice setup actions. The configurable delivery SOP is above.
+        </p>
       </div>
 
       <div className="overflow-x-auto pb-2">
@@ -278,7 +295,7 @@ export function InstallKanban() {
           </CardHeader>
           <CardContent className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-4">
-              <p className="compass-section-label">Steps</p>
+              <p className="compass-section-label">Legacy voice steps</p>
               <ol className="space-y-2">
                 {board.pipeline.steps.map((step) => {
                   const state = selected.steps[step.id]

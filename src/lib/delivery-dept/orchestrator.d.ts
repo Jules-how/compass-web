@@ -1,3 +1,5 @@
+import type { SopPlan } from './sop-template'
+
 export type InstallStep = {
   id: string
   status: 'pending' | 'current' | 'done'
@@ -32,6 +34,7 @@ export type InstallRecord = {
   currentCheckpoint: string | null
   voice: Record<string, unknown>
   steps: Record<string, InstallStep>
+  sopPlan?: SopPlan
   notes: string
 }
 

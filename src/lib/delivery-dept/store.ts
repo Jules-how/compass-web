@@ -18,9 +18,16 @@ import {
   setBlocked
 } from './orchestrator.mjs'
 import { buildDemoInstalls, demoNow } from './demo.mjs'
+import {
+  createSopPlanFromLegacySteps,
+  createDefaultSopPlan,
+  normalizeSopPlan,
+  type SopPlan
+} from './sop-template'
+import { loadSopTemplate } from './sop-storage'
 import { runTestCallScenarios } from './voice-lab.mjs'
 
-type InstallRecord = ReturnType<typeof createInstall>
+type InstallRecord = ReturnType<typeof createInstall> & { sopPlan?: SopPlan }
 
 const demoState = new Map<string, InstallRecord>()
 let demoSeeded = false
@@ -45,14 +52,29 @@ function deliveryOf(dealTerms: unknown): Record<string, unknown> {
   return delivery && typeof delivery === 'object' ? (delivery as Record<string, unknown>) : {}
 }
 
+function ensureSopPlan(install: InstallRecord, template = createDefaultSopPlan()): InstallRecord {
+  if (install.sopPlan) {
+    try {
+      install.sopPlan = normalizeSopPlan(install.sopPlan)
+      return install
+    } catch {
+      // Fall through to a safe plan derived from the legacy install state.
+    }
+  }
+  install.sopPlan = createSopPlanFromLegacySteps(install.steps, template)
+  return install
+}
+
 export function ensureInstallFromDelivery(
   client: { id: string; name: string; deal_terms?: unknown; voice?: unknown },
-  at = new Date().toISOString()
+  at = new Date().toISOString(),
+  template = createDefaultSopPlan()
 ): InstallRecord {
   const delivery = deliveryOf(client.deal_terms)
   const existing = delivery.install as InstallRecord | undefined
   if (existing?.id && existing.steps) {
-    return hydrateFromVoice(existing, (client.voice || {}) as ClientVoiceConfig, at)
+    const install = hydrateFromVoice(existing, (client.voice || {}) as ClientVoiceConfig, at)
+    return ensureSopPlan(install, template)
   }
   const install = createInstall(
     {
@@ -72,7 +94,8 @@ export function ensureInstallFromDelivery(
     String(delivery.onboarding_submitted_at || at)
   )
   completeStep(install, 'intake_form', at)
-  return hydrateFromVoice(install, (client.voice || {}) as ClientVoiceConfig, at)
+  hydrateFromVoice(install, (client.voice || {}) as ClientVoiceConfig, at)
+  return ensureSopPlan(install, template)
 }
 
 async function saveLiveInstall(supabase: SupabaseClient, clientId: string, install: InstallRecord) {
@@ -95,7 +118,7 @@ async function saveLiveInstall(supabase: SupabaseClient, clientId: string, insta
   if (updateError) throw new Error(updateError.message)
 }
 
-async function loadLiveInstalls(supabase: SupabaseClient): Promise<InstallRecord[]> {
+async function loadLiveInstalls(supabase: SupabaseClient, template: SopPlan): Promise<InstallRecord[]> {
   const { data, error } = await supabase
     .from('compass_clients')
     .select('id,name,voice,deal_terms,archived_at')
@@ -107,7 +130,7 @@ async function loadLiveInstalls(supabase: SupabaseClient): Promise<InstallRecord
     const delivery = deliveryOf(row.deal_terms)
     const hasForm = Boolean(delivery.onboarding_submitted_at || delivery.install)
     if (!hasForm) continue
-    const install = ensureInstallFromDelivery(row)
+    const install = ensureInstallFromDelivery(row, undefined, template)
     out.push(install)
     if (!delivery.install) {
       await saveLiveInstall(supabase, row.id, install)
@@ -125,13 +148,18 @@ function getDemo(id: string): InstallRecord {
 
 export async function listInstallBoard(supabase: SupabaseClient, source = 'all') {
   seedDemo()
+  const sopTemplate = await loadSopTemplate(supabase)
   const now = source === 'demo' ? demoNow() : new Date().toISOString()
-  const live = source === 'demo' ? [] : await loadLiveInstalls(supabase)
-  const demo = source === 'live' ? [] : [...demoState.values()]
+  const live = source === 'demo' ? [] : await loadLiveInstalls(supabase, sopTemplate)
+  const demo =
+    source === 'live'
+      ? []
+      : [...demoState.values()].map((install) => ensureSopPlan(install, sopTemplate))
   const installs = [...live, ...demo]
   return {
     now,
     pipeline: loadPipeline(),
+    sopTemplate,
     columns: boardColumns(installs, now),
     capacity: capacity(installs),
     smsById: Object.fromEntries(installs.map((install) => [install.id, renderSms(install)]))
@@ -140,9 +168,10 @@ export async function listInstallBoard(supabase: SupabaseClient, source = 'all')
 
 export async function getInstall(supabase: SupabaseClient, id: string) {
   if (id.startsWith('demo-')) {
-    const install = getDemo(id)
+    const install = ensureSopPlan(getDemo(id), await loadSopTemplate(supabase))
     return { install, sms: renderSms(install), now: demoNow() }
   }
+  const sopTemplate = await loadSopTemplate(supabase)
   const { data, error } = await supabase
     .from('compass_clients')
     .select('id,name,voice,deal_terms')
@@ -160,10 +189,10 @@ export async function getInstall(supabase: SupabaseClient, id: string) {
       return (delivery.install as { id?: string } | undefined)?.id === id
     })
     if (!match) throw new Error('not_found')
-    const install = ensureInstallFromDelivery(match)
+    const install = ensureInstallFromDelivery(match, undefined, sopTemplate)
     return { install, sms: renderSms(install), now: new Date().toISOString() }
   }
-  const install = ensureInstallFromDelivery(data)
+  const install = ensureInstallFromDelivery(data, undefined, sopTemplate)
   return { install, sms: renderSms(install), now: new Date().toISOString() }
 }
 
@@ -257,6 +286,8 @@ export async function mutateInstall(
     }
   } else if (action === 'checkpoint') {
     completeStep(install, 'checkpoint', at, { checkpointId: body.checkpointId })
+  } else if (action === 'save_sop_plan') {
+    install.sopPlan = normalizeSopPlan(body.plan)
   } else if (action === 'reset_demo') {
     resetDemoInstalls()
     return getInstall(supabase, id)
@@ -272,7 +303,7 @@ export async function spawnInstallOnSubmit(
   supabase: SupabaseClient,
   client: { id: string; name: string; deal_terms?: unknown; voice?: unknown }
 ) {
-  const install = ensureInstallFromDelivery(client)
+  const install = ensureInstallFromDelivery(client, new Date().toISOString(), await loadSopTemplate(supabase))
   await saveLiveInstall(supabase, client.id, install)
   return install
 }

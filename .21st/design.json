@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "project": {
+    "name": "compass-web",
+    "productType": null,
+    "stack": [
+      "nextjs",
+      "react",
+      "tailwind-v3"
+    ]
+  },
+  "sources": {
+    "tokens": [
+      "src/app/globals.css"
+    ],
+    "components": [
+      "src/components/ui"
+    ],
+    "assets": [],
+    "instructions": [
+      "AGENTS.md"
+    ]
+  },
+  "design": {
+    "colorMode": "light",
+    "colors": {
+      "--compass-muted": {
+        "value": "#6b7280",
+        "source": "src/app/globals.css"
+      },
+      "--compass-accent": {
+        "value": "#e85d2a",
+        "source": "src/app/globals.css"
+      },
+      "--compass-accent-hover": {
+        "value": "#c94a1f",
+        "source": "src/app/globals.css"
+      },
+      "--compass-accent-soft": {
+        "value": "rgba(232, 93, 42, 0.1)",
+        "source": "src/app/globals.css"
+      },
+      "--destructive-foreground": {
+        "value": "#ffffff",
+        "source": "src/app/globals.css"
+      },
+      "--color-destructive-foreground": {
+        "value": "var(--destructive-foreground)",
+        "source": "src/app/globals.css"
+      }
+    },
+    "typography": {},
+    "spacing": {},
+    "radius": {},
+    "shadows": {
+      "--compass-shadow": {
+        "value": "0 1px 2px rgba(15, 18, 23, 0.04), 0 8px 24px rgba(15, 18, 23, 0.04)",
+        "source": "src/app/globals.css"
+      },
+      "--compass-shadow-sm": {
+        "value": "0 1px 2px rgba(15, 18, 23, 0.05)",
+        "source": "src/app/globals.css"
+      }
+    },
+    "motion": {},
+    "density": "unknown"
+  },
+  "components": {
+    "installed": [
+      "accordion",
+      "badge",
+      "card",
+      "chart",
+      "records-table",
+      "sidebar"
+    ],
+    "preferredPrimitives": [
+      "radix-ui"
+    ],
+    "patterns": []
+  },
+  "constraints": {
+    "must": [],
+    "avoid": []
+  },
+  "decisions": [],
+  "evidence": [
+    {
+      "fact": "components.installed",
+      "source": "src/components/ui"
+    },
+    {
+      "fact": "design.colorMode:light",
+      "source": "src/app/globals.css"
+    },
+    {
+      "fact": "design.tokens",
+      "source": "src/app/globals.css"
+    },
+    {
+      "fact": "project.instructions",
+      "source": "AGENTS.md"
+    },
+    {
+      "fact": "project.stack:nextjs",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:react",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:tailwind-v3",
+      "source": "package.json"
+    }
+  ],
+  "generatedAt": "2026-08-31T13:30:39.227Z"
+}

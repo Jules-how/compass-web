@@ -5,7 +5,7 @@ export default function InstallsPage() {
   return (
     <OperatorShell
       title="Installs"
-      subtitle="Signed client to live number. Ten concurrent. Under two hours of your time each."
+      subtitle="Configure each client system from intake to monitored lead delivery."
       width="full"
     >
       <InstallKanban />
