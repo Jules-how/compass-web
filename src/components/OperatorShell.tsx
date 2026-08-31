@@ -203,7 +203,7 @@ function PageMain({
   actions,
   children
 }: {
-  title?: string
+  title?: ReactNode
   subtitle?: string
   width?: keyof typeof WIDTH
   flush?: boolean
@@ -255,7 +255,7 @@ export function OperatorShell({
 }: {
   active?: NavKey
   role?: PortalRole
-  title?: string
+  title?: ReactNode
   subtitle?: string
   width?: keyof typeof WIDTH
   flush?: boolean

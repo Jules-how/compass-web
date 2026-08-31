@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useConsoleNav, useConsoleViewPath } from '@/components/ConsoleNav'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { OperatorShell } from '@/components/OperatorShell'
-import { CreateOfferInterior, OfferInterior, OfferMissing } from '@/components/offers/OfferInterior'
+import { CreateOfferInterior, EditableOfferTitle, OfferInterior, OfferMissing } from '@/components/offers/OfferInterior'
 import type { GtmStatus, OfferDeskCard, OfferDeskModel } from '@/lib/offer-sku'
 import {
   commercialLocked,
@@ -101,25 +101,25 @@ export function OffersDesk() {
     offerKey === 'new'
       ? 'New testing SKU'
       : interiorCard
-        ? interiorCard.offer.name
+        ? (
+            <EditableOfferTitle
+              name={interiorCard.offer.name}
+              busy={busyId === interiorCard.offer.id}
+              onSave={(name) => patchOffer(interiorCard.offer.id, { name })}
+            />
+          )
         : 'Offers'
-  const subtitle =
-    offerKey === 'new'
-      ? 'Starts as testing. Copy library stays under Outbound.'
-      : interiorCard
-        ? interiorCard.offer.one_sentence || interiorCard.offer.pack_summary
-        : 'Live, testing, and retired SKUs on one board. Results from the ledger, not CPL.'
 
   if (loading && !data) {
     return (
-      <OperatorShell title="Offers" subtitle={subtitle} width="full">
+      <OperatorShell title="Offers" width="full">
         <LoadingBlock label="Loading offers…" />
       </OperatorShell>
     )
   }
 
   return (
-    <OperatorShell title={title} subtitle={subtitle} width="full">
+    <OperatorShell title={title} width="full">
       {offerKey === 'new' ? (
         <CreateOfferInterior
           busy={creating}
@@ -166,11 +166,6 @@ function OfferGallery({
 }) {
   return (
     <div className="space-y-7">
-      <p className="max-w-xl text-sm leading-relaxed text-neutral-500">
-        Scoreboard is booked jobs and positive replies on the ledger. Not CPL. Copy library stays
-        under Outbound.
-      </p>
-
       {error ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
           Could not refresh the desk. {error}

@@ -1,11 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import type { OfferDeskCard, OfferLock, OfferRelevanceFact, OfferVehicle } from '@/lib/offer-sku'
 import { emptyOfferLock, slugifyOfferKey } from '@/lib/offer-sku'
-import { cn } from '@/lib/utils'
 
 function linesToList(value: string) {
   return value
@@ -48,6 +47,64 @@ function campaignStatusBadge(status: string) {
     <Badge variant="secondary" appearance="light" size="sm">
       {status || 'Draft'}
     </Badge>
+  )
+}
+
+export function EditableOfferTitle({
+  name,
+  busy,
+  onSave
+}: {
+  name: string
+  busy: boolean
+  onSave: (name: string) => Promise<void>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(name)
+
+  useEffect(() => {
+    setDraft(name)
+  }, [name])
+
+  async function commit() {
+    const next = draft.trim()
+    if (!next || next === name) {
+      setDraft(name)
+      setEditing(false)
+      return
+    }
+    setEditing(false)
+    await onSave(next)
+  }
+
+  if (editing) {
+    return (
+      <input
+        aria-label="Offer name"
+        className="w-full min-w-0 border-0 bg-transparent p-0 outline-none"
+        value={draft}
+        autoFocus
+        disabled={busy}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            void commit()
+          }
+          if (e.key === 'Escape') {
+            setDraft(name)
+            setEditing(false)
+          }
+        }}
+      />
+    )
+  }
+
+  return (
+    <button type="button" className="max-w-full text-left" onClick={() => setEditing(true)}>
+      {name}
+    </button>
   )
 }
 
@@ -216,7 +273,6 @@ function OfferLockForm({
   onPatch: (body: Record<string, unknown>) => Promise<void>
 }) {
   const offer = card.offer
-  const [name, setName] = useState(offer.name)
   const [oneSentence, setOneSentence] = useState(offer.one_sentence ?? '')
   const [dream, setDream] = useState(offer.dream_outcome ?? '')
   const [pack, setPack] = useState(offer.pack_summary)
@@ -286,7 +342,6 @@ function OfferLockForm({
       onSubmit={async (event) => {
         event.preventDefault()
         await onPatch({
-          name,
           pack_summary: pack,
           one_sentence: oneSentence,
           dream_outcome: dream,
@@ -302,10 +357,6 @@ function OfferLockForm({
       }}
     >
       <Panel title="Primary copy">
-        <label className="block text-sm">
-          <span className="mb-1.5 block text-neutral-600">Name</span>
-          <input className="compass-input" value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
         <label className="block text-sm">
           <span className="mb-1.5 block text-neutral-600">One sentence (3S)</span>
           <textarea

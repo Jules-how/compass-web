@@ -286,6 +286,8 @@ test('offer sku desk is wired in Compass not markdown', () => {
   assert.match(interior, /Primary copy/)
   assert.match(interior, /Anti-ICP/)
   assert.match(interior, /Open copy library/)
+  assert.match(interior, /EditableOfferTitle/)
+  assert.match(ui, /EditableOfferTitle/)
 
   const nested = read('src/app/(console)/sales/offers/[offerKey]/page.tsx')
   assert.match(nested, /OperatorShell/)
