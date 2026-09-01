@@ -27,13 +27,43 @@ export function getDbPath(): string {
   if (process.env.COMPASS_DB_PATH) {
     return process.env.COMPASS_DB_PATH
   }
+  const isServerless =
+    Boolean(process.env.VERCEL) ||
+    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+    process.cwd().startsWith('/var/task') ||
+    process.cwd().startsWith('/var/runtime')
+
+  if (isServerless) {
+    const tmpDir = path.join('/tmp', 'compass-data')
+    try {
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true })
+      }
+    } catch {
+      /* ignore */
+    }
+    return path.join(tmpDir, 'compass.db')
+  }
+
   const cwd = process.cwd()
   const inCompassWeb = cwd.endsWith('compass-web')
   const baseDir = inCompassWeb ? path.join(cwd, 'data') : path.join(cwd, 'compass-web', 'data')
-  if (!fs.existsSync(baseDir)) {
-    fs.mkdirSync(baseDir, { recursive: true })
+  try {
+    if (!fs.existsSync(baseDir)) {
+      fs.mkdirSync(baseDir, { recursive: true })
+    }
+    return path.join(baseDir, 'compass.db')
+  } catch {
+    const fallbackDir = path.join('/tmp', 'compass-data')
+    try {
+      if (!fs.existsSync(fallbackDir)) {
+        fs.mkdirSync(fallbackDir, { recursive: true })
+      }
+    } catch {
+      /* ignore */
+    }
+    return path.join(fallbackDir, 'compass.db')
   }
-  return path.join(baseDir, 'compass.db')
 }
 
 export function getLocalDb(): DatabaseSync {

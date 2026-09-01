@@ -75,11 +75,20 @@ export function LibraryBrowser({ kind }: { kind: Kind }) {
 
   const reload = useCallback(async () => {
     try {
-      await ensureOutboundLibrarySeeded()
-      const [items, cams] = await Promise.all([
+      try {
+        await ensureOutboundLibrarySeeded()
+      } catch (seedErr) {
+        console.warn('Seed check failed', seedErr)
+      }
+      const [itemsRes, camsRes] = await Promise.allSettled([
         listLibraryItems<Record<string, unknown>>(kind, { q: q || undefined }),
         listCampaigns()
       ])
+      if (itemsRes.status === 'rejected') {
+        throw itemsRes.reason
+      }
+      const items = itemsRes.value
+      const cams = camsRes.status === 'fulfilled' ? camsRes.value : []
       setCampaigns(cams)
       setLoadError(null)
       setRows(
