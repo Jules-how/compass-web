@@ -16,6 +16,19 @@ export type OfferRelevanceFact = {
   source: string
 }
 
+export const VERTICAL_VARIANT_STATUSES = ['planned', 'testing', 'validated', 'killed'] as const
+export type VerticalVariantStatus = (typeof VERTICAL_VARIANT_STATUSES)[number]
+
+export type OfferVerticalVariant = {
+  key: string
+  name: string
+  status: VerticalVariantStatus
+  hypothesis: string
+  pain_wrapper: string
+  list_spec: string
+  notes: string
+}
+
 export type OfferLock = {
   icp: string
   antiIcp: string[]
@@ -31,6 +44,7 @@ export type OfferLock = {
   crowd: string
   verticalIn: string[]
   verticalOut: string[]
+  verticals: OfferVerticalVariant[]
   vehicles: OfferVehicle[]
   relevance: OfferRelevanceFact[]
 }
@@ -55,6 +69,7 @@ export type OfferCampaignBind = {
   status: string
   offer_key?: string | null
   instantly_campaign_id?: string | null
+  vertical_tags?: string[]
 }
 
 export type OfferCampaignResult = {
@@ -62,6 +77,7 @@ export type OfferCampaignResult = {
   name: string
   status: string
   instantlyCampaignId: string | null
+  verticalTags: string[]
   cohort: number
   positive: number
   meetings: number
@@ -111,6 +127,7 @@ export function emptyOfferLock(): OfferLock {
     crowd: '',
     verticalIn: [],
     verticalOut: [],
+    verticals: [],
     vehicles: [],
     relevance: []
   }
@@ -188,6 +205,33 @@ function asRelevance(value: unknown): OfferRelevanceFact[] {
   return rows
 }
 
+function asVerticalVariants(value: unknown): OfferVerticalVariant[] {
+  if (!Array.isArray(value)) return []
+  const rows: OfferVerticalVariant[] = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue
+    const raw = item as Record<string, unknown>
+    const name = typeof raw.name === 'string' ? raw.name.trim() : ''
+    const key = typeof raw.key === 'string' && raw.key.trim() ? slugifyOfferKey(raw.key) : slugifyOfferKey(name)
+    if (!key && !name) continue
+    const statusRaw = typeof raw.status === 'string' ? raw.status.trim().toLowerCase() : ''
+    const status: VerticalVariantStatus =
+      statusRaw === 'validated' || statusRaw === 'killed' || statusRaw === 'testing'
+        ? (statusRaw as VerticalVariantStatus)
+        : 'planned'
+    rows.push({
+      key,
+      name: name || key,
+      status,
+      hypothesis: typeof raw.hypothesis === 'string' ? raw.hypothesis.trim() : '',
+      pain_wrapper: typeof raw.pain_wrapper === 'string' ? raw.pain_wrapper.trim() : '',
+      list_spec: typeof raw.list_spec === 'string' ? raw.list_spec.trim() : '',
+      notes: typeof raw.notes === 'string' ? raw.notes.trim() : ''
+    })
+  }
+  return rows
+}
+
 export function parseOfferLock(value: unknown): OfferLock {
   const empty = emptyOfferLock()
   if (!value || typeof value !== 'object' || Array.isArray(value)) return empty
@@ -211,6 +255,7 @@ export function parseOfferLock(value: unknown): OfferLock {
     crowd: typeof raw.crowd === 'string' ? raw.crowd.trim() : '',
     verticalIn: asStringList(raw.verticalIn ?? raw.vertical_in),
     verticalOut: asStringList(raw.verticalOut ?? raw.vertical_out),
+    verticals: asVerticalVariants(raw.verticals),
     vehicles: asVehicles(raw.vehicles),
     relevance: asRelevance(raw.relevance)
   }
@@ -407,11 +452,13 @@ export function assembleOfferDesk(input: {
           sentSum += sent
           sentKnown = true
         }
+        const verticalTags = Array.isArray(campaign.vertical_tags) ? campaign.vertical_tags : []
         return {
           id: campaign.id,
           name: campaign.name,
           status: campaign.status,
           instantlyCampaignId: instantlyId,
+          verticalTags,
           cohort: rowTally.cohort,
           positive: rowTally.positive,
           meetings: rowTally.meetings,

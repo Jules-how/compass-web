@@ -127,6 +127,7 @@ function parseOfferLock(value) {
     crowd: '',
     verticalIn: [],
     verticalOut: [],
+    verticals: [],
     vehicles: [],
     relevance: []
   }
@@ -151,6 +152,20 @@ function parseOfferLock(value) {
           source: typeof row.source === 'string' ? row.source.trim() : ''
         }))
     : []
+  const verticals = Array.isArray(value.verticals)
+    ? value.verticals
+        .filter((row) => row && typeof row === 'object')
+        .map((row) => ({
+          key: typeof row.key === 'string' ? row.key.trim() : '',
+          name: typeof row.name === 'string' ? row.name.trim() : '',
+          status: typeof row.status === 'string' ? row.status.trim() : 'planned',
+          hypothesis: typeof row.hypothesis === 'string' ? row.hypothesis.trim() : '',
+          pain_wrapper: typeof row.pain_wrapper === 'string' ? row.pain_wrapper.trim() : '',
+          list_spec: typeof row.list_spec === 'string' ? row.list_spec.trim() : '',
+          notes: typeof row.notes === 'string' ? row.notes.trim() : ''
+        }))
+        .filter((row) => row.key || row.name)
+    : []
   return {
     ...empty,
     icp: typeof value.icp === 'string' ? value.icp.trim() : '',
@@ -167,6 +182,7 @@ function parseOfferLock(value) {
     crowd: typeof value.crowd === 'string' ? value.crowd.trim() : '',
     verticalIn: asStringList(value.verticalIn),
     verticalOut: asStringList(value.verticalOut),
+    verticals,
     vehicles,
     relevance
   }
@@ -231,12 +247,26 @@ test('offer gallery path and lock parse', () => {
     extra: 'ignored',
     mechanism: 'Bolt onto their number',
     verticalIn: ['plumbing', ''],
+    verticals: [
+      {
+        key: 'plumbing',
+        name: 'Plumbing Contractors',
+        status: 'testing',
+        hypothesis: 'Miss emergency calls on tools',
+        pain_wrapper: 'We answer plumber emergency calls',
+        list_spec: 'Maps: plumbing contractors',
+        notes: '0 positive replies on wave 1'
+      }
+    ],
     vehicles: [{ problem: 'Missed calls', vehicle: 'Voice' }, { problem: '', vehicle: '' }],
     relevance: [{ fact: 'Published email', required: true, source: 'Maps' }, { fact: '  ' }]
   })
   assert.equal(parsed.mechanism, 'Bolt onto their number')
   assert.equal(parsed.icp, 'shops')
   assert.deepEqual(parsed.verticalIn, ['plumbing'])
+  assert.equal(parsed.verticals.length, 1)
+  assert.equal(parsed.verticals[0].key, 'plumbing')
+  assert.equal(parsed.verticals[0].status, 'testing')
   assert.deepEqual(parsed.vehicles, [{ problem: 'Missed calls', vehicle: 'Voice' }])
   assert.deepEqual(parsed.relevance, [{ fact: 'Published email', required: true, source: 'Maps' }])
   assert.equal(parsed.crowd, '')

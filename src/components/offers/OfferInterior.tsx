@@ -3,8 +3,17 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
-import type { OfferDeskCard, OfferLock, OfferRelevanceFact, OfferVehicle } from '@/lib/offer-sku'
-import { emptyOfferLock, slugifyOfferKey } from '@/lib/offer-sku'
+import { cn } from '@/lib/utils'
+import type {
+  OfferCampaignResult,
+  OfferDeskCard,
+  OfferLock,
+  OfferRelevanceFact,
+  OfferVehicle,
+  OfferVerticalVariant,
+  VerticalVariantStatus
+} from '@/lib/offer-sku'
+import { emptyOfferLock, slugifyOfferKey, VERTICAL_VARIANT_STATUSES } from '@/lib/offer-sku'
 
 function linesToList(value: string) {
   return value
@@ -48,6 +57,36 @@ function campaignStatusBadge(status: string) {
       {status || 'Draft'}
     </Badge>
   )
+}
+
+function verticalStatusBadge(status: VerticalVariantStatus) {
+  switch (status) {
+    case 'validated':
+      return (
+        <Badge variant="success" appearance="light" size="sm">
+          Validated
+        </Badge>
+      )
+    case 'testing':
+      return (
+        <Badge variant="warning" appearance="light" size="sm">
+          Testing
+        </Badge>
+      )
+    case 'killed':
+      return (
+        <Badge variant="destructive" appearance="light" size="sm">
+          Killed
+        </Badge>
+      )
+    case 'planned':
+    default:
+      return (
+        <Badge variant="secondary" appearance="light" size="sm">
+          Planned
+        </Badge>
+      )
+  }
 }
 
 export function EditableOfferTitle({
@@ -289,6 +328,24 @@ function OfferLockForm({
   const [verticalOut, setVerticalOut] = useState(listToLines(offer.lock.verticalOut))
   const [verticalTags, setVerticalTags] = useState(offer.vertical_tags.join(', '))
   const [locationTags, setLocationTags] = useState(offer.location_tags.join(', '))
+  const [verticals, setVerticals] = useState<OfferVerticalVariant[]>(() => {
+    if (offer.lock.verticals && offer.lock.verticals.length > 0) {
+      return offer.lock.verticals
+    }
+    if (offer.lock.verticalIn && offer.lock.verticalIn.length > 0) {
+      return offer.lock.verticalIn.map((v) => ({
+        key: slugifyOfferKey(v),
+        name: v.charAt(0).toUpperCase() + v.slice(1),
+        status: 'testing' as const,
+        hypothesis: '',
+        pain_wrapper: '',
+        list_spec: '',
+        notes: ''
+      }))
+    }
+    return []
+  })
+  const [activeVerticalKey, setActiveVerticalKey] = useState<string>('overview')
   const [icp, setIcp] = useState(offer.lock.icp)
   const [antiIcp, setAntiIcp] = useState(listToLines(offer.lock.antiIcp))
   const [screen, setScreen] = useState(listToLines(offer.lock.screen))
@@ -315,6 +372,7 @@ function OfferLockForm({
       crowd,
       verticalIn: linesToList(verticalIn),
       verticalOut: linesToList(verticalOut),
+      verticals,
       vehicles: vehicles.filter((row) => row.problem.trim() || row.vehicle.trim()),
       relevance: relevance.filter((row) => row.fact.trim())
     }),
@@ -331,6 +389,7 @@ function OfferLockForm({
       crowd,
       verticalIn,
       verticalOut,
+      verticals,
       vehicles,
       relevance
     ]
@@ -386,6 +445,14 @@ function OfferLockForm({
           <input className="compass-input" value={pack} onChange={(e) => setPack(e.target.value)} />
         </label>
       </Panel>
+
+      <VerticalVariantsSection
+        verticals={verticals}
+        activeKey={activeVerticalKey}
+        campaigns={card.campaigns}
+        onChangeActiveKey={setActiveVerticalKey}
+        onChangeVerticals={setVerticals}
+      />
 
       <Panel title="Strategy and components">
         <div className="grid gap-4 lg:grid-cols-3">
@@ -593,6 +660,424 @@ function OfferLockForm({
         {busy ? 'Saving…' : 'Save lock'}
       </button>
     </form>
+  )
+}
+
+function getVerticalCampaigns(campaigns: OfferCampaignResult[], vertical: OfferVerticalVariant) {
+  const vk = vertical.key.toLowerCase().trim()
+  const vn = vertical.name.toLowerCase().trim()
+  return campaigns.filter((c) => {
+    const cName = c.name.toLowerCase()
+    const matchTag = c.verticalTags?.some((tag: string) => {
+      const t = tag.toLowerCase().trim()
+      return t === vk || t === vn || vk.includes(t) || t.includes(vk)
+    })
+    const matchName = cName.includes(vk) || cName.includes(vn)
+    return matchTag || matchName
+  })
+}
+
+function computeVerticalStats(campaigns: OfferCampaignResult[]) {
+  let cohort = 0
+  let sent = 0
+  let positive = 0
+  let meetings = 0
+  let sentKnown = false
+
+  for (const c of campaigns) {
+    cohort += c.cohort
+    positive += c.positive
+    meetings += c.meetings
+    if (typeof c.sent === 'number') {
+      sent += c.sent
+      sentKnown = true
+    }
+  }
+
+  const replyRate = sentKnown && sent > 0 ? `${((positive / sent) * 100).toFixed(1)}%` : '—'
+
+  return {
+    campaignsCount: campaigns.length,
+    cohort,
+    sent: sentKnown ? sent : null,
+    positive,
+    meetings,
+    replyRate
+  }
+}
+
+function VerticalVariantsSection({
+  verticals,
+  activeKey,
+  campaigns,
+  onChangeActiveKey,
+  onChangeVerticals
+}: {
+  verticals: OfferVerticalVariant[]
+  activeKey: string
+  campaigns: OfferCampaignResult[]
+  onChangeActiveKey: (key: string) => void
+  onChangeVerticals: (next: OfferVerticalVariant[]) => void
+}) {
+  const [newVerticalName, setNewVerticalName] = useState('')
+  const [adding, setAdding] = useState(false)
+
+  const activeVertical = verticals.find((v) => v.key === activeKey)
+  const activeIndex = verticals.findIndex((v) => v.key === activeKey)
+
+  function handleAddVertical() {
+    const name = newVerticalName.trim()
+    if (!name) return
+    const key = slugifyOfferKey(name)
+    if (verticals.some((v) => v.key === key)) {
+      onChangeActiveKey(key)
+      setNewVerticalName('')
+      setAdding(false)
+      return
+    }
+    const nextVariant: OfferVerticalVariant = {
+      key,
+      name,
+      status: 'planned',
+      hypothesis: '',
+      pain_wrapper: '',
+      list_spec: '',
+      notes: ''
+    }
+    const next = [...verticals, nextVariant]
+    onChangeVerticals(next)
+    onChangeActiveKey(key)
+    setNewVerticalName('')
+    setAdding(false)
+  }
+
+  function handleUpdateActive(partial: Partial<OfferVerticalVariant>) {
+    if (activeIndex === -1) return
+    const next = verticals.map((v, i) => (i === activeIndex ? { ...v, ...partial } : v))
+    onChangeVerticals(next)
+  }
+
+  function handleDeleteActive() {
+    if (activeIndex === -1) return
+    const next = verticals.filter((_, i) => i !== activeIndex)
+    onChangeVerticals(next)
+    onChangeActiveKey('overview')
+  }
+
+  return (
+    <section className="compass-panel space-y-4 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="compass-section-label">Vertical Hypotheses &amp; Variants</div>
+          <p className="mt-1 text-xs text-neutral-500">
+            Compare performance across tested industries and tailor messaging specs for each market.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {!adding ? (
+            <button
+              type="button"
+              className="compass-btn-secondary text-xs"
+              onClick={() => setAdding(true)}
+            >
+              + Add vertical
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                className="compass-input h-8 py-1 text-xs"
+                placeholder="e.g. Cosmetic Clinics"
+                value={newVerticalName}
+                autoFocus
+                onChange={(e) => setNewVerticalName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleAddVertical()
+                  }
+                  if (e.key === 'Escape') setAdding(false)
+                }}
+              />
+              <button
+                type="button"
+                className="compass-btn-primary text-xs"
+                onClick={handleAddVertical}
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                className="compass-btn-ghost text-xs"
+                onClick={() => setAdding(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-stone-200 pb-2">
+        <button
+          type="button"
+          className={cn(
+            'rounded-lg px-3 py-1.5 text-xs font-medium transition',
+            activeKey === 'overview'
+              ? 'bg-neutral-900 text-white'
+              : 'bg-stone-100 text-neutral-600 hover:bg-stone-200'
+          )}
+          onClick={() => onChangeActiveKey('overview')}
+        >
+          Overview ({verticals.length})
+        </button>
+        {verticals.map((v) => (
+          <button
+            key={v.key}
+            type="button"
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition',
+              activeKey === v.key
+                ? 'bg-neutral-900 text-white'
+                : 'bg-stone-100 text-neutral-600 hover:bg-stone-200'
+            )}
+            onClick={() => onChangeActiveKey(v.key)}
+          >
+            <span>{v.name}</span>
+            {verticalStatusBadge(v.status)}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      {activeKey === 'overview' || !activeVertical ? (
+        <div className="space-y-4">
+          {verticals.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-stone-200 text-neutral-400 uppercase tracking-wider">
+                    <th className="py-2.5 pr-4 font-semibold">Vertical</th>
+                    <th className="py-2.5 px-3 font-semibold">Status</th>
+                    <th className="py-2.5 px-3 font-semibold">Hypothesis / Hook</th>
+                    <th className="py-2.5 px-3 font-semibold text-right">Campaigns</th>
+                    <th className="py-2.5 px-3 font-semibold text-right">Cohort</th>
+                    <th className="py-2.5 px-3 font-semibold text-right">Sent</th>
+                    <th className="py-2.5 px-3 font-semibold text-right">Positive</th>
+                    <th className="py-2.5 px-3 font-semibold text-right">Meetings</th>
+                    <th className="py-2.5 pl-3 font-semibold text-right">Pos Rate</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100 text-neutral-700">
+                  {verticals.map((v) => {
+                    const matched = getVerticalCampaigns(campaigns, v)
+                    const stats = computeVerticalStats(matched)
+                    return (
+                      <tr
+                        key={v.key}
+                        className="cursor-pointer transition hover:bg-stone-50"
+                        onClick={() => onChangeActiveKey(v.key)}
+                      >
+                        <td className="py-3 pr-4 font-medium text-neutral-900">
+                          <div>{v.name}</div>
+                          <div className="text-[10px] text-neutral-400 font-mono">{v.key}</div>
+                        </td>
+                        <td className="py-3 px-3">{verticalStatusBadge(v.status)}</td>
+                        <td className="py-3 px-3 max-w-xs truncate text-neutral-500">
+                          {v.pain_wrapper || v.hypothesis || '—'}
+                        </td>
+                        <td className="py-3 px-3 text-right tabular-nums">{stats.campaignsCount}</td>
+                        <td className="py-3 px-3 text-right tabular-nums">{formatCount(stats.cohort)}</td>
+                        <td className="py-3 px-3 text-right tabular-nums">{formatCount(stats.sent)}</td>
+                        <td className="py-3 px-3 text-right tabular-nums font-medium text-neutral-900">
+                          {stats.positive}
+                        </td>
+                        <td className="py-3 px-3 text-right tabular-nums font-medium text-neutral-900">
+                          {stats.meetings}
+                        </td>
+                        <td className="py-3 pl-3 text-right tabular-nums font-semibold text-emerald-600">
+                          {stats.replyRate}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-xs text-neutral-500">
+              No vertical variants planned yet. Click &quot;+ Add vertical&quot; above to create an industry hypothesis.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Vertical Header Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-stone-50 p-3.5 border border-stone-200">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="text-xs">
+                <span className="block text-[10px] uppercase font-semibold text-neutral-400">Vertical Name</span>
+                <input
+                  className="compass-input mt-0.5 h-8 font-medium text-neutral-900"
+                  value={activeVertical.name}
+                  onChange={(e) => handleUpdateActive({ name: e.target.value })}
+                />
+              </label>
+              <label className="text-xs">
+                <span className="block text-[10px] uppercase font-semibold text-neutral-400">Key</span>
+                <input
+                  className="compass-input mt-0.5 h-8 font-mono text-neutral-500"
+                  value={activeVertical.key}
+                  onChange={(e) => handleUpdateActive({ key: slugifyOfferKey(e.target.value) })}
+                />
+              </label>
+              <label className="text-xs">
+                <span className="block text-[10px] uppercase font-semibold text-neutral-400">Status</span>
+                <select
+                  className="compass-input mt-0.5 h-8 bg-white text-xs font-medium"
+                  value={activeVertical.status}
+                  onChange={(e) =>
+                    handleUpdateActive({ status: e.target.value as VerticalVariantStatus })
+                  }
+                >
+                  {VERTICAL_VARIANT_STATUSES.map((st) => (
+                    <option key={st} value={st}>
+                      {st.charAt(0).toUpperCase() + st.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <button
+              type="button"
+              className="compass-btn-ghost text-xs text-red-700"
+              onClick={handleDeleteActive}
+            >
+              Delete vertical
+            </button>
+          </div>
+
+          {/* Quick stats for active vertical */}
+          {(() => {
+            const matched = getVerticalCampaigns(campaigns, activeVertical)
+            const stats = computeVerticalStats(matched)
+            return (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 rounded-xl border border-stone-100 bg-white p-3.5 text-xs">
+                <div>
+                  <div className="text-[10px] uppercase font-semibold text-neutral-400">Campaigns</div>
+                  <div className="mt-0.5 font-display text-lg font-semibold tabular-nums text-neutral-900">
+                    {stats.campaignsCount}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-semibold text-neutral-400">Cohort</div>
+                  <div className="mt-0.5 font-display text-lg font-semibold tabular-nums text-neutral-900">
+                    {formatCount(stats.cohort)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-semibold text-neutral-400">Sent</div>
+                  <div className="mt-0.5 font-display text-lg font-semibold tabular-nums text-neutral-900">
+                    {formatCount(stats.sent)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-semibold text-neutral-400">Positive Replies</div>
+                  <div className="mt-0.5 font-display text-lg font-semibold tabular-nums text-neutral-900">
+                    {stats.positive}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-semibold text-neutral-400">Meetings</div>
+                  <div className="mt-0.5 font-display text-lg font-semibold tabular-nums text-neutral-900">
+                    {stats.meetings}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Vertical spec fields */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <label className="block text-sm">
+              <span className="mb-1.5 block text-neutral-600 text-xs font-medium">Industry Hypothesis</span>
+              <textarea
+                className="compass-input min-h-[96px] text-xs"
+                placeholder="Why this industry feels the pain, what happens in the moment, and ticket economics..."
+                value={activeVertical.hypothesis}
+                onChange={(e) => handleUpdateActive({ hypothesis: e.target.value })}
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1.5 block text-neutral-600 text-xs font-medium">Tailored 3S &amp; Pain Wrapper</span>
+              <textarea
+                className="compass-input min-h-[96px] text-xs"
+                placeholder="Specific 3S line, dream outcome, and opener hook for this vertical..."
+                value={activeVertical.pain_wrapper}
+                onChange={(e) => handleUpdateActive({ pain_wrapper: e.target.value })}
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <label className="block text-sm">
+              <span className="mb-1.5 block text-neutral-600 text-xs font-medium">List &amp; Targeting Spec</span>
+              <textarea
+                className="compass-input min-h-[96px] text-xs"
+                placeholder="Maps queries, search terms, required badges, and walk filters..."
+                value={activeVertical.list_spec}
+                onChange={(e) => handleUpdateActive({ list_spec: e.target.value })}
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1.5 block text-neutral-600 text-xs font-medium">Field Feedback &amp; Notes</span>
+              <textarea
+                className="compass-input min-h-[96px] text-xs"
+                placeholder="Inbox replies, objections raised on calls, reasons for killing or validating..."
+                value={activeVertical.notes}
+                onChange={(e) => handleUpdateActive({ notes: e.target.value })}
+              />
+            </label>
+          </div>
+
+          {/* Bound Campaigns for this vertical */}
+          {(() => {
+            const matched = getVerticalCampaigns(campaigns, activeVertical)
+            return (
+              <div className="space-y-2 pt-2 border-t border-stone-100">
+                <div className="text-xs font-semibold text-neutral-600">
+                  Bound Campaigns for {activeVertical.name} ({matched.length})
+                </div>
+                {matched.length > 0 ? (
+                  <div className="space-y-2">
+                    {matched.map((campaign) => (
+                      <Link
+                        key={campaign.id}
+                        href={`/sales/outbound/editor/${campaign.id}`}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-100 bg-white px-4 py-2.5 text-xs transition hover:shadow-soft"
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          {campaignStatusBadge(campaign.status)}
+                          <span className="truncate font-medium text-neutral-800">{campaign.name}</span>
+                        </div>
+                        <div className="tabular-nums text-neutral-500">
+                          {formatCount(campaign.cohort)} cohort · {formatCount(campaign.positive)} positive ·{' '}
+                          {formatCount(campaign.meetings)} meetings
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-neutral-400">
+                    No active campaigns tagged with {activeVertical.key} yet.
+                  </p>
+                )}
+              </div>
+            )
+          })()}
+        </div>
+      )}
+    </section>
   )
 }
 
