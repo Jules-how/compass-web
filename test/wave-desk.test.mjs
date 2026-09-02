@@ -33,6 +33,16 @@ function suggestWaveMoves(input) {
   return suggestions
 }
 
+function mergeWaveBriefPayload(existing, incoming) {
+  const recommendation = incoming.recommendation?.trim() || existing?.recommendation || null
+  const scan = incoming.scan ?? existing?.scan ?? {}
+  return {
+    recommendation,
+    scan,
+    ...(existing?.created_at ? { created_at: existing.created_at } : {})
+  }
+}
+
 test('5 percent replies with thin remainder queues a top-up', () => {
   const out = suggestWaveMoves({
     instantly: [
@@ -56,5 +66,28 @@ test('waves UI and agent route exist', () => {
   assert.match(board, /recontactReady/)
   assert.match(read('src/components/outbound/WaveCampaignCard.tsx'), /wave_rationale/)
   assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /wave_lane: 'recommended'/)
+  assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /mergeWaveBriefPayload/)
   assert.match(read('src/app/api/campaigns/route.ts'), /listPipelineCampaigns/)
+  assert.match(read('src/lib/outbound-desk.ts'), /DEFAULT_OUTBOUND_DESK: OutboundDeskId = 'waves'/)
+})
+
+test('morning brief merge keeps an existing recommendation when scan-only', () => {
+  const existing = {
+    recommendation: 'Keep topping Sydney roofers',
+    scan: { emailsSentToday: 12 },
+    created_at: '2026-09-01T22:00:00.000Z'
+  }
+  const merged = mergeWaveBriefPayload(existing, { scan: { emailsSentToday: 40 } })
+  assert.equal(merged.recommendation, 'Keep topping Sydney roofers')
+  assert.equal(merged.scan.emailsSentToday, 40)
+  assert.equal(merged.created_at, existing.created_at)
+})
+
+test('morning brief merge replaces recommendation when a new one is sent', () => {
+  const merged = mergeWaveBriefPayload(
+    { recommendation: 'Old call', scan: { a: 1 }, created_at: '2026-09-01T22:00:00.000Z' },
+    { recommendation: '  Pause and inspect inboxes.  ', scan: { a: 2 } }
+  )
+  assert.equal(merged.recommendation, 'Pause and inspect inboxes.')
+  assert.equal(merged.scan.a, 2)
 })

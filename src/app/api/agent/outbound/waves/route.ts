@@ -7,6 +7,7 @@ import {
   parseGoLiveAt
 } from '@/lib/campaigns'
 import { insertPipelineCampaign, listPipelineCampaigns } from '@/lib/campaigns-server'
+import { mergeWaveBriefPayload } from '@/lib/wave-desk-persist'
 import {
   InstantlyApiError,
   loadOutboundBoardFromInstantly,
@@ -184,12 +185,21 @@ export async function POST(request: Request) {
     const createdActions: Array<{ id: string; title: string }> = []
 
     if (body.recommendation?.trim() || body.scan) {
+      const { data: existing } = await admin
+        .from('compass_wave_briefs')
+        .select('recommendation,scan,created_at')
+        .eq('id', day)
+        .maybeSingle()
+      const merged = mergeWaveBriefPayload(existing, {
+        recommendation: body.recommendation,
+        scan: body.scan
+      })
       const { error } = await admin.from('compass_wave_briefs').upsert({
         id: day,
         generated_at: stamp,
-        recommendation: body.recommendation?.trim() || null,
-        scan: body.scan ?? {},
-        created_at: stamp
+        recommendation: merged.recommendation,
+        scan: merged.scan,
+        created_at: merged.created_at ?? stamp
       })
       if (error) throw new Error(error.message)
     }

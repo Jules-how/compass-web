@@ -2,6 +2,30 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { sydneyDateOnly } from '@/lib/wave-desk'
 
+export function mergeWaveBriefPayload(
+  existing:
+    | {
+        recommendation?: string | null
+        scan?: Record<string, unknown> | null
+        created_at?: string | null
+      }
+    | null
+    | undefined,
+  incoming: { recommendation?: string | null; scan?: Record<string, unknown> | null }
+): {
+  recommendation: string | null
+  scan: Record<string, unknown>
+  created_at?: string
+} {
+  const recommendation = incoming.recommendation?.trim() || existing?.recommendation || null
+  const scan = incoming.scan ?? existing?.scan ?? {}
+  return {
+    recommendation,
+    scan,
+    ...(existing?.created_at ? { created_at: existing.created_at } : {})
+  }
+}
+
 export async function persistDailyWaveScan(
   supabase: SupabaseClient,
   instantly?: {

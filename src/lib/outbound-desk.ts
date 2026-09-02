@@ -2,9 +2,9 @@ export const OUTBOUND_DESK_IDS = ['waves', 'cassette', 'runway', 'factory', 'cal
 
 export type OutboundDeskId = (typeof OUTBOUND_DESK_IDS)[number]
 
-export const OUTBOUND_DESK_STORAGE_KEY = 'compass.outbound.desk.v1'
+export const OUTBOUND_DESK_STORAGE_KEY = 'compass.outbound.desk.v2'
 
-export const DEFAULT_OUTBOUND_DESK: OutboundDeskId = 'cassette'
+export const DEFAULT_OUTBOUND_DESK: OutboundDeskId = 'waves'
 
 export function parseOutboundDesk(raw: string | null | undefined): OutboundDeskId {
   const value = (raw || '').trim().toLowerCase()
