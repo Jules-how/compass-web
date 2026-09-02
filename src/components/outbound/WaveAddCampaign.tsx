@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,9 +15,11 @@ import {
 import { LIVE_OUTBOUND_OFFER_KEY } from '@/lib/lead-icp'
 
 export function WaveAddCampaign({
-  onCreated
+  onCreated,
+  openToken
 }: {
   onCreated: (campaign: CompassCampaign) => void
+  openToken?: number
 }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
@@ -29,6 +31,10 @@ export function WaveAddCampaign({
   const [listSize, setListSize] = useState('150')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (openToken && openToken > 0) setOpen(true)
+  }, [openToken])
 
   async function submit() {
     setBusy(true)

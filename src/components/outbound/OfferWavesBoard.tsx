@@ -1,22 +1,26 @@
 'use client'
 
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { KanbanBoard, type KanbanColumn, type KanbanTask } from '@/components/ui/kanban-board'
 import { WaveAddCampaign } from '@/components/outbound/WaveAddCampaign'
-import { WaveCampaignCard, WaveEmptyColumn } from '@/components/outbound/WaveCampaignCard'
+import { WaveCampaignCard } from '@/components/outbound/WaveCampaignCard'
 import { CAMPAIGNS_QUERY_KEY, updateCampaign } from '@/lib/campaigns-client'
 import {
   OFFER_WAVE_COLUMN_LABELS,
-  evaluateOfferWaveDecision,
-  type CompassCampaign
+  dateOnlyInZone,
+  type CompassCampaign,
+  type OfferWaveColumnId
 } from '@/lib/campaigns'
 import type { OutboundBoardCampaign } from '@/lib/instantly'
 import { useCachedJson } from '@/lib/use-cached-json'
 import {
+  INSTANTLY_CAMPAIGN_APP,
   buildLiveDesk,
+  formatWaveDate,
   glanceLabel,
   groupCampaignsByWave,
   splitMorningBrief,
@@ -48,6 +52,43 @@ type WaveDeskPayload = {
   }>
 }
 
+function tradeCity(campaign: CompassCampaign): { trade: string; city: string } {
+  return {
+    trade: (campaign.vertical_tags ?? []).filter(Boolean)[0] || 'Trade',
+    city: (campaign.location_tags ?? []).filter(Boolean)[0] || 'City'
+  }
+}
+
+function campaignToKanbanTask(
+  campaign: CompassCampaign,
+  column: OfferWaveColumnId | 'parked',
+  instantly?: OutboundBoardCampaign
+): KanbanTask {
+  const { trade, city } = tradeCity(campaign)
+  const goLive = campaign.go_live_at
+    ? formatWaveDate(dateOnlyInZone(campaign.go_live_at))
+    : formatWaveDate(campaign.start_date)
+  const sending = instantly?.status === 'live' || instantly?.status === 'launching'
+  return {
+    id: campaign.id,
+    title: campaign.name,
+    description:
+      (column === 'recommended' ? campaign.wave_rationale : campaign.summary) ||
+      campaign.wave_approach ||
+      undefined,
+    priority: sending ? 'high' : instantly?.status === 'paused' ? 'low' : 'medium',
+    assignee: { name: `${trade} ${city}` },
+    tags: [`${trade} · ${city}`],
+    dueDate: goLive || undefined,
+    comments: instantly?.replyCount ?? 0,
+    attachments: instantly?.remaining ?? campaign.wave_list_size ?? undefined,
+    href: `/sales/outbound/editor/${encodeURIComponent(campaign.id)}`,
+    externalHref: instantly ? INSTANTLY_CAMPAIGN_APP(instantly.id) : campaign.instantly_campaign_id
+      ? INSTANTLY_CAMPAIGN_APP(campaign.instantly_campaign_id)
+      : undefined
+  }
+}
+
 function WaveSkeleton() {
   return (
     <div className="space-y-3" aria-busy="true" aria-label="Loading waves">
@@ -75,6 +116,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
   const [note, setNote] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [actionBusy, setActionBusy] = useState<string | null>(null)
+  const [addToken, setAddToken] = useState(0)
 
   const instantlyById = useMemo(() => {
     const map = new Map<string, OutboundBoardCampaign>()
@@ -112,17 +154,6 @@ export function OfferWavesBoard({ className }: { className?: string }) {
     campaignsQuery.loading || boardQuery.loading || deskQuery.loading
   )
 
-  async function promote(campaign: CompassCampaign) {
-    setError(null)
-    try {
-      await updateCampaign(campaign.id, { wave_lane: 'next' })
-      setNote(`${campaign.name} moved to next.`)
-      void campaignsQuery.reload()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Move failed')
-    }
-  }
-
   async function markAction(id: string, status: 'done' | 'queued') {
     setActionBusy(id)
     setError(null)
@@ -144,6 +175,100 @@ export function OfferWavesBoard({ className }: { className?: string }) {
   const openActions = (deskQuery.data?.actions ?? []).filter((action) => action.status !== 'done')
   const doneActions = (deskQuery.data?.actions ?? []).filter((action) => action.status === 'done')
 
+  const kanbanColumns = useMemo((): KanbanColumn[] => {
+    return [
+      {
+        id: 'recommended',
+        title: OFFER_WAVE_COLUMN_LABELS.recommended,
+        color: '#e85d2a',
+        hint: 'Agent-only until you move it to next.',
+        tasks: grouped.recommended.map((campaign) =>
+          campaignToKanbanTask(
+            campaign,
+            'recommended',
+            campaign.instantly_campaign_id
+              ? instantlyById.get(campaign.instantly_campaign_id)
+              : undefined
+          )
+        )
+      },
+      {
+        id: 'next',
+        title: OFFER_WAVE_COLUMN_LABELS.next,
+        color: '#a8a29e',
+        onAdd: () => setAddToken((value) => value + 1),
+        tasks: nextSplit.upcoming.map((campaign) =>
+          campaignToKanbanTask(
+            campaign,
+            'next',
+            campaign.instantly_campaign_id
+              ? instantlyById.get(campaign.instantly_campaign_id)
+              : undefined
+          )
+        )
+      },
+      {
+        id: 'live',
+        title: OFFER_WAVE_COLUMN_LABELS.live,
+        color: '#6B8E23',
+        hint: 'Sending now. Activate stays in Instantly.',
+        tasks: liveDesk.sending.map((item) => {
+          if (item.campaign) {
+            return campaignToKanbanTask(item.campaign, 'live', item.instantly ?? undefined)
+          }
+          const instantly = item.instantly
+          return {
+            id: item.key,
+            title: instantly?.name || 'Instantly campaign',
+            description: 'Instantly only. Bind it in Compass to move lanes.',
+            priority: 'high' as const,
+            tags: ['Instantly'],
+            comments: instantly?.replyCount,
+            attachments: instantly?.remaining,
+            externalHref: instantly ? INSTANTLY_CAMPAIGN_APP(instantly.id) : undefined,
+            draggable: false
+          }
+        })
+      },
+      {
+        id: 'parked',
+        title: 'Parked',
+        color: '#78716c',
+        hint: 'Paused in Instantly. Pause stays in Instantly.',
+        tasks: liveDesk.parked.map((campaign) =>
+          campaignToKanbanTask(
+            campaign,
+            'parked',
+            campaign.instantly_campaign_id
+              ? instantlyById.get(campaign.instantly_campaign_id)
+              : undefined
+          )
+        )
+      }
+    ]
+  }, [grouped.recommended, nextSplit.upcoming, liveDesk, instantlyById])
+
+  async function moveTask(taskId: string, fromColumnId: string, toColumnId: string) {
+    if (fromColumnId === toColumnId) return
+    if (taskId.startsWith('instantly-')) {
+      setError('That campaign lives in Instantly only. Bind it in Compass before moving lanes.')
+      return
+    }
+    if (toColumnId === 'parked') {
+      setError('Parked is Instantly paused. Pause stays in Instantly.')
+      return
+    }
+    if (toColumnId !== 'recommended' && toColumnId !== 'next' && toColumnId !== 'live') return
+    setError(null)
+    try {
+      await updateCampaign(taskId, { wave_lane: toColumnId })
+      setNote(`Moved to ${OFFER_WAVE_COLUMN_LABELS[toColumnId]}.`)
+      void campaignsQuery.reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Move failed')
+    }
+  }
+
   return (
     <div className={cn('space-y-6', className)}>
       <section className="flex flex-wrap items-end justify-between gap-3">
@@ -157,6 +282,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
           {note ? <p className="text-[12px] text-emerald-800">{note}</p> : null}
           {error ? <p className="text-[12px] text-red-700">{error}</p> : null}
           <WaveAddCampaign
+            openToken={addToken}
             onCreated={() => {
               setNote('Campaign saved to next.')
               void campaignsQuery.reload()
@@ -190,62 +316,8 @@ export function OfferWavesBoard({ className }: { className?: string }) {
         <WaveSkeleton />
       ) : (
         <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
-          <div className="order-1 space-y-8">
-            <WaveColumn
-              title={OFFER_WAVE_COLUMN_LABELS.live}
-              count={liveDesk.sending.length}
-              empty="Nothing sending. Instantly live campaigns land here even without a Compass row."
-            >
-              {liveDesk.sending.map((item) => {
-                const instantly = item.instantly ?? undefined
-                const sends = instantly?.sendCount ?? 0
-                const replies = instantly?.replyCount ?? 0
-                const positive = instantly?.positiveReplies ?? item.campaign?.wave_positive_count ?? 0
-                const decision = evaluateOfferWaveDecision({
-                  sends,
-                  replies,
-                  positiveReplies: positive,
-                  instantlyStatus: instantly?.status
-                })
-                return (
-                  <WaveCampaignCard
-                    key={item.key}
-                    campaign={item.campaign}
-                    column="live"
-                    instantly={instantly}
-                    sends={sends}
-                    replies={replies}
-                    remaining={instantly?.remaining}
-                    decisionLabel={decision.label}
-                  />
-                )
-              })}
-            </WaveColumn>
-
-            {liveDesk.parked.length ? (
-              <WaveColumn
-                title="Parked"
-                count={liveDesk.parked.length}
-                hint="Paused or finished Instantly. Still on the live lane until you move them."
-              >
-                {liveDesk.parked.map((campaign) => {
-                  const instantly = campaign.instantly_campaign_id
-                    ? instantlyById.get(campaign.instantly_campaign_id)
-                    : undefined
-                  return (
-                    <WaveCampaignCard
-                      key={campaign.id}
-                      campaign={campaign}
-                      column="parked"
-                      instantly={instantly}
-                      sends={instantly?.sendCount ?? 0}
-                      replies={instantly?.replyCount ?? 0}
-                      remaining={instantly?.remaining}
-                    />
-                  )
-                })}
-              </WaveColumn>
-            ) : null}
+          <div className="order-1">
+            <KanbanBoard columns={kanbanColumns} onMove={moveTask} />
           </div>
 
           <aside className="order-2 space-y-3 xl:sticky xl:top-4">
@@ -338,53 +410,6 @@ export function OfferWavesBoard({ className }: { className?: string }) {
           </aside>
 
           <div className="order-3 space-y-8 xl:col-start-1">
-            {grouped.recommended.length ? (
-              <WaveColumn
-                title={OFFER_WAVE_COLUMN_LABELS.recommended}
-                count={grouped.recommended.length}
-                hint="Agent-only until you move it to next."
-              >
-                {grouped.recommended.map((campaign) => {
-                  const instantly = campaign.instantly_campaign_id
-                    ? instantlyById.get(campaign.instantly_campaign_id)
-                    : undefined
-                  return (
-                    <WaveCampaignCard
-                      key={campaign.id}
-                      campaign={campaign}
-                      column="recommended"
-                      instantly={instantly}
-                      sends={instantly?.sendCount ?? 0}
-                      replies={instantly?.replyCount ?? 0}
-                      onPromote={promote}
-                    />
-                  )
-                })}
-              </WaveColumn>
-            ) : null}
-
-            <WaveColumn
-              title={OFFER_WAVE_COLUMN_LABELS.next}
-              count={nextSplit.upcoming.length}
-              empty="No upcoming campaigns. Add one when you have a list ready."
-            >
-              {nextSplit.upcoming.map((campaign) => {
-                const instantly = campaign.instantly_campaign_id
-                  ? instantlyById.get(campaign.instantly_campaign_id)
-                  : undefined
-                return (
-                  <WaveCampaignCard
-                    key={campaign.id}
-                    campaign={campaign}
-                    column="next"
-                    instantly={instantly}
-                    sends={instantly?.sendCount ?? 0}
-                    replies={instantly?.replyCount ?? 0}
-                  />
-                )
-              })}
-            </WaveColumn>
-
             {nextSplit.leftover.length ? (
               <Accordion type="single" collapsible className="rounded-2xl border border-stone-200/70 bg-white px-5 shadow-soft">
                 <AccordionItem value="leftovers" className="border-b-0">
@@ -418,33 +443,5 @@ export function OfferWavesBoard({ className }: { className?: string }) {
         </div>
       )}
     </div>
-  )
-}
-
-function WaveColumn({
-  title,
-  count,
-  hint,
-  empty,
-  children
-}: {
-  title: string
-  count: number
-  hint?: string
-  empty?: string
-  children: ReactNode
-}) {
-  const childCount = Array.isArray(children) ? children.length : children ? 1 : 0
-  return (
-    <section className="space-y-3">
-      <div className="flex items-baseline justify-between gap-2 px-0.5">
-        <div>
-          <h3 className="text-[12px] font-semibold uppercase tracking-wide text-neutral-500">{title}</h3>
-          {hint ? <p className="mt-0.5 text-[11px] text-neutral-400">{hint}</p> : null}
-        </div>
-        <span className="text-[11px] text-neutral-400">{count}</span>
-      </div>
-      {childCount === 0 && empty ? <WaveEmptyColumn label={empty} /> : <div className="grid gap-3 md:grid-cols-2">{children}</div>}
-    </section>
   )
 }

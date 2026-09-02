@@ -109,7 +109,7 @@ test('offer wave decision desk badges follow send and reply thresholds', () => {
   assert.match(lib, /Live campaigns/)
   assert.doesNotMatch(lib, /Sourcing & Data/)
   const board = read('src/components/outbound/OfferWavesBoard.tsx')
-  assert.match(board, /evaluateOfferWaveDecision/)
+  assert.match(board, /KanbanBoard/)
   assert.match(board, /Outlook/)
   assert.match(board, /WaveAddCampaign/)
   assert.match(board, /90-day retarget/)
