@@ -27,6 +27,25 @@ export const EXPERIMENT_FACTORS = [
 ] as const
 export type ExperimentFactor = (typeof EXPERIMENT_FACTORS)[number]
 
+export const TESTING_VARIABLES = [
+  'none',
+  'cta',
+  'body',
+  'offer',
+  'risk_reversal',
+  'length',
+  'icp',
+  'tone',
+  'personalisation',
+  'audience',
+  'subject',
+  'opener_mode'
+] as const
+export type TestingVariable = (typeof TESTING_VARIABLES)[number]
+
+export const WAVE_LANES = ['recommended', 'next', 'live'] as const
+export type WaveLane = (typeof WAVE_LANES)[number]
+
 export const EXPERIMENT_ROLES = ['none', 'control', 'challenger', 'solo'] as const
 export type ExperimentRole = (typeof EXPERIMENT_ROLES)[number]
 
@@ -85,6 +104,12 @@ export interface CompassCampaign {
   cta_type?: CtaType | string | null
   opener_reviewed_at?: string | null
   copy_confirmed_at?: string | null
+  wave_lane?: WaveLane | string | null
+  wave_rationale?: string | null
+  wave_list_size?: number | null
+  wave_copy_strategy?: string | null
+  wave_approach?: string | null
+  testing_variable?: TestingVariable | string | null
   /** Computed on list/detail — not a DB column. */
   wave_cohort_count?: number
   wave_positive_count?: number
@@ -116,7 +141,7 @@ export interface CompassCampaignActivity {
 }
 
 const CAMPAIGN_CORE_COLUMNS =
-  'id,name,status,priority,health,start_date,end_date,go_live_at,google_calendar_event_id,color,summary,labels,owner_label,instantly_campaign_id,offer_key,structure_id,opener_mode,vertical_tags,location_tags,copy_status,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,opener_reviewed_at,copy_confirmed_at,created_at,updated_at'
+  'id,name,status,priority,health,start_date,end_date,go_live_at,google_calendar_event_id,color,summary,labels,owner_label,instantly_campaign_id,offer_key,structure_id,opener_mode,vertical_tags,location_tags,copy_status,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,opener_reviewed_at,copy_confirmed_at,wave_lane,wave_rationale,wave_list_size,wave_copy_strategy,wave_approach,testing_variable,created_at,updated_at'
 
 /** Planner / list GET — skip bulky sequence JSON. */
 export const CAMPAIGN_BOARD_COLUMNS = CAMPAIGN_CORE_COLUMNS
@@ -148,7 +173,13 @@ export function emptyCampaignCopyFields() {
     expression_key: null as string | null,
     cta_type: null as string | null,
     opener_reviewed_at: null as string | null,
-    copy_confirmed_at: null as string | null
+    copy_confirmed_at: null as string | null,
+    wave_lane: null as WaveLane | null,
+    wave_rationale: null as string | null,
+    wave_list_size: null as number | null,
+    wave_copy_strategy: null as string | null,
+    wave_approach: null as string | null,
+    testing_variable: null as TestingVariable | null
   }
 }
 
@@ -179,6 +210,15 @@ export function projectCampaignCopy(row: CompassCampaign): CompassCampaign {
     cta_type: normalizeCtaType(row.cta_type),
     opener_reviewed_at: row.opener_reviewed_at ?? null,
     copy_confirmed_at: row.copy_confirmed_at ?? null,
+    wave_lane: normalizeWaveLane(row.wave_lane),
+    wave_rationale: row.wave_rationale ?? null,
+    wave_list_size:
+      typeof row.wave_list_size === 'number' && Number.isFinite(row.wave_list_size)
+        ? Math.max(0, Math.floor(row.wave_list_size))
+        : null,
+    wave_copy_strategy: row.wave_copy_strategy ?? null,
+    wave_approach: row.wave_approach ?? null,
+    testing_variable: normalizeTestingVariable(row.testing_variable),
     go_live_at: row.go_live_at ?? null,
     google_calendar_event_id: row.google_calendar_event_id ?? null,
     wave_cohort_count:
@@ -211,6 +251,31 @@ export function normalizeExperimentStatus(value: string | undefined | null): Exp
     return value as ExperimentStatus
   }
   return 'none'
+}
+
+export function normalizeWaveLane(value: string | undefined | null): WaveLane | null {
+  if (value && (WAVE_LANES as readonly string[]).includes(value)) {
+    return value as WaveLane
+  }
+  return null
+}
+
+export function normalizeTestingVariable(value: string | undefined | null): TestingVariable | null {
+  if (!value) return null
+  if ((TESTING_VARIABLES as readonly string[]).includes(value)) {
+    return value as TestingVariable
+  }
+  return null
+}
+
+export function testingVariableLabel(value: string | null | undefined): string {
+  if (!value || value === 'none') return 'None'
+  if (value === 'cta') return 'CTA'
+  if (value === 'icp') return 'ICP'
+  if (value === 'risk_reversal') return 'Risk reversal'
+  if (value === 'personalisation') return 'Personalisation depth'
+  if (value === 'opener_mode') return 'Opener mode'
+  return value.charAt(0).toUpperCase() + value.slice(1).replaceAll('_', ' ')
 }
 
 export function normalizeCtaType(value: string | undefined | null): CtaType | null {
@@ -438,14 +503,13 @@ export function campaignLeadCountLabel(campaign: Pick<CompassCampaign, 'wave_coh
   return `${count} lead${count === 1 ? '' : 's'}`
 }
 
-export const OFFER_WAVE_COLUMNS = ['sourcing', 'prep', 'live', 'decision'] as const
+export const OFFER_WAVE_COLUMNS = ['recommended', 'next', 'live'] as const
 export type OfferWaveColumnId = (typeof OFFER_WAVE_COLUMNS)[number]
 
 export const OFFER_WAVE_COLUMN_LABELS: Record<OfferWaveColumnId, string> = {
-  sourcing: 'Sourcing & Data',
-  prep: 'Openers & Review',
-  live: 'Live Tranche',
-  decision: 'Decision Desk'
+  recommended: 'Recommended next list',
+  next: 'Next campaigns',
+  live: 'Live campaigns'
 }
 
 export type OfferWaveDecisionId = 'waiting' | 'kill' | 'validated' | 'deliverability'
@@ -480,37 +544,25 @@ export function evaluateOfferWaveDecision(metrics: OfferWaveMetrics): OfferWaveD
 }
 
 export function offerWaveColumn(
-  campaign: Pick<
-    CompassCampaign,
-    | 'status'
-    | 'copy_status'
-    | 'instantly_campaign_id'
-    | 'wave_cohort_count'
-    | 'wave_opener_count'
-    | 'opener_reviewed_at'
-  >,
+  campaign: Pick<CompassCampaign, 'status' | 'wave_lane' | 'instantly_campaign_id'>,
   metrics?: OfferWaveMetrics
 ): OfferWaveColumnId {
-  const sends = metrics?.sends ?? 0
+  const explicit = normalizeWaveLane(campaign.wave_lane)
+  if (explicit) return explicit
+
   const instantlyStatus = (metrics?.instantlyStatus || '').toLowerCase()
   const compassStatus = (campaign.status || '').toLowerCase()
-  const cohort = campaign.wave_cohort_count ?? 0
-  const openers = campaign.wave_opener_count ?? 0
+  const sends = metrics?.sends ?? 0
 
-  if (compassStatus === 'completed' || instantlyStatus === 'completed' || sends >= 300) {
-    return 'decision'
-  }
-  if (compassStatus === 'active' || instantlyStatus === 'live') {
+  if (
+    compassStatus === 'active' ||
+    instantlyStatus === 'live' ||
+    instantlyStatus === 'launching' ||
+    (instantlyStatus === 'paused' && sends > 0)
+  ) {
     return 'live'
   }
-  if (cohort <= 0) return 'sourcing'
-  if (openers < Math.max(1, Math.floor(cohort * 0.5)) && !campaign.opener_reviewed_at) {
-    return cohort < 50 ? 'sourcing' : 'prep'
-  }
-  if (!campaign.instantly_campaign_id && (campaign.copy_status === 'none' || !campaign.copy_status)) {
-    return 'prep'
-  }
-  return 'prep'
+  return 'next'
 }
 
 export function goLiveToDatetimeLocal(iso: string | null | undefined): string {

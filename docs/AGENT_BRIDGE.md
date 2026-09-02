@@ -66,6 +66,8 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 | `POST` | `/api/campaigns/:id/instantly/push-sequence` | Operator: PATCH Instantly steps from Compass `sequence_draft` |
 | `POST` | `/api/agent/instantly/ensure` | Agent twin of ensure (`campaignId`, `pushSequence`) |
 | `POST` | `/api/agent/instantly/duplicate-template` | Duplicate `[Template] Switchflow Fill & Capture` (`name` or `campaignId`, optional `templateId`). Binds if the Compass campaign is unbound. Stays paused. |
+| `GET` | `/api/agent/outbound/waves` | Morning Waves desk: columns, Instantly rates, 90-day retarget count, suggestions, briefs, actions |
+| `POST` | `/api/agent/outbound/waves` | Write morning brief, recommended list cards, and outlook actions. Never activates Instantly |
 | `POST` | `/api/agent/instantly/push-leads` | Agent twin of lead push |
 | `POST` | `/api/agent/instantly/push-sequence` | Agent twin of sequence push |
 | `GET/POST` | `/api/cron/daily-sync` | Vercel Cron daily runner |

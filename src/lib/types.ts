@@ -585,7 +585,7 @@ export interface LeadUploadResult {
   errors: string[]
 }
 
-export type OfferWaveColumnId = 'sourcing' | 'prep' | 'live' | 'decision'
+export type OfferWaveColumnId = 'recommended' | 'next' | 'live'
 
 export type OfferWaveCard = {
   campaignId: string
@@ -593,12 +593,14 @@ export type OfferWaveCard = {
   column: OfferWaveColumnId
   trade: string
   city: string
-  leadCount: number
-  openerCount: number
+  rationale: string
+  listSize: number
+  offerKey: string
+  copyStrategy: string
+  approach: string
+  goLiveAt: string | null
+  testingVariable: string
   instantlyStatus: string
   sends: number
   replies: number
-  positiveReplies: number
-  decisionLabel: string
-  dailyCap: number
 }

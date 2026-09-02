@@ -47,6 +47,12 @@ export type CampaignPatch = Partial<{
   cta_type: string | null
   opener_reviewed_at: string | null
   copy_confirmed_at: string | null
+  wave_lane: string | null
+  wave_rationale: string | null
+  wave_list_size: number | null
+  wave_copy_strategy: string | null
+  wave_approach: string | null
+  testing_variable: string | null
 }>
 
 export type CampaignDetail = {
@@ -168,10 +174,18 @@ export async function createCampaign(
       location_tags: input?.location_tags,
       cold_expression: input?.cold_expression,
       sequence_draft: input?.sequence_draft,
-      copy_status: input?.copy_status
+      copy_status: input?.copy_status,
+      hypothesis: input?.hypothesis,
+      wave_lane: input?.wave_lane,
+      wave_rationale: input?.wave_rationale,
+      wave_list_size: input?.wave_list_size,
+      wave_copy_strategy: input?.wave_copy_strategy,
+      wave_approach: input?.wave_approach,
+      testing_variable: input?.testing_variable
     })
   })
-  const campaign = project(await readJson<CompassCampaign>(res))
+  const body = await readJson<{ campaign: CompassCampaign }>(res)
+  const campaign = project(body.campaign)
   upsertInCache(campaign)
   return campaign
 }
@@ -182,7 +196,8 @@ export async function updateCampaign(id: string, patch: CampaignPatch): Promise<
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(patch)
   })
-  const campaign = project(await readJson<CompassCampaign>(res))
+  const body = await readJson<{ campaign: CompassCampaign }>(res)
+  const campaign = project(body.campaign)
   upsertInCache(campaign)
   return campaign
 }

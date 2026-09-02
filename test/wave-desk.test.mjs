@@ -1,0 +1,60 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { readFileSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+
+function read(rel) {
+  return readFileSync(resolve(root, rel), 'utf8')
+}
+
+function suggestWaveMoves(input) {
+  const suggestions = []
+  for (const row of input.instantly) {
+    const sends = Math.max(0, row.sendCount || 0)
+    const replies = Math.max(0, row.replyCount || 0)
+    const rate = sends > 0 ? replies / sends : 0
+    const remaining = Math.max(0, row.remaining || 0)
+    if (sends >= 1000 && replies === 0) {
+      suggestions.push({ kind: 'kill' })
+      continue
+    }
+    if (sends >= 100 && rate < 0.01) {
+      suggestions.push({ kind: 'pause_inspect' })
+      continue
+    }
+    if (row.status === 'live' && rate >= 0.05 && remaining < 50) {
+      suggestions.push({ kind: 'load_more' })
+    }
+  }
+  if (suggestions.length === 0) suggestions.push({ kind: 'new_list' })
+  return suggestions
+}
+
+test('5 percent replies with thin remainder queues a top-up', () => {
+  const out = suggestWaveMoves({
+    instantly: [
+      { status: 'live', sendCount: 200, replyCount: 10, remaining: 20 }
+    ]
+  })
+  assert.equal(out[0].kind, 'load_more')
+})
+
+test('sub 1 percent after 100 sends queues a deliverability pause', () => {
+  const out = suggestWaveMoves({
+    instantly: [{ status: 'live', sendCount: 120, replyCount: 0, remaining: 80 }]
+  })
+  assert.equal(out[0].kind, 'pause_inspect')
+})
+
+test('waves UI and agent route exist', () => {
+  const board = read('src/components/outbound/OfferWavesBoard.tsx')
+  assert.match(board, /OFFER_WAVE_COLUMN_LABELS/)
+  assert.match(board, /WaveAddCampaign/)
+  assert.match(board, /recontactReady/)
+  assert.match(read('src/components/outbound/WaveCampaignCard.tsx'), /wave_rationale/)
+  assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /wave_lane: 'recommended'/)
+  assert.match(read('src/app/api/campaigns/route.ts'), /listPipelineCampaigns/)
+})

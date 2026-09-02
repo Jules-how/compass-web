@@ -146,10 +146,14 @@ test('campaign list GET skips sequence bodies and loads lead tallies in parallel
   assert.match(campaigns, /CAMPAIGN_BOARD_COLUMNS/)
   assert.match(campaigns, /CAMPAIGN_LIST_COLUMNS = `\$\{CAMPAIGN_CORE_COLUMNS\},cold_expression,sequence_draft`/)
 
+  const store = read('src/lib/campaigns-server.ts')
+  assert.match(store, /select\(CAMPAIGN_BOARD_COLUMNS\)/)
+  assert.match(store, /Promise\.all/)
+  assert.match(store, /select\(CAMPAIGN_LIST_COLUMNS\)/)
+
   const list = read('src/app/api/campaigns/route.ts')
-  assert.match(list, /CAMPAIGN_BOARD_COLUMNS/)
-  assert.match(list, /Promise\.all/)
-  assert.doesNotMatch(list, /select\(CAMPAIGN_LIST_COLUMNS\)/)
+  assert.match(list, /listPipelineCampaigns/)
+  assert.match(list, /requirePortalAccess/)
 
   const planner = read('src/components/campaigns/CampaignPlanner.tsx')
   assert.match(planner, /useCachedJson/)

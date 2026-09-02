@@ -23,6 +23,7 @@ import { syncQboLedger, type QboSyncResult } from '@/lib/qbo-sync'
 import { generateDailyDigest } from '@/lib/evidence-poller'
 import { syncReactivationLists, type ReactivationSyncResult } from '@/lib/reactivation-runtime'
 import { recomputeComponentStats } from '@/lib/component-stats'
+import { persistDailyWaveScan } from '@/lib/wave-desk-persist'
 
 export type AgentSyncSource = 'ads' | 'instantly' | 'instantly_leads' | 'qbo' | 'evidence' | 'reactivation'
 
@@ -240,6 +241,19 @@ export async function runAgentSync(
   if (options?.includeBrief !== false) {
     result.brief = await buildAgentBrief(supabase)
     await upsertSyncSnapshot(supabase, 'daily_brief', result.brief, 'live')
+    if (sources.includes('instantly')) {
+      try {
+        await persistDailyWaveScan(supabase, {
+          ok: result.instantly?.ok ?? true,
+          emailsSentToday: result.brief.instantly.emailsSentToday,
+          repliesWaiting: result.brief.instantly.repliesWaiting,
+          replyRate: result.brief.instantly.replyRate,
+          campaigns: result.brief.instantly.campaigns
+        })
+      } catch (err) {
+        console.error('[agent-sync/wave-scan]', err instanceof Error ? err.message : err)
+      }
+    }
   }
 
   await upsertSyncSnapshot(

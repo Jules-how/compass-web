@@ -200,6 +200,36 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/campaigns/<id>/copy" \
 
 Vercel hits `GET /api/cron/daily-sync` once per day (`vercel.json`). Auth with `CRON_SECRET` or `COMPASS_AGENT_SECRET`. Agents should **not** re-sync the world on every turn if `brief.lastSyncAt` is fresh.
 
+## 8am Waves scan
+
+Compass Waves is the shared outbound desk. Instantly activate stays in Instantly.
+
+1. `GET /api/agent/outbound/waves` after Instantly glance is fresh (`POST /api/agent/sync` with `instantly` if `brief.lastSyncAt` is stale).
+2. Read `suggestions`, live reply rates, remaining volume, and `outlook.recontactReady`.
+3. Recommend one morning move. Examples:
+   - ≥5% replies and few leads left → scrape / filter / openers / `push-leads` into that campaign (paused until Jules launches).
+   - under 1% replies after 100 sends → propose pause and inspect inboxes before rewriting copy.
+   - 0 replies at 1,000 sends → kill / overhaul offer. Do not load more of the same.
+4. Persist the call with `POST /api/agent/outbound/waves`:
+   - `recommendation` + `scan` (the morning brief)
+   - `recommend` cards (lane `recommended`: rationale, list_size, offer, copy_strategy, approach)
+   - `actions` on the outlook (volume, copy, city, inboxes, …)
+5. Manual Jules adds land in **Next campaigns**. Recommended column is agent-only until Jules moves a card.
+
+Do not invent emails. Do not activate Instantly. Write the brief even when the recommendation is “wait.”
+
+```bash
+curl -sS "$COMPASS_BASE_URL/api/agent/outbound/waves" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
+
+curl -sS -X POST "$COMPASS_BASE_URL/api/agent/outbound/waves" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"recommendation":"Load 150 more Sydney roofers into the live wave. 5% replies, 20 remaining.","recommend":[{"name":"Roofing Sydney top-up","rationale":"Live wave is converting. Keep the same copy.","list_size":150,"offer_key":"booked-jobs-system","copy_strategy":"35-word Fill and Capture","approach":"Maps scrape, filter_leads, generate_openers, push-leads paused","vertical_tags":["roofing"],"location_tags":["Sydney"]}],"actions":[{"title":"Top up Sydney roofing","kind":"volume","detail":"150 sendable, same sequence"}]}'
+```
+
+Wave memory lives in Compass (`compass_wave_briefs`, `compass_wave_actions`, campaign `wave_*` fields). Do not copy those facts into a second markdown store.
+
 ## Mental model
 
 - Instantly / Ads APIs hold live platform truth.

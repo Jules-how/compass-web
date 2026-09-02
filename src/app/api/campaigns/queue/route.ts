@@ -1,5 +1,7 @@
 import type { NextRequest } from 'next/server'
+import { requirePortalAccess } from '@/lib/portal-access'
 import {
+  portalAccessResponse,
   portalJson,
   portalJsonCached,
   readBoundedJson,
@@ -8,11 +10,8 @@ import {
 import {
   dateOnlyInZone,
   defaultGoLiveAt,
-  emptyCampaignCopyFields,
-  parseGoLiveAt,
-  type CompassCampaign
+  parseGoLiveAt
 } from '@/lib/campaigns'
-import { tallyLeadsByCampaign } from '@/lib/campaign-wave'
 import {
   RECONTACT_PROMOTE_MIN,
   QUEUE_WAVE_SIZE,
@@ -24,13 +23,8 @@ import {
   type QueueCampaign,
   type QueuePayload
 } from '@/lib/campaign-queue'
-import {
-  getLocalDb,
-  getPipelineCampaigns,
-  upsertPipelineCampaign,
-  addPipelineActivity
-} from '@/lib/local-db'
-import { recontactCutoffIso } from '@/lib/recontact-eligibility'
+import { insertPipelineCampaign, listPipelineCampaigns } from '@/lib/campaigns-server'
+import { applyRecontactReadyFilters } from '@/lib/leads-query'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,53 +32,44 @@ const QUEUE_STATUSES = ['draft', 'planned', 'paused']
 
 export async function GET() {
   try {
-    const db = getLocalDb()
+    const { supabase } = await requirePortalAccess({ operator: true })
     const today = dateOnlyInZone(new Date().toISOString())
-    const cutoff = recontactCutoffIso()
 
-    const allCampaigns = getPipelineCampaigns()
-    const queueCampaigns = allCampaigns.filter((c) => QUEUE_STATUSES.includes(c.status))
+    const allCampaigns = await listPipelineCampaigns(supabase)
+    const queueCampaigns = allCampaigns.filter((c) => QUEUE_STATUSES.includes(String(c.status)))
 
-    const leads = db.prepare(`
-      SELECT pipeline_campaign_id, outbound_status, opener
-      FROM lead_contacts
-      WHERE pipeline_campaign_id IS NOT NULL
-    `).all() as Array<{ pipeline_campaign_id: string; outbound_status: string; opener: string | null }>
+    const sendableQuery = supabase
+      .from('lead_contacts')
+      .select('vertical')
+      .is('suppression_reason', null)
+      .neq('outbound_status', 'suppressed')
+      .is('last_outbound_at', null)
+      .not('email', 'is', null)
+      .neq('email', '')
+      .limit(5000)
 
-    const tallies = tallyLeadsByCampaign(leads)
+    const readyQuery = applyRecontactReadyFilters(
+      supabase.from('lead_contacts').select('vertical,city').limit(5000) as never
+    ) as Promise<{ data: Array<{ vertical: string | null; city: string | null }> | null }>
 
-    const sendable = db.prepare(`
-      SELECT vertical FROM lead_contacts
-      WHERE suppression_reason IS NULL
-        AND outbound_status != 'suppressed'
-        AND last_outbound_at IS NULL
-        AND email IS NOT NULL
-        AND email != ''
-    `).all() as Array<{ vertical: string | null }>
-
-    const ready = db.prepare(`
-      SELECT vertical, city FROM lead_contacts
-      WHERE outbound_status != 'suppressed'
-        AND suppression_reason IS NULL
-        AND (recontact_ok = 1 OR recontact_ok IS NULL)
-        AND last_outbound_at IS NOT NULL
-        AND last_outbound_at < ?
-        AND outbound_status NOT IN ('replied', 'interested', 'booked', 'meeting_booked', 'converted')
-    `).all(cutoff) as Array<{ vertical: string | null; city: string | null }>
+    const [sendableRes, readyRes] = await Promise.all([sendableQuery, readyQuery])
 
     const queue: QueueCampaign[] = queueCampaigns.map((row) => ({
       id: row.id,
       name: row.name,
-      status: row.status,
+      status: String(row.status),
       start_date: row.start_date ?? null,
       priority: typeof row.priority === 'number' ? row.priority : 0,
       vertical_tags: Array.isArray(row.vertical_tags) ? row.vertical_tags : [],
       location_tags: Array.isArray(row.location_tags) ? row.location_tags : [],
-      copy_status: row.copy_status || 'none',
+      copy_status: String(row.copy_status || 'none'),
       bound: Boolean((row.instantly_campaign_id || '').trim()),
-      cohort: tallies[row.id]?.cohort ?? 0,
+      cohort: row.wave_cohort_count ?? 0,
       week: queueWeekBucket(row.start_date, today)
     }))
+
+    const sendable = (sendableRes.data ?? []) as Array<{ vertical: string | null }>
+    const ready = (readyRes.data ?? []) as Array<{ vertical: string | null; city: string | null }>
 
     const payload: QueuePayload = {
       queue,
@@ -96,6 +81,8 @@ export async function GET() {
     }
     return portalJsonCached(payload, {}, 5)
   } catch (err) {
+    const access = portalAccessResponse(err)
+    if (access) return access
     const message = err instanceof Error ? err.message : 'fetch_failed'
     return portalJson({ error: 'fetch_failed', detail: message }, { status: 500 })
   }
@@ -146,14 +133,9 @@ export async function POST(request: NextRequest) {
       ? recontactCampaignName(vertical, city, effectiveStartDate)
       : freshCampaignName(vertical, city, effectiveStartDate))
 
-  const now = new Date().toISOString()
-  const campaignId = `campaign-${crypto.randomUUID()}`
-
   try {
-    const db = getLocalDb()
-
-    const created = upsertPipelineCampaign({
-      id: campaignId,
+    const { supabase } = await requirePortalAccess({ operator: true })
+    const created = await insertPipelineCampaign(supabase, {
       name: campaignName,
       status: 'planned',
       priority: 2,
@@ -164,19 +146,12 @@ export async function POST(request: NextRequest) {
       vertical_tags: [vertical],
       location_tags: city ? [city] : [],
       copy_status: 'draft',
-      created_at: now,
-      updated_at: now
+      wave_lane: 'next'
     })
-
-    addPipelineActivity(campaignId, 'queue_promote', `Created wave slot "${campaignName}"`, {
-      action,
-      vertical,
-      city,
-      startDate: effectiveStartDate
-    })
-
     return portalJson({ campaign: created }, { status: 201 })
   } catch (err) {
+    const access = portalAccessResponse(err)
+    if (access) return access
     const message = err instanceof Error ? err.message : 'queue_mutation_failed'
     return portalJson({ error: 'queue_mutation_failed', detail: message }, { status: 500 })
   }

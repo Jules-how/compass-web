@@ -111,7 +111,8 @@ test('outbound APIs are operator-gated with same-origin writes', () => {
   }
   const campaignPatch = read('src/app/api/campaigns/[id]/route.ts')
   assert.match(campaignPatch, /requireSameOrigin/)
-  assert.match(campaignPatch, /upsertPipelineCampaign/)
+  assert.match(campaignPatch, /updatePipelineCampaignRow/)
+  assert.match(campaignPatch, /requirePortalAccess/)
   const campaignCreate = read('src/app/api/campaigns/route.ts')
   assert.match(campaignCreate, /sequence_draft/)
   assert.match(campaignCreate, /copy_status/)

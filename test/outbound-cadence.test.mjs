@@ -103,8 +103,17 @@ test('offer wave decision desk badges follow send and reply thresholds', () => {
   assert.match(lib, /Validated: Expand to 1,000 Sends/)
   assert.match(lib, /Inspect Mailbox Deliverability/)
   assert.match(lib, /export function offerWaveColumn/)
-  assert.match(read('src/components/outbound/OfferWavesBoard.tsx'), /evaluateOfferWaveDecision/)
+  assert.match(lib, /Recommended next list/)
+  assert.match(lib, /Next campaigns/)
+  assert.match(lib, /Live campaigns/)
+  assert.doesNotMatch(lib, /Sourcing & Data/)
+  const board = read('src/components/outbound/OfferWavesBoard.tsx')
+  assert.match(board, /evaluateOfferWaveDecision/)
+  assert.match(board, /Outlook/)
+  assert.match(board, /WaveAddCampaign/)
+  assert.match(board, /90-day retarget/)
   assert.match(read('src/app/api/agent/instantly/duplicate-template/route.ts'), /duplicateFillCaptureTemplate/)
+  assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /suggestWaveMoves/)
 })
 
 test('live outbound desk switcher offers waves, cassette, runway, factory, and calendar', () => {

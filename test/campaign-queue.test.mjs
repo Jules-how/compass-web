@@ -91,18 +91,15 @@ test('week capacity band is 3-5 launches and 250 leads, flagged both directions'
 
 test('queue route is planning-only and reuses recontact + wave helpers', () => {
   const route = read('src/app/api/campaigns/queue/route.ts')
-  // Reads the ready pool through the shared 90-day filter, not a re-implementation.
   assert.match(route, /applyRecontactReadyFilters/)
-  assert.match(route, /tallyLeadsByCampaign/)
-  // Promote gates on the shared minimum and never touches Instantly.
+  assert.match(route, /listPipelineCampaigns/)
+  assert.match(route, /insertPipelineCampaign/)
   assert.match(route, /RECONTACT_PROMOTE_MIN/)
-  assert.match(route, /thin_cohort/)
+  assert.match(route, /wave_lane: 'next'/)
   assert.doesNotMatch(route, /instantly\/(ensure|push)/)
-  // Mutations require same-origin like every cookie-authenticated route.
   assert.match(route, /requireSameOrigin/)
-  // Planning statuses only — active/completed campaigns stay out of the queue.
   assert.match(route, /'draft', 'planned', 'paused'/)
-  assert.match(route, /action !== 'promote' && body.action !== 'schedule'/)
+  assert.match(route, /action !== 'promote' && action !== 'schedule'/)
   assert.match(route, /go_live_at/)
 })
 

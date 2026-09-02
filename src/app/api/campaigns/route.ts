@@ -1,5 +1,7 @@
 import type { NextRequest } from 'next/server'
+import { requirePortalAccess } from '@/lib/portal-access'
 import {
+  portalAccessResponse,
   portalJson,
   portalJsonCached,
   readBoundedJson,
@@ -8,63 +10,28 @@ import {
 import {
   dateOnlyInZone,
   defaultGoLiveAt,
-  emptyCampaignCopyFields,
-  normalizeCampaignHealth,
-  normalizeCampaignStatus,
-  normalizeLabels,
-  normalizeOutboundTagList,
-  parseGoLiveAt,
-  projectCampaignCopy,
-  type CompassCampaign
+  parseGoLiveAt
 } from '@/lib/campaigns'
 import {
   coldExpressionFromSequence,
   isValidSequence,
-  normalizeCopyStatus,
   type OutboundSequence
 } from '@/lib/outbound-copy'
-import { applyLeadTallies, tallyLeadsByCampaign } from '@/lib/campaign-wave'
 import {
-  getLocalDb,
-  getPipelineCampaigns,
-  upsertPipelineCampaign,
-  addPipelineActivity
-} from '@/lib/local-db'
+  insertPipelineCampaign,
+  listPipelineCampaigns
+} from '@/lib/campaigns-server'
 
 export const dynamic = 'force-dynamic'
 
-function nowIso(): string {
-  return new Date().toISOString()
-}
-
-function projectCampaign(row: CompassCampaign): CompassCampaign {
-  return projectCampaignCopy({
-    ...emptyCampaignCopyFields(),
-    ...row,
-    labels: Array.isArray(row.labels) ? row.labels : [],
-    priority: typeof row.priority === 'number' ? row.priority : 0,
-    health: row.health || 'no_updates',
-    color: row.color || '#94a3b8'
-  })
-}
-
 export async function GET() {
   try {
-    const db = getLocalDb()
-    const campaigns = getPipelineCampaigns().map(projectCampaign)
-
-    const leads = db.prepare(`
-      SELECT pipeline_campaign_id, outbound_status, opener
-      FROM lead_contacts
-      WHERE pipeline_campaign_id IS NOT NULL
-    `).all() as Array<{ pipeline_campaign_id: string; outbound_status: string; opener: string | null }>
-
-    const tallies = tallyLeadsByCampaign(leads)
-
-    return portalJsonCached({
-      campaigns: applyLeadTallies(campaigns, tallies)
-    }, {}, 5)
+    const { supabase } = await requirePortalAccess({ operator: true })
+    const campaigns = await listPipelineCampaigns(supabase)
+    return portalJsonCached({ campaigns }, {}, 5)
   } catch (err) {
+    const access = portalAccessResponse(err)
+    if (access) return access
     const message = err instanceof Error ? err.message : 'fetch_failed'
     return portalJson({ error: 'fetch_failed', detail: message }, { status: 500 })
   }
@@ -95,6 +62,13 @@ export async function POST(request: NextRequest) {
     cold_expression?: string | null
     sequence_draft?: OutboundSequence | null
     copy_status?: string
+    hypothesis?: string | null
+    wave_lane?: string | null
+    wave_rationale?: string | null
+    wave_list_size?: number | null
+    wave_copy_strategy?: string | null
+    wave_approach?: string | null
+    testing_variable?: string | null
   }
   try {
     body = (await readBoundedJson(request, 256 * 1024)) as typeof body
@@ -109,12 +83,12 @@ export async function POST(request: NextRequest) {
     return portalJson({ error: 'invalid_sequence' }, { status: 400 })
   }
 
-  const stamp = nowIso()
-  const parsedGoLiveRes = parseGoLiveAt(body.go_live_at === undefined ? defaultGoLiveAt() : body.go_live_at)
+  const parsedGoLiveRes = parseGoLiveAt(
+    body.go_live_at === undefined ? defaultGoLiveAt() : body.go_live_at
+  )
   const parsedGoLive = parsedGoLiveRes.ok ? parsedGoLiveRes.iso : null
   const inferredStartDate = parsedGoLive ? dateOnlyInZone(parsedGoLive) : null
   const startDate = body.start_date !== undefined ? body.start_date : inferredStartDate
-
   const inferredColdExpression =
     body.cold_expression !== undefined
       ? body.cold_expression
@@ -122,40 +96,41 @@ export async function POST(request: NextRequest) {
         ? coldExpressionFromSequence(body.sequence_draft)
         : null
 
-  const row = {
-    id: `campaign-${crypto.randomUUID()}`,
-    name,
-    status: normalizeCampaignStatus(body.status),
-    priority: typeof body.priority === 'number' ? body.priority : 0,
-    health: normalizeCampaignHealth(body.health),
-    start_date: startDate,
-    end_date: body.end_date ?? null,
-    go_live_at: parsedGoLive,
-    color: body.color || '#94a3b8',
-    summary: body.summary ?? null,
-    labels: normalizeLabels(body.labels),
-    owner_label: body.owner_label ?? null,
-    instantly_campaign_id: body.instantly_campaign_id?.trim() || null,
-    offer_key: body.offer_key?.trim() || null,
-    structure_id: body.structure_id?.trim() || null,
-    opener_mode: body.opener_mode?.trim() || null,
-    vertical_tags: normalizeOutboundTagList(body.vertical_tags),
-    location_tags: normalizeOutboundTagList(body.location_tags),
-    copy_status: normalizeCopyStatus(body.copy_status),
-    cold_expression: inferredColdExpression,
-    sequence_draft: body.sequence_draft ?? null,
-    created_at: stamp,
-    updated_at: stamp
-  }
-
   try {
-    const created = upsertPipelineCampaign(row)
-    addPipelineActivity(created.id, 'campaign_created', `Campaign "${created.name}" created`, {
-      name: created.name
+    const { supabase } = await requirePortalAccess({ operator: true })
+    const created = await insertPipelineCampaign(supabase, {
+      name,
+      status: body.status,
+      priority: body.priority,
+      health: body.health,
+      start_date: startDate,
+      end_date: body.end_date ?? null,
+      go_live_at: parsedGoLive,
+      color: body.color,
+      summary: body.summary ?? null,
+      labels: body.labels,
+      owner_label: body.owner_label ?? null,
+      instantly_campaign_id: body.instantly_campaign_id,
+      offer_key: body.offer_key,
+      structure_id: body.structure_id,
+      opener_mode: body.opener_mode,
+      vertical_tags: body.vertical_tags,
+      location_tags: body.location_tags,
+      cold_expression: inferredColdExpression,
+      sequence_draft: body.sequence_draft ?? null,
+      copy_status: body.copy_status,
+      hypothesis: body.hypothesis,
+      wave_lane: body.wave_lane ?? 'next',
+      wave_rationale: body.wave_rationale,
+      wave_list_size: body.wave_list_size,
+      wave_copy_strategy: body.wave_copy_strategy,
+      wave_approach: body.wave_approach,
+      testing_variable: body.testing_variable
     })
-
-    return portalJson({ campaign: projectCampaign(created) })
+    return portalJson({ campaign: created })
   } catch (err) {
+    const access = portalAccessResponse(err)
+    if (access) return access
     const message = err instanceof Error ? err.message : 'create_failed'
     return portalJson({ error: 'create_failed', detail: message }, { status: 500 })
   }
