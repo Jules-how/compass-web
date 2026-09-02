@@ -70,7 +70,7 @@ export type CadenceWeekLoad = {
 export function cadenceWeekLoad(slots: number, prefs: CadencePrefs): CadenceWeekLoad {
   const overCapacity = prefs.cap != null && slots > prefs.cap
   const underTarget = prefs.target != null && slots < prefs.target
-  const bits = [`${slots} this week`]
+  const bits = [`${slots} launched this week`]
   if (overCapacity) bits.push('over cap')
   else if (underTarget) bits.push('under target')
   return { slots, overCapacity, underTarget, label: bits.join(' · ') }

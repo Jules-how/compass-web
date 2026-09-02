@@ -30,18 +30,6 @@ export function WaveAddCampaign({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="compass-btn-secondary !px-3 !py-1.5 text-[12px]"
-      >
-        Add campaign
-      </button>
-    )
-  }
-
   async function submit() {
     setBusy(true)
     setError(null)
@@ -74,84 +62,104 @@ export function WaveAddCampaign({
   }
 
   return (
-    <Card className="max-w-md border-stone-200/80 shadow-soft">
-      <CardHeader className="p-4 pb-2">
-        <Badge variant="secondary" size="sm">
-          Next campaigns
-        </Badge>
-        <CardTitle className="mt-2 text-[15px]">Add a campaign</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-2 p-4 pt-2 text-[12px]">
-        <label className="grid gap-1">
-          <span className="text-neutral-500">Name</span>
-          <input
-            className="compass-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Roofing Sydney 150"
-          />
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="grid gap-1">
-            <span className="text-neutral-500">Trade</span>
-            <input className="compass-input" value={trade} onChange={(e) => setTrade(e.target.value)} />
-          </label>
-          <label className="grid gap-1">
-            <span className="text-neutral-500">City</span>
-            <input className="compass-input" value={city} onChange={(e) => setCity(e.target.value)} />
-          </label>
-        </div>
-        <label className="grid gap-1">
-          <span className="text-neutral-500">Offer</span>
-          <input className="compass-input" value={offerKey} onChange={(e) => setOfferKey(e.target.value)} />
-        </label>
-        <label className="grid gap-1">
-          <span className="text-neutral-500">Testing variable</span>
-          <select
-            className="compass-input"
-            value={testingVariable}
-            onChange={(e) => setTestingVariable(e.target.value)}
-          >
-            {TESTING_VARIABLES.filter((value) => value !== 'none').map((value) => (
-              <option key={value} value={value}>
-                {testingVariableLabel(value)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1">
-          <span className="text-neutral-500">List size</span>
-          <input
-            className="compass-input"
-            value={listSize}
-            onChange={(e) => setListSize(e.target.value)}
-          />
-        </label>
-        <label className="grid gap-1">
-          <span className="text-neutral-500">Notes</span>
-          <textarea
-            className="compass-input min-h-16"
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            placeholder="What we are testing and why."
-          />
-        </label>
-        {error ? <p className="text-red-700">{error}</p> : null}
-      </CardContent>
-      <CardFooter className="flex justify-end gap-2 p-4 pt-0">
-        <button type="button" className="text-[12px] text-neutral-500" onClick={() => setOpen(false)}>
-          Cancel
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void submit()}
-          className="compass-btn-primary !px-3 !py-1.5 text-[12px]"
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="compass-btn-secondary !px-3 !py-1.5 text-[12px]"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+      >
+        {open ? 'Close' : 'Add campaign'}
+      </button>
+      {open ? (
+        <Card
+          className="absolute right-0 z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] shadow-soft"
+          role="dialog"
+          aria-label="Add a campaign"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') setOpen(false)
+          }}
         >
-          {busy ? 'Saving…' : 'Save to next'}
-          <ArrowRight className="ml-1.5 size-3.5" />
-        </button>
-      </CardFooter>
-    </Card>
+          <CardHeader>
+            <Badge variant="secondary" size="sm">
+              Next campaigns
+            </Badge>
+            <CardTitle className="text-[15px]">Add a campaign</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 pt-4 text-[12px]">
+            <label className="grid gap-1">
+              <span className="text-neutral-500">Name</span>
+              <input
+                className="compass-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Roofing Sydney 150"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="grid gap-1">
+                <span className="text-neutral-500">Trade</span>
+                <input className="compass-input" value={trade} onChange={(e) => setTrade(e.target.value)} />
+              </label>
+              <label className="grid gap-1">
+                <span className="text-neutral-500">City</span>
+                <input className="compass-input" value={city} onChange={(e) => setCity(e.target.value)} />
+              </label>
+            </div>
+            <label className="grid gap-1">
+              <span className="text-neutral-500">Offer</span>
+              <input className="compass-input" value={offerKey} onChange={(e) => setOfferKey(e.target.value)} />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-neutral-500">Testing variable</span>
+              <select
+                className="compass-input"
+                value={testingVariable}
+                onChange={(e) => setTestingVariable(e.target.value)}
+              >
+                {TESTING_VARIABLES.filter((value) => value !== 'none').map((value) => (
+                  <option key={value} value={value}>
+                    {testingVariableLabel(value)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1">
+              <span className="text-neutral-500">List size</span>
+              <input
+                className="compass-input"
+                value={listSize}
+                onChange={(e) => setListSize(e.target.value)}
+              />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-neutral-500">Notes</span>
+              <textarea
+                className="compass-input min-h-16"
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                placeholder="What we are testing and why."
+              />
+            </label>
+            {error ? <p className="text-red-700">{error}</p> : null}
+          </CardContent>
+          <CardFooter className="justify-end gap-2">
+            <button type="button" className="text-[12px] text-neutral-500" onClick={() => setOpen(false)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void submit()}
+              className="compass-btn-primary !px-3 !py-1.5 text-[12px]"
+            >
+              {busy ? 'Saving…' : 'Save to next'}
+              <ArrowRight className="ml-1.5 size-3.5" />
+            </button>
+          </CardFooter>
+        </Card>
+      ) : null}
+    </div>
   )
 }

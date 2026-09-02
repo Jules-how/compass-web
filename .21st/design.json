@@ -83,7 +83,13 @@
     "must": [],
     "avoid": []
   },
-  "decisions": [],
+  "decisions": [
+    {
+      "date": "2026-09-02",
+      "decision": "Waves is a morning operator desk, not a three-equal-column kanban. Live Instantly sending is the hero. Recommended collapses when empty. Stale next campaigns sit behind leftovers. Outlook is a side rail. Cards use Compass Card/Badge with a color rail instead of a 16:9 blob. Activate stays in Instantly.",
+      "source": "Jules asked for a 10x Waves UI/UX on /sales/outbound"
+    }
+  ],
   "evidence": [
     {
       "fact": "components.installed",

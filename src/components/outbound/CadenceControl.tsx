@@ -74,7 +74,7 @@ export function CadenceControl({
           placeholder="none"
           onChange={(e) => setTargetDraft(e.target.value)}
           onBlur={commit}
-          className="compass-input h-8 w-16 px-2 py-1 text-[12px]"
+          className="compass-input h-8 w-[4.5rem] px-2 py-1 text-[12px]"
           aria-label="This week launch target"
         />
       </label>
@@ -86,7 +86,7 @@ export function CadenceControl({
           placeholder="none"
           onChange={(e) => setCapDraft(e.target.value)}
           onBlur={commit}
-          className="compass-input h-8 w-16 px-2 py-1 text-[12px]"
+          className="compass-input h-8 w-[4.5rem] px-2 py-1 text-[12px]"
           aria-label="This week launch cap"
         />
       </label>

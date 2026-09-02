@@ -27,7 +27,7 @@ function normalizeCadencePrefs(raw) {
 function cadenceWeekLoad(slots, prefs) {
   const overCapacity = prefs.cap != null && slots > prefs.cap
   const underTarget = prefs.target != null && slots < prefs.target
-  const bits = [`${slots} this week`]
+  const bits = [`${slots} launched this week`]
   if (overCapacity) bits.push('over cap')
   else if (underTarget) bits.push('under target')
   return { slots, overCapacity, underTarget, label: bits.join(' · ') }
@@ -57,9 +57,9 @@ test('cadence prefs treat empty as none and lift cap up to target', () => {
 })
 
 test('cadence week load never prints a default 3-5 band', () => {
-  assert.equal(cadenceWeekLoad(2, { target: null, cap: null }).label, '2 this week')
-  assert.equal(cadenceWeekLoad(2, { target: 4, cap: null }).label, '2 this week · under target')
-  assert.equal(cadenceWeekLoad(6, { target: 4, cap: 5 }).label, '6 this week · over cap')
+  assert.equal(cadenceWeekLoad(2, { target: null, cap: null }).label, '2 launched this week')
+  assert.equal(cadenceWeekLoad(2, { target: 4, cap: null }).label, '2 launched this week · under target')
+  assert.equal(cadenceWeekLoad(6, { target: 4, cap: 5 }).label, '6 launched this week · over cap')
   assert.equal(cadenceWeekLoad(4, { target: 4, cap: 5 }).overCapacity, false)
   assert.equal(cadenceWeekLoad(4, { target: 4, cap: 5 }).underTarget, false)
 })
@@ -88,6 +88,7 @@ test('shared cadence helper and control exist, without live 3-5 doctrine', () =>
   assert.doesNotMatch(lib, /QUEUE_WEEK_SLOT_MAX/)
   assert.doesNotMatch(lib, /3–5/)
   assert.doesNotMatch(lib, /3-5 this week/)
+  assert.match(lib, /launched this week/)
 
   const control = read('src/components/outbound/CadenceControl.tsx')
   assert.match(control, /Target/)

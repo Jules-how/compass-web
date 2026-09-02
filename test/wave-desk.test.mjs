@@ -64,7 +64,13 @@ test('waves UI and agent route exist', () => {
   assert.match(board, /OFFER_WAVE_COLUMN_LABELS/)
   assert.match(board, /WaveAddCampaign/)
   assert.match(board, /recontactReady/)
+  assert.match(board, /buildLiveDesk/)
+  assert.match(board, /leftover campaigns/)
+  assert.match(board, /Mark done/)
   assert.match(read('src/components/outbound/WaveCampaignCard.tsx'), /wave_rationale/)
+  assert.match(read('src/components/outbound/WaveCampaignCard.tsx'), /Open copy/)
+  assert.match(read('src/lib/wave-desk.ts'), /export function buildLiveDesk/)
+  assert.match(read('src/app/api/outbound/wave-desk/route.ts'), /export async function PATCH/)
   assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /normalizeWaveLane\(rec.wave_lane\) \|\| 'recommended'/)
   assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /instantly_campaign_id: instantlyId/)
   assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /mergeWaveBriefPayload/)
@@ -92,3 +98,102 @@ test('morning brief merge replaces recommendation when a new one is sent', () =>
   assert.equal(merged.recommendation, 'Pause and inspect inboxes.')
   assert.equal(merged.scan.a, 2)
 })
+
+function splitMorningBrief(recommendation) {
+  const text = (recommendation || '').trim()
+  if (!text) return { headline: '', watches: [] }
+  const parts = text
+    .split(/(?<=\.)\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+  return { headline: parts[0] || text, watches: parts.slice(1) }
+}
+
+function splitNextQueue(campaigns, today) {
+  const upcoming = []
+  const leftover = []
+  for (const campaign of campaigns) {
+    const date = campaign.go_live_at ? campaign.go_live_at.slice(0, 10) : (campaign.start_date || '').slice(0, 10)
+    const stale = Boolean(date && date < today && !(campaign.instantly_campaign_id || '').trim())
+    if (stale) leftover.push(campaign)
+    else upcoming.push(campaign)
+  }
+  return { upcoming, leftover }
+}
+
+function buildLiveDesk(input) {
+  const pool = input.allCampaigns ?? input.liveCampaigns
+  const byInstantlyId = new Map(
+    pool.filter((row) => (row.instantly_campaign_id || '').trim()).map((row) => [row.instantly_campaign_id, row])
+  )
+  const sending = []
+  const usedCampaignIds = new Set()
+  for (const row of input.instantlyRows) {
+    if (row.status !== 'live' && row.status !== 'launching') continue
+    const campaign = byInstantlyId.get(row.id) ?? null
+    sending.push({ key: campaign?.id || `instantly-${row.id}`, campaign, instantly: row })
+    if (campaign) usedCampaignIds.add(campaign.id)
+  }
+  for (const campaign of input.liveCampaigns) {
+    if (usedCampaignIds.has(campaign.id)) continue
+    const instantly = campaign.instantly_campaign_id
+      ? input.instantlyById.get(campaign.instantly_campaign_id)
+      : undefined
+    if (instantly && instantly.status !== 'live' && instantly.status !== 'launching') continue
+    sending.push({ key: campaign.id, campaign, instantly: instantly ?? null })
+    usedCampaignIds.add(campaign.id)
+  }
+  const parked = input.liveCampaigns.filter((campaign) => !usedCampaignIds.has(campaign.id))
+  return { sending, parked }
+}
+
+test('morning brief splits the first sentence as the decision', () => {
+  const out = splitMorningBrief(
+    'Sydney HVAC is live. Roofing Sydney has 0 replies. Do not swap HVAC onto Fill and Capture.'
+  )
+  assert.equal(out.headline, 'Sydney HVAC is live.')
+  assert.equal(out.watches.length, 2)
+})
+
+test('stale next campaigns without Instantly bind go to leftovers', () => {
+  const out = splitNextQueue(
+    [
+      { id: 'a', go_live_at: '2026-08-17T00:00:00.000Z', instantly_campaign_id: null },
+      { id: 'b', go_live_at: '2026-09-10T00:00:00.000Z', instantly_campaign_id: null },
+      { id: 'c', go_live_at: '2026-08-01T00:00:00.000Z', instantly_campaign_id: 'inst-1' }
+    ],
+    '2026-09-02'
+  )
+  assert.deepEqual(
+    out.leftover.map((row) => row.id),
+    ['a']
+  )
+  assert.deepEqual(
+    out.upcoming.map((row) => row.id),
+    ['b', 'c']
+  )
+})
+
+test('live desk shows Instantly sending even without a Compass row, and parks paused Compass live', () => {
+  const hvac = { id: 'hvac', name: 'HVAC', instantly_campaign_id: 'inst-hvac' }
+  const perth = { id: 'perth', name: 'Perth', instantly_campaign_id: 'inst-perth' }
+  const instantlyById = new Map([
+    ['inst-hvac', { id: 'inst-hvac', status: 'live', name: 'HVAC' }],
+    ['inst-perth', { id: 'inst-perth', status: 'paused', name: 'Perth' }],
+    ['inst-roof', { id: 'inst-roof', status: 'live', name: 'Roofing Sydney' }]
+  ])
+  const out = buildLiveDesk({
+    liveCampaigns: [hvac, perth],
+    allCampaigns: [hvac, perth],
+    instantlyById,
+    instantlyRows: [instantlyById.get('inst-hvac'), instantlyById.get('inst-perth'), instantlyById.get('inst-roof')]
+  })
+  assert.equal(out.sending.length, 2)
+  assert.equal(out.sending.some((row) => row.instantly.id === 'inst-roof' && !row.campaign), true)
+  assert.equal(out.sending.some((row) => row.campaign?.id === 'hvac'), true)
+  assert.deepEqual(
+    out.parked.map((row) => row.id),
+    ['perth']
+  )
+})
+

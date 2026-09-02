@@ -1,5 +1,5 @@
 import type { CompassCampaign, OfferWaveColumnId, OfferWaveMetrics } from '@/lib/campaigns'
-import { offerWaveColumn } from '@/lib/campaigns'
+import { dateOnlyInZone, offerWaveColumn } from '@/lib/campaigns'
 import type { OutboundBoardCampaign } from '@/lib/instantly'
 
 export const WAVE_ACTION_KINDS = [
@@ -189,4 +189,122 @@ export function groupCampaignsByWave(
     buckets[offerWaveColumn(campaign, metrics)].push(campaign)
   }
   return buckets
+}
+
+export const INSTANTLY_CAMPAIGN_APP = (id: string) =>
+  `https://app.instantly.ai/app/campaign/${encodeURIComponent(id)}`
+
+export function formatWaveDate(isoOrDateOnly: string | null | undefined): string {
+  const raw = (isoOrDateOnly || '').trim()
+  if (!raw) return ''
+  const dateOnly = raw.length >= 10 && raw[4] === '-' ? raw.slice(0, 10) : raw
+  const parsed = new Date(/^\d{4}-\d{2}-\d{2}$/.test(dateOnly) ? `${dateOnly}T00:00:00+10:00` : raw)
+  if (Number.isNaN(parsed.getTime())) return dateOnly
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'Australia/Sydney'
+  }).format(parsed)
+}
+
+export function splitMorningBrief(recommendation: string | null | undefined): {
+  headline: string
+  watches: string[]
+} {
+  const text = (recommendation || '').trim()
+  if (!text) return { headline: '', watches: [] }
+  const parts = text
+    .split(/(?<=\.)\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+  return { headline: parts[0] || text, watches: parts.slice(1) }
+}
+
+export function campaignDateOnly(
+  campaign: Pick<CompassCampaign, 'go_live_at' | 'start_date'>
+): string | null {
+  if (campaign.go_live_at) {
+    const value = dateOnlyInZone(campaign.go_live_at)
+    if (value && !value.includes('undefined')) return value
+  }
+  const start = (campaign.start_date || '').trim()
+  return start ? start.slice(0, 10) : null
+}
+
+export function splitNextQueue(
+  campaigns: CompassCampaign[],
+  today: string
+): { upcoming: CompassCampaign[]; leftover: CompassCampaign[] } {
+  const upcoming: CompassCampaign[] = []
+  const leftover: CompassCampaign[] = []
+  for (const campaign of campaigns) {
+    const date = campaignDateOnly(campaign)
+    const stale = Boolean(date && date < today && !(campaign.instantly_campaign_id || '').trim())
+    if (stale) leftover.push(campaign)
+    else upcoming.push(campaign)
+  }
+  return { upcoming, leftover }
+}
+
+export type LiveDeskItem = {
+  key: string
+  campaign: CompassCampaign | null
+  instantly: OutboundBoardCampaign | null
+}
+
+function isInstantlySending(status: OutboundBoardCampaign['status'] | undefined): boolean {
+  return status === 'live' || status === 'launching'
+}
+
+export function buildLiveDesk(input: {
+  liveCampaigns: CompassCampaign[]
+  allCampaigns?: CompassCampaign[]
+  instantlyById: Map<string, OutboundBoardCampaign>
+  instantlyRows: OutboundBoardCampaign[]
+}): { sending: LiveDeskItem[]; parked: CompassCampaign[] } {
+  const pool = input.allCampaigns ?? input.liveCampaigns
+  const byInstantlyId = new Map(
+    pool
+      .filter((row) => (row.instantly_campaign_id || '').trim())
+      .map((row) => [row.instantly_campaign_id as string, row])
+  )
+  const sending: LiveDeskItem[] = []
+  const usedCampaignIds = new Set<string>()
+
+  for (const row of input.instantlyRows) {
+    if (!isInstantlySending(row.status)) continue
+    const campaign = byInstantlyId.get(row.id) ?? null
+    sending.push({
+      key: campaign?.id || `instantly-${row.id}`,
+      campaign,
+      instantly: row
+    })
+    if (campaign) usedCampaignIds.add(campaign.id)
+  }
+
+  for (const campaign of input.liveCampaigns) {
+    if (usedCampaignIds.has(campaign.id)) continue
+    const instantly = campaign.instantly_campaign_id
+      ? input.instantlyById.get(campaign.instantly_campaign_id)
+      : undefined
+    if (instantly && !isInstantlySending(instantly.status)) continue
+    sending.push({
+      key: campaign.id,
+      campaign,
+      instantly: instantly ?? null
+    })
+    usedCampaignIds.add(campaign.id)
+  }
+
+  const parked = input.liveCampaigns.filter((campaign) => !usedCampaignIds.has(campaign.id))
+  return { sending, parked }
+}
+
+export function glanceLabel(updatedAt: number | null | undefined): string | null {
+  if (!updatedAt) return null
+  const delta = Date.now() - updatedAt
+  if (delta < 15_000) return 'Instantly glance just now'
+  const minutes = Math.max(1, Math.round(delta / 60_000))
+  if (minutes < 60) return `Instantly glance ${minutes}m ago`
+  return 'Instantly glance over an hour ago'
 }

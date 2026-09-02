@@ -125,3 +125,40 @@ export async function POST(request: NextRequest) {
     return portalJson({ error: 'create_failed', detail: message }, { status: 500 })
   }
 }
+
+export async function PATCH(request: NextRequest) {
+  const originError = requireSameOrigin(request)
+  if (originError) return originError
+
+  let body: { id?: string; status?: string }
+  try {
+    body = (await readBoundedJson(request, 4 * 1024)) as typeof body
+  } catch {
+    return portalJson({ error: 'invalid_json' }, { status: 400 })
+  }
+
+  const id = body.id?.trim()
+  if (!id) return portalJson({ error: 'id_required' }, { status: 400 })
+  if (body.status === undefined) return portalJson({ error: 'status_required' }, { status: 400 })
+
+  try {
+    const { supabase } = await requirePortalAccess({ operator: true })
+    const { data, error } = await supabase
+      .from('compass_wave_actions')
+      .update({
+        status: normalizeWaveActionStatus(body.status),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select('id,title,kind,detail,source,status,week_start,campaign_id,created_at,updated_at')
+      .single()
+    if (error) throw new Error(error.message)
+    if (!data) return portalJson({ error: 'not_found' }, { status: 404 })
+    return portalJson({ action: data })
+  } catch (err) {
+    const access = portalAccessResponse(err)
+    if (access) return access
+    const message = err instanceof Error ? err.message : 'update_failed'
+    return portalJson({ error: 'update_failed', detail: message }, { status: 500 })
+  }
+}
