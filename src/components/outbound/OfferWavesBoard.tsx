@@ -167,16 +167,12 @@ export function OfferWavesBoard({ className }: { className?: string }) {
 
       {brief.headline ? (
         <Card>
-          <CardHeader>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-                This morning · {latestBrief?.id}
-              </p>
-              <CardTitle className="mt-1.5 text-[16px] leading-snug">{brief.headline}</CardTitle>
-            </div>
-          </CardHeader>
-          {brief.watches.length ? (
-            <CardContent className="pt-4">
+          <CardContent className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+              This morning · {latestBrief?.id}
+            </p>
+            <h3 className="text-[16px] font-semibold leading-snug text-neutral-900">{brief.headline}</h3>
+            {brief.watches.length ? (
               <ul className="space-y-2 text-[13px] leading-relaxed text-neutral-600">
                 {brief.watches.map((line) => (
                   <li key={line} className="flex gap-2">
@@ -185,8 +181,8 @@ export function OfferWavesBoard({ className }: { className?: string }) {
                   </li>
                 ))}
               </ul>
-            </CardContent>
-          ) : null}
+            ) : null}
+          </CardContent>
         </Card>
       ) : null}
 
