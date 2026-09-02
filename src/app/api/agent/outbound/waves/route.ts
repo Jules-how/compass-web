@@ -4,6 +4,7 @@ import { portalJson, readBoundedJson } from '@/lib/portal-http'
 import {
   dateOnlyInZone,
   defaultGoLiveAt,
+  normalizeWaveLane,
   parseGoLiveAt
 } from '@/lib/campaigns'
 import { insertPipelineCampaign, listPipelineCampaigns } from '@/lib/campaigns-server'
@@ -169,6 +170,8 @@ export async function POST(request: Request) {
       vertical_tags?: string[]
       location_tags?: string[]
       go_live_at?: string | null
+      wave_lane?: string
+      instantly_campaign_id?: string | null
     }>
   } = {}
   try {
@@ -224,20 +227,31 @@ export async function POST(request: Request) {
       createdActions.push({ id: row.id, title: row.title })
     }
 
+    const existingCampaigns = await listPipelineCampaigns(admin)
     for (const rec of body.recommend ?? []) {
       const name = rec.name?.trim()
       if (!name) continue
+      const instantlyId = rec.instantly_campaign_id?.trim() || null
+      if (instantlyId) {
+        const bound = existingCampaigns.find((row) => row.instantly_campaign_id === instantlyId)
+        if (bound) {
+          createdCampaigns.push({ id: bound.id, name: bound.name })
+          continue
+        }
+      }
+      const lane = normalizeWaveLane(rec.wave_lane) || 'recommended'
       const parsed = parseGoLiveAt(rec.go_live_at || defaultGoLiveAt())
       const goLive = parsed.ok && parsed.iso ? parsed.iso : defaultGoLiveAt()
       const created = await insertPipelineCampaign(admin, {
         name,
-        status: 'planned',
+        status: lane === 'live' ? 'active' : 'planned',
         go_live_at: goLive,
         start_date: dateOnlyInZone(goLive),
-        offer_key: rec.offer_key || 'booked-jobs-system',
+        offer_key: rec.offer_key === undefined ? 'booked-jobs-system' : rec.offer_key.trim() || null,
+        instantly_campaign_id: instantlyId,
         vertical_tags: rec.vertical_tags,
         location_tags: rec.location_tags,
-        wave_lane: 'recommended',
+        wave_lane: lane,
         wave_rationale: rec.rationale,
         wave_list_size: rec.list_size ?? 150,
         wave_copy_strategy: rec.copy_strategy,
@@ -246,6 +260,7 @@ export async function POST(request: Request) {
         summary: rec.rationale || null
       })
       createdCampaigns.push({ id: created.id, name: created.name })
+      existingCampaigns.push(created)
     }
 
     return portalJson({
