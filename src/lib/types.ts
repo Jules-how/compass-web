@@ -584,3 +584,21 @@ export interface LeadUploadResult {
   skipped: Array<{ row: number; reason: string }>
   errors: string[]
 }
+
+export type OfferWaveColumnId = 'sourcing' | 'prep' | 'live' | 'decision'
+
+export type OfferWaveCard = {
+  campaignId: string
+  name: string
+  column: OfferWaveColumnId
+  trade: string
+  city: string
+  leadCount: number
+  openerCount: number
+  instantlyStatus: string
+  sends: number
+  replies: number
+  positiveReplies: number
+  decisionLabel: string
+  dailyCap: number
+}

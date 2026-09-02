@@ -182,7 +182,7 @@ test('monthly periods: start plus n months within 7 days and inside the term', (
 
 test('deal terms default to the locked offer', () => {
   const terms = parseDealTerms({ tier: 'vans_4_8', start_date: '2026-08-26' })
-  assert.equal(terms.offer, 'missed_call_booking')
+  assert.equal(terms.offer, 'booked-jobs-system')
   assert.equal(terms.gst_mode, 'exclusive')
   assert.equal(terms.install_aud, 1997)
   assert.equal(terms.monthly_aud, 1997)

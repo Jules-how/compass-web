@@ -191,16 +191,16 @@ function parseOfferLock(value) {
 test('offer desk lanes split live testing retired and score bound campaigns', () => {
   const desk = assembleOfferDesk({
     offers: [
-      { offer_key: 'ai-receptionist-system', gtm_status: 'live', name: 'After-hours' },
-      { offer_key: 'booked-jobs-system', gtm_status: 'testing', name: 'Booked jobs' },
-      { offer_key: 'growth-system', gtm_status: 'retired', name: 'Growth' }
+      { offer_key: 'booked-jobs-system', gtm_status: 'live', name: 'Fill and capture' },
+      { offer_key: 'agency-ai-reporting', gtm_status: 'testing', name: 'Reporting' },
+      { offer_key: 'ai-receptionist-system', gtm_status: 'retired', name: 'After-hours' }
     ],
     campaigns: [
       {
         id: 'c1',
         name: 'Sydney plumbers',
         status: 'active',
-        offer_key: 'ai-receptionist-system',
+        offer_key: 'booked-jobs-system',
         instantly_campaign_id: 'inst-1'
       },
       {
@@ -232,7 +232,7 @@ test('offer desk lanes split live testing retired and score bound campaigns', ()
     gallery.map((card) => card.offer.gtm_status),
     ['live', 'testing', 'retired']
   )
-  assert.equal(gallery[0].offer.offer_key, 'ai-receptionist-system')
+  assert.equal(gallery[0].offer.offer_key, 'booked-jobs-system')
 })
 
 test('offer gallery path and lock parse', () => {

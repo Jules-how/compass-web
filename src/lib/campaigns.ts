@@ -438,6 +438,81 @@ export function campaignLeadCountLabel(campaign: Pick<CompassCampaign, 'wave_coh
   return `${count} lead${count === 1 ? '' : 's'}`
 }
 
+export const OFFER_WAVE_COLUMNS = ['sourcing', 'prep', 'live', 'decision'] as const
+export type OfferWaveColumnId = (typeof OFFER_WAVE_COLUMNS)[number]
+
+export const OFFER_WAVE_COLUMN_LABELS: Record<OfferWaveColumnId, string> = {
+  sourcing: 'Sourcing & Data',
+  prep: 'Openers & Review',
+  live: 'Live Tranche',
+  decision: 'Decision Desk'
+}
+
+export type OfferWaveDecisionId = 'waiting' | 'kill' | 'validated' | 'deliverability'
+
+export type OfferWaveDecision = {
+  id: OfferWaveDecisionId
+  label: string
+}
+
+export type OfferWaveMetrics = {
+  sends: number
+  replies: number
+  positiveReplies: number
+  instantlyStatus?: string | null
+}
+
+export function evaluateOfferWaveDecision(metrics: OfferWaveMetrics): OfferWaveDecision {
+  const sends = Math.max(0, metrics.sends)
+  const replies = Math.max(0, metrics.replies)
+  const positive = Math.max(0, metrics.positiveReplies)
+  const rate = sends > 0 ? replies / sends : 0
+  if (sends >= 1000 && replies === 0) {
+    return { id: 'kill', label: 'Kill / Overhaul Offer' }
+  }
+  if (sends >= 100 && rate < 0.01) {
+    return { id: 'deliverability', label: 'Inspect Mailbox Deliverability' }
+  }
+  if (sends >= 150 && sends <= 1000 && positive >= 1) {
+    return { id: 'validated', label: 'Validated: Expand to 1,000 Sends' }
+  }
+  return { id: 'waiting', label: 'Waiting on sample' }
+}
+
+export function offerWaveColumn(
+  campaign: Pick<
+    CompassCampaign,
+    | 'status'
+    | 'copy_status'
+    | 'instantly_campaign_id'
+    | 'wave_cohort_count'
+    | 'wave_opener_count'
+    | 'opener_reviewed_at'
+  >,
+  metrics?: OfferWaveMetrics
+): OfferWaveColumnId {
+  const sends = metrics?.sends ?? 0
+  const instantlyStatus = (metrics?.instantlyStatus || '').toLowerCase()
+  const compassStatus = (campaign.status || '').toLowerCase()
+  const cohort = campaign.wave_cohort_count ?? 0
+  const openers = campaign.wave_opener_count ?? 0
+
+  if (compassStatus === 'completed' || instantlyStatus === 'completed' || sends >= 300) {
+    return 'decision'
+  }
+  if (compassStatus === 'active' || instantlyStatus === 'live') {
+    return 'live'
+  }
+  if (cohort <= 0) return 'sourcing'
+  if (openers < Math.max(1, Math.floor(cohort * 0.5)) && !campaign.opener_reviewed_at) {
+    return cohort < 50 ? 'sourcing' : 'prep'
+  }
+  if (!campaign.instantly_campaign_id && (campaign.copy_status === 'none' || !campaign.copy_status)) {
+    return 'prep'
+  }
+  return 'prep'
+}
+
 export function goLiveToDatetimeLocal(iso: string | null | undefined): string {
   if (!iso) return ''
   const date = new Date(iso)

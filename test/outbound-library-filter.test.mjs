@@ -49,7 +49,7 @@ function isDoctrineOpener(row) {
 }
 
 const electricianReceptionist = {
-  offer_key: 'ai-receptionist-system',
+  offer_key: 'booked-jobs-system',
   vertical_tags: ['electricians'],
   location_tags: ['nsw']
 }
@@ -71,7 +71,7 @@ test('This campaign hides untagged Source rows', () => {
 test('offer_key match is enough even with au-national only', () => {
   assert.equal(
     matchesCampaignLibrary(
-      { offer_key: 'ai-receptionist-system', location_tags: ['au-national'] },
+      { offer_key: 'booked-jobs-system', location_tags: ['au-national'] },
       electricianReceptionist,
       'expressions'
     ),

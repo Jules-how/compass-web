@@ -54,7 +54,7 @@ curl -sS "$COMPASS_BASE_URL/api/agent/outbound/summary" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 
 # Compact list (no bodies/sequences)
-curl -sS "$COMPASS_BASE_URL/api/agent/outbound/expressions?offer_key=ai-receptionist-system&limit=20" \
+curl -sS "$COMPASS_BASE_URL/api/agent/outbound/expressions?offer_key=booked-jobs-system&limit=20" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 
 # Full row only when editing
@@ -136,7 +136,7 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"rows":[{"id":"…","icp_status":"pass","review_count":82,"hours_label":"Open 24 hours","after_hours":true,"capture_crack":"Two reviews this month say they could not get through after 5","email_origin":"published","opener":"…"}]}'
+  -d '{"rows":[{"id":"…","icp_status":"pass","review_count":82,"email_origin":"published","opener":"…"}]}'
 
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
@@ -161,6 +161,12 @@ curl -sS -X POST "$COMPASS_BASE_URL/api/agent/instantly/ensure" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"campaignId":"campaign-au-plumbers-capture-2026-08","pushSequence":true}'
+
+# Duplicate [Template] Switchflow Fill & Capture (paused). Binds if unbound.
+curl -sS -X POST "$COMPASS_BASE_URL/api/agent/instantly/duplicate-template" \
+  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"campaignId":"campaign-au-plumbers-capture-2026-08"}'
 
 # Dry-run then push cohort leads. Instantly drops unknown keys: first_name, personalization, custom_variables.opener.
 curl -sS -X POST "$COMPASS_BASE_URL/api/agent/instantly/push-leads" \

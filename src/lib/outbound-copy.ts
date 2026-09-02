@@ -724,6 +724,179 @@ export function sequenceLintWarnings(step: OutboundStep): string[] {
   return warnings
 }
 
+export type PillarStatus = 'pass' | 'warn' | 'fail'
+
+export type PillarCheck = {
+  id: string
+  label: string
+  status: PillarStatus
+  detail: string
+}
+
+export type PillarsQaResult = {
+  email1Words: number
+  mobileScan: PillarCheck
+  pillars: PillarCheck[]
+  threading: PillarCheck
+  spintax: PillarCheck
+}
+
+const ECONOMIC_PASS_RE = /\b(jobs?|revenue|full|capacity|schedule|booked|showed)\b/i
+const ECONOMIC_WARN_RE = /\b(ai receptionist|voice agent|\bcrm\b|chatgpt)\b/i
+const SIGNAL_PASS_RE = /\{\{\s*(suburb|city|specialty|personalization)\s*\}\}/i
+const MECHANISM_PASS_RE =
+  /\b(dedicated search|booking line|direct calendar|instead of shared|dedicated (?:google|local) search)\b/i
+const MECHANISM_WARN_RE = /\b(chatgpt ads|seo package)\b/i
+const CTA_LINK_WARN_RE = /\b(calendly|zoom|15-minute call|15 minute call)\b/i
+const RISK_PASS_RE = /\b(refund|pay once booked|covers fees|only pay.{0,40}booked)\b/i
+const SPINTAX_RE = /\{[^{}\n]+\|[^{}\n]+\}/g
+
+function stripMergeAndSpintax(text: string): string {
+  return text
+    .replace(SPINTAX_RE, (match) => {
+      const inner = match.slice(1, -1)
+      return inner.split('|')[0]?.trim() || ''
+    })
+    .replace(/\{\{[^}]+\}\}/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function lastAskSentence(text: string): string {
+  const parts = text
+    .split(/(?<=[.?])\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+  const questions = parts.filter((part) => part.includes('?'))
+  return questions[questions.length - 1] || ''
+}
+
+function signatureStripped(text: string): string {
+  return text
+    .replace(/\n(?:Julian|Switchflow)\s*$/gim, '')
+    .replace(/\n(?:Julian|Switchflow)\s*\n/gi, '\n')
+    .trim()
+}
+
+function pillar(
+  id: string,
+  label: string,
+  status: PillarStatus,
+  detail: string
+): PillarCheck {
+  return { id, label, status, detail }
+}
+
+export function evaluatePillarsQa(sequence: OutboundSequence | null | undefined): PillarsQaResult {
+  const steps = sequence?.steps ?? []
+  const email1 = steps.find((step) => step.kind === 'email') ?? steps[0]
+  const bump = steps.find((step) => step.kind === 'followup') ?? steps[1]
+  const email1Body = signatureStripped(email1 ? compileStepBody(email1) : '')
+  const bumpBody = signatureStripped(bump ? compileStepBody(bump) : '')
+  const email1Visible = stripMergeAndSpintax(email1Body)
+  const email1Words = wordCount(email1Visible)
+
+  let mobileStatus: PillarStatus = 'pass'
+  let mobileDetail = `${email1Words} words on Email 1.`
+  if (email1Words > 80) {
+    mobileStatus = 'fail'
+    mobileDetail = `${email1Words} words. Mobile scan flags copy over 80.`
+  } else if (email1Words > 60) {
+    mobileStatus = 'warn'
+    mobileDetail = `${email1Words} words. Stay at 60 or under for mobile scan.`
+  }
+
+  const economicWarn = ECONOMIC_WARN_RE.test(email1Body)
+  const economicPass = ECONOMIC_PASS_RE.test(email1Visible)
+  const signalPass = SIGNAL_PASS_RE.test(email1Body)
+  const mechanismWarn = MECHANISM_WARN_RE.test(email1Body)
+  const mechanismPass = MECHANISM_PASS_RE.test(email1Visible)
+  const ask = lastAskSentence(email1Visible)
+  const askWords = wordCount(ask)
+  const ctaLink = CTA_LINK_WARN_RE.test(email1Body)
+  const riskPass = RISK_PASS_RE.test(bumpBody || email1Body)
+  const bumpSubject = (bump?.subject || '').trim()
+  const spintaxMatches = email1Body.match(SPINTAX_RE) ?? []
+  const danglingBrace = /\{(?!\{)[^{}|]*$|\{\s*\}/.test(email1Body)
+
+  const pillars: PillarCheck[] = [
+    pillar(
+      'economic',
+      'Economic outcome',
+      economicWarn ? 'fail' : economicPass ? 'pass' : 'warn',
+      economicWarn
+        ? 'Flagged a tool or feature term. Lead with jobs, capacity, or revenue.'
+        : economicPass
+          ? 'Jobs, capacity, or revenue language is on Email 1.'
+          : 'No jobs / capacity / revenue noun on Email 1.'
+    ),
+    pillar(
+      'signal',
+      'Researched signal',
+      signalPass ? 'pass' : 'warn',
+      signalPass
+        ? 'Local or personalization tags are on Email 1.'
+        : 'Add {{suburb}}, {{city}}, {{specialty}}, or {{personalization}}.'
+    ),
+    pillar(
+      'mechanism',
+      'Novel mechanism',
+      mechanismWarn ? 'fail' : mechanismPass ? 'pass' : 'warn',
+      mechanismWarn
+        ? 'Flagged a generic agency buzzword.'
+        : mechanismPass
+          ? 'Dedicated search / booking line contrast is present.'
+          : 'Spell the mechanism: dedicated search, booking line, or direct calendar.'
+    ),
+    pillar(
+      'cta',
+      'Low-friction CTA',
+      ctaLink ? 'fail' : ask && askWords <= 20 && ask.includes('?') ? 'pass' : 'warn',
+      ctaLink
+        ? 'Meeting links (Calendly, Zoom, 15-minute call) are blocked.'
+        : ask && askWords <= 20 && ask.includes('?')
+          ? `Ask is ${askWords} words with a binary question.`
+          : ask
+            ? `Ask is ${askWords} words. Keep it at 20 or under with a question mark.`
+            : 'No binary question on Email 1.'
+    ),
+    pillar(
+      'risk',
+      'Risk reversal',
+      riskPass ? 'pass' : bump ? 'warn' : 'warn',
+      riskPass
+        ? 'Guarantee language is on the bump.'
+        : 'Add refund / pay once booked / covers fees on Step 2.'
+    )
+  ]
+
+  return {
+    email1Words,
+    mobileScan: pillar('mobile', 'Mobile scan', mobileStatus, mobileDetail),
+    pillars,
+    threading: pillar(
+      'thread',
+      'Threading guard',
+      !bump ? 'warn' : bumpSubject ? 'warn' : 'pass',
+      !bump
+        ? 'No bump step yet.'
+        : bumpSubject
+          ? 'Step 2 has a subject. Leave it blank so Instantly threads as Re: {{subject}}.'
+          : 'Step 2 subject is empty. Follow-up will thread.'
+    ),
+    spintax: pillar(
+      'spintax',
+      'Spintax guard',
+      danglingBrace ? 'fail' : spintaxMatches.length ? 'pass' : 'pass',
+      danglingBrace
+        ? 'Unbalanced spintax brace on Email 1.'
+        : spintaxMatches.length
+          ? `${spintaxMatches.length} spintax block${spintaxMatches.length === 1 ? '' : 's'} on Email 1.`
+          : 'No spintax. Fine if the body is a single variant.'
+    )
+  }
+}
+
 export function isValidSequence(value: unknown): value is OutboundSequence {
   if (!value || typeof value !== 'object') return false
   const seq = value as OutboundSequence
@@ -802,15 +975,9 @@ export const LIBRARY_FEATURED_EXAMPLES: Record<
 > = {
   offers: [
     {
-      id: 'offer-ai-receptionist-system',
-      title: 'After-hours booking',
-      detail:
-        'Overflow voice + SMS so a job that already called books while they are on the tools'
-    },
-    {
       id: 'offer-booked-jobs-system',
       title: 'Fill and capture',
-      detail: 'Paid demand into a number that answers. Testing. Not live outbound.'
+      detail: 'Paid demand into a number that answers and books. Testing. Default for new waves.'
     },
     {
       id: 'offer-growth-system',
@@ -820,10 +987,10 @@ export const LIBRARY_FEATURED_EXAMPLES: Record<
   ],
   expressions: [
     {
-      id: 'expr-proof-receptionist',
-      title: 'After-hours booking · proof',
+      id: 'expr-proof-fill-capture',
+      title: 'Fill and capture · proof',
       detail:
-        'After-hours calls on a comparable shop still hit voicemail; [peer] now answers and offers a booking path.'
+        'Google search clicks into showed jobs on the calendar the same week. Do not pitch after-hours cover.'
     },
     {
       id: 'expr-growth-mortgage',

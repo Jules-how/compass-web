@@ -54,6 +54,7 @@ import { cn } from '@/lib/utils'
 import { CampaignLeadsPane } from '@/components/outbound/CampaignLeadsPane'
 import { InstantlyBindPrompt } from '@/components/outbound/InstantlyBindPrompt'
 import { SequencePreviewText } from '@/components/outbound/SequencePreviewBody'
+import { PillarsQaInspector } from '@/components/outbound/PillarsQaInspector'
 
 const UNBOUND_KEY = 'compass.outbound.unbound-draft.v1'
 const COMPONENTS_WIDTH_KEY = 'compass.outbound.components-width.v2'
@@ -165,6 +166,7 @@ export function SequenceEditor({
   const [instantlyUnbound, setInstantlyUnbound] = useState(false)
   const [focusField, setFocusField] = useState<string>('body')
   const [componentsWidth, setComponentsWidth] = useState(COMPONENTS_WIDTH_DEFAULT)
+  const [railTab, setRailTab] = useState<'library' | 'pillars'>('pillars')
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resizeDrag = useRef<{ startX: number; startWidth: number } | null>(null)
   const leadsResize = useRef<{ startY: number; startVh: number } | null>(null)
@@ -1259,16 +1261,46 @@ export function SequenceEditor({
               }}
               className="absolute inset-y-0 -left-1 z-10 w-2 cursor-col-resize"
             />
-            <EditorComponentsAccordion
-              onInsert={(payload) => void applyLibraryPayload(payload)}
-              className="min-h-0 flex-1"
-              campaignContext={{
-                offer_key: campaign?.offer_key ?? null,
-                vertical_tags: campaign?.vertical_tags ?? [],
-                location_tags: campaign?.location_tags ?? [],
-                structure_id: campaign?.structure_id ?? sequence?.structure_id ?? null
-              }}
-            />
+            <div className="flex shrink-0 gap-0.5 border-b border-stone-100 px-2 py-1.5">
+              <button
+                type="button"
+                onClick={() => setRailTab('pillars')}
+                className={cn(
+                  'rounded-lg px-2.5 py-1 text-[11px] font-semibold',
+                  railTab === 'pillars'
+                    ? 'bg-[#e85d2a]/10 text-[#c2410c]'
+                    : 'text-neutral-500 hover:text-neutral-800'
+                )}
+              >
+                5 Pillars
+              </button>
+              <button
+                type="button"
+                onClick={() => setRailTab('library')}
+                className={cn(
+                  'rounded-lg px-2.5 py-1 text-[11px] font-semibold',
+                  railTab === 'library'
+                    ? 'bg-[#e85d2a]/10 text-[#c2410c]'
+                    : 'text-neutral-500 hover:text-neutral-800'
+                )}
+              >
+                Library
+              </button>
+            </div>
+            {railTab === 'pillars' ? (
+              <PillarsQaInspector sequence={sequence} className="min-h-0 flex-1" />
+            ) : (
+              <EditorComponentsAccordion
+                onInsert={(payload) => void applyLibraryPayload(payload)}
+                className="min-h-0 flex-1"
+                campaignContext={{
+                  offer_key: campaign?.offer_key ?? null,
+                  vertical_tags: campaign?.vertical_tags ?? [],
+                  location_tags: campaign?.location_tags ?? [],
+                  structure_id: campaign?.structure_id ?? sequence?.structure_id ?? null
+                }}
+              />
+            )}
           </aside>
         ) : null}
       </div>
@@ -1352,7 +1384,7 @@ export async function saveActiveSlotToLibrary(
     const label = window.prompt('Save expression as', 'Campaign expression')
     if (!label) return
     await createLibraryItem('expressions', {
-      offer_key: campaign?.offer_key || 'ai-receptionist-system',
+      offer_key: campaign?.offer_key || 'booked-jobs-system',
       label,
       body: slot.body,
       status: 'draft',

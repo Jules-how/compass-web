@@ -72,7 +72,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (!client) return portalJson({ error: 'not_found' }, { status: 404 })
 
     const admin = getPortalAdminClient()
-    const offerKey = body.offerKey?.trim() || 'missed_call_booking'
+    const offerKey = body.offerKey?.trim() || 'booked-jobs-system'
     const form = await createOnboardingForm(admin, id, offerKey)
 
     return portalJson(

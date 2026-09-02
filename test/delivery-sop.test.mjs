@@ -49,6 +49,17 @@ test('legacy voice state is marked partial instead of falsely verified', () => {
   assert.equal(plan.statuses.lead_intake, 'not_wired')
 })
 
+test('stored plans drop the retired lsa node instead of throwing', () => {
+  const base = createDefaultSopPlan()
+  const plan = normalizeSopPlan({
+    ...base,
+    nodes: [...base.nodes, 'lsa']
+  })
+
+  assert.equal(plan.nodes.includes('lsa'), false)
+  assert.deepEqual(plan.nodes, base.nodes)
+})
+
 test('new installs snapshot the selected future template', () => {
   const base = createDefaultSopPlan()
   const template = normalizeSopPlan({

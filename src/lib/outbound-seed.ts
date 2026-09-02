@@ -173,6 +173,20 @@ function yoursExpressions(): OutboundExpression[] {
       ...yoursProvenance()
     },
     {
+      id: 'expr-proof-fill-capture',
+      offer_key: 'booked-jobs-system',
+      label: '[Yours] Proof · fill and capture',
+      body: 'Shops like yours turn Google search clicks into showed jobs on the calendar the same week. Swap [peer] for a named like-for-like before send. Do not promise lead volume.',
+      vertical_tags: ['tradies', 'plumber', 'hvac'],
+      location_tags: ['nsw', 'qld'],
+      status: 'draft',
+      notes: 'slot:proof_block. Campaign-gated; no named peer metric yet.',
+      archived: false,
+      created_at: STAMP,
+      updated_at: STAMP,
+      ...yoursProvenance()
+    },
+    {
       id: 'expr-proof-receptionist',
       offer_key: 'ai-receptionist-system',
       label: '[Yours] Proof · after-hours booking',
@@ -180,8 +194,8 @@ function yoursExpressions(): OutboundExpression[] {
       vertical_tags: ['tradies', 'electricians'],
       location_tags: ['nsw', 'qld'],
       status: 'draft',
-      notes: 'slot:proof_block. Campaign-gated; no named peer metric yet.',
-      archived: false,
+      notes: 'slot:proof_block. Campaign-gated; no named peer metric yet. Killed offer. Do not use on new waves.',
+      archived: true,
       created_at: STAMP,
       updated_at: STAMP,
       ...yoursProvenance()
@@ -296,8 +310,8 @@ function yoursCtas(): OutboundCta[] {
     },
     {
       id: 'cta-consultative',
-      label: '[Yours] Consultative after-hours',
-      body: 'Worth a look at how after-hours calls run on your number?',
+      label: '[Yours] Consultative capacity',
+      body: 'Are you looking to add 10 to 15 showed jobs this month, or is the crew already at capacity?',
       cta_type: 'permission',
       vertical_tags: ['tradies', 'electricians'],
       location_tags: ['nsw', 'qld'],
@@ -464,13 +478,13 @@ function yoursTemplates(): OutboundTemplate[] {
   const exprFour = emailFour.slots.find((s) => s.key === 'cold_expression')
   if (exprFour) exprFour.body = '{{cold_expression}}'
   const ctaFour = emailFour.slots.find((s) => s.key === 'cta')
-  if (ctaFour) ctaFour.body = 'Worth a look at how after-hours calls run on your number?'
+  if (ctaFour) ctaFour.body = 'Are you looking to add 10 to 15 showed jobs this month, or is the crew already at capacity?'
   const fuAngle = emptyFollowUpStep(1, 3)
   const bumpAngle = fuAngle.slots.find((s) => s.key === 'opener')
   if (bumpAngle) {
     bumpAngle.label = 'New angle'
     bumpAngle.body =
-      "Different angle: the missed calls aren't the ads, it's the number after 5pm. That's the bit I'd show you."
+      'Different angle: quiet weeks between jobs are usually a fill problem, not a callback problem. That is the bit I would show you.'
   }
   const ctaAngle = fuAngle.slots.find((s) => s.key === 'cta')
   if (ctaAngle) ctaAngle.body = 'Mind if I send a short outline of how I would run it for you?'
@@ -479,7 +493,7 @@ function yoursTemplates(): OutboundTemplate[] {
   if (bumpProof) {
     bumpProof.label = 'Proof'
     bumpProof.body =
-      'One-line proof when you have it: [peer] answers after hours and texts the owner inside a minute.'
+      'One-line proof when you have it: [peer] points Google search at a line that books onto the calendar the same day.'
   }
   const ctaProof2 = fuProof.slots.find((s) => s.key === 'cta')
   if (ctaProof2) ctaProof2.body = 'If you want the outline, say yes.'
@@ -488,7 +502,7 @@ function yoursTemplates(): OutboundTemplate[] {
   if (bumpBreak) {
     bumpBreak.label = 'Breakup'
     bumpBreak.body =
-      "I'll close this thread so it doesn't sit in your inbox. If after-hours calls become a problem later, reply and I'll send the short outline."
+      "I'll close this thread so it doesn't sit in your inbox. If the board has gaps later, reply and I'll send the short outline."
   }
   const ctaBreak = fuBreak.slots.find((s) => s.key === 'cta')
   if (ctaBreak) ctaBreak.body = ''
@@ -501,7 +515,7 @@ function yoursTemplates(): OutboundTemplate[] {
   const exprRe = emailRe.slots.find((s) => s.key === 'cold_expression')
   if (exprRe) {
     exprRe.body =
-      'One new proof if you have it: [peer] now answers after hours and texts the owner inside a minute.'
+      'One new proof if you have it: [peer] points Google search at a line that books onto the calendar the same day.'
   }
   const ctaRe = emailRe.slots.find((s) => s.key === 'cta')
   if (ctaRe) ctaRe.body = 'Worth a look now, or still later?'
@@ -549,7 +563,7 @@ function yoursTemplates(): OutboundTemplate[] {
     {
       id: 'tmpl-four-touch-breakup',
       name: '[Yours] Four-touch breakup · nick-3step',
-      offer_key: 'ai-receptionist-system',
+      offer_key: 'booked-jobs-system',
       structure_id: 'nick-3step',
       vertical_tags: ['tradies', 'electricians'],
       location_tags: ['nsw', 'qld'],
@@ -646,16 +660,16 @@ export function seedCopyArchive(): CopyArchiveEntry[] {
     }
   })
 
-  const qldTradies = fillSequence('platten-aida', 'ai-receptionist-system', {
+  const qldTradies = fillSequence('platten-aida', 'booked-jobs-system', {
     subject: '{{outcome}} for {{companyName}}',
     opener: '{{hook}}',
-    proof: 'Teams like yours keep the phone line covered after hours without hiring another receptionist.',
+    proof: 'Shops like yours turn Google search clicks into showed jobs on the calendar the same week.',
     expression:
-      'Missed calls after 5pm turn into booked jobs the next morning — answered, qualified, and SMS’d on your number.',
-    cta: 'Would you be open to 15 minutes? If so, I can ring at {{t1}} or {{t2}}.',
+      'Dedicated local search into a booking line so residential repair jobs land on the calendar in minutes instead of sitting in voicemail.',
+    cta: 'Are you looking to add 10 to 15 emergency jobs this month, or is the crew already at capacity?',
     followUp: {
-      bump: 'Quick bump — still happy to walk through a missed-call example for {{companyName}}.',
-      cta: 'Would {{t1}} or {{t2}} work for a short call?'
+      bump: 'Quick bump — still happy to send the 1-page demand snapshot for {{companyName}}.',
+      cta: 'Still room for 10 to 15 more showed jobs this month?'
     }
   })
 
@@ -717,16 +731,16 @@ export function seedCopyArchive(): CopyArchiveEntry[] {
     }
   })
 
-  const aprilTradies = fillSequence('platten-aida', 'ai-receptionist-system', {
+  const aprilTradies = fillSequence('platten-aida', 'booked-jobs-system', {
     subject: '{{outcome}} for {{companyName}}',
     opener: '{{hook}}',
-    proof: 'QLD trade teams keep after-hours coverage without a second hire.',
+    proof: 'QLD trade shops fill quiet weeks by pointing Google search at a line that books.',
     expression:
-      'Missed calls after hours become booked jobs overnight — answered and qualified on your number.',
-    cta: 'Would you be open to 15 minutes? If so, I can ring at {{t1}} or {{t2}}.',
+      'Google Search into a booking line so showed jobs land on the calendar instead of a next-day callback.',
+    cta: 'Are you looking to add 10 to 15 emergency jobs this month, or is the crew already at capacity?',
     followUp: {
-      bump: 'Seasonal bump — still relevant if after-hours calls are slipping.',
-      cta: 'Would {{t1}} or {{t2}} work?'
+      bump: 'Still relevant if the board has gaps between bigger jobs.',
+      cta: 'Still room for more showed jobs this month?'
     }
   })
 
@@ -758,13 +772,13 @@ export function seedCopyArchive(): CopyArchiveEntry[] {
       updated_at: '2026-08-07T04:12:00.000Z'
     }),
     archiveEntry({
-      id: 'archive-qld-tradies-receptionist',
-      name: 'QLD Tradies — AI Receptionist',
+      id: 'archive-qld-tradies-fill-capture',
+      name: 'QLD Tradies — Fill and capture',
       source: 'saved',
       source_id: 'ob-live-2',
       vertical_tags: ['tradies'],
       location_tags: ['qld'],
-      offer_key: 'ai-receptionist-system',
+      offer_key: 'booked-jobs-system',
       structure_id: 'platten-aida',
       opener_mode: 'platten-hook',
       sequence: qldTradies,
@@ -779,7 +793,7 @@ export function seedCopyArchive(): CopyArchiveEntry[] {
       },
       last_used_at: '2026-08-07T03:40:00.000Z',
       first_used_at: '2026-07-30T00:00:00.000Z',
-      notes: 'Platten AIDA · missed-call hook · timed call CTA',
+      notes: 'Platten AIDA · fill-and-capture · capacity CTA',
       created_at: '2026-07-30T00:00:00.000Z',
       updated_at: '2026-08-07T03:40:00.000Z'
     }),
@@ -868,7 +882,7 @@ export function seedCopyArchive(): CopyArchiveEntry[] {
       source_id: 'ob-hist-3',
       vertical_tags: ['tradies'],
       location_tags: ['qld'],
-      offer_key: 'ai-receptionist-system',
+      offer_key: 'booked-jobs-system',
       structure_id: 'platten-aida',
       opener_mode: 'platten-hook',
       sequence: aprilTradies,

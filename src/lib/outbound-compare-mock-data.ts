@@ -42,12 +42,12 @@ function cleaningNick3Emails(
   return [
     {
       step: 1,
-      subject: `{{companyName}} — after-hours calls in ${city}`,
+      subject: `{{companyName}} — showed jobs in ${city}`,
       body: `Hey {{firstName}},
 
-Noticed a few ${city} cleaning companies losing booked jobs when the phone rings after 5.
+Most ${city} cleaning companies wait on word of mouth and hit quiet weeks between bigger jobs.
 
-We catch those calls and book them straight into your calendar — no new hire.
+We point local Google search at a line that books onto the calendar in minutes.
 
 Mind if I send a 60-sec loom?`,
       waitDays: 0,
@@ -55,12 +55,12 @@ Mind if I send a 60-sec loom?`,
     },
     {
       step: 2,
-      subject: `re: after-hours in ${city}`,
+      subject: `re: showed jobs in ${city}`,
       body: `{{firstName}} — quick bump.
 
-If after-hours is already covered, ignore this.
+If the board is already full, ignore this.
 
-If not, happy to send the short clip showing how cleaners in ${city} are catching those jobs.`,
+If not, happy to send the short clip showing how cleaners in ${city} turn search clicks into showed jobs.`,
       waitDays: 3,
       ...metrics[1]
     },
@@ -84,23 +84,23 @@ function cleaningNick4Emails(
   return [
     {
       step: 1,
-      subject: '{{companyName}} — missed calls after hours',
+      subject: '{{companyName}} — showed jobs this month',
       body: `Hey {{firstName}},
 
-Sydney cleaners keep telling me the same thing: the job goes to whoever answers first after 5pm.
+Most {{trade}} shops wait on word of mouth and hit quiet weeks between bigger jobs.
 
-We pick up those calls and book them while you’re off the tools.
+We point local Google search at a line that books onto the calendar in minutes.
 
-Open to a quick look this week?`,
+Looking to add 10 to 15 jobs this month, or is the crew at capacity?`,
       waitDays: 0,
       ...metrics[0]
     },
     {
       step: 2,
-      subject: 're: missed calls',
+      subject: 're: showed jobs',
       body: `{{firstName}} —
 
-If you’ve already sorted after-hours, all good.
+If the board is already full, all good.
 
 If not, I can show you how it looks in practice in under a minute.`,
       waitDays: 2,
@@ -109,7 +109,7 @@ If not, I can show you how it looks in practice in under a minute.`,
     {
       step: 3,
       subject: 'one more idea',
-      body: `One more angle: most of the value isn’t “answering the phone” — it’s not losing the Saturday clean that would’ve paid for the month.
+      body: `One more angle: most of the value is the Saturday clean that would’ve paid for the month actually landing on the board.
 
 Worth a peek?`,
       waitDays: 4,
@@ -137,7 +137,7 @@ export const MOCK_CAMPAIGNS: MockCampaign[] = [
     structureId: 'nick-3step',
     structureLabel: 'Nick 3-step',
     offer: 'Growth System',
-    expression: 'Missed calls after hours are costing cleaners jobs — we catch them.',
+    expression: 'Local search into a booking line so quiet weeks turn into showed cleans.',
     cta: 'Mind if I send a 60-sec loom?',
     ctaType: 'permission',
     sent: 820,
@@ -161,7 +161,7 @@ export const MOCK_CAMPAIGNS: MockCampaign[] = [
     structureId: 'nick-3step',
     structureLabel: 'Nick 3-step',
     offer: 'Growth System',
-    expression: 'Missed calls after hours are costing cleaners jobs — we catch them.',
+    expression: 'Local search into a booking line so quiet weeks turn into showed cleans.',
     cta: 'Mind if I send a 60-sec loom?',
     ctaType: 'permission',
     sent: 910,
@@ -185,7 +185,7 @@ export const MOCK_CAMPAIGNS: MockCampaign[] = [
     structureId: 'nick-4step',
     structureLabel: 'Nick 4-step',
     offer: 'Growth System',
-    expression: 'Missed calls after hours are costing cleaners jobs — we catch them.',
+    expression: 'Local search into a booking line so quiet weeks turn into showed cleans.',
     cta: 'Open to a quick look this week?',
     ctaType: 'interest_check',
     sent: 640,
@@ -209,8 +209,8 @@ export const MOCK_CAMPAIGNS: MockCampaign[] = [
     location: 'Melbourne',
     structureId: 'nick-3step',
     structureLabel: 'Nick 3-step',
-    offer: 'AI Receptionist',
-    expression: 'After-hours HVAC calls going to voicemail — we book them while you sleep.',
+    offer: 'Fill and capture',
+    expression: 'Google search into a booking line so HVAC jobs land on the calendar the same day.',
     cta: 'Mind if I send over how it works?',
     ctaType: 'permission',
     sent: 540,
@@ -222,12 +222,12 @@ export const MOCK_CAMPAIGNS: MockCampaign[] = [
     emails: [
       {
         step: 1,
-        subject: '{{companyName}} — after-hours breakdowns',
+        subject: '{{companyName}} — Melbourne HVAC search',
         body: `Hey {{firstName}},
 
-Melbourne HVAC jobs don’t stop at 5 — but a lot of phones do.
+Most Melbourne HVAC shops pay for search, then the click sits until someone is back on the tools.
 
-We answer those calls and book the job while you’re off the tools.
+We point that demand at a line that books onto the calendar the same day.
 
 Mind if I send over how it works?`,
         sent: 540,
@@ -237,10 +237,10 @@ Mind if I send over how it works?`,
       },
       {
         step: 2,
-        subject: 're: after-hours',
+        subject: 're: showed HVAC jobs',
         body: `{{firstName}} — bumping this once.
 
-If after-hours is covered, ignore me.
+If the board is already full, ignore me.
 
 If not, happy to show the setup in a short note.`,
         sent: 410,
@@ -280,14 +280,14 @@ If not, happy to show the setup in a short note.`,
     emails: [
       {
         step: 1,
-        subject: 'Brisbane cleaners losing jobs after 5',
+        subject: 'Brisbane cleaners filling quiet weeks',
         body: `Hey {{firstName}},
 
-Attention: the cleaner who answers first usually gets the job.
+Attention: the cleaner who books the search click first usually gets the job.
 
-Interest: most Brisbane operators we talk to are losing 2–4 booked cleans a week to after-hours voicemail.
+Interest: most Brisbane operators we talk to still wait on word of mouth between bigger jobs.
 
-Desire: we catch the call, qualify, and put it on your calendar before the lead cools off.
+Desire: we point local Google search at a line that books onto the calendar in minutes.
 
 Worth a 10-min look Thu/Fri?`,
         sent: 310,
@@ -297,8 +297,8 @@ Worth a 10-min look Thu/Fri?`,
       },
       {
         step: 2,
-        subject: 're: after 5',
-        body: `{{firstName}} — still curious if after-hours leakage is a real cost for {{companyName}}.
+        subject: 're: showed jobs',
+        body: `{{firstName}} — still curious if quiet weeks are a real cost for {{companyName}}.
 
 Happy to walk through a live example Thu or Fri.`,
         sent: 240,
@@ -325,8 +325,8 @@ Happy to walk through a live example Thu or Fri.`,
     location: 'Gold Coast',
     structureId: 'nick-3step',
     structureLabel: 'Nick 3-step',
-    offer: 'AI Receptionist',
-    expression: 'Emergency plumbing calls at 9pm — we pick up so you don’t lose the job.',
+    offer: 'Fill and capture',
+    expression: 'Emergency plumbing search clicks book onto the calendar instead of sitting in voicemail.',
     cta: 'Mind if I send a short clip?',
     ctaType: 'permission',
     sent: 480,
@@ -338,12 +338,12 @@ Happy to walk through a live example Thu or Fri.`,
     emails: [
       {
         step: 1,
-        subject: '{{companyName}} — 9pm emergency calls',
+        subject: '{{companyName}} — emergency search clicks',
         body: `Hey {{firstName}},
 
-Emergency plumbing calls at 9pm shouldn’t go to voicemail — that’s usually the job that pays for the week.
+Emergency plumbing search clicks shouldn’t sit until someone is back on the tools — that’s usually the job that pays for the week.
 
-We pick up and book them so you don’t lose it.
+We point that demand at a line that books onto the calendar.
 
 Mind if I send a short clip?`,
         sent: 480,
@@ -353,8 +353,8 @@ Mind if I send a short clip?`,
       },
       {
         step: 2,
-        subject: 're: emergency calls',
-        body: `{{firstName}} — quick bump. If nights are already covered, ignore this.`,
+        subject: 're: showed plumbing jobs',
+        body: `{{firstName}} — quick bump. If the board is already full, ignore this.`,
         sent: 360,
         replies: 5,
         replyRate: 1.4,

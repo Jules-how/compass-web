@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { CompassCampaign } from '@/lib/campaigns'
 import {
+  duplicateInstantlyTemplate,
   ensureInstantlyCampaign,
   pushInstantlyLeads,
   pushInstantlySequence,
@@ -91,6 +92,27 @@ export function CampaignInstantlyPanel({
           className="rounded-xl border border-stone-200 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-neutral-800 shadow-soft disabled:opacity-50"
         >
           {busy === 'ensure' ? 'Working…' : bound ? 'Check Instantly bind' : 'Create in Instantly'}
+        </button>
+        <button
+          type="button"
+          disabled={disabled || bound || Boolean(busy)}
+          onClick={() =>
+            void run('duplicate', async () => {
+              const result = await duplicateInstantlyTemplate({
+                campaignId,
+                name: campaign?.name
+              })
+              if (result.campaign) onCampaignChange?.(result.campaign)
+              setNote(
+                result.bound
+                  ? 'Duplicated Fill & Capture template and bound it. Still paused.'
+                  : `Draft Instantly campaign ${result.instantlyCampaignId} (paused).`
+              )
+            })
+          }
+          className="rounded-xl border border-stone-200 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-neutral-800 shadow-soft disabled:opacity-50"
+        >
+          {busy === 'duplicate' ? 'Duplicating…' : 'Duplicate Fill & Capture'}
         </button>
         <button
           type="button"

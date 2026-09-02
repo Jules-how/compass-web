@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { loadDailyDigest, refreshEvidenceIfStale, type DailyDecisionDigest } from '@/lib/evidence-poller'
+import { getPortalAdminClient } from '@/lib/portal-admin'
 import { loadSyncSnapshot } from '@/lib/sync-snapshots'
 import {
   clientStagesInOrder,
@@ -75,8 +76,10 @@ async function countByColumn(
   }))
 }
 
-async function buildPullNext(supabase: SupabaseClient): Promise<PullNextCard | null> {
-  const { data, error } = await supabase.rpc('lead_inventory_aggregate', { p_vertical: null })
+async function buildPullNext(): Promise<PullNextCard | null> {
+  const { data, error } = await getPortalAdminClient().rpc('lead_inventory_aggregate', {
+    p_vertical: null
+  })
   if (error || !data) return null
 
   type Row = {
@@ -157,7 +160,7 @@ export async function loadHomePayload(supabase: SupabaseClient): Promise<HomePay
       [...clientStagesInOrder()],
       (stage) => stageToolHref(stage as ClientPipelineStage)
     ),
-    buildPullNext(supabase)
+    buildPullNext()
   ])
 
   const tasks = (tasksRes.data ?? []) as CompassTask[]

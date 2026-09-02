@@ -535,7 +535,7 @@ export const MISSED_CALL_LOCK: OfferLock = {
   ],
   machine: {
     capture: 'Voice on their number for overflow / after hours. SMS on miss or form. Book into their calendar.',
-    fill: 'Consented reactivation, then Google / LSA. After 30 days of capture data if they still want volume.',
+    fill: 'Consented reactivation, then Google Ads. After 30 days of capture data if they still want volume.',
     convert: 'Landing page only if paid traffic or booking UX is the bottleneck. Never the first SKU.'
   },
   walk: [
@@ -559,15 +559,15 @@ export const BOOKED_JOBS_LOCK: OfferLock = {
     'Tilers, kitchens, cleaning, handyman'
   ],
   screen: [
-    'What do you already pay for demand (Google, LSA, Hipages, nothing)? If nothing, will you fund Google / LSA at a floor we name today?',
+    'What do you already pay for demand (Google Ads, Hipages, nothing)? If nothing, will you fund Google Ads at a floor we name today after a Keyword Planner check on your territory?',
     'When a new lead comes in (call or form), what happens in the first 10 minutes?',
     'Last month, how many enquiries did you not action the same day?',
     'Rough contribution margin on a typical book-now job vs a replacement (not revenue).',
-    'Will you point the public number and forms at this booking path for 90 days, and let fill run into that same path?'
+    'Will you point the public number and forms at this booking path for 30 days, and let fill run into that same path?'
   ],
   machine: {
     capture: 'Voice/SMS that books in minutes. Overflow / after hours on their number. SMS on miss or form. Calendar. Handoff. Not nurture.',
-    fill: 'LSA and branded search into that path. Meta only if search intent is thin. They pay media. Kill switch if enquiries do not book.',
+    fill: 'Google Search into that path, built paused in their own account, enabled after review. Meta only if search intent is thin. They pay media. Kill switch if enquiries do not book.',
     convert: 'Landing page only if paid traffic or booking UX is the bottleneck. Never the first conversation.'
   },
   walk: [
@@ -580,7 +580,7 @@ export const BOOKED_JOBS_LOCK: OfferLock = {
     'Most shops buy more leads and leave voicemail or next-day callback in place. Extra leads walk at the same rate. We put paid demand into a path that answers and books in minutes. Fill and capture are one install.',
   category: 'Demand in, showed job out. Not an ads shop. Not a receptionist shop.',
   crowd:
-    'Owner-led residential trades in major AU cities, 2 to 8 vans, owner can say yes this week, book-now inbound, already pay for demand or the phone already rings.',
+    'Owner-led residential trades in major AU cities, 2 to 8 vans, owner can say yes this week, that want more booked work and will fund Google Search or already pay for demand.',
   verticalIn: ['plumber', 'hvac', 'electrical', 'locksmith', 'roofing', 'pest'],
   verticalOut: ['tilers', 'kitchens', 'cleaning', 'handyman'],
   vehicles: [
@@ -599,8 +599,8 @@ export const BOOKED_JOBS_LOCK: OfferLock = {
     { fact: 'Trading name', required: true, source: 'Maps' },
     { fact: 'Suburb', required: true, source: 'Maps / address' },
     { fact: 'Trade on the in-table for this campaign', required: true, source: 'Maps category' },
-    { fact: 'Demand proxy (reviews or years trading or visible Google/LSA/Hipages)', required: true, source: 'Maps, site' },
-    { fact: 'Paid demand (Hipages, Google Ads, LSA)', required: false, source: 'Site extract, not Origami' },
+    { fact: 'Demand proxy (reviews or years trading or visible Google Ads/Hipages)', required: true, source: 'Maps, site' },
+    { fact: 'Paid demand (Hipages, Google Ads)', required: false, source: 'Site extract, not Origami' },
     { fact: 'Hours / close time / after hours claim', required: false, source: 'Maps hours' },
     { fact: 'Specialty', required: false, source: 'Services' }
   ]

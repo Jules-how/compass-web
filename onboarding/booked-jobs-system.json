@@ -1,0 +1,252 @@
+{
+  "offerKey": "booked-jobs-system",
+  "title": "Switchflow onboarding",
+  "subtitle": "Fill and capture setup: Google Search into a booking line. About 10 minutes on your phone.",
+  "sections": [
+    {
+      "id": "billing",
+      "title": "Billing & legal",
+      "description": "For your install invoice and contract records.",
+      "fields": [
+        {
+          "id": "legal_entity_name",
+          "label": "Legal entity name",
+          "help": "Registered business name on your ABN.",
+          "type": "text",
+          "required": true,
+          "blocks": "invoice"
+        },
+        {
+          "id": "abn",
+          "label": "ABN",
+          "help": "11 digits, spaces optional.",
+          "type": "text",
+          "required": true,
+          "blocks": "invoice"
+        },
+        {
+          "id": "gst_registered",
+          "label": "GST registered",
+          "type": "toggle",
+          "required": true,
+          "blocks": "invoice"
+        },
+        {
+          "id": "billing_email",
+          "label": "Billing email",
+          "help": "QuickBooks invoice and receipts go here.",
+          "type": "email",
+          "required": true,
+          "blocks": "invoice"
+        }
+      ]
+    },
+    {
+      "id": "business",
+      "title": "Your business",
+      "description": "How customers know you and how we reach you.",
+      "fields": [
+        {
+          "id": "trading_name",
+          "label": "Trading name",
+          "help": "Name customers see (can match legal name).",
+          "type": "text",
+          "required": true,
+          "blocks": null
+        },
+        {
+          "id": "owner_name",
+          "label": "Owner name",
+          "type": "text",
+          "required": true,
+          "blocks": null
+        },
+        {
+          "id": "owner_mobile",
+          "label": "Owner mobile",
+          "type": "tel",
+          "required": true,
+          "blocks": null
+        },
+        {
+          "id": "public_number",
+          "label": "Published number to keep",
+          "help": "The number on your van, site, and Google listing.",
+          "type": "tel",
+          "required": true,
+          "blocks": "delivery"
+        },
+        {
+          "id": "carrier",
+          "label": "Current carrier",
+          "type": "select",
+          "required": true,
+          "blocks": "delivery",
+          "options": [
+            { "value": "telstra", "label": "Telstra" },
+            { "value": "optus", "label": "Optus" },
+            { "value": "vodafone", "label": "Vodafone" },
+            { "value": "tpg", "label": "TPG" },
+            { "value": "other", "label": "Other" }
+          ]
+        },
+        {
+          "id": "line_type",
+          "label": "Line type",
+          "type": "select",
+          "required": true,
+          "blocks": "delivery",
+          "options": [
+            { "value": "landline", "label": "Landline" },
+            { "value": "mobile", "label": "Mobile" }
+          ]
+        },
+        {
+          "id": "van_count_band",
+          "label": "Van count",
+          "type": "select",
+          "required": true,
+          "blocks": null,
+          "options": [
+            { "value": "1-3", "label": "1 to 3 vans" },
+            { "value": "4-8", "label": "4 to 8 vans" }
+          ]
+        },
+        {
+          "id": "trade",
+          "label": "Trade",
+          "help": "e.g. Plumbing, HVAC, Electrical, Roofing",
+          "type": "text",
+          "required": true,
+          "blocks": null
+        },
+        {
+          "id": "services_offered",
+          "label": "Services offered",
+          "help": "What you want booked (installs, emergencies, maintenance…).",
+          "type": "textarea",
+          "required": true,
+          "blocks": "delivery"
+        },
+        {
+          "id": "service_suburbs",
+          "label": "Service suburbs",
+          "help": "Areas you cover. One suburb per line is fine.",
+          "type": "textarea",
+          "required": true,
+          "blocks": "delivery"
+        }
+      ]
+    },
+    {
+      "id": "hours",
+      "title": "Hours & booking rules",
+      "description": "When we answer and what to book.",
+      "fields": [
+        {
+          "id": "business_hours",
+          "label": "Business hours",
+          "help": "Normal open hours, per weekday.",
+          "type": "hours",
+          "required": true,
+          "blocks": "delivery"
+        },
+        {
+          "id": "after_hours_preference",
+          "label": "After-hours handling",
+          "type": "select",
+          "required": true,
+          "blocks": "delivery",
+          "options": [
+            {
+              "value": "no_answer_divert",
+              "label": "Divert on no answer (recommended)"
+            },
+            {
+              "value": "owner_toggle_at_close",
+              "label": "Owner toggles forwarding at close"
+            },
+            {
+              "value": "always_forward",
+              "label": "Always forward to Switchflow"
+            }
+          ]
+        },
+        {
+          "id": "booked_out_action",
+          "label": "When fully booked",
+          "help": "What should we tell callers?",
+          "type": "textarea",
+          "required": true,
+          "blocks": "delivery"
+        },
+        {
+          "id": "do_not_book_rules",
+          "label": "Do-not-book rules",
+          "help": "Jobs, areas, or situations to decline.",
+          "type": "textarea",
+          "required": true,
+          "blocks": "delivery"
+        }
+      ]
+    },
+    {
+      "id": "calendar",
+      "title": "Google Calendar",
+      "description": "Where confirmed jobs land.",
+      "fields": [
+        {
+          "id": "calendar_share_note",
+          "label": "Share your calendar",
+          "type": "file_note",
+          "required": false,
+          "blocks": null,
+          "help": "In Google Calendar → Settings → share your booking calendar with {{BOOKING_GRANT_EMAIL}} with permission to make changes to events."
+        },
+        {
+          "id": "google_calendar_id",
+          "label": "Calendar email or ID",
+          "help": "The Google account email or calendar ID you shared.",
+          "type": "email",
+          "required": true,
+          "blocks": "delivery"
+        }
+      ]
+    },
+    {
+      "id": "voice",
+      "title": "How we answer",
+      "fields": [
+        {
+          "id": "spoken_business_name",
+          "label": "Spoken business name",
+          "help": "How the agent introduces your business on calls.",
+          "type": "text",
+          "required": true,
+          "blocks": "delivery"
+        },
+        {
+          "id": "after_hours_greeting",
+          "label": "After-hours greeting preference",
+          "help": "Optional tone or phrase for after hours.",
+          "type": "textarea",
+          "required": false,
+          "blocks": "delivery"
+        }
+      ]
+    },
+    {
+      "id": "authorisation",
+      "title": "Authorisation",
+      "fields": [
+        {
+          "id": "authorisation",
+          "label": "I authorise Switchflow to answer calls and forms on my published number, to record those calls, to send SMS from a Switchflow-provisioned number that identifies my business, and to create events on the Google Calendar I share.",
+          "type": "toggle",
+          "required": true,
+          "blocks": null
+        }
+      ]
+    }
+  ]
+}

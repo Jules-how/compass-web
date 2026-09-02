@@ -151,3 +151,49 @@ export async function instantlyListSendingEmails(apiKey: string): Promise<string
     .map((row) => (row.email || '').trim())
     .filter(Boolean)
 }
+
+export async function instantlyListCampaigns(
+  apiKey: string,
+  input?: { search?: string; limit?: number }
+): Promise<InstantlyCampaignRecord[]> {
+  const qs = new URLSearchParams()
+  qs.set('limit', String(Math.min(100, Math.max(1, input?.limit ?? 20))))
+  if (input?.search?.trim()) qs.set('search', input.search.trim())
+  const body = await instantlyFetch<{ items?: InstantlyCampaignRecord[] } | InstantlyCampaignRecord[]>(
+    `/campaigns?${qs}`,
+    apiKey
+  )
+  return Array.isArray(body) ? body : Array.isArray(body.items) ? body.items : []
+}
+
+export async function instantlyDuplicateCampaign(
+  apiKey: string,
+  campaignId: string,
+  name?: string
+): Promise<InstantlyCampaignRecord> {
+  const id = campaignId.trim()
+  if (!id) throw new InstantlyApiError('campaign id is required', 400)
+  const body: Record<string, unknown> = {}
+  if (name?.trim()) body.name = name.trim()
+  return instantlyFetch<InstantlyCampaignRecord>(
+    `/campaigns/${encodeURIComponent(id)}/duplicate`,
+    apiKey,
+    {
+      method: 'POST',
+      body: JSON.stringify(body)
+    }
+  )
+}
+
+export async function instantlyPauseCampaign(
+  apiKey: string,
+  campaignId: string
+): Promise<InstantlyCampaignRecord> {
+  const id = campaignId.trim()
+  if (!id) throw new InstantlyApiError('campaign id is required', 400)
+  return instantlyFetch<InstantlyCampaignRecord>(
+    `/campaigns/${encodeURIComponent(id)}/pause`,
+    apiKey,
+    { method: 'POST' }
+  )
+}

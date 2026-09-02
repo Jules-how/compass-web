@@ -251,6 +251,38 @@ export async function pushInstantlyLeads(
   return readJson(res)
 }
 
+export async function duplicateInstantlyTemplate(input: {
+  campaignId: string
+  name?: string
+  templateId?: string
+}): Promise<{
+  ok: boolean
+  instantlyCampaignId: string
+  templateId: string
+  name: string
+  bound: boolean
+  campaign: CompassCampaign | null
+}> {
+  const res = await fetch(
+    `/api/campaigns/${encodeURIComponent(input.campaignId)}/instantly/duplicate-template`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ name: input.name, templateId: input.templateId })
+    }
+  )
+  const body = await readJson<{
+    ok: boolean
+    instantlyCampaignId: string
+    templateId: string
+    name: string
+    bound: boolean
+    campaign: CompassCampaign | null
+  }>(res)
+  if (body.campaign) upsertInCache(project(body.campaign))
+  return body
+}
+
 export type SpawnChallengerInput = {
   name?: string
   factor: string

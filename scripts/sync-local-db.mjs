@@ -432,7 +432,7 @@ for (const c of campaigns) {
     '[]',
     'Jules',
     c.instantly_campaign_id,
-    'missed-call-booking',
+    'booked-jobs-system',
     null,
     'waterfall',
     JSON.stringify(c.vertical_tags),

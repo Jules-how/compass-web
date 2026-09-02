@@ -17,18 +17,18 @@ Packs are JSON data, not hard-coded UI.
 
 | Path | Purpose |
 | --- | --- |
-| `onboarding/missed-call-booking.json` (repo root) | Canonical pack for missed-call booking |
-| `compass-web/onboarding/missed-call-booking.json` | Deploy copy (Vercel root = `compass-web`) |
+| `compass-web/onboarding/booked-jobs-system.json` | Default pack for fill and capture |
+| `compass-web/onboarding/missed-call-booking.json` | Legacy pack. Do not send on new clients |
 
 Loader search order: `cwd/onboarding`, `../onboarding`, `compass-web/onboarding`.
 
-**Filename:** offer key uses underscores (`missed_call_booking`); pack file uses hyphens (`missed-call-booking.json`).
+**Filename:** offer key `booked-jobs-system` maps to `booked-jobs-system.json`. Underscores become hyphens (`missed_call_booking` → `missed-call-booking.json`).
 
 ### Pack schema
 
 ```json
 {
-  "offerKey": "missed_call_booking",
+  "offerKey": "booked-jobs-system",
   "title": "Switchflow onboarding",
   "subtitle": "…",
   "sections": [
@@ -64,11 +64,11 @@ Validation: `validateOnboardingPack()` / `collectPackErrors()` in `src/lib/onboa
 
 ## Add an offer pack
 
-1. Copy `missed-call-booking.json` → `onboarding/{offer_key}.json` (both repo root and `compass-web/onboarding/`).
-2. Set `offerKey` to match the filename stem (underscores).
+1. Copy `booked-jobs-system.json` → `onboarding/{offer_key}.json` under `compass-web/onboarding/`.
+2. Set `offerKey` to match the filename stem.
 3. Include an `authorisation` toggle with the legal wording required for that offer.
 4. Run `node --test test/onboarding.test.mjs`.
-5. Wire operator send if the offer is not `missed_call_booking` (optional `offerKey` on `POST /api/clients/:id/onboarding`).
+5. Operator send defaults to `booked-jobs-system`. Pass `offerKey` on `POST /api/clients/:id/onboarding` only for a different pack.
 
 ## API
 

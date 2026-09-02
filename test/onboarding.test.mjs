@@ -11,6 +11,13 @@ import {
   ONBOARDING_DELIVERY_TASKS
 } from '../src/lib/onboarding-pack.mjs'
 
+test('fill-capture pack is the default onboarding pack', () => {
+  const pack = loadOnboardingPack('booked-jobs-system')
+  assert.equal(pack.offerKey, 'booked-jobs-system')
+  assert.equal(collectPackErrors(pack).length, 0)
+  validateOnboardingPack(pack)
+})
+
 test('missed-call pack passes schema validation', () => {
   const pack = loadOnboardingPack('missed_call_booking')
   assert.equal(pack.offerKey, 'missed_call_booking')

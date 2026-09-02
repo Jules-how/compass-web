@@ -35,7 +35,7 @@ SQLite `data/compass.db` is no longer the operator lead store. UI `/leads` list 
 
 Qualify before research. `icp_status=skip` (franchise, no inbound, thin reviews) never needs an opener and never uploads. Real shop + thin card: `icp_status=thin` and `enrich_status=thin`. Harvest pass-only: `GET /api/agent/leads/cohort?icp_status=pass`.
 
-Per-lead first line is Hook compile (signal) or YAML tension. Instantly `{{personalization}}`. Hook PATCHes `opener` / `opener_track` / `opener_kind` / `lead_facts` / ICP fields only on `--stage full --write-compass`. Hook does not tick `opener_reviewed_at` and does not activate Instantly. New campaigns use offer_key `ai-receptionist-system` only.
+Per-lead first line is Hook compile (signal) or YAML tension. Instantly `{{personalization}}`. Hook PATCHes `opener` / `opener_track` / `opener_kind` / `lead_facts` / ICP fields only on `--stage full --write-compass`. Hook does not tick `opener_reviewed_at` and does not activate Instantly. New campaigns use offer_key `booked-jobs-system` only. Do not bind new waves to `ai-receptionist-system` (killed).
 
 Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/DELETE) for saved sequences with vertical tags, component breakdown, Instantly-style performance, and `last_used_at`.
 
@@ -65,6 +65,7 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 | `POST` | `/api/campaigns/:id/instantly/push-leads` | Operator: bulk-add cohort leads (`dryRun` supported). Never activates |
 | `POST` | `/api/campaigns/:id/instantly/push-sequence` | Operator: PATCH Instantly steps from Compass `sequence_draft` |
 | `POST` | `/api/agent/instantly/ensure` | Agent twin of ensure (`campaignId`, `pushSequence`) |
+| `POST` | `/api/agent/instantly/duplicate-template` | Duplicate `[Template] Switchflow Fill & Capture` (`name` or `campaignId`, optional `templateId`). Binds if the Compass campaign is unbound. Stays paused. |
 | `POST` | `/api/agent/instantly/push-leads` | Agent twin of lead push |
 | `POST` | `/api/agent/instantly/push-sequence` | Agent twin of sequence push |
 | `GET/POST` | `/api/cron/daily-sync` | Vercel Cron daily runner |

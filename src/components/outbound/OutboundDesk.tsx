@@ -8,6 +8,7 @@ import { CadenceControl, useCadencePrefs } from '@/components/outbound/CadenceCo
 import { CassettePreview } from '@/components/outbound/mock/CassettePreview'
 import { FactoryPreview } from '@/components/outbound/mock/FactoryPreview'
 import { OutboundDeskSwitch } from '@/components/outbound/OutboundDeskSwitch'
+import { OfferWavesBoard } from '@/components/outbound/OfferWavesBoard'
 import { RunwayPreview } from '@/components/outbound/mock/RunwayPreview'
 import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
 import { dateOnlyInZone, type CompassCampaign } from '@/lib/campaigns'
@@ -86,6 +87,7 @@ export function OutboundDesk() {
         </div>
       }
     >
+      {desk === 'waves' ? <OfferWavesBoard /> : null}
       {desk === 'cassette' ? (
         <CassettePreview embedded prefs={prefs} onPrefs={setPrefs} />
       ) : null}

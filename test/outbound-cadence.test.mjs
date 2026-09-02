@@ -96,15 +96,28 @@ test('shared cadence helper and control exist, without live 3-5 doctrine', () =>
   assert.doesNotMatch(control, /QUEUE_WEEK_SLOT/)
 })
 
-test('live outbound desk switcher offers cassette, runway, factory, and calendar', () => {
+test('offer wave decision desk badges follow send and reply thresholds', () => {
+  const lib = read('src/lib/campaigns.ts')
+  assert.match(lib, /export function evaluateOfferWaveDecision/)
+  assert.match(lib, /Kill \/ Overhaul Offer/)
+  assert.match(lib, /Validated: Expand to 1,000 Sends/)
+  assert.match(lib, /Inspect Mailbox Deliverability/)
+  assert.match(lib, /export function offerWaveColumn/)
+  assert.match(read('src/components/outbound/OfferWavesBoard.tsx'), /evaluateOfferWaveDecision/)
+  assert.match(read('src/app/api/agent/instantly/duplicate-template/route.ts'), /duplicateFillCaptureTemplate/)
+})
+
+test('live outbound desk switcher offers waves, cassette, runway, factory, and calendar', () => {
   const desk = read('src/lib/outbound-desk.ts')
   assert.match(desk, /OUTBOUND_DESK_STORAGE_KEY = 'compass.outbound.desk.v1'/)
+  assert.match(desk, /waves/)
   assert.match(desk, /cassette/)
   assert.match(desk, /runway/)
   assert.match(desk, /factory/)
   assert.match(desk, /calendar/)
 
   const landing = read('src/components/outbound/OutboundDesk.tsx')
+  assert.match(landing, /OfferWavesBoard/)
   assert.match(landing, /CassettePreview/)
   assert.match(landing, /RunwayPreview/)
   assert.match(landing, /FactoryPreview/)

@@ -60,8 +60,8 @@ export const SOP_NODE_CATALOG: SopNodeDefinition[] = [
     id: 'channel_plan',
     title: 'Choose channels',
     kicker: 'Decide',
-    summary: 'Choose Meta forms, Google Search calls, a landing page form, LSA, or a combination.',
-    detail: 'Meta Instant Forms, Google Search click to call, Google landing page forms, and LSA deliver information differently. Record the exact channel and destination before building the intake.',
+    summary: 'Choose Meta forms, Google Search calls, or a landing page form.',
+    detail: 'Meta Instant Forms, Google Search click to call, and Google landing page forms deliver information differently. Record the exact channel and destination before building the intake.',
     why: 'A click to call is not the same thing as a form submission. The workflow must know what payload or phone event to expect.',
     owner: 'jules',
     required: true,
@@ -221,7 +221,7 @@ export const SOP_NODE_CATALOG: SopNodeDefinition[] = [
     acceptance: ['Call asset uses the intended number', 'Search query and service area are recorded', 'A test call reaches the capture path'],
     evidence: ['Campaign and asset IDs', 'Call trace', 'Test booking']
   },
-  {
+    {
     id: 'google_landing_form',
     title: 'Google landing form',
     kicker: 'Optional channel',
@@ -235,21 +235,6 @@ export const SOP_NODE_CATALOG: SopNodeDefinition[] = [
     channel: 'google',
     acceptance: ['Form submits into Compass', 'The lead receives the intended response', 'Source and campaign are retained'],
     evidence: ['Test submission', 'Compass record', 'Response timestamp']
-  },
-  {
-    id: 'lsa',
-    title: 'Local Services Ads',
-    kicker: 'Optional channel',
-    summary: 'Connect the Local Services lead feed when the client and trade qualify.',
-    detail: 'LSA is separate from Google Search and requires its own lead delivery and account checks. Keep it disabled until that integration is tested.',
-    why: 'Treating LSA as ordinary Search would leave the lead feed and attribution unverified.',
-    owner: 'jules',
-    required: false,
-    dependsOn: ['channel_plan'],
-    icon: 'google',
-    channel: 'google',
-    acceptance: ['Client and trade qualify', 'Lead feed is connected', 'A test lead reaches the same booking path'],
-    evidence: ['LSA profile', 'Lead feed result', 'Test booking']
   },
   {
     id: 'mms_media',
@@ -298,7 +283,8 @@ export function normalizeSopPlan(input: unknown): SopPlan {
   const rawNodes = input.nodes
   if (!Array.isArray(rawNodes) || rawNodes.length === 0) throw new Error('invalid_sop_nodes')
 
-  const nodes = rawNodes.map((id) => String(id))
+  const nodes = rawNodes.map((id) => String(id)).filter((id) => id !== 'lsa')
+  if (nodes.length === 0) throw new Error('invalid_sop_nodes')
   if (new Set(nodes).size !== nodes.length) throw new Error('duplicate_sop_node')
   if (nodes.some((id) => !SOP_NODE_BY_ID.has(id))) throw new Error('unknown_sop_node')
 

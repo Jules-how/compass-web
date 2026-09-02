@@ -8,6 +8,7 @@ import {
   hydratePackForClient,
   loadOnboardingPack,
   mapOnboardingSubmit,
+  DEFAULT_ONBOARDING_OFFER_KEY,
   ONBOARDING_DELIVERY_TASKS,
   ONBOARDING_INVOICE_TASK,
   validateOnboardingAnswers
@@ -84,7 +85,7 @@ export function publicPackForForm(offerKey: string) {
   return hydratePackForClient(pack, bookingGrantEmail())
 }
 
-const PROJECT_EXTERNAL_PREFIX = 'onboarding:missed_call_booking:'
+const PROJECT_EXTERNAL_PREFIX = 'onboarding:booked-jobs-system:'
 
 async function ensureDeliveryProject(
   admin: SupabaseClient,
@@ -106,7 +107,7 @@ async function ensureDeliveryProject(
     .from('compass_projects')
     .insert({
       id,
-      name: `${clientName.trim() || 'Client'} · missed-call delivery`,
+      name: `${clientName.trim() || 'Client'} · fill-and-capture delivery`,
       status: 'in_progress',
       priority: 1,
       health: 'on_track',
@@ -114,7 +115,7 @@ async function ensureDeliveryProject(
       source: 'onboarding',
       external_id: externalId,
       summary: 'Auto-created from client onboarding form.',
-      labels: ['onboarding', 'missed-call'],
+      labels: ['onboarding', 'fill-capture'],
       created_at: now,
       updated_at: now,
       mirrored_at: now
@@ -226,7 +227,7 @@ export async function processOnboardingSubmit(
   const amounts = amountsFromTier(dealTerms.tier as 'vans_3' | 'vans_4_8')
   const mergedDealTerms = {
     ...defaultDealTerms({
-      offer: String(dealTerms.offer || 'missed_call_booking'),
+      offer: String(dealTerms.offer || DEFAULT_ONBOARDING_OFFER_KEY),
       tier: dealTerms.tier as 'vans_3' | 'vans_4_8',
       billing_email: String(dealTerms.billing_email || ''),
       status: dealTerms.status as 'draft' | 'contracted' | 'retainer_active' | 'paused' | 'ended',
@@ -319,7 +320,7 @@ export async function processOnboardingSubmit(
 export async function createOnboardingForm(
   admin: SupabaseClient,
   clientId: string,
-  offerKey = 'missed_call_booking'
+  offerKey = DEFAULT_ONBOARDING_OFFER_KEY
 ): Promise<OnboardingFormRow> {
   validateOfferPackExists(offerKey)
   const now = new Date().toISOString()

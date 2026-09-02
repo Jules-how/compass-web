@@ -68,7 +68,7 @@ export function ClientOnboardingCard({ clientId }: { clientId: string }) {
       const res = await fetch(`/api/clients/${clientId}/onboarding`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ offerKey: 'missed_call_booking' })
+        body: JSON.stringify({ offerKey: 'booked-jobs-system' })
       })
       const body = (await res.json().catch(() => ({}))) as { form?: OnboardingFormSummary; error?: string }
       if (!res.ok) throw new Error(body.error || `Send failed (${res.status})`)

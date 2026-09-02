@@ -8,11 +8,13 @@ import { OutboundHistorySection } from '@/components/outbound/OutboundHistorySec
 import { OutboundLibraryAccordion } from '@/components/outbound/OutboundLibraryAccordion'
 import { OutboundLiveSection } from '@/components/outbound/OutboundLiveSection'
 import { OutboundWorkshopSection } from '@/components/outbound/OutboundWorkshopSection'
+import { OfferWavesBoard } from '@/components/outbound/OfferWavesBoard'
 
 export function OutboundHub(_props: { onOpenEditor?: () => void } = {}) {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)]">
       <div className="min-w-0 space-y-6">
+        <OfferWavesBoard />
         <OutboundWorkshopSection />
         <OutboundLiveSection />
         <OutboundExperimentCompare />

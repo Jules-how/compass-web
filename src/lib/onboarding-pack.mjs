@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+export const DEFAULT_ONBOARDING_OFFER_KEY = 'booked-jobs-system'
+
 const FIELD_TYPES = new Set([
   'text',
   'tel',
@@ -249,7 +251,7 @@ export function mapOnboardingSubmit(answers, existingClient = {}, existingDealTe
 
   const dealTerms = {
     ...existingDealTerms,
-    offer: existingDealTerms.offer || 'missed_call_booking',
+    offer: existingDealTerms.offer || DEFAULT_ONBOARDING_OFFER_KEY,
     tier,
     billing_email: billingEmail || existingDealTerms.billing_email || '',
     status: existingDealTerms.status === 'draft' || !existingDealTerms.status ? 'contracted' : existingDealTerms.status,

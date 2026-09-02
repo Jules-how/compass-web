@@ -19,8 +19,11 @@ import { InstantlyApiError, getInstantlyTimezone } from '@/lib/instantly'
 import {
   instantlyAddLeadsBulk,
   instantlyCreateCampaign,
+  instantlyDuplicateCampaign,
   instantlyGetCampaign,
+  instantlyListCampaigns,
   instantlyListSendingEmails,
+  instantlyPauseCampaign,
   instantlyUpdateCampaign,
   type InstantlyLeadPayload,
   type InstantlySequencePayload
@@ -431,5 +434,88 @@ export async function pushLeadsToInstantly(input: {
     instantlySkipped,
     invalidEmails,
     marked
+  }
+}
+
+export const FILL_CAPTURE_TEMPLATE_SEARCH = 'Switchflow Fill'
+export const FILL_CAPTURE_TEMPLATE_ID = '8b5584dd-d0c7-4299-9de5-c2fcecd942a0'
+
+export async function resolveFillCaptureTemplateId(
+  apiKey: string,
+  templateId?: string
+): Promise<string> {
+  const explicit = trim(templateId) || FILL_CAPTURE_TEMPLATE_ID
+  if (explicit) return explicit
+  const rows = await instantlyListCampaigns(apiKey, {
+    search: FILL_CAPTURE_TEMPLATE_SEARCH,
+    limit: 50
+  })
+  const named = rows.find((row) =>
+    /template/i.test(row.name || '') && /fill/i.test(row.name || '') && /capture/i.test(row.name || '')
+  ) || rows.find((row) => /fill/i.test(row.name || '') && /capture/i.test(row.name || ''))
+  const id = trim(named?.id)
+  if (!id) {
+    throw new InstantlyApiError(
+      'No Instantly template named Switchflow Fill & Capture. Pass templateId.',
+      404
+    )
+  }
+  return id
+}
+
+export async function duplicateFillCaptureTemplate(input: {
+  supabase: SupabaseClient
+  apiKey: string
+  name: string
+  campaign?: CompassCampaign | null
+  templateId?: string
+}): Promise<{
+  instantlyCampaignId: string
+  templateId: string
+  name: string
+  bound: boolean
+  campaign: CompassCampaign | null
+}> {
+  const templateId = await resolveFillCaptureTemplateId(input.apiKey, input.templateId)
+  const copyName = trim(input.name) || undefined
+  const duplicated = await instantlyDuplicateCampaign(input.apiKey, templateId, copyName)
+  const instantlyId = trim(duplicated.id) || trim((duplicated as { campaign_id?: string }).campaign_id)
+  if (!instantlyId) throw new InstantlyApiError('Instantly did not return a campaign id', 502)
+
+  if (duplicated.status === 1) {
+    await instantlyPauseCampaign(input.apiKey, instantlyId)
+  }
+
+  let campaign = input.campaign ?? null
+  let bound = false
+  if (campaign && !trim(campaign.instantly_campaign_id)) {
+    const stamp = new Date().toISOString()
+    const { data, error } = await input.supabase
+      .from('compass_pipeline_campaigns')
+      .update({ instantly_campaign_id: instantlyId, updated_at: stamp })
+      .eq('id', campaign.id)
+      .select('id,instantly_campaign_id')
+      .single()
+    if (error || !data) {
+      throw new Error(error?.message || 'Could not bind Instantly campaign')
+    }
+    await input.supabase.from('compass_pipeline_activity').insert({
+      id: `cact-${crypto.randomUUID()}`,
+      campaign_id: campaign.id,
+      actor: 'operator',
+      action: 'instantly_bound',
+      body: `Duplicated Fill & Capture template to ${instantlyId} (paused). Activate stays in Instantly.`,
+      created_at: stamp
+    })
+    campaign = { ...campaign, instantly_campaign_id: instantlyId }
+    bound = true
+  }
+
+  return {
+    instantlyCampaignId: instantlyId,
+    templateId,
+    name: copyName || duplicated.name || '',
+    bound,
+    campaign
   }
 }

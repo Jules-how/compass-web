@@ -108,7 +108,7 @@ Component: `src/components/clients/ClientGoogleAttachPanel.tsx`. Not mounted by 
 
 ## Doctrine (locked)
 
-- SEARCH only. No PMax, no LSA.
+- SEARCH only. No PMax.
 - Client-owned account under Switchflow MCC.
 - Tightly themed ad groups, shared negatives, 2 RSAs per group, sitelink/callout/call assets, one conversion action.
 - Everything PAUSED on push. Jules activates in Google Ads.

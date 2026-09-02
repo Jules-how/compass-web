@@ -5,9 +5,9 @@ export const QBO_INSTALL_AUD = 1997
 export const QBO_MONTHLY_VANS_3 = 1497
 export const QBO_MONTHLY_VANS_4_8 = 1997
 export const QBO_TERM_DAYS = 90
-export const QBO_OFFER_ID = 'missed_call_booking'
-export const INSTALL_LINE_DESC = 'Missed-call booking: install + first 30 days'
-export const MONTHLY_LINE_DESC = 'Missed-call booking: monthly retainer'
+export const QBO_OFFER_ID = 'booked-jobs-system'
+export const INSTALL_LINE_DESC = 'Fill and capture: install + first 30 days'
+export const MONTHLY_LINE_DESC = 'Fill and capture: monthly retainer'
 export const QBO_CONFIRM_CREATE =
   'This creates a real invoice in QuickBooks (posts to AR). Send is a separate step.'
 

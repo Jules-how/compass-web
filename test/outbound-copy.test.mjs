@@ -57,6 +57,7 @@ test('outbound nav and pages are wired under Sales', () => {
   assert.match(read('src/app/(console)/sales/outbound/craft/page.tsx'), /OutboundPageClient/)
   assert.match(read('src/components/outbound/OutboundPageClient.tsx'), /OutboundHub/)
   assert.match(read('src/components/outbound/OutboundPageClient.tsx'), /SequenceEditor/)
+  assert.match(read('src/components/outbound/OutboundHub.tsx'), /OfferWavesBoard/)
   assert.match(read('src/components/outbound/OutboundHub.tsx'), /OutboundLiveSection/)
   assert.match(read('src/components/outbound/OutboundHub.tsx'), /OutboundWorkshopSection/)
   assert.match(read('src/components/outbound/OutboundHub.tsx'), /OutboundHistorySection/)
@@ -64,8 +65,13 @@ test('outbound nav and pages are wired under Sales', () => {
   assert.match(read('src/components/outbound/OutboundLibraryAccordion.tsx'), /LIBRARY_FEATURED_EXAMPLES/)
   const featured = read('src/lib/outbound-copy.ts')
   assert.match(featured, /LIBRARY_FEATURED_EXAMPLES/)
-  assert.match(featured, /title: 'After-hours booking'/)
   assert.match(featured, /title: 'Fill and capture'/)
+  assert.match(featured, /export function evaluatePillarsQa/)
+  assert.match(featured, /ECONOMIC_PASS_RE/)
+  assert.match(featured, /MECHANISM_PASS_RE/)
+  assert.match(read('src/components/outbound/PillarsQaInspector.tsx'), /evaluatePillarsQa/)
+  assert.match(read('src/components/outbound/SequenceEditor.tsx'), /PillarsQaInspector/)
+  assert.doesNotMatch(featured, /title: 'After-hours booking'/)
   assert.match(read('src/app/(console)/sales/outbound/editor/new/page.tsx'), /SequenceEditor/)
   assert.match(
     read('src/app/(console)/sales/outbound/editor/[campaignId]/page.tsx'),
@@ -104,16 +110,18 @@ test('outbound APIs are operator-gated with same-origin writes', () => {
     assert.match(list + id, /compass_outbound_/)
   }
   const campaignPatch = read('src/app/api/campaigns/[id]/route.ts')
-  assert.match(campaignPatch, /sequence_draft/)
-  assert.match(campaignPatch, /copy_status/)
-  assert.match(campaignPatch, /cold_expression/)
+  assert.match(campaignPatch, /requireSameOrigin/)
+  assert.match(campaignPatch, /upsertPipelineCampaign/)
+  const campaignCreate = read('src/app/api/campaigns/route.ts')
+  assert.match(campaignCreate, /sequence_draft/)
+  assert.match(campaignCreate, /copy_status/)
+  assert.match(campaignCreate, /cold_expression/)
 })
 
 test('library browser allows free add for all kinds; edit/archive require lock', () => {
   const browser = read('src/components/outbound/LibraryBrowser.tsx')
   assert.doesNotMatch(browser, /Structures and templates are seeded/)
-  assert.match(browser, /saveLocalStructure/)
-  assert.match(browser, /saveLocalTemplate/)
+  assert.match(browser, /createLibraryItem/)
   assert.match(browser, /scaffoldSequence/)
   assert.match(browser, /ensureLibraryMutationUnlocked\('edit'\)/)
   assert.match(browser, /ensureLibraryMutationUnlocked\('archive'\)/)
@@ -124,6 +132,7 @@ test('library browser allows free add for all kinds; edit/archive require lock',
 
   const store = read('src/lib/outbound-local-store.ts')
   assert.match(store, /export function saveLocalStructure/)
+  assert.match(store, /export function saveLocalTemplate/)
 
   const lock = read('src/lib/outbound-library-lock.ts')
   assert.match(lock, /LIBRARY_LOCK_SESSION_KEY/)

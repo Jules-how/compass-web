@@ -6,7 +6,7 @@ export type IcpStatus = (typeof ICP_STATUSES)[number]
 export const EMAIL_ORIGINS = ['unknown', 'published', 'guessed'] as const
 export type EmailOrigin = (typeof EMAIL_ORIGINS)[number]
 
-export const LIVE_OUTBOUND_OFFER_KEY = 'ai-receptionist-system'
+export const LIVE_OUTBOUND_OFFER_KEY = 'booked-jobs-system'
 export const LIVE_OUTBOUND_OFFER_KEYS = [LIVE_OUTBOUND_OFFER_KEY] as const
 
 export const MAX_CAPTURE_CRACK = 280
