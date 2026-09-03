@@ -79,6 +79,8 @@ export const OUTBOUND_SLOT_KEYS = [
   'who_line',
   'why_priorities_and_outcomes',
   'availability_ask',
+  'risk_reversal',
+  'ps',
   'subject',
   'accountSignature',
   'spam_act_opt_out',
@@ -220,6 +222,8 @@ export type CopyArchiveComponents = {
   opener_preview: string | null
   expression_preview: string | null
   cta_preview: string | null
+  risk_preview: string | null
+  ps_preview: string | null
   subject: string | null
   step_count: number
   slot_keys: string[]
@@ -256,7 +260,7 @@ export type CopyArchiveEntry = {
   updated_at: string
 }
 
-export const COPY_ARCHIVE_SORT_KEYS = ['reply', 'last_used', 'sent', 'name'] as const
+export const COPY_ARCHIVE_SORT_KEYS = ['positive', 'reply', 'last_used', 'sent', 'name'] as const
 export type CopyArchiveSortKey = (typeof COPY_ARCHIVE_SORT_KEYS)[number]
 
 export const STRUCTURE_LABELS: Record<string, string> = {
@@ -301,6 +305,8 @@ export function deriveCopyArchiveComponents(
     cta_preview: truncatePreview(
       slotMap.get('cta') ?? slotMap.get('availability_ask') ?? ''
     ),
+    risk_preview: truncatePreview(slotMap.get('risk_reversal') ?? ''),
+    ps_preview: truncatePreview(slotMap.get('ps') ?? ''),
     subject: truncatePreview(email?.subject ?? '', 64),
     step_count: sequence.steps.length,
     slot_keys: slotKeys
@@ -375,25 +381,33 @@ const STRUCTURE_SLOT_MAP: Record<OutboundStructureId, Array<{ key: string; label
       { key: 'opener', label: 'Opener', required: true },
       { key: 'proof_block', label: 'Proof', required: true },
       { key: 'cold_expression', label: 'Cold expression', required: true },
-      { key: 'cta', label: 'CTA', required: true }
+      { key: 'risk_reversal', label: 'Risk reversal' },
+      { key: 'cta', label: 'CTA', required: true },
+      { key: 'ps', label: 'P.S.' }
     ],
     'nick-3step': [
       { key: 'opener', label: 'Opener', required: true },
       { key: 'cold_expression', label: 'Cold expression', required: true },
-      { key: 'cta', label: 'CTA', required: true }
+      { key: 'risk_reversal', label: 'Risk reversal' },
+      { key: 'cta', label: 'CTA', required: true },
+      { key: 'ps', label: 'P.S.' }
     ],
     'platten-aida': [
       { key: 'opener', label: 'Opener / Attention', required: true },
       { key: 'interest_mechanism', label: 'Interest', required: true },
       { key: 'proof_block', label: 'Proof / Desire', required: true },
       { key: 'cold_expression', label: 'Cold expression', required: true },
-      { key: 'cta', label: 'CTA', required: true }
+      { key: 'risk_reversal', label: 'Risk reversal' },
+      { key: 'cta', label: 'CTA', required: true },
+      { key: 'ps', label: 'P.S.' }
     ],
     'connor-3para': [
       { key: 'who_line', label: 'Who line', required: true },
       { key: 'why_priorities_and_outcomes', label: 'Why / priorities & outcomes', required: true },
       { key: 'cold_expression', label: 'Cold expression (optional)' },
-      { key: 'availability_ask', label: 'Availability ask', required: true }
+      { key: 'risk_reversal', label: 'Risk reversal' },
+      { key: 'availability_ask', label: 'Availability ask', required: true },
+      { key: 'ps', label: 'P.S.' }
     ]
   }
 
@@ -449,7 +463,9 @@ const NAMED_EDIT_SLOT_KEYS = new Set([
   'interest_mechanism',
   'who_line',
   'why_priorities_and_outcomes',
-  'availability_ask'
+  'availability_ask',
+  'risk_reversal',
+  'ps'
 ])
 
 export function editableContentSlots(step: OutboundStep): OutboundSlot[] {
@@ -490,7 +506,9 @@ export function emptyFollowUpStep(index = 1, delayDays = 3): OutboundStep {
     subject: '',
     slots: [
       { key: 'opener', label: 'Bump', body: '' },
+      { key: 'risk_reversal', label: 'Risk reversal', body: '' },
       { key: 'cta', label: 'CTA', required: true, body: '' },
+      { key: 'ps', label: 'P.S.', body: '' },
       ...COMPLIANCE_FOOTER_SLOTS.map((s) => ({ ...s }))
     ]
   }
@@ -557,6 +575,34 @@ export function copyTextIntoSlot(
     }
   }
   next.updated_at = new Date().toISOString()
+  return next
+}
+
+function insertSlotBeforeCompliance(step: OutboundStep, slot: OutboundSlot) {
+  const footerIdx = step.slots.findIndex(
+    (s) => s.key === 'accountSignature' || s.key === 'spam_act_opt_out'
+  )
+  if (footerIdx >= 0) step.slots.splice(footerIdx, 0, slot)
+  else step.slots.push(slot)
+}
+
+/** Add risk / P.S. (and other scaffold slots) to drafts that predate those keys. */
+export function ensureSequenceSlots(sequence: OutboundSequence): OutboundSequence {
+  const next = forkSequence(sequence)
+  for (const step of next.steps) {
+    if (!usesSlotEditor(step)) continue
+    const wanted =
+      step.kind === 'followup'
+        ? emptyFollowUpStep(1, step.delay_days ?? 3).slots
+        : structureSlots(next.structure_id)
+    const have = new Set(step.slots.map((s) => s.key))
+    for (const slot of wanted) {
+      if (have.has(slot.key)) continue
+      if (slot.key === 'accountSignature' || slot.key === 'spam_act_opt_out') continue
+      insertSlotBeforeCompliance(step, { ...slot, body: slot.body || '' })
+      have.add(slot.key)
+    }
+  }
   return next
 }
 
@@ -814,7 +860,11 @@ export function evaluatePillarsQa(sequence: OutboundSequence | null | undefined)
   const ask = lastAskSentence(email1Visible)
   const askWords = wordCount(ask)
   const ctaLink = CTA_LINK_WARN_RE.test(email1Body)
-  const riskPass = RISK_PASS_RE.test(bumpBody || email1Body)
+  const riskSlotText = [email1, bump]
+    .flatMap((step) => (step?.slots ?? []).filter((s) => s.key === 'risk_reversal').map((s) => s.body))
+    .join('\n')
+  const riskPass =
+    RISK_PASS_RE.test(bumpBody || email1Body) || Boolean(riskSlotText.replace(/\s+/g, ' ').trim())
   const bumpSubject = (bump?.subject || '').trim()
   const spintaxMatches = email1Body.match(SPINTAX_RE) ?? []
   const danglingBrace = /\{(?!\{)[^{}|]*$|\{\s*\}/.test(email1Body)
@@ -865,8 +915,8 @@ export function evaluatePillarsQa(sequence: OutboundSequence | null | undefined)
       'Risk reversal',
       riskPass ? 'pass' : bump ? 'warn' : 'warn',
       riskPass
-        ? 'Guarantee language is on the bump.'
-        : 'Add refund / pay once booked / covers fees on Step 2.'
+        ? 'Risk reversal is on Email 1 or the bump.'
+        : 'Fill the risk reversal slot (refund / pay once booked / covers fees).'
     )
   ]
 

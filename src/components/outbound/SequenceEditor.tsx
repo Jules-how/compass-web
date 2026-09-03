@@ -21,6 +21,7 @@ import {
   copyTextIntoSlot,
   editableContentSlots,
   emptyFollowUpStep,
+  ensureSequenceSlots,
   forkSequence,
   inboxPreview,
   scaffoldSequence,
@@ -54,6 +55,7 @@ import { cn } from '@/lib/utils'
 import { CampaignLeadsPane } from '@/components/outbound/CampaignLeadsPane'
 import { InstantlyBindPrompt } from '@/components/outbound/InstantlyBindPrompt'
 import { SequencePreviewText } from '@/components/outbound/SequencePreviewBody'
+import { ComposeLeversPanel, ComposeRatesStrip, ComposeRecipeStrip } from '@/components/outbound/ComposeCraftPanel'
 import { PillarsQaInspector } from '@/components/outbound/PillarsQaInspector'
 
 const UNBOUND_KEY = 'compass.outbound.unbound-draft.v1'
@@ -166,7 +168,7 @@ export function SequenceEditor({
   const [instantlyUnbound, setInstantlyUnbound] = useState(false)
   const [focusField, setFocusField] = useState<string>('body')
   const [componentsWidth, setComponentsWidth] = useState(COMPONENTS_WIDTH_DEFAULT)
-  const [railTab, setRailTab] = useState<'library' | 'pillars'>('pillars')
+  const [railTab, setRailTab] = useState<'library' | 'pillars' | 'levers'>('library')
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resizeDrag = useRef<{ startX: number; startWidth: number } | null>(null)
   const leadsResize = useRef<{ startY: number; startVh: number } | null>(null)
@@ -271,7 +273,7 @@ export function SequenceEditor({
       if (existing) {
         if (gen !== hydrateGenRef.current) return
         setCampaign(existing.campaign)
-        setSequence(existing.sequence)
+        setSequence(ensureSequenceSlots(existing.sequence))
         keepStep(existing.sequence.steps)
         setInstantlyUnbound(false)
         return
@@ -357,11 +359,12 @@ export function SequenceEditor({
       setError(null)
       const detail = await getCampaignDetail(campaignId)
       if (!detail) throw new Error('Campaign not found')
-      const seq =
+      const seq = ensureSequenceSlots(
         detail.campaign.sequence_draft ??
-        scaffoldSequence(detail.campaign.structure_id || 'nick-3step', {
-          offerKey: detail.campaign.offer_key
-        })
+          scaffoldSequence(detail.campaign.structure_id || 'nick-3step', {
+            offerKey: detail.campaign.offer_key
+          })
+      )
       if (gen !== hydrateGenRef.current) return
       setCampaign(detail.campaign)
       setSequence(seq)
@@ -538,6 +541,14 @@ export function SequenceEditor({
             patch.location_tags = Array.from(
               new Set([...(campaign.location_tags ?? []), ...(offer.location_tags ?? [])])
             )
+            if (offer.guarantee?.trim() && targetStep) {
+              next = copyTextIntoSlot(
+                { ...next, offer_key: payload.offer_key },
+                targetStep,
+                'risk_reversal',
+                offer.guarantee
+              )
+            }
           }
         } catch {
           /* offer lookup optional */
@@ -893,6 +904,80 @@ export function SequenceEditor({
                   Compass copy. Instantly may differ until you push copy.
                 </p>
               ) : null}
+              <ComposeRatesStrip campaign={campaign} />
+              <ComposeRecipeStrip
+                bits={[
+                  {
+                    id: 'vertical',
+                    label: 'Vertical',
+                    value: (campaign.vertical_tags ?? []).join(', ')
+                  },
+                  {
+                    id: 'offer',
+                    label: 'Offer',
+                    value: campaign.offer_key || ''
+                  },
+                  {
+                    id: 'structure',
+                    label: 'Template',
+                    value: sequence.structure_id
+                  },
+                  {
+                    id: 'opener',
+                    label: 'Opener',
+                    value:
+                      sequence.steps[0]?.slots.find((s) => s.key === 'opener')?.body?.replace(/\s+/g, ' ').trim() ||
+                      '',
+                    slotKey: 'opener'
+                  },
+                  {
+                    id: 'subject',
+                    label: 'Subject',
+                    value: sequence.steps[0]?.subject?.trim() || '',
+                    slotKey: 'subject'
+                  },
+                  {
+                    id: 'body',
+                    label: 'Body',
+                    value:
+                      sequence.steps[0]?.slots
+                        .find((s) => s.key === 'cold_expression')
+                        ?.body?.replace(/\s+/g, ' ')
+                        .trim() || '',
+                    slotKey: 'cold_expression'
+                  },
+                  {
+                    id: 'risk',
+                    label: 'Risk',
+                    value:
+                      sequence.steps[0]?.slots
+                        .find((s) => s.key === 'risk_reversal')
+                        ?.body?.replace(/\s+/g, ' ')
+                        .trim() || '',
+                    slotKey: 'risk_reversal'
+                  },
+                  {
+                    id: 'cta',
+                    label: 'CTA',
+                    value:
+                      sequence.steps[0]?.slots.find((s) => s.key === 'cta' || s.key === 'availability_ask')?.body
+                        ?.replace(/\s+/g, ' ')
+                        .trim() || '',
+                    slotKey: 'cta'
+                  },
+                  {
+                    id: 'ps',
+                    label: 'P.S.',
+                    value:
+                      sequence.steps[0]?.slots.find((s) => s.key === 'ps')?.body?.replace(/\s+/g, ' ').trim() || '',
+                    slotKey: 'ps'
+                  }
+                ]}
+                onFocusSlot={(slotKey) => {
+                  setActiveStepId(sequence.steps[0]?.id ?? null)
+                  setFocusField(slotKey)
+                }}
+              />
               {sequence.steps.map((step, index) => (
                 <div key={step.id}>
                   {index > 0 ? (
@@ -1034,7 +1119,11 @@ export function SequenceEditor({
                               placeholder={
                                 slot.key === 'opener'
                                   ? '{{personalization}}'
-                                  : slot.label
+                                  : slot.key === 'risk_reversal'
+                                    ? 'You carry the risk. They pay on results.'
+                                    : slot.key === 'ps'
+                                      ? 'P.S. half-done work, objection, or give-first.'
+                                      : slot.label
                               }
                               className="w-full resize-none rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-[14px] leading-relaxed text-neutral-800 outline-none focus:border-[#e85d2a]/45"
                             />
@@ -1264,18 +1353,6 @@ export function SequenceEditor({
             <div className="flex shrink-0 gap-0.5 border-b border-stone-100 px-2 py-1.5">
               <button
                 type="button"
-                onClick={() => setRailTab('pillars')}
-                className={cn(
-                  'rounded-lg px-2.5 py-1 text-[11px] font-semibold',
-                  railTab === 'pillars'
-                    ? 'bg-[#e85d2a]/10 text-[#c2410c]'
-                    : 'text-neutral-500 hover:text-neutral-800'
-                )}
-              >
-                5 Pillars
-              </button>
-              <button
-                type="button"
                 onClick={() => setRailTab('library')}
                 className={cn(
                   'rounded-lg px-2.5 py-1 text-[11px] font-semibold',
@@ -1286,8 +1363,41 @@ export function SequenceEditor({
               >
                 Library
               </button>
+              <button
+                type="button"
+                onClick={() => setRailTab('levers')}
+                className={cn(
+                  'rounded-lg px-2.5 py-1 text-[11px] font-semibold',
+                  railTab === 'levers'
+                    ? 'bg-[#e85d2a]/10 text-[#c2410c]'
+                    : 'text-neutral-500 hover:text-neutral-800'
+                )}
+              >
+                Levers
+              </button>
+              <button
+                type="button"
+                onClick={() => setRailTab('pillars')}
+                className={cn(
+                  'rounded-lg px-2.5 py-1 text-[11px] font-semibold',
+                  railTab === 'pillars'
+                    ? 'bg-[#e85d2a]/10 text-[#c2410c]'
+                    : 'text-neutral-500 hover:text-neutral-800'
+                )}
+              >
+                QA
+              </button>
             </div>
-            {railTab === 'pillars' ? (
+            {railTab === 'levers' ? (
+              <ComposeLeversPanel
+                sequence={sequence}
+                onFocusSlot={(slotKey) => {
+                  setActiveStepId(sequence.steps[0]?.id ?? null)
+                  setFocusField(slotKey)
+                }}
+                className="min-h-0 flex-1"
+              />
+            ) : railTab === 'pillars' ? (
               <PillarsQaInspector sequence={sequence} className="min-h-0 flex-1" />
             ) : (
               <EditorComponentsAccordion

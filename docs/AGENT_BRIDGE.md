@@ -37,7 +37,7 @@ Qualify before research. `icp_status=skip` (franchise, no inbound, thin reviews)
 
 Per-lead first line is Hook compile (signal) or YAML tension. Instantly `{{personalization}}`. Hook PATCHes `opener` / `opener_track` / `opener_kind` / `lead_facts` / ICP fields only on `--stage full --write-compass`. Hook does not tick `opener_reviewed_at` and does not activate Instantly. New campaigns use offer_key `booked-jobs-system` only. Do not bind new waves to `ai-receptionist-system` (killed).
 
-Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/DELETE) for saved sequences with vertical tags, component breakdown, Instantly-style performance, and `last_used_at`.
+Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/DELETE) for saved sequences with vertical tags, component breakdown, Instantly-style performance, and `last_used_at`. Archive overlay uses Instantly send volume plus Compass positive/meeting counts when a row is bound to a pipeline campaign. Sequence editor compose rail: Library (mixer) · Levers (six questions) · QA. Email scaffolds include `risk_reversal` and `ps` slots.
 
 ## Endpoints
 

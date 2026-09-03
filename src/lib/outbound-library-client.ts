@@ -181,6 +181,7 @@ export async function getOfferByKey(offerKey: string) {
     pack_summary: string
     vertical_tags?: string[]
     location_tags?: string[]
+    guarantee?: string | null
   }>('offers', { offer_key: offerKey })
   return items.find((row) => row.offer_key === offerKey) ?? items[0] ?? null
 }

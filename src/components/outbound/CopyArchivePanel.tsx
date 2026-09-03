@@ -21,12 +21,23 @@ import {
 import {
   forkCopyArchiveIntoSequence,
   listCopyArchive,
-  saveCopyArchiveEntry
+    overlayArchiveInstantlyPerformance,
+    saveCopyArchiveEntry,
+    sortCopyArchiveEntries
 } from '@/lib/outbound-copy-archive'
 import {
   ensureOutboundLibrarySeeded,
   listLibraryItems
 } from '@/lib/outbound-library-client'
+import { listCampaigns } from '@/lib/campaigns-client'
+import {
+  enrichOutboundCampaignFactors,
+  rollupOutboundByFactor,
+  type OutboundFactorKey
+} from '@/lib/outbound-factor-performance'
+import type { OutboundBoardCampaign } from '@/lib/instantly'
+import { computeOutcomeMetrics } from '@/lib/outbound-outcome-metrics'
+import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 import type { CompassCampaign } from '@/lib/campaigns'
 import type { OutboundSequence } from '@/lib/outbound-copy'
@@ -135,10 +146,12 @@ function ArchiveCard({
         </div>
         <div className="shrink-0 text-right">
           <div className="text-[15px] font-semibold tabular-nums text-[#c2410c]">
-            {perf.replyRate ? `${perf.replyRate}%` : '—'}
+            {perf.sendCount && perf.positiveReplies
+              ? `${Math.round((1000 * perf.positiveReplies) / Math.max(1, perf.sendCount)) / 10}%`
+              : '—'}
           </div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
-            Reply
+            Positive / sent
           </div>
         </div>
       </div>
@@ -149,7 +162,7 @@ function ArchiveCard({
           label="Positive"
           value={perf.positiveReplies ? perf.positiveReplies.toLocaleString() : '—'}
         />
-        <Metric label="Last used" value={formatRelativeUsedAt(entry.last_used_at)} />
+        <Metric label="Meetings" value={perf.meetings ? perf.meetings.toLocaleString() : '—'} />
       </div>
 
       <div className="mt-3">
@@ -207,17 +220,31 @@ export function CopyArchivePanel({
   const [q, setQ] = useState('')
   const [vertical, setVertical] = useState('all')
   const [offer, setOffer] = useState('all')
-  const [sort, setSort] = useState<CopyArchiveSortKey>('reply')
+  const [sort, setSort] = useState<CopyArchiveSortKey>('positive')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
+  const [pipeline, setPipeline] = useState<CompassCampaign[]>([])
+  const [pieceFactor, setPieceFactor] = useState<OutboundFactorKey>('cta')
+
+  const board = useCachedJson<{ live?: OutboundBoardCampaign[]; history?: OutboundBoardCampaign[] }>(
+    '/api/instantly/outbound-campaigns',
+    '/api/instantly/outbound-campaigns',
+    { staleMs: 60_000 }
+  )
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
         await ensureOutboundLibrarySeeded()
-        const rows = await listLibraryItems<OutboundOffer>('offers')
-        if (!cancelled) setOffers(rows)
+        const [cams, offerRows] = await Promise.all([
+          listCampaigns().catch(() => [] as CompassCampaign[]),
+          listLibraryItems<OutboundOffer>('offers')
+        ])
+        if (!cancelled) {
+          setPipeline(cams)
+          setOffers(offerRows)
+        }
       } catch {
         if (!cancelled) setOffers([])
       }
@@ -230,15 +257,26 @@ export function CopyArchivePanel({
 
   const entries = useMemo(() => {
     void tick
-    return listCopyArchive({
+    const listed = listCopyArchive({
       q: q.trim() || undefined,
       vertical: vertical === 'all' ? undefined : vertical,
       offer_key: offer === 'all' ? undefined : offer,
-      sort
+      sort,
+      pipelineCampaigns: pipeline
     })
-  }, [q, vertical, offer, sort, tick])
+    const boardRows = [...(board.data?.live ?? []), ...(board.data?.history ?? [])]
+    const overlaid = overlayArchiveInstantlyPerformance(listed, pipeline, boardRows)
+    return sortCopyArchiveEntries(overlaid, sort)
+  }, [q, vertical, offer, sort, tick, pipeline, board.data])
 
   const selected = entries.find((e) => e.id === selectedId) ?? entries[0] ?? null
+
+  const pieceRows = useMemo(() => {
+    const offerNames = Object.fromEntries(offers.map((o) => [o.offer_key, o.name]))
+    const boardRows = [...(board.data?.live ?? []), ...(board.data?.history ?? [])]
+    const enriched = boardRows.map((c) => enrichOutboundCampaignFactors(c, pipeline, offerNames))
+    return rollupOutboundByFactor(enriched, pieceFactor).slice(0, 8)
+  }, [board.data, pipeline, offers, pieceFactor])
 
   function refresh() {
     setTick((n) => n + 1)
@@ -361,6 +399,7 @@ export function CopyArchivePanel({
             value={sort}
             onChange={(v) => setSort(v as CopyArchiveSortKey)}
             options={[
+              { value: 'positive', label: 'Positive rate' },
               { value: 'reply', label: 'Reply rate' },
               { value: 'last_used', label: 'Last used' },
               { value: 'sent', label: 'Sent volume' },
@@ -368,6 +407,41 @@ export function CopyArchivePanel({
             ]}
           />
         </div>
+
+        {pieceRows.length ? (
+          <div className="mb-4 rounded-2xl border border-stone-200/80 bg-white p-4 shadow-soft">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-[12px] font-semibold text-neutral-800">Named pieces</p>
+              <select
+                value={pieceFactor}
+                onChange={(e) => setPieceFactor(e.target.value as OutboundFactorKey)}
+                className="rounded-xl border border-stone-200 bg-white px-2 py-1 text-[11px]"
+              >
+                <option value="cta">CTA</option>
+                <option value="expression">Expression</option>
+                <option value="structure">Structure</option>
+                <option value="offer">Offer</option>
+                <option value="audience">Audience</option>
+              </select>
+            </div>
+            <p className="mb-2 text-[11px] text-neutral-500">
+              Instantly volume plus Compass positives. Ignore opens. One factor at a time.
+            </p>
+            <ul className="space-y-1.5">
+              {pieceRows.map((row) => (
+                <li
+                  key={row.key}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-stone-100 px-2.5 py-1.5 text-[12px]"
+                >
+                  <span className="min-w-0 truncate font-medium text-neutral-800">{row.key}</span>
+                  <span className="shrink-0 tabular-nums text-neutral-500">
+                    {row.delivered} del · {row.positiveRate}% pos · {row.meetingsPer100} mtg/100
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {entries.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-stone-200 bg-white px-5 py-12 text-center shadow-soft">
@@ -407,10 +481,16 @@ export function CopyArchivePanel({
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 rounded-2xl border border-stone-200/70 bg-stone-50/50 p-3">
                 <Metric
-                  label="Reply rate"
+                  label="Positive / delivered"
                   value={
-                    selected.performance.replyRate
-                      ? `${selected.performance.replyRate}%`
+                    selected.performance.sendCount
+                      ? `${computeOutcomeMetrics(
+                          { sent: selected.performance.sendCount, bounced: 0 },
+                          {
+                            positive: selected.performance.positiveReplies,
+                            meetings: selected.performance.meetings
+                          }
+                        ).positiveRate}%`
                       : '—'
                   }
                 />
@@ -423,10 +503,18 @@ export function CopyArchivePanel({
                   }
                 />
                 <Metric
-                  label="Meetings"
+                  label="Meetings / 100"
                   value={
-                    selected.performance.meetings
-                      ? selected.performance.meetings.toLocaleString()
+                    selected.performance.sendCount
+                      ? String(
+                          computeOutcomeMetrics(
+                            { sent: selected.performance.sendCount, bounced: 0 },
+                            {
+                              positive: selected.performance.positiveReplies,
+                              meetings: selected.performance.meetings
+                            }
+                          ).meetingsPer100
+                        )
                       : '—'
                   }
                 />

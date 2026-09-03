@@ -1,6 +1,8 @@
 /** Local Copy Archive store + list helpers for the Sequence Editor Archive tab. */
 
 import type { CompassCampaign } from '@/lib/campaigns'
+import type { OutboundBoardCampaign } from '@/lib/instantly'
+import { computeOutcomeMetrics } from '@/lib/outbound-outcome-metrics'
 import {
   deriveCopyArchiveComponents,
   emptyCopyArchivePerformance,
@@ -223,7 +225,7 @@ function matchesFilters(entry: CopyArchiveEntry, filters?: CopyArchiveListFilter
   return true
 }
 
-function sortEntries(list: CopyArchiveEntry[], sort: CopyArchiveSortKey = 'reply'): CopyArchiveEntry[] {
+export function sortCopyArchiveEntries(list: CopyArchiveEntry[], sort: CopyArchiveSortKey = 'reply'): CopyArchiveEntry[] {
   const next = list.slice()
   next.sort((a, b) => {
     switch (sort) {
@@ -231,6 +233,15 @@ function sortEntries(list: CopyArchiveEntry[], sort: CopyArchiveSortKey = 'reply
         return a.name.localeCompare(b.name)
       case 'sent':
         return b.performance.sendCount - a.performance.sendCount
+      case 'positive': {
+        const ap = a.performance.sendCount
+          ? a.performance.positiveReplies / Math.max(1, a.performance.sendCount)
+          : 0
+        const bp = b.performance.sendCount
+          ? b.performance.positiveReplies / Math.max(1, b.performance.sendCount)
+          : 0
+        return bp - ap || b.performance.positiveReplies - a.performance.positiveReplies || b.performance.sendCount - a.performance.sendCount
+      }
       case 'last_used': {
         const au = a.last_used_at || ''
         const bu = b.last_used_at || ''
@@ -294,7 +305,7 @@ export function listCopyArchive(filters?: CopyArchiveListFilters): CopyArchiveEn
     }
   }
 
-  return sortEntries(
+  return sortCopyArchiveEntries(
     [...saved, ...derived].filter((row) => matchesFilters(row, filters)),
     filters?.sort ?? 'reply'
   )
@@ -429,3 +440,52 @@ export function forkCopyArchiveIntoSequence(id: string): OutboundSequence | null
     template_origin_id: entry.source === 'template' ? entry.source_id : entry.sequence.template_origin_id
   })
 }
+
+/** Overlay Instantly + ledger volume onto archive rows bound to a campaign. */
+export function overlayArchiveInstantlyPerformance(
+  entries: CopyArchiveEntry[],
+  pipeline: CompassCampaign[],
+  board: OutboundBoardCampaign[]
+): CopyArchiveEntry[] {
+  const byPipelineId = new Map(pipeline.map((c) => [c.id, c]))
+  const byInstantlyId = new Map(board.map((c) => [c.id, c]))
+
+  return entries.map((entry) => {
+    const pipelineId =
+      (entry.source === 'campaign' && entry.source_id) ||
+      (entry.source === 'saved' ? entry.source_id : null)
+    if (!pipelineId) return entry
+    const bind = byPipelineId.get(pipelineId)
+    if (!bind) return entry
+    const instantlyId = bind.instantly_campaign_id?.trim()
+    if (!instantlyId) return entry
+    const live = byInstantlyId.get(instantlyId)
+    if (!live) return entry
+    const outcome = computeOutcomeMetrics(
+      { sent: live.sendCount, bounced: live.bouncedCount || 0 },
+      {
+        positive:
+          typeof bind.wave_positive_count === 'number'
+            ? bind.wave_positive_count
+            : live.positiveReplies ?? 0,
+        meetings:
+          typeof bind.wave_meeting_count === 'number'
+            ? bind.wave_meeting_count
+            : live.meetings ?? 0
+      }
+    )
+    return {
+      ...entry,
+      performance: {
+        sendCount: live.sendCount,
+        replyCount: live.replyCount,
+        replyRate: live.replyRate,
+        positiveReplies: outcome.positive,
+        meetings: outcome.meetings,
+        leadCount: live.leadCount || entry.performance.leadCount,
+        campaignCount: Math.max(1, entry.performance.campaignCount)
+      }
+    }
+  })
+}
+
