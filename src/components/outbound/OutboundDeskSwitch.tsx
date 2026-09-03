@@ -5,11 +5,8 @@ import type { OutboundDeskId } from '@/lib/outbound-desk'
 
 const DESKS: Array<{ id: OutboundDeskId; label: string }> = [
   { id: 'waves', label: 'Waves' },
-  { id: 'pathways', label: 'Pathways' },
-  { id: 'cassette', label: 'Cassette' },
-  { id: 'runway', label: 'Runway' },
-  { id: 'factory', label: 'Factory' },
-  { id: 'calendar', label: 'Calendar' }
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'timeline', label: 'Timeline' }
 ]
 
 export function OutboundDeskSwitch({

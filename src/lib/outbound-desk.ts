@@ -1,13 +1,16 @@
-export const OUTBOUND_DESK_IDS = ['waves', 'pathways', 'cassette', 'runway', 'factory', 'calendar'] as const
+export const OUTBOUND_DESK_IDS = ['waves', 'calendar', 'timeline'] as const
 
 export type OutboundDeskId = (typeof OUTBOUND_DESK_IDS)[number]
 
-export const OUTBOUND_DESK_STORAGE_KEY = 'compass.outbound.desk.v2'
+export const OUTBOUND_DESK_STORAGE_KEY = 'compass.outbound.desk.v3'
 
 export const DEFAULT_OUTBOUND_DESK: OutboundDeskId = 'waves'
 
+const LEGACY_DESKS = new Set(['pathways', 'cassette', 'runway', 'factory'])
+
 export function parseOutboundDesk(raw: string | null | undefined): OutboundDeskId {
   const value = (raw || '').trim().toLowerCase()
+  if (LEGACY_DESKS.has(value)) return DEFAULT_OUTBOUND_DESK
   return (OUTBOUND_DESK_IDS as readonly string[]).includes(value)
     ? (value as OutboundDeskId)
     : DEFAULT_OUTBOUND_DESK

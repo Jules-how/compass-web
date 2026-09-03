@@ -5,12 +5,8 @@ import Link from 'next/link'
 import { CampaignPlanner } from '@/components/campaigns/CampaignPlanner'
 import { OperatorShell } from '@/components/OperatorShell'
 import { CadenceControl, useCadencePrefs } from '@/components/outbound/CadenceControl'
-import { CassettePreview } from '@/components/outbound/mock/CassettePreview'
-import { FactoryPreview } from '@/components/outbound/mock/FactoryPreview'
 import { OutboundDeskSwitch } from '@/components/outbound/OutboundDeskSwitch'
 import { OfferWavesBoard } from '@/components/outbound/OfferWavesBoard'
-import { PathwayDesk } from '@/components/outbound/PathwayDesk'
-import { RunwayPreview } from '@/components/outbound/mock/RunwayPreview'
 import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
 import { dateOnlyInZone, type CompassCampaign } from '@/lib/campaigns'
 import { mondayOfWeek, mondayWeeksAhead } from '@/lib/campaign-queue'
@@ -63,10 +59,10 @@ export function OutboundDesk() {
     return <OperatorShell title="Outbound" width="full">{null}</OperatorShell>
   }
 
-  if (desk === 'calendar') {
+  if (desk === 'calendar' || desk === 'timeline') {
     return (
       <OperatorShell flush>
-        <CampaignPlanner deskSwitch={switcher} />
+        <CampaignPlanner deskSwitch={switcher} initialView={desk} />
       </OperatorShell>
     )
   }
@@ -88,17 +84,7 @@ export function OutboundDesk() {
         </div>
       }
     >
-      {desk === 'waves' ? <OfferWavesBoard /> : null}
-      {desk === 'pathways' ? <PathwayDesk /> : null}
-      {desk === 'cassette' ? (
-        <CassettePreview embedded prefs={prefs} onPrefs={setPrefs} />
-      ) : null}
-      {desk === 'runway' ? (
-        <RunwayPreview embedded prefs={prefs} onPrefs={setPrefs} />
-      ) : null}
-      {desk === 'factory' ? (
-        <FactoryPreview embedded prefs={prefs} onPrefs={setPrefs} />
-      ) : null}
+      <OfferWavesBoard />
     </OperatorShell>
   )
 }

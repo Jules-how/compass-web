@@ -108,7 +108,13 @@ const PRIORITY_OPTIONS = [0, 1, 2, 3, 4] as const
 
 type CampaignsPayload = { campaigns: CompassCampaign[] }
 
-export function CampaignPlanner({ deskSwitch }: { deskSwitch?: ReactNode }) {
+export function CampaignPlanner({
+  deskSwitch,
+  initialView = 'calendar'
+}: {
+  deskSwitch?: ReactNode
+  initialView?: 'calendar' | 'timeline'
+}) {
   const router = useRouter()
   const campaignsQuery = useCachedJson<CampaignsPayload>(CAMPAIGNS_QUERY_KEY, '/api/campaigns', {
     staleMs: 30_000
@@ -127,12 +133,12 @@ export function CampaignPlanner({ deskSwitch }: { deskSwitch?: ReactNode }) {
   const [filterOpen, setFilterOpen] = useState(false)
   const [displayOpen, setDisplayOpen] = useState(false)
   const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null)
-  const [view, setView] = useState<ViewMode>('calendar')
+  const [view, setView] = useState<ViewMode>(initialView)
   const [calendarGrain, setCalendarGrain] = useState<CalendarGrain>('week')
   const [calendarCursor, setCalendarCursor] = useState(() => startOfDay(new Date()))
   const [slotDraft, setSlotDraft] = useState<string | null>(null)
   const [slotPlaced, setSlotPlaced] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('open')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [query, setQuery] = useState('')
   const [display, setDisplay] = useState<DisplayProps>(DEFAULT_DISPLAY)
@@ -150,9 +156,20 @@ export function CampaignPlanner({ deskSwitch }: { deskSwitch?: ReactNode }) {
     void campaignsQuery.reload(true)
   }, [campaignsQuery.reload])
 
+  useEffect(() => {
+    setView(initialView)
+    if (initialView === 'timeline') didCenterToday.current = false
+    if (initialView === 'calendar') setCalendarCursor(startOfDay(new Date()))
+  }, [initialView])
+
   const filtered = useMemo(() => {
     return campaigns.filter((c) => {
-      if (statusFilter !== 'all' && c.status !== statusFilter) return false
+      const status = normalizeCampaignStatus(c.status)
+      if (statusFilter === 'open') {
+        if (status === 'cancelled' || status === 'completed') return false
+      } else if (statusFilter !== 'all' && status !== statusFilter) {
+        return false
+      }
       if (priorityFilter !== 'all' && String(c.priority) !== priorityFilter) return false
       if (query.trim() && !c.name.toLowerCase().includes(query.trim().toLowerCase())) return false
       return true
@@ -542,6 +559,7 @@ export function CampaignPlanner({ deskSwitch }: { deskSwitch?: ReactNode }) {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="mt-1 w-full rounded-md border border-neutral-200 px-2 py-1.5 text-sm"
               >
+                <option value="open">Open</option>
                 <option value="all">All</option>
                 <option value="draft">Draft</option>
                 <option value="planned">Planned</option>
@@ -571,7 +589,7 @@ export function CampaignPlanner({ deskSwitch }: { deskSwitch?: ReactNode }) {
               className="mt-3 text-xs font-medium text-neutral-500 hover:text-neutral-800"
               onClick={() => {
                 setQuery('')
-                setStatusFilter('all')
+                setStatusFilter('open')
                 setPriorityFilter('all')
               }}
             >
@@ -587,12 +605,9 @@ export function CampaignPlanner({ deskSwitch }: { deskSwitch?: ReactNode }) {
             </div>
             <div className="mb-3 grid grid-cols-2 gap-0.5 rounded-lg border border-neutral-200 p-0.5 text-xs">
               {(
-                [
-                  ['list', 'List'],
-                  ['board', 'Board'],
-                  ['timeline', 'Timeline'],
-                  ['calendar', 'Calendar']
-                ] as const
+                initialView === 'timeline'
+                  ? ([['list', 'List'], ['board', 'Board'], ['timeline', 'Timeline']] as const)
+                  : ([['list', 'List'], ['board', 'Board'], ['calendar', 'Calendar']] as const)
               ).map(([mode, label]) => (
                 <button
                   key={mode}

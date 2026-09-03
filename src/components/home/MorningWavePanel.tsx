@@ -98,7 +98,7 @@ function SendingRow({
         ) : null}
         <Link
           href="/sales/outbound"
-          onClick={() => writeOutboundDesk('pathways')}
+          onClick={() => writeOutboundDesk('waves')}
           className="text-[11px] font-medium text-[#c2410c] hover:underline"
         >
           Open chunk
@@ -176,10 +176,10 @@ export function MorningWavePanel({
           </div>
           <Link
             href="/sales/outbound"
-            onClick={() => writeOutboundDesk('pathways')}
+            onClick={() => writeOutboundDesk('waves')}
             className="text-xs font-medium text-[#c2410c] hover:underline"
           >
-            Pathway desk
+            Waves
           </Link>
         </div>
 
