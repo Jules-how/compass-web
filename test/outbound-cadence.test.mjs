@@ -117,11 +117,12 @@ test('offer wave decision desk badges follow send and reply thresholds', () => {
   assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /suggestWaveMoves/)
 })
 
-test('live outbound desk switcher offers waves, cassette, runway, factory, and calendar', () => {
+test('live outbound desk switcher offers waves, pathways, cassette, runway, factory, and calendar', () => {
   const desk = read('src/lib/outbound-desk.ts')
   assert.match(desk, /OUTBOUND_DESK_STORAGE_KEY = 'compass.outbound.desk.v2'/)
   assert.match(desk, /DEFAULT_OUTBOUND_DESK: OutboundDeskId = 'waves'/)
   assert.match(desk, /waves/)
+  assert.match(desk, /pathways/)
   assert.match(desk, /cassette/)
   assert.match(desk, /runway/)
   assert.match(desk, /factory/)
@@ -129,6 +130,7 @@ test('live outbound desk switcher offers waves, cassette, runway, factory, and c
 
   const landing = read('src/components/outbound/OutboundDesk.tsx')
   assert.match(landing, /OfferWavesBoard/)
+  assert.match(landing, /PathwayDesk/)
   assert.match(landing, /CassettePreview/)
   assert.match(landing, /RunwayPreview/)
   assert.match(landing, /FactoryPreview/)

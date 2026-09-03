@@ -41,18 +41,14 @@ test('ad API routes are operator-gated with same-origin writes', () => {
   assert.match(glance, /loadHomeGlance/)
 })
 
-test('settings and home wire to ad account connect flow', () => {
+test('settings wires to ad account connect flow', () => {
   const settings = read('src/app/(console)/settings/page.tsx')
   const panel = read('src/components/settings/AdAccountsSettings.tsx')
-  const home = read('src/components/home/HomeDashboard.tsx')
   assert.match(settings, /AdAccountsSettings/)
   assert.match(panel, /\/api\/ads\/accounts/)
   assert.match(panel, /\/api\/ads\/discover/)
   assert.match(panel, /\/api\/instantly\/settings/)
   assert.match(panel, /Sync/)
-  assert.match(home, /\/api\/ads\/glance/)
-  assert.match(home, /href=\"\/settings\"/)
-  assert.match(home, /Accounts|Connect/)
 })
 
 test('creative status heuristics prefer winning on strong CPA / ROAS', async () => {

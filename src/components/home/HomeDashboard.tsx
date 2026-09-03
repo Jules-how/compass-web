@@ -1,14 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import type { BrainDumpReorganizeResult, BrainDumpSuggestion } from '@/lib/brain-dump'
 import type { HomePayload } from '@/lib/home-data'
 import type { CompassTask } from '@/lib/types'
-import { HomePrioritySheet } from '@/components/home/HomePriorityActions'
+import { MorningWavePanel } from '@/components/home/MorningWavePanel'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
@@ -63,12 +63,9 @@ export function HomeDashboard() {
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState<string | null>(null)
   const [applyNote, setApplyNote] = useState<string | null>(null)
-  const [undoingId, setUndoingId] = useState<string | null>(null)
-  const [openTask, setOpenTask] = useState<CompassTask | null>(null)
 
   const data = home.data
   const cold = data?.coldEmail
-  const digest = data?.digest
 
   useEffect(() => {
     try {
@@ -160,32 +157,6 @@ export function HomeDashboard() {
     }
   }
 
-  async function undoDone(taskId: string) {
-    setUndoingId(taskId)
-    try {
-      const res = await fetch('/api/digest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'undo', task_id: taskId })
-      })
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string }
-        throw new Error(body.error ?? 'Undo failed')
-      }
-      await home.reload(true)
-      await tasks.reload(true)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setUndoingId(null)
-    }
-  }
-
-  const spineRows = useMemo(() => {
-    if (!data) return []
-    return [...data.spine.leads, ...data.spine.clients]
-  }, [data])
-
   if (home.error && !data) {
     return (
       <div className="p-6 text-sm text-red-700">
@@ -232,108 +203,15 @@ export function HomeDashboard() {
           variants={staggerItem}
           className="grid min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain lg:grid-cols-2 xl:grid-cols-3"
         >
-          <Card className="min-h-0">
-            <CardContent className="p-4 sm:p-5">
-              <SectionHeader title="Done" hint={digest?.completed.length ? String(digest.completed.length) : undefined} />
-              {(digest?.completed ?? []).length === 0 ? (
-                <p className="text-sm text-neutral-500">Digest will auto-complete proof tasks here.</p>
-              ) : (
-                <ul className="divide-y divide-stone-100 rounded-xl border border-stone-100 bg-stone-50/40">
-                  {digest!.completed.map((item) => (
-                    <li key={item.task_id} className="flex items-start justify-between gap-2 px-3 py-2.5">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-neutral-900">{item.title}</div>
-                        <div className="mt-0.5 text-[11px] text-neutral-500">{item.why}</div>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={undoingId === item.task_id}
-                        onClick={() => void undoDone(item.task_id)}
-                        className="compass-btn-ghost shrink-0 px-2 py-1 text-[11px]"
-                      >
-                        {undoingId === item.task_id ? '…' : 'Undo'}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="min-h-0">
-            <CardContent className="p-4 sm:p-5">
-              <SectionHeader title="In flight" href="/tasks" />
-              <div className="space-y-3">
-                {(data?.inFlight ?? []).length > 0 ? (
-                  <ul className="divide-y divide-stone-100 rounded-xl border border-stone-100 bg-stone-50/40">
-                    {data!.inFlight.map((task) => (
-                      <li key={task.id} className="px-3 py-2.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="truncate text-sm font-medium text-neutral-900">{task.title}</span>
-                          <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
-                            {task.proven} of {task.total} proven
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-neutral-500">No partial proof tasks right now.</p>
-                )}
-                <div className="rounded-xl border border-stone-100 bg-stone-50/40 px-3 py-2.5 text-sm">
-                  <span className="text-neutral-500">Live campaigns </span>
-                  <span className="font-semibold tabular-nums text-neutral-900">
-                    {data?.liveCampaignCount ?? 0}
-                  </span>
-                  <Link href="/sales/outbound" className="ml-2 text-xs font-medium text-[#c2410c] hover:underline">
-                    Outbound
-                  </Link>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="min-h-0">
-            <CardContent className="p-4 sm:p-5">
-              <SectionHeader title="Needed" href="/tasks" />
-              <div className="space-y-2">
-                {[...(digest?.proposed ?? []), ...(digest?.needs_you ?? [])].map((item) => (
-                  <div
-                    key={item.key}
-                    className="rounded-xl border border-stone-100 bg-stone-50/40 px-3 py-2.5"
-                  >
-                    <Link href={item.href} className="text-sm font-medium text-neutral-900 hover:underline">
-                      {item.title}
-                    </Link>
-                    <p className="mt-0.5 text-[11px] text-neutral-500">{item.reason}</p>
-                  </div>
-                ))}
-                {(data?.overdueTasks ?? []).map((task) => (
-                  <div
-                    key={task.id}
-                    className="rounded-xl border border-amber-200/80 bg-amber-50/50 px-3 py-2.5"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const full = tasks.data?.topTasks.find((t) => t.id === task.id)
-                        if (full) setOpenTask(full)
-                      }}
-                      className="text-sm font-medium text-amber-900 hover:underline"
-                    >
-                      {task.title}
-                    </button>
-                    <p className="text-[11px] text-amber-800">Overdue · {task.due?.slice(0, 10)}</p>
-                  </div>
-                ))}
-                {(digest?.proposed ?? []).length === 0 &&
-                (digest?.needs_you ?? []).length === 0 &&
-                (data?.overdueTasks ?? []).length === 0 ? (
-                  <p className="text-sm text-neutral-500">Nothing queued — stack is clear.</p>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
+          {data?.wave ? (
+            <MorningWavePanel wave={data.wave} onReload={() => home.reload(true)} />
+          ) : (
+            <Card className="lg:col-span-2 xl:col-span-3">
+              <CardContent className="p-4 sm:p-5">
+                <p className="text-sm text-neutral-500">Morning wave did not load. Retry or check the brief tables.</p>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardContent className="p-4 sm:p-5">
@@ -375,68 +253,8 @@ export function HomeDashboard() {
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardContent className="p-4 sm:p-5">
-              <SectionHeader title="Pull next" href={data?.pullNext?.href ?? '/leads'} />
-              {data?.pullNext ? (
-                <div className="rounded-xl border border-[#e85d2a]/20 bg-gradient-to-br from-orange-50/70 to-white p-3.5">
-                  <div className="text-base font-semibold text-neutral-900">
-                    {data.pullNext.vertical}
-                    {data.pullNext.state ? ` · ${data.pullNext.state}` : ''}
-                  </div>
-                  <p className="mt-1 text-sm text-neutral-600">
-                    {data.pullNext.uncontacted.toLocaleString()} uncontacted with email
-                  </p>
-                  <p className="mt-2 text-xs text-neutral-500">
-                    Agent: {data.pullNext.agentQuery}
-                  </p>
-                  <Link
-                    href={data.pullNext.href}
-                    className="mt-3 inline-flex text-xs font-medium text-[#c2410c] hover:underline"
-                  >
-                    Open filtered leads
-                  </Link>
-                </div>
-              ) : (
-                <p className="text-sm text-neutral-500">Inventory is thin — import or widen filters.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="lg:col-span-2 xl:col-span-3">
-            <CardContent className="p-4 sm:p-5">
-              <SectionHeader title="Flow" href="/functions" />
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                {spineRows.map((row) => (
-                  <Link
-                    key={row.stage}
-                    href={row.href}
-                    className="rounded-xl border border-stone-100 bg-stone-50/40 px-3 py-2.5 transition hover:bg-white"
-                  >
-                    <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-400">
-                      {row.stage}
-                    </div>
-                    <div className="mt-1 text-xl font-semibold tabular-nums text-neutral-900">
-                      {row.count.toLocaleString()}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </motion.div>
       </motion.div>
-
-      {openTask ? (
-        <HomePrioritySheet
-          task={openTask}
-          project={null}
-          completing={false}
-          onClose={() => setOpenTask(null)}
-          onComplete={async () => {}}
-        />
-      ) : null}
 
       <AnimatePresence>
         {dumpOpen ? (

@@ -1,4 +1,4 @@
-export const OUTBOUND_DESK_IDS = ['waves', 'cassette', 'runway', 'factory', 'calendar'] as const
+export const OUTBOUND_DESK_IDS = ['waves', 'pathways', 'cassette', 'runway', 'factory', 'calendar'] as const
 
 export type OutboundDeskId = (typeof OUTBOUND_DESK_IDS)[number]
 

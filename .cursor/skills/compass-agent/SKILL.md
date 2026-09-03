@@ -75,7 +75,7 @@ curl -sS "$COMPASS_BASE_URL/api/agent/offers/desk" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 ```
 
-Campaign sequence of record: `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Outbound doctrine is `cold-email/AGENTS.md`. Product/price lock is Compass: `GET /api/agent/offers/desk` (Offers tab). Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact readiness `wave` is on `GET /api/agent/campaigns`. Live targeting (`currentWave`: trade, cluster, remaining, last import) is on `GET /api/agent/brief`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. First line goes in `personalization` and `custom_variables.opener`.
+Campaign sequence of record: `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Outbound doctrine is `cold-email/AGENTS.md`. Product/price lock is Compass: `GET /api/agent/offers/desk` (Offers tab). Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact readiness `wave` is on `GET /api/agent/campaigns`. `GET /api/agent/brief` includes `morningWave` (sending, two next, `landUnlocked`). Do not land while `landUnlocked` is false. `POST /api/agent/outbound/waves` writes `next_campaign_ids`. Pathway tools: `GET /api/agent/outbound/pathway`. Runs: `POST /api/agent/outbound/pathway/runs`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. First line goes in `personalization` and `custom_variables.opener`.
 
 **Operating model:** Compass = workshop · Instantly = mail truck. Activate stays in Instantly. Outbound doctrine is `cold-email/AGENTS.md`.
 

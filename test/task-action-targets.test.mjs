@@ -293,8 +293,8 @@ test('source file wires Gmail-first replies and Home sheet', () => {
   assert.match(resolver, /auto-reply-/)
 
   const home = read('src/components/home/HomeDashboard.tsx')
-  assert.match(home, /HomePrioritySheet/)
-  assert.match(home, /\/api\/digest/)
+  assert.match(home, /MorningWavePanel/)
+  assert.match(home, /\/inbox\?tab=instantly/)
   assert.doesNotMatch(home, /HomePriorityCheck/)
 
   const actions = read('src/components/home/HomePriorityActions.tsx')

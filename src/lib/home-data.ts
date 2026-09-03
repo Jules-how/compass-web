@@ -14,6 +14,8 @@ import type { ColdEmailGlance } from '@/lib/home-demo-data'
 import type { CompassTask } from '@/lib/types'
 import { taskHasProofClauses, proofProgress } from '@/lib/execution-contract'
 import { isOpenTask } from '@/lib/task-organisation'
+import type { MorningWavePayload } from '@/lib/wave-morning'
+import { loadMorningWavePayload } from '@/lib/wave-morning-server'
 
 export type SpineStageCount = {
   stage: string
@@ -48,6 +50,7 @@ export type HomePayload = {
   }>
   overdueTasks: Array<{ id: string; title: string; due: string | null }>
   liveCampaignCount: number
+  wave: MorningWavePayload | null
 }
 
 async function countByColumn(
@@ -141,7 +144,7 @@ async function buildPullNext(): Promise<PullNextCard | null> {
 export async function loadHomePayload(supabase: SupabaseClient): Promise<HomePayload> {
   await refreshEvidenceIfStale(supabase)
 
-  const [digest, coldSnap, tasksRes, leadSpine, clientSpine, pullNext] = await Promise.all([
+  const [digest, coldSnap, tasksRes, leadSpine, clientSpine, pullNext, wave] = await Promise.all([
     loadDailyDigest(supabase),
     loadSyncSnapshot<ColdEmailGlance>(supabase, 'instantly_cold_email'),
     supabase
@@ -160,7 +163,8 @@ export async function loadHomePayload(supabase: SupabaseClient): Promise<HomePay
       [...clientStagesInOrder()],
       (stage) => stageToolHref(stage as ClientPipelineStage)
     ),
-    buildPullNext()
+    buildPullNext(),
+    loadMorningWavePayload(supabase).catch(() => null)
   ])
 
   const tasks = (tasksRes.data ?? []) as CompassTask[]
@@ -189,6 +193,9 @@ export async function loadHomePayload(supabase: SupabaseClient): Promise<HomePay
     pullNext,
     inFlight,
     overdueTasks,
-    liveCampaignCount
+    liveCampaignCount,
+    wave: wave
+      ? { ...wave, instantlyRepliesWaiting: cold?.repliesWaiting ?? wave.instantlyRepliesWaiting }
+      : null
   }
 }

@@ -77,6 +77,7 @@ test('waves UI and agent route exist', () => {
   assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /normalizeWaveLane\(rec.wave_lane\) \|\| 'recommended'/)
   assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /instantly_campaign_id: instantlyId/)
   assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /mergeWaveBriefPayload/)
+  assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /next_campaign_ids/)
   assert.match(read('src/app/api/campaigns/route.ts'), /listPipelineCampaigns/)
   assert.match(read('src/lib/outbound-desk.ts'), /DEFAULT_OUTBOUND_DESK: OutboundDeskId = 'waves'/)
 })

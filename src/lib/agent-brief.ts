@@ -3,6 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadHomeGlance } from '@/lib/ad-sync'
 import type { ColdEmailGlance } from '@/lib/home-demo-data'
 import { loadSyncSnapshot } from '@/lib/sync-snapshots'
+import type { MorningWavePayload } from '@/lib/wave-morning'
+import { loadMorningWavePayload } from '@/lib/wave-morning-server'
 
 export type AgentCurrentWave = {
   campaignId: string | null
@@ -68,6 +70,7 @@ export type AgentBrief = {
   }
   /** Live targeting ledger. Not markdown. */
   currentWave: AgentCurrentWave
+  morningWave: MorningWavePayload | null
   /** One-line operator hint for agents — keep prompts short. */
   hint: string
 }
@@ -288,6 +291,13 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
   }
   if (hintParts.length === 0) hintParts.push('no urgent outbound signals')
 
+  const morningWave = await loadMorningWavePayload(supabase, cold?.repliesWaiting ?? 0).catch(
+    () => null
+  )
+  if (morningWave && !morningWave.landUnlocked) {
+    hintParts.unshift('Home brief not accepted — do not land live remaining')
+  }
+
   return {
     generatedAt,
     lastSyncAt: lastSync?.payload?.ranAt || lastSync?.syncedAt || null,
@@ -323,6 +333,7 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
       campaigns: pipeline
     },
     currentWave,
+    morningWave,
     hint: hintParts.join(' · ')
   }
 }

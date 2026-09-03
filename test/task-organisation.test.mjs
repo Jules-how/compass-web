@@ -218,10 +218,9 @@ test('Home Priorities is Focus subset aligned with My Tasks', () => {
   assert.equal(matchesFocusWindow(urgentNoDue, 'today', now), false)
 
   const home = read('src/components/home/HomeDashboard.tsx')
-  assert.match(home, /selectHomePriorities/)
-  assert.match(home, /bucketPriorityPlate/)
-  assert.match(home, /tasksHref/)
-  assert.match(home, /window: 'focus'/)
+  assert.match(home, /MorningWavePanel/)
+  assert.match(home, /\/api\/home/)
+  assert.doesNotMatch(home, /selectHomePriorities/)
   assert.doesNotMatch(home, /compareTasksByFocus/)
 
   const inbox = read('src/components/InboxPanel.tsx')

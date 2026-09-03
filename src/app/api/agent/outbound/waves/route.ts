@@ -28,6 +28,10 @@ import {
   type WaveAction,
   type WaveBrief
 } from '@/lib/wave-desk'
+import {
+  briefAllowsNextOverwrite,
+  clipNextIds
+} from '@/lib/wave-morning'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -159,6 +163,7 @@ export async function POST(request: Request) {
       week_start?: string | null
       campaign_id?: string | null
     }>
+    next_campaign_ids?: string[]
     recommend?: Array<{
       name?: string
       rationale?: string
@@ -187,22 +192,29 @@ export async function POST(request: Request) {
     const createdCampaigns: Array<{ id: string; name: string }> = []
     const createdActions: Array<{ id: string; title: string }> = []
 
-    if (body.recommendation?.trim() || body.scan) {
-      const { data: existing } = await admin
-        .from('compass_wave_briefs')
-        .select('recommendation,scan,created_at')
-        .eq('id', day)
-        .maybeSingle()
-      const merged = mergeWaveBriefPayload(existing, {
+    const { data: existingBrief } = await admin
+      .from('compass_wave_briefs')
+      .select('recommendation,scan,created_at,next_campaign_ids,next_status')
+      .eq('id', day)
+      .maybeSingle()
+
+    if (body.recommendation?.trim() || body.scan || body.next_campaign_ids) {
+      const merged = mergeWaveBriefPayload(existingBrief, {
         recommendation: body.recommendation,
         scan: body.scan
       })
+      const canOverwrite = briefAllowsNextOverwrite(existingBrief?.next_status)
+      const nextIds = canOverwrite
+        ? clipNextIds(body.next_campaign_ids ?? existingBrief?.next_campaign_ids)
+        : clipNextIds(existingBrief?.next_campaign_ids)
       const { error } = await admin.from('compass_wave_briefs').upsert({
         id: day,
         generated_at: stamp,
         recommendation: merged.recommendation,
         scan: merged.scan,
-        created_at: merged.created_at ?? stamp
+        created_at: merged.created_at ?? stamp,
+        next_campaign_ids: nextIds,
+        next_status: canOverwrite ? 'proposed' : existingBrief?.next_status || 'proposed'
       })
       if (error) throw new Error(error.message)
     }
@@ -261,6 +273,26 @@ export async function POST(request: Request) {
       })
       createdCampaigns.push({ id: created.id, name: created.name })
       existingCampaigns.push(created)
+    }
+
+    if (
+      briefAllowsNextOverwrite(existingBrief?.next_status) &&
+      !body.next_campaign_ids &&
+      createdCampaigns.length > 0
+    ) {
+      const filled = clipNextIds([
+        ...(existingBrief?.next_campaign_ids ?? []),
+        ...createdCampaigns.map((row) => row.id)
+      ])
+      const { error: fillError } = await admin.from('compass_wave_briefs').upsert({
+        id: day,
+        generated_at: stamp,
+        recommendation: existingBrief?.recommendation ?? body.recommendation?.trim() ?? null,
+        scan: existingBrief?.scan ?? body.scan ?? {},
+        next_campaign_ids: filled,
+        next_status: 'proposed'
+      })
+      if (fillError) throw new Error(fillError.message)
     }
 
     return portalJson({

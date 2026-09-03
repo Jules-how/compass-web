@@ -447,6 +447,8 @@ export interface LeadContact {
   cohort_tag?: string | null
   enrich_status?: string | null
   opener?: string | null
+  opener_template_id?: string | null
+  opener_override?: boolean | null
   website?: string | null
   company_domain?: string | null
   email_verify_status?: string | null
