@@ -904,7 +904,9 @@ export function SequenceEditor({
                   Compass copy. Instantly may differ until you push copy.
                 </p>
               ) : null}
+              <div className="mb-5 rounded-2xl border border-stone-200/70 bg-white p-4 shadow-soft">
               <ComposeRatesStrip campaign={campaign} />
+              <div className="mt-3 border-t border-stone-100 pt-3">
               <ComposeRecipeStrip
                 bits={[
                   {
@@ -978,6 +980,8 @@ export function SequenceEditor({
                   setFocusField(slotKey)
                 }}
               />
+              </div>
+              </div>
               {sequence.steps.map((step, index) => (
                 <div key={step.id}>
                   {index > 0 ? (
@@ -1013,7 +1017,7 @@ export function SequenceEditor({
                     onClick={() => setActiveStepId(step.id)}
                   >
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+                      <span className="text-[11px] font-semibold text-neutral-400">
                         {step.label}
                       </span>
                       <div className="flex items-center gap-1">
@@ -1092,7 +1096,7 @@ export function SequenceEditor({
                       <div className="mt-3 space-y-2.5">
                         {editableContentSlots(step).map((slot) => (
                           <label key={slot.key} className="block">
-                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+                            <span className="mb-1 block text-[11px] font-semibold text-neutral-400">
                               {slot.label}
                             </span>
                             <textarea
@@ -1350,43 +1354,28 @@ export function SequenceEditor({
               }}
               className="absolute inset-y-0 -left-1 z-10 w-2 cursor-col-resize"
             />
-            <div className="flex shrink-0 gap-0.5 border-b border-stone-100 px-2 py-1.5">
-              <button
-                type="button"
-                onClick={() => setRailTab('library')}
-                className={cn(
-                  'rounded-lg px-2.5 py-1 text-[11px] font-semibold',
-                  railTab === 'library'
-                    ? 'bg-[#e85d2a]/10 text-[#c2410c]'
-                    : 'text-neutral-500 hover:text-neutral-800'
-                )}
-              >
-                Library
-              </button>
-              <button
-                type="button"
-                onClick={() => setRailTab('levers')}
-                className={cn(
-                  'rounded-lg px-2.5 py-1 text-[11px] font-semibold',
-                  railTab === 'levers'
-                    ? 'bg-[#e85d2a]/10 text-[#c2410c]'
-                    : 'text-neutral-500 hover:text-neutral-800'
-                )}
-              >
-                Levers
-              </button>
-              <button
-                type="button"
-                onClick={() => setRailTab('pillars')}
-                className={cn(
-                  'rounded-lg px-2.5 py-1 text-[11px] font-semibold',
-                  railTab === 'pillars'
-                    ? 'bg-[#e85d2a]/10 text-[#c2410c]'
-                    : 'text-neutral-500 hover:text-neutral-800'
-                )}
-              >
-                QA
-              </button>
+            <div className="flex shrink-0 gap-0.5 border-b border-stone-100 bg-stone-50/80 px-2 py-1.5">
+              {(
+                [
+                  ['library', 'Library'],
+                  ['levers', 'Levers'],
+                  ['pillars', 'QA']
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setRailTab(id)}
+                  className={cn(
+                    'rounded-xl px-2.5 py-1 text-[11px] font-semibold',
+                    railTab === id
+                      ? 'bg-white text-[#c2410c] shadow-soft'
+                      : 'text-neutral-500 hover:text-neutral-800'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
             {railTab === 'levers' ? (
               <ComposeLeversPanel

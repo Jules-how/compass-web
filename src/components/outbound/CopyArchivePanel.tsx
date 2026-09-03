@@ -55,9 +55,7 @@ function Select({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
-        {label}
-      </span>
+      <span className="text-[10px] font-semibold text-neutral-400">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -84,7 +82,7 @@ function TagChip({ children }: { children: ReactNode }) {
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+      <div className="text-[10px] font-semibold text-neutral-400">
         {label}
       </div>
       <div className="mt-0.5 truncate text-[13px] font-semibold tabular-nums text-neutral-900">
@@ -150,7 +148,7 @@ function ArchiveCard({
               ? `${Math.round((1000 * perf.positiveReplies) / Math.max(1, perf.sendCount)) / 10}%`
               : '—'}
           </div>
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+          <div className="text-[10px] font-semibold text-neutral-400">
             Positive / sent
           </div>
         </div>
@@ -181,7 +179,7 @@ function StepPreview({ entry }: { entry: CopyArchiveEntry }) {
           className="rounded-2xl border border-stone-200/80 bg-white p-4 shadow-soft"
         >
           <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+            <span className="text-[11px] font-semibold text-neutral-400">
               {step.label}
               {index > 0 && step.delay_days ? ` · +${step.delay_days}d` : ''}
             </span>
@@ -409,9 +407,9 @@ export function CopyArchivePanel({
         </div>
 
         {pieceRows.length ? (
-          <div className="mb-4 rounded-2xl border border-stone-200/80 bg-white p-4 shadow-soft">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-[12px] font-semibold text-neutral-800">Named pieces</p>
+          <div className="mb-5 rounded-2xl border border-stone-200/80 bg-white p-4 shadow-soft">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="text-[13px] font-semibold text-neutral-800">Named pieces</p>
               <select
                 value={pieceFactor}
                 onChange={(e) => setPieceFactor(e.target.value as OutboundFactorKey)}
@@ -424,14 +422,14 @@ export function CopyArchivePanel({
                 <option value="audience">Audience</option>
               </select>
             </div>
-            <p className="mb-2 text-[11px] text-neutral-500">
+            <p className="mb-2 text-[11px] text-pretty text-neutral-500">
               Instantly volume plus Compass positives. Ignore opens. One factor at a time.
             </p>
-            <ul className="space-y-1.5">
+            <ul className="divide-y divide-stone-100">
               {pieceRows.map((row) => (
                 <li
                   key={row.key}
-                  className="flex items-center justify-between gap-2 rounded-xl border border-stone-100 px-2.5 py-1.5 text-[12px]"
+                  className="flex items-center justify-between gap-2 py-2 text-[12px]"
                 >
                   <span className="min-w-0 truncate font-medium text-neutral-800">{row.key}</span>
                   <span className="shrink-0 tabular-nums text-neutral-500">
@@ -572,7 +570,7 @@ export function CopyArchivePanel({
               </div>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-              <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+              <div className="mb-3 text-[11px] font-semibold text-neutral-400">
                 Preview
               </div>
               <StepPreview entry={selected} />

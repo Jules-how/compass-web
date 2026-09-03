@@ -3,9 +3,7 @@
 import { useState, type DragEvent } from 'react'
 import Link from 'next/link'
 import { ArrowUpRight, Calendar, GripVertical, MessageCircle, Paperclip, Plus } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 
 export type KanbanTask = {
@@ -40,19 +38,8 @@ type DragPayload = {
   sourceColumnId: string
 }
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')
-}
-
 function priorityLabel(priority: KanbanTask['priority']): string | null {
-  if (priority === 'high') return 'High'
-  if (priority === 'medium') return 'Medium'
-  if (priority === 'low') return 'Low'
+  if (priority === 'high') return 'Sending'
   return null
 }
 
@@ -146,99 +133,83 @@ export function KanbanBoard({
               </p>
             ) : (
               column.tasks.map((task) => (
-                <Card
+                <div
                   key={task.id}
                   className={cn(
-                    'border-stone-200/80',
+                    'rounded-xl border border-stone-200/80 bg-stone-50/70 p-4',
                     task.draggable === false ? 'cursor-default' : 'cursor-move'
                   )}
                   draggable={task.draggable !== false}
                   onDragStart={(event) => handleDragStart(event, task, column.id)}
                 >
-                  <CardContent className="space-y-3 p-5">
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="text-[13px] font-semibold leading-snug text-neutral-900">
-                        {task.href ? (
-                          <Link href={task.href} className="hover:text-[#c2410c] hover:underline">
-                            {task.title}
-                          </Link>
-                        ) : (
-                          task.title
-                        )}
-                      </h4>
-                      {task.draggable === false ? null : (
-                        <GripVertical className="size-4 shrink-0 text-neutral-400" aria-hidden />
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="min-w-0 truncate text-[13px] font-semibold leading-snug text-neutral-900">
+                      {task.href ? (
+                        <Link href={task.href} className="hover:text-[#c2410c] hover:underline">
+                          {task.title}
+                        </Link>
+                      ) : (
+                        task.title
                       )}
-                    </div>
+                    </h4>
+                    {task.draggable === false ? null : (
+                      <GripVertical className="size-4 shrink-0 text-neutral-400" aria-hidden />
+                    )}
+                  </div>
 
-                    {task.description ? (
-                      <p className="line-clamp-2 text-[12px] leading-relaxed text-neutral-500">
-                        {task.description}
-                      </p>
-                    ) : null}
+                  {task.description ? (
+                    <p className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-pretty text-neutral-500">
+                      {task.description}
+                    </p>
+                  ) : null}
 
-                    {task.tags?.length || priorityLabel(task.priority) ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {priorityLabel(task.priority) ? (
-                          <Badge
-                            variant={task.priority === 'high' ? 'primary' : 'secondary'}
-                            appearance="light"
-                            size="sm"
-                          >
-                            {priorityLabel(task.priority)}
-                          </Badge>
-                        ) : null}
-                        {task.tags?.map((tag) => (
-                          <Badge key={tag} variant="secondary" appearance="light" size="sm">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    <div className="flex items-center justify-between gap-2 border-t border-stone-100 pt-3">
-                      <div className="flex flex-wrap items-center gap-3 text-neutral-500">
-                        {task.dueDate ? (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="size-3.5" />
-                            <span className="text-[11px] font-medium">{task.dueDate}</span>
-                          </div>
-                        ) : null}
-                        {task.comments != null ? (
-                          <div className="flex items-center gap-1">
-                            <MessageCircle className="size-3.5" />
-                            <span className="text-[11px] font-medium">{task.comments}</span>
-                          </div>
-                        ) : null}
-                        {task.attachments != null ? (
-                          <div className="flex items-center gap-1">
-                            <Paperclip className="size-3.5" />
-                            <span className="text-[11px] font-medium">{task.attachments}</span>
-                          </div>
-                        ) : null}
-                        {task.externalHref ? (
-                          <a
-                            href={task.externalHref}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-0.5 text-[11px] font-medium text-[#c2410c] hover:underline"
-                          >
-                            Instantly
-                            <ArrowUpRight className="size-3" />
-                          </a>
-                        ) : null}
-                      </div>
-                      {task.assignee ? (
-                        <Avatar className="size-8 ring-2 ring-white">
-                          {task.assignee.avatar ? (
-                            <AvatarImage src={task.assignee.avatar} alt="" />
-                          ) : null}
-                          <AvatarFallback>{initials(task.assignee.name)}</AvatarFallback>
-                        </Avatar>
+                  {task.tags?.length || priorityLabel(task.priority) ? (
+                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      {priorityLabel(task.priority) ? (
+                        <Badge variant="primary" appearance="light" size="sm">
+                          {priorityLabel(task.priority)}
+                        </Badge>
                       ) : null}
+                      {task.tags?.map((tag) => (
+                        <Badge key={tag} variant="secondary" appearance="light" size="sm">
+                          {tag}
+                        </Badge>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
+                  ) : null}
+
+                  <div className="mt-3 flex flex-wrap items-center gap-3 text-neutral-500">
+                    {task.dueDate ? (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="size-3.5" />
+                        <span className="text-[11px] font-medium tabular-nums">{task.dueDate}</span>
+                      </div>
+                    ) : null}
+                    {task.comments != null ? (
+                      <div className="flex items-center gap-1">
+                        <MessageCircle className="size-3.5" />
+                        <span className="text-[11px] font-medium tabular-nums">{task.comments}</span>
+                      </div>
+                    ) : null}
+                    {task.attachments != null ? (
+                      <div className="flex items-center gap-1">
+                        <Paperclip className="size-3.5" />
+                        <span className="text-[11px] font-medium tabular-nums">{task.attachments}</span>
+                      </div>
+                    ) : null}
+                    {task.externalHref ? (
+                      <a
+                        href={task.externalHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-0.5 text-[11px] font-medium text-[#c2410c] hover:underline"
+                      >
+                        Instantly
+                        <ArrowUpRight className="size-3" />
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
               ))
             )}
           </div>

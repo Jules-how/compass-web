@@ -67,26 +67,26 @@ export function CadenceControl({
         {load.label}
       </p>
       <label className="flex flex-col gap-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Target</span>
+        <span className="text-[10px] font-semibold text-neutral-400">Target</span>
         <input
           inputMode="numeric"
           value={targetDraft}
           placeholder="none"
           onChange={(e) => setTargetDraft(e.target.value)}
           onBlur={commit}
-          className="compass-input h-8 w-[4.5rem] px-2 py-1 text-[12px]"
+          className="compass-input h-8 w-[4.5rem] px-2 py-1 text-[12px] tabular-nums"
           aria-label="This week launch target"
         />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Cap</span>
+        <span className="text-[10px] font-semibold text-neutral-400">Cap</span>
         <input
           inputMode="numeric"
           value={capDraft}
           placeholder="none"
           onChange={(e) => setCapDraft(e.target.value)}
           onBlur={commit}
-          className="compass-input h-8 w-[4.5rem] px-2 py-1 text-[12px]"
+          className="compass-input h-8 w-[4.5rem] px-2 py-1 text-[12px] tabular-nums"
           aria-label="This week launch cap"
         />
       </label>

@@ -104,6 +104,13 @@ const DEFAULT_DISPLAY: DisplayProps = {
   showList: true
 }
 
+const plannerCtrl =
+  'inline-flex h-8 items-center justify-center rounded-xl border border-stone-200/80 bg-white px-2.5 text-[12px] font-medium text-neutral-700 shadow-soft hover:bg-stone-50'
+const plannerIcon =
+  'inline-flex size-8 items-center justify-center rounded-xl border border-stone-200/80 bg-white text-neutral-600 shadow-soft hover:bg-stone-50'
+const plannerGhost =
+  'inline-flex h-8 items-center justify-center rounded-xl px-2.5 text-[12px] font-medium text-neutral-600 hover:bg-white hover:shadow-soft'
+
 const PRIORITY_OPTIONS = [0, 1, 2, 3, 4] as const
 
 type CampaignsPayload = { campaigns: CompassCampaign[] }
@@ -399,22 +406,13 @@ export function CampaignPlanner({
   const menuCampaign = rowMenu ? campaigns.find((c) => c.id === rowMenu.campaignId) : null
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-[#f7f8f9] text-neutral-900">
-      <header className="relative z-40 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-neutral-200/80 bg-white px-4">
-        <div className="flex min-w-0 items-center gap-2">
-          <h1 className="truncate text-[15px] font-semibold tracking-tight">Outbound</h1>
-          <span className="text-neutral-300">/</span>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[13px] text-neutral-600 hover:bg-neutral-100"
-          >
-            All campaigns
-            <span className="text-[10px] text-neutral-400">▾</span>
-          </button>
-        </div>
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-[var(--compass-wash)] text-neutral-900">
+      <header className="relative z-40 flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-stone-200/80 bg-white px-4 py-2 shadow-soft">
+        <h1 className="truncate text-[15px] font-semibold tracking-tight text-neutral-900">Outbound</h1>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           {deskSwitch}
+          <div className="flex items-center gap-1">
           <ToolbarIconButton
             label="Filter"
             active={filterOpen || statusFilter !== 'all' || priorityFilter !== 'all' || Boolean(query)}
@@ -446,16 +444,17 @@ export function CampaignPlanner({
           >
             <PanelIcon />
           </ToolbarIconButton>
+          </div>
 
           {view === 'timeline' || view === 'calendar' ? (
-            <>
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => {
                   if (view === 'calendar') setCalendarCursor(startOfDay(new Date()))
                   else scrollToToday('smooth')
                 }}
-                className="ml-1 h-7 rounded-md border border-neutral-200 bg-white px-2.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
+                className={plannerCtrl}
               >
                 Today
               </button>
@@ -465,7 +464,7 @@ export function CampaignPlanner({
                     type="button"
                     aria-label="Previous period"
                     onClick={() => setCalendarCursor((cur) => shiftCursor(cur, calendarGrain, -1))}
-                    className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
+                    className={plannerIcon}
                   >
                     ‹
                   </button>
@@ -473,7 +472,7 @@ export function CampaignPlanner({
                     type="button"
                     aria-label="Next period"
                     onClick={() => setCalendarCursor((cur) => shiftCursor(cur, calendarGrain, 1))}
-                    className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
+                    className={plannerIcon}
                   >
                     ›
                   </button>
@@ -481,7 +480,7 @@ export function CampaignPlanner({
                     <select
                       value={calendarGrain}
                       onChange={(e) => setCalendarGrain(e.target.value as CalendarGrain)}
-                      className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
+                      className={`${plannerCtrl} appearance-none pr-7`}
                     >
                       {CALENDAR_GRAINS.map((option) => (
                         <option key={option.id} value={option.id}>
@@ -501,7 +500,7 @@ export function CampaignPlanner({
                     onChange={(e) => {
                       setZoomLevel(e.target.value as TimelineZoom)
                     }}
-                    className="h-7 appearance-none rounded-md border border-neutral-200 bg-white py-0 pl-2.5 pr-7 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50"
+                    className={`${plannerCtrl} appearance-none pr-7`}
                   >
                     {ZOOM_OPTIONS.map((option) => (
                       <option key={option.id} value={option.id}>
@@ -514,12 +513,13 @@ export function CampaignPlanner({
                   </span>
                 </label>
               )}
-            </>
+            </div>
           ) : null}
+          <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => createCampaign()}
-            className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-neutral-600 hover:bg-neutral-100"
+            className={plannerIcon}
             aria-label="New campaign"
             title="New campaign"
           >
@@ -528,17 +528,15 @@ export function CampaignPlanner({
           <button
             type="button"
             onClick={() => createCampaign(undefined, true)}
-            className="flex h-7 items-center rounded-md px-2 text-[11px] font-medium text-neutral-600 hover:bg-neutral-100"
+            className={plannerGhost}
             title="New campaign with copy editor"
           >
             + Copy
           </button>
-          <Link
-            href="/sales/outbound/craft"
-            className="ml-1 flex h-7 items-center rounded-md px-2 text-[11px] font-medium text-neutral-600 hover:bg-neutral-100"
-          >
+          <Link href="/sales/outbound/craft" className={plannerGhost}>
             Craft
           </Link>
+          </div>
         </div>
 
         {filterOpen ? (
@@ -550,14 +548,14 @@ export function CampaignPlanner({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Filter by title…"
-              className="mb-2 w-full rounded-md border border-neutral-200 px-2.5 py-1.5 text-sm"
+              className="mb-2 w-full rounded-xl border border-stone-200 px-2.5 py-1.5 text-sm"
             />
             <label className="mb-2 block text-xs text-neutral-500">
               Status
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="mt-1 w-full rounded-md border border-neutral-200 px-2 py-1.5 text-sm"
+                className="mt-1 w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
               >
                 <option value="open">Open</option>
                 <option value="all">All</option>
@@ -574,7 +572,7 @@ export function CampaignPlanner({
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                className="mt-1 w-full rounded-md border border-neutral-200 px-2 py-1.5 text-sm"
+                className="mt-1 w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
               >
                 <option value="all">All</option>
                 <option value="0">No priority</option>
@@ -603,7 +601,7 @@ export function CampaignPlanner({
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
               Display
             </div>
-            <div className="mb-3 grid grid-cols-2 gap-0.5 rounded-lg border border-neutral-200 p-0.5 text-xs">
+            <div className="mb-3 flex gap-0.5 rounded-xl border border-stone-200/80 bg-stone-50/80 p-0.5 text-xs">
               {(
                 initialView === 'timeline'
                   ? ([['list', 'List'], ['board', 'Board'], ['timeline', 'Timeline']] as const)
@@ -618,9 +616,9 @@ export function CampaignPlanner({
                     if (mode === 'timeline') didCenterToday.current = false
                     if (mode === 'calendar') setCalendarCursor(startOfDay(new Date()))
                   }}
-                  className={`rounded-md px-2 py-1.5 text-center font-medium ${
+                  className={`flex-1 rounded-xl px-2 py-1.5 text-center font-medium ${
                     view === mode
-                      ? 'bg-neutral-900 text-white'
+                      ? 'bg-white text-[#c2410c] shadow-soft'
                       : 'text-neutral-500 hover:text-neutral-800'
                   }`}
                 >
@@ -697,7 +695,7 @@ export function CampaignPlanner({
                     <button
                       type="button"
                       onClick={() => createCampaign()}
-                      className="mt-3 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
+                      className="compass-btn-primary mt-3 !px-3 !py-1.5 text-xs"
                     >
                       New campaign
                     </button>
@@ -864,12 +862,12 @@ export function CampaignPlanner({
                 }}
               >
                 <div
-                  className="sticky top-0 z-30 flex shrink-0 border-b border-neutral-200/80 bg-[#f7f8f9]"
+                  className="sticky top-0 z-30 flex shrink-0 border-b border-neutral-200/80 bg-[var(--compass-wash)]"
                   style={{ height: HEADER_HEIGHT }}
                 >
                   {display.showList ? (
                     <div
-                      className="sticky left-0 z-40 flex items-end border-r border-neutral-200/80 bg-[#f7f8f9] px-3 pb-2 text-[12px] font-medium text-neutral-500"
+                      className="sticky left-0 z-40 flex items-end border-r border-neutral-200/80 bg-[var(--compass-wash)] px-3 pb-2 text-[12px] font-medium text-neutral-500"
                       style={{ width: LABEL_WIDTH }}
                     >
                       All campaigns
@@ -1129,7 +1127,7 @@ export function CampaignPlanner({
                     >
                       {display.showList ? (
                         <div
-                          className="sticky left-0 z-20 border-r border-neutral-200/80 bg-[#f7f8f9]"
+                          className="sticky left-0 z-20 border-r border-neutral-200/80 bg-[var(--compass-wash)]"
                           style={{ width: LABEL_WIDTH }}
                         />
                       ) : null}
@@ -1141,7 +1139,7 @@ export function CampaignPlanner({
                   <div className="flex min-h-0 flex-1">
                     {display.showList ? (
                       <div
-                        className="sticky left-0 z-20 border-r border-neutral-200/80 bg-[#f7f8f9]"
+                        className="sticky left-0 z-20 border-r border-neutral-200/80 bg-[var(--compass-wash)]"
                         style={{ width: LABEL_WIDTH }}
                       />
                     ) : null}
@@ -1158,7 +1156,7 @@ export function CampaignPlanner({
                         <button
                           type="button"
                           onClick={() => createCampaign()}
-                          className="mt-3 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
+                          className="compass-btn-primary mt-3 !px-3 !py-1.5 text-xs"
                         >
                           New campaign
                         </button>
@@ -1563,10 +1561,10 @@ function ToolbarIconButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className={`flex h-7 w-7 items-center justify-center rounded-md border text-neutral-600 ${
+      className={`inline-flex size-8 items-center justify-center rounded-xl border text-neutral-600 ${
         active
-          ? 'border-neutral-300 bg-neutral-100'
-          : 'border-transparent hover:border-neutral-200 hover:bg-neutral-50'
+          ? 'border-stone-200 bg-stone-100 shadow-soft'
+          : 'border-transparent hover:border-stone-200/80 hover:bg-stone-50'
       }`}
     >
       {children}
@@ -1587,7 +1585,7 @@ function Popover({
     <>
       <button type="button" className="fixed inset-0 z-40 cursor-default" onClick={onClose} aria-label="Close" />
       <div
-        className={`absolute z-50 rounded-xl border border-neutral-200 bg-white p-3 shadow-xl ${className ?? ''}`}
+        className={`absolute z-50 rounded-2xl border border-stone-200/80 bg-white p-4 shadow-soft ${className ?? ''}`}
       >
         {children}
       </div>

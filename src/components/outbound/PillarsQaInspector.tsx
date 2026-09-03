@@ -47,10 +47,10 @@ export function PillarsQaInspector({
     <div className={cn('flex min-h-0 flex-col overflow-y-auto p-3', className)}>
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+          <p className="text-[11px] font-semibold text-neutral-400">
             5-pillar QA
           </p>
-          <p className="mt-0.5 text-[12px] text-neutral-500">Email 1 and bump, live as you type.</p>
+          <p className="mt-0.5 text-[12px] text-pretty text-neutral-500">Email 1 and bump, live as you type.</p>
         </div>
         <span
           className={cn(

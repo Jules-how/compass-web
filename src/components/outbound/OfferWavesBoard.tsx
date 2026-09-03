@@ -77,7 +77,6 @@ function campaignToKanbanTask(
       campaign.wave_approach ||
       undefined,
     priority: sending ? 'high' : instantly?.status === 'paused' ? 'low' : 'medium',
-    assignee: { name: `${trade} ${city}` },
     tags: [`${trade} · ${city}`],
     dueDate: goLive || undefined,
     comments: instantly?.replyCount ?? 0,
@@ -271,13 +270,8 @@ export function OfferWavesBoard({ className }: { className?: string }) {
 
   return (
     <div className={cn('space-y-6', className)}>
-      <section className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-[15px] font-semibold text-neutral-900">Offer waves</h2>
-          <p className="mt-0.5 text-[12px] text-neutral-500">
-            {glance || 'Activate stays in Instantly.'}
-          </p>
-        </div>
+      <section className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[12px] text-neutral-500">{glance || 'Activate stays in Instantly.'}</p>
         <div className="relative flex flex-wrap items-center justify-end gap-2">
           {note ? <p className="text-[12px] text-emerald-800">{note}</p> : null}
           {error ? <p className="text-[12px] text-red-700">{error}</p> : null}
@@ -294,10 +288,10 @@ export function OfferWavesBoard({ className }: { className?: string }) {
       {brief.headline ? (
         <Card>
           <CardContent className="space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+            <p className="text-[11px] font-semibold text-neutral-400">
               This morning · {latestBrief?.id}
             </p>
-            <h3 className="text-[16px] font-semibold leading-snug text-neutral-900">{brief.headline}</h3>
+            <h3 className="text-balance text-[16px] font-semibold leading-snug text-neutral-900">{brief.headline}</h3>
             {brief.watches.length ? (
               <ul className="space-y-2 text-[13px] leading-relaxed text-neutral-600">
                 {brief.watches.map((line) => (
@@ -320,91 +314,90 @@ export function OfferWavesBoard({ className }: { className?: string }) {
             <KanbanBoard columns={kanbanColumns} onMove={moveTask} />
           </div>
 
-          <aside className="order-2 space-y-3 xl:sticky xl:top-4">
-            <div>
-              <h2 className="text-[15px] font-semibold text-neutral-900">Outlook</h2>
-              <p className="mt-0.5 text-[12px] text-neutral-500">
-                What can be retargeted, what is still queued, and the next moves.
-              </p>
-            </div>
-            <Card>
-              <CardHeader className="border-b-0 pb-0">
-                <CardTitle className="text-[13px] font-medium text-neutral-500">90-day retarget</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-2">
-                <p className="text-2xl font-semibold text-neutral-900">
-                  {deskQuery.data?.recontactReady ?? '—'}
-                </p>
-                <p className="mt-1 text-[12px] text-neutral-500">Past cooldown. New offer, new copy.</p>
-                <Link href="/leads?recontact_ready=1" className="mt-2 inline-block text-[12px] text-[#c2410c] hover:underline">
-                  Open ready leads
-                </Link>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="border-b-0 pb-0">
-                <CardTitle className="text-[13px] font-medium text-neutral-500">Emails still to send</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-2">
-                <p className="text-2xl font-semibold text-neutral-900">
-                  {deskQuery.data?.emailsRemaining ?? '—'}
-                </p>
-                <p className="mt-1 text-[12px] text-neutral-500">Remaining Instantly contacts on live and paused waves.</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="border-b-0 pb-0">
-                <CardTitle className="text-[13px] font-medium text-neutral-500">Live now</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-2">
-                <p className="text-2xl font-semibold text-neutral-900">
-                  {deskQuery.data?.liveCampaigns ?? '—'}
-                </p>
-                <p className="mt-1 text-[12px] text-neutral-500">Instantly campaigns currently sending.</p>
-              </CardContent>
-            </Card>
+          <aside className="order-2 xl:sticky xl:top-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-[13px]">Pipeline actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 pt-4">
-                {openActions.length === 0 && doneActions.length === 0 ? (
-                  <p className="text-[12px] text-neutral-400">
-                    Nothing queued. Morning scan or Add campaign writes the next move here.
+                <div>
+                  <CardTitle>Outlook</CardTitle>
+                  <p className="mt-1 text-[12px] text-pretty text-neutral-500">
+                    What can be retargeted, what is still queued, and the next moves.
                   </p>
-                ) : (
-                  openActions.map((action) => (
-                    <div
-                      key={action.id}
-                      className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-stone-100 px-3 py-2.5"
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-[11px] font-medium text-neutral-500">90-day retarget</p>
+                    <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
+                      {deskQuery.data?.recontactReady ?? '—'}
+                    </p>
+                    <Link
+                      href="/leads?recontact_ready=1"
+                      className="mt-1 inline-block text-[12px] text-[#c2410c] hover:underline"
                     >
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-neutral-800">{action.title}</p>
-                        {action.detail ? (
-                          <p className="mt-0.5 text-[12px] text-neutral-500">{action.detail}</p>
-                        ) : null}
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                          <Badge variant="secondary" size="sm">
-                            {action.kind}
-                          </Badge>
-                          <span className="text-[11px] text-neutral-400">{action.source}</span>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={actionBusy === action.id}
-                        onClick={() => void markAction(action.id, 'done')}
-                        className="min-h-8 shrink-0 rounded-xl px-2 text-[12px] font-semibold text-[#c2410c] hover:bg-orange-50"
-                        aria-label={`Mark ${action.title} done`}
-                      >
-                        {actionBusy === action.id ? 'Saving…' : 'Mark done'}
-                      </button>
-                    </div>
-                  ))
-                )}
-                {doneActions.length ? (
-                  <p className="pt-1 text-[11px] text-neutral-400">{doneActions.length} done this week.</p>
-                ) : null}
+                      Open ready leads
+                    </Link>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium text-neutral-500">Still to send</p>
+                    <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
+                      {deskQuery.data?.emailsRemaining ?? '—'}
+                    </p>
+                    <p className="mt-1 text-[12px] text-neutral-500">Live and paused</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium text-neutral-500">Live now</p>
+                    <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
+                      {deskQuery.data?.liveCampaigns ?? '—'}
+                    </p>
+                    <p className="mt-1 text-[12px] text-neutral-500">Sending in Instantly</p>
+                  </div>
+                </div>
+
+                <div className="border-t border-stone-100 pt-4">
+                  <p className="mb-2 text-[13px] font-semibold text-neutral-900">Pipeline actions</p>
+                  {openActions.length === 0 && doneActions.length === 0 ? (
+                    <p className="text-[12px] text-pretty text-neutral-400">
+                      Nothing queued. Morning scan or Add campaign writes the next move here.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {openActions.map((action) => (
+                        <li
+                          key={action.id}
+                          className="flex flex-wrap items-start justify-between gap-2 rounded-xl bg-stone-50/80 px-3 py-2.5"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-[13px] font-medium text-neutral-800">{action.title}</p>
+                            {action.detail ? (
+                              <p className="mt-0.5 text-[12px] text-pretty text-neutral-500">{action.detail}</p>
+                            ) : null}
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                              <Badge variant="secondary" size="sm">
+                                {action.kind}
+                              </Badge>
+                              <span className="text-[11px] text-neutral-400">{action.source}</span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={actionBusy === action.id}
+                            onClick={() => void markAction(action.id, 'done')}
+                            className="min-h-8 shrink-0 rounded-xl px-2 text-[12px] font-semibold text-[#c2410c] hover:bg-orange-50"
+                            aria-label={`Mark ${action.title} done`}
+                          >
+                            {actionBusy === action.id ? 'Saving…' : 'Mark done'}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {doneActions.length ? (
+                    <p className="pt-2 text-[11px] tabular-nums text-neutral-400">
+                      {doneActions.length} done this week.
+                    </p>
+                  ) : null}
+                </div>
               </CardContent>
             </Card>
           </aside>
