@@ -155,13 +155,15 @@ test('job contribution defaults by trade', () => {
 
 test('CS routes, nav, and migration are wired', () => {
   const page = read('src/app/(console)/operations/cs/page.tsx')
+  const keepAlive = read('src/components/ConsoleHomeInboxKeepAlive.tsx')
   const api = read('src/app/api/cs/route.ts')
   const agent = read('src/app/api/agent/cs/route.ts')
   const nav = read('src/components/NavLinks.tsx')
   const migration = read('supabase/migrations/0075_compass_cs_dept.sql')
   const detail = read('src/components/clients/ClientDetailPanel.tsx')
 
-  assert.match(page, /CsDeptBoard/)
+  assert.match(page, /OperatorShell/)
+  assert.match(keepAlive, /CsDeptBoard/)
   assert.match(api, /runCsDept/)
   assert.match(agent, /requireAgentAuth/)
   assert.match(nav, /\/operations\/cs/)

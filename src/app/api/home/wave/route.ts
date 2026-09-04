@@ -3,13 +3,27 @@ import { requirePortalAccess } from '@/lib/portal-access'
 import {
   portalAccessResponse,
   portalJson,
+  portalJsonCached,
   readBoundedJson,
   requireSameOrigin
 } from '@/lib/portal-http'
+import { loadMorningWavePayload } from '@/lib/wave-morning-server'
 import { sydneyDateOnly } from '@/lib/wave-desk'
 import { applyBriefDecision } from '@/lib/wave-morning'
 
 export const dynamic = 'force-dynamic'
+
+export async function GET() {
+  try {
+    const { supabase } = await requirePortalAccess({ operator: true })
+    const wave = await loadMorningWavePayload(supabase)
+    return portalJsonCached(wave, {}, 30)
+  } catch (err) {
+    const access = portalAccessResponse(err)
+    if (access) return access
+    return portalJson({ error: 'wave_fetch_failed' }, { status: 500 })
+  }
+}
 
 export async function POST(request: NextRequest) {
   const originError = requireSameOrigin(request)

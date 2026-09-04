@@ -1,14 +1,9 @@
 import { OperatorShell } from '@/components/OperatorShell'
-import { FunctionsPanel } from '@/components/FunctionsPanel'
 
+/**
+ * Functions list is owned by ConsoleHomeInboxKeepAlive inside the persistent
+ * console layout so sidebar switches keep the panel mounted.
+ */
 export default function FunctionsPage() {
-  return (
-    <OperatorShell
-      title="Functions"
-      subtitle="System map — how modules connect to live routes and tables"
-      width="full"
-    >
-      <FunctionsPanel />
-    </OperatorShell>
-  )
+  return <OperatorShell width="full">{null}</OperatorShell>
 }

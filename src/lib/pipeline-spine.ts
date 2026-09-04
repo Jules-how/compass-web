@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
 /** Pipeline spine stages and deep links for operator navigation. */
 
 export const LEAD_PIPELINE_STAGES = [
@@ -115,4 +117,31 @@ export function leadStagesInOrder(): LeadPipelineStage[] {
 
 export function clientStagesInOrder(): ClientPipelineStage[] {
   return [...CLIENT_PIPELINE_STAGES]
+}
+
+export type StageCount = {
+  stage: string
+  count: number
+  href: string
+}
+
+/** COUNT(*) per value. Never download the table to tally it. */
+export async function countRowsByValue(
+  supabase: SupabaseClient,
+  table: 'lead_contacts' | 'compass_clients',
+  column: string,
+  values: string[],
+  hrefFor: (value: string) => string
+): Promise<StageCount[]> {
+  const rows = await Promise.all(
+    values.map(async (value) => {
+      const { count, error } = await supabase
+        .from(table)
+        .select('id', { count: 'exact', head: true })
+        .eq(column, value)
+      if (error) throw new Error(error.message)
+      return { stage: value, count: count ?? 0, href: hrefFor(value) }
+    })
+  )
+  return rows
 }

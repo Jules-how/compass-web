@@ -1,16 +1,65 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { Suspense, useEffect, useState } from 'react'
-import { OutboundDesk } from '@/components/outbound/OutboundDesk'
-import { HomeDashboard } from '@/components/home/HomeDashboard'
-import { InboxPanel } from '@/components/InboxPanel'
-import { LeadsPanel } from '@/components/LeadsPanel'
-import { LoadingBlock } from '@/components/LoadingBlock'
-import { OffersDesk } from '@/components/offers/OffersDesk'
-import { OperatorShell } from '@/components/OperatorShell'
-import { SalesOverview } from '@/components/sales/SalesOverview'
 import { keepAliveKey, useConsoleViewPath } from '@/components/ConsoleNav'
+import { LoadingBlock } from '@/components/LoadingBlock'
+import { OperatorShell } from '@/components/OperatorShell'
 import { cn } from '@/lib/utils'
+
+const HomeDashboard = dynamic(
+  () => import('@/components/home/HomeDashboard').then((m) => ({ default: m.HomeDashboard })),
+  { loading: () => <LoadingBlock label="Loading home…" /> }
+)
+const InboxPanel = dynamic(
+  () => import('@/components/InboxPanel').then((m) => ({ default: m.InboxPanel })),
+  { loading: () => <LoadingBlock label="Loading inbox…" /> }
+)
+const SalesOverview = dynamic(
+  () => import('@/components/sales/SalesOverview').then((m) => ({ default: m.SalesOverview })),
+  { loading: () => <LoadingBlock label="Loading sales…" /> }
+)
+const OffersDesk = dynamic(
+  () => import('@/components/offers/OffersDesk').then((m) => ({ default: m.OffersDesk })),
+  { loading: () => <LoadingBlock label="Loading offers…" /> }
+)
+const OutboundDesk = dynamic(
+  () => import('@/components/outbound/OutboundDesk').then((m) => ({ default: m.OutboundDesk })),
+  { loading: () => <LoadingBlock label="Loading outbound…" /> }
+)
+const LeadsPanel = dynamic(
+  () => import('@/components/LeadsPanel').then((m) => ({ default: m.LeadsPanel })),
+  { loading: () => <LoadingBlock label="Loading leads…" /> }
+)
+const TasksPanel = dynamic(
+  () => import('@/components/TasksPanel').then((m) => ({ default: m.TasksPanel })),
+  { loading: () => <LoadingBlock label="Loading tasks…" /> }
+)
+const ProjectsPanel = dynamic(
+  () => import('@/components/ProjectsPanel').then((m) => ({ default: m.ProjectsPanel })),
+  { loading: () => <LoadingBlock label="Loading projects…" /> }
+)
+const FunctionsPanel = dynamic(
+  () => import('@/components/FunctionsPanel').then((m) => ({ default: m.FunctionsPanel })),
+  { loading: () => <LoadingBlock label="Loading functions…" /> }
+)
+const ClientsPanel = dynamic(
+  () => import('@/components/ClientsPanel').then((m) => ({ default: m.ClientsPanel })),
+  { loading: () => <LoadingBlock label="Loading clients…" /> }
+)
+const FinancesBoard = dynamic(
+  () => import('@/components/finances/FinancesBoard').then((m) => ({ default: m.FinancesBoard })),
+  { loading: () => <LoadingBlock label="Loading finances…" /> }
+)
+const InstallKanban = dynamic(
+  () =>
+    import('@/components/delivery-dept/InstallKanban').then((m) => ({ default: m.InstallKanban })),
+  { loading: () => <LoadingBlock label="Loading installs…" /> }
+)
+const CsDeptBoard = dynamic(
+  () => import('@/components/cs-dept/CsDeptBoard').then((m) => ({ default: m.CsDeptBoard })),
+  { loading: () => <LoadingBlock label="Loading retention…" /> }
+)
 
 function KeepAlivePane({
   active,
@@ -46,32 +95,53 @@ function useSeen(active: boolean) {
 }
 
 /**
- * Keeps Home, Inbox, and the Sales surfaces mounted after first visit so
- * switching between them is instant (no remount, no fade, no waiting on RSC).
+ * Keeps operator list surfaces mounted after first visit so sidebar switches
+ * do not remount or wait on RSC. Heavy desks load on first visit only.
  */
 export function ConsoleHomeInboxKeepAlive() {
   const viewPath = useConsoleViewPath()
   const key = keepAliveKey(viewPath)
   const showHome = key === 'home'
   const showInbox = key === 'inbox'
+  const showTasks = key === 'tasks'
+  const showProjects = key === 'projects'
+  const showFunctions = key === 'functions'
+  const showClients = key === 'clients'
   const showOverview = key === 'sales'
   const showOffers = key === 'offers'
   const showOutbound = key === 'outbound'
   const showCrm = key === 'leads'
+  const showFinances = key === 'finances'
+  const showInstalls = key === 'installs'
+  const showRetention = key === 'retention'
   const seenHome = useSeen(showHome)
   const seenInbox = useSeen(showInbox)
+  const seenTasks = useSeen(showTasks)
+  const seenProjects = useSeen(showProjects)
+  const seenFunctions = useSeen(showFunctions)
+  const seenClients = useSeen(showClients)
   const seenOverview = useSeen(showOverview)
   const seenOffers = useSeen(showOffers)
   const seenOutbound = useSeen(showOutbound)
   const seenCrm = useSeen(showCrm)
+  const seenFinances = useSeen(showFinances)
+  const seenInstalls = useSeen(showInstalls)
+  const seenRetention = useSeen(showRetention)
 
   if (
     !seenHome &&
     !seenInbox &&
+    !seenTasks &&
+    !seenProjects &&
+    !seenFunctions &&
+    !seenClients &&
     !seenOverview &&
     !seenOffers &&
     !seenOutbound &&
-    !seenCrm
+    !seenCrm &&
+    !seenFinances &&
+    !seenInstalls &&
+    !seenRetention
   ) {
     return null
   }
@@ -80,7 +150,6 @@ export function ConsoleHomeInboxKeepAlive() {
     <>
       {seenHome ? (
         <KeepAlivePane active={showHome}>
-          {/* HomeDashboard owns its own padding / one-viewport layout. */}
           <main className="flex min-h-0 flex-1 flex-col">
             <HomeDashboard />
           </main>
@@ -99,6 +168,42 @@ export function ConsoleHomeInboxKeepAlive() {
               <InboxPanel />
             </Suspense>
           </main>
+        </KeepAlivePane>
+      ) : null}
+      {seenTasks ? (
+        <KeepAlivePane active={showTasks}>
+          <OperatorShell title="My Tasks" subtitle="Todo · doing · blocked · done" width="full">
+            <TasksPanel />
+          </OperatorShell>
+        </KeepAlivePane>
+      ) : null}
+      {seenProjects ? (
+        <KeepAlivePane active={showProjects}>
+          <OperatorShell title="Projects" width="full" compact>
+            <ProjectsPanel />
+          </OperatorShell>
+        </KeepAlivePane>
+      ) : null}
+      {seenFunctions ? (
+        <KeepAlivePane active={showFunctions}>
+          <OperatorShell
+            title="Functions"
+            subtitle="System map — how modules connect to live routes and tables"
+            width="full"
+          >
+            <FunctionsPanel />
+          </OperatorShell>
+        </KeepAlivePane>
+      ) : null}
+      {seenClients ? (
+        <KeepAlivePane active={showClients}>
+          <OperatorShell
+            title="Clients"
+            subtitle="Accounts, relationships, and delivery workspaces"
+            width="6xl"
+          >
+            <ClientsPanel />
+          </OperatorShell>
         </KeepAlivePane>
       ) : null}
       {seenOverview ? (
@@ -128,6 +233,35 @@ export function ConsoleHomeInboxKeepAlive() {
             <Suspense fallback={<LoadingBlock label="Loading leads…" />}>
               <LeadsPanel />
             </Suspense>
+          </OperatorShell>
+        </KeepAlivePane>
+      ) : null}
+      {seenFinances ? (
+        <KeepAlivePane active={showFinances}>
+          <OperatorShell title="Finances" subtitle="QuickBooks is the only ledger">
+            <FinancesBoard />
+          </OperatorShell>
+        </KeepAlivePane>
+      ) : null}
+      {seenInstalls ? (
+        <KeepAlivePane active={showInstalls}>
+          <OperatorShell
+            title="Installs"
+            subtitle="Configure each client system from intake to monitored lead delivery."
+            width="full"
+          >
+            <InstallKanban />
+          </OperatorShell>
+        </KeepAlivePane>
+      ) : null}
+      {seenRetention ? (
+        <KeepAlivePane active={showRetention}>
+          <OperatorShell
+            title="Retention"
+            subtitle="Monday review. Drafts only. Approve, skip, or call the save play."
+            width="6xl"
+          >
+            <CsDeptBoard />
           </OperatorShell>
         </KeepAlivePane>
       ) : null}

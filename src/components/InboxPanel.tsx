@@ -34,6 +34,11 @@ import { useCachedJson } from '@/lib/use-cached-json'
 import { useUndo } from '@/components/UndoProvider'
 import { cn } from '@/lib/utils'
 
+function replaceInboxUrl(pathname: string, params: URLSearchParams) {
+  const url = `${pathname}?${params.toString()}`
+  window.history.replaceState(window.history.state, '', url)
+}
+
 const EMPTY_COPY: Record<InboxTab, { title: string; body: string }> = {
   agents: {
     title: 'No agent notifications',
@@ -478,8 +483,8 @@ export function InboxPanel() {
     const params = new URLSearchParams()
     params.set('tab', tab)
     params.set('id', items[0].id)
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }, [items, pathname, router, selectedParam, tab])
+    replaceInboxUrl(pathname, params)
+  }, [items, pathname, selectedParam, tab])
 
   const loadSuggestion = useCallback(async (item: InboxItem, signal?: AbortSignal) => {
     setSuggestion(null)
@@ -528,7 +533,7 @@ export function InboxPanel() {
     setMobileShowContext(false)
     // Transition keeps the previous list painted while the URL/selection updates.
     startTransition(() => {
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      replaceInboxUrl(pathname, params)
     })
   }
 
@@ -538,7 +543,7 @@ export function InboxPanel() {
     params.set('id', item.id)
     setMobileShowContext(true)
     startTransition(() => {
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      replaceInboxUrl(pathname, params)
     })
     if (item.unread) {
       void patchTriage(item, 'read', { silent: true })

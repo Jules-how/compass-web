@@ -12,7 +12,7 @@ import {
   useConsoleNav,
   useConsoleViewPath
 } from '@/components/ConsoleNav'
-import { NavLinks, navKeyFromPathname, type NavKey, OPERATOR_PREFETCH } from '@/components/NavLinks'
+import { NavLinks, navKeyFromPathname, type NavKey } from '@/components/NavLinks'
 import SignOutButton from '@/components/SignOutButton'
 import { UndoProvider } from '@/components/UndoProvider'
 import { Sidebar, SidebarBody } from '@/components/ui/sidebar'
@@ -132,9 +132,10 @@ function OperatorConsoleLayoutInner({
     // projects / campaigns on every console mount was a thundering herd —
     // hover/focus on NavLinks still warms individual APIs on demand.
     // Home plate needs /api/tasks; warm that with inbox so Home ↔ Inbox feels ready.
-    for (const item of OPERATOR_PREFETCH) {
-      router.prefetch(item.href)
-    }
+    // Prefetch the two busiest RSC shells. Prefetching every operator href on
+    // mount stampeded force-dynamic layout auth (iad1 × Seoul).
+    router.prefetch('/home')
+    router.prefetch('/inbox')
     prefetchJson('/api/tasks', '/api/tasks')
 
     // Warm the shared inbox cache so opening Inbox (and tab switches) stay snappy.

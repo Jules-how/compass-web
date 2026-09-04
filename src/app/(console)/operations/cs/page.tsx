@@ -1,14 +1,9 @@
-import { CsDeptBoard } from '@/components/cs-dept/CsDeptBoard'
 import { OperatorShell } from '@/components/OperatorShell'
 
+/**
+ * Retention is owned by ConsoleHomeInboxKeepAlive inside the persistent
+ * console layout so sidebar switches keep the board mounted.
+ */
 export default function CsDeptPage() {
-  return (
-    <OperatorShell
-      title="Retention"
-      subtitle="Monday review. Drafts only. Approve, skip, or call the save play."
-      width="6xl"
-    >
-      <CsDeptBoard />
-    </OperatorShell>
-  )
+  return <OperatorShell width="6xl">{null}</OperatorShell>
 }

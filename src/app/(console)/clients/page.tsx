@@ -1,14 +1,9 @@
 import { OperatorShell } from '@/components/OperatorShell'
-import { ClientsPanel } from '@/components/ClientsPanel'
 
+/**
+ * Clients list is owned by ConsoleHomeInboxKeepAlive inside the persistent
+ * console layout so sidebar switches keep the panel mounted.
+ */
 export default function ClientsPage() {
-  return (
-    <OperatorShell
-      title="Clients"
-      subtitle="Accounts, relationships, and delivery workspaces"
-      width="6xl"
-    >
-      <ClientsPanel />
-    </OperatorShell>
-  )
+  return <OperatorShell width="6xl">{null}</OperatorShell>
 }

@@ -1,10 +1,9 @@
-import { FinancesBoard } from '@/components/finances/FinancesBoard'
 import { OperatorShell } from '@/components/OperatorShell'
 
+/**
+ * Finances is owned by ConsoleHomeInboxKeepAlive inside the persistent
+ * console layout so sidebar switches keep the board mounted.
+ */
 export default function FinancesPage() {
-  return (
-    <OperatorShell title="Finances" subtitle="QuickBooks is the only ledger">
-      <FinancesBoard />
-    </OperatorShell>
-  )
+  return <OperatorShell>{null}</OperatorShell>
 }

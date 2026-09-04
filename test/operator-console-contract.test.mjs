@@ -51,22 +51,24 @@ test('operator pages still gate access and login supports open-operator fallback
     'src/app/(console)/inbox/page.tsx',
     'src/app/(console)/leads/page.tsx'
   ]) {
-    // Console pages inherit the shared layout gate.
-    // Home/Inbox/Sales/CRM bodies live in ConsoleHomeInboxKeepAlive for instant tab switches.
+    // Home/Inbox/Sales/CRM/workspace list bodies live in ConsoleHomeInboxKeepAlive
+    // for instant tab switches.
     if (
       page.includes('(console)/home') ||
       page.includes('(console)/inbox') ||
-      page.includes('(console)/leads')
+      page.includes('(console)/leads') ||
+      page.includes('(console)/tasks') ||
+      page.includes('(console)/projects/page') ||
+      page.includes('(console)/functions/page')
     ) {
       assert.match(read(page), /OperatorShell/)
-      assert.match(
-        read('src/components/ConsoleHomeInboxKeepAlive.tsx'),
-        page.includes('/home')
-          ? /HomeDashboard/
-          : page.includes('/inbox')
-            ? /InboxPanel/
-            : /LeadsPanel/
-      )
+      const keepAlive = read('src/components/ConsoleHomeInboxKeepAlive.tsx')
+      if (page.includes('/home')) assert.match(keepAlive, /HomeDashboard/)
+      else if (page.includes('/inbox')) assert.match(keepAlive, /InboxPanel/)
+      else if (page.includes('/leads')) assert.match(keepAlive, /LeadsPanel/)
+      else if (page.includes('/tasks')) assert.match(keepAlive, /TasksPanel/)
+      else if (page.includes('/projects')) assert.match(keepAlive, /ProjectsPanel/)
+      else if (page.includes('/functions')) assert.match(keepAlive, /FunctionsPanel/)
     } else if (page.includes('(console)') && !page.includes('leads')) {
       assert.match(
         read(page),
@@ -119,7 +121,8 @@ test('client routes are operator-gated with same-origin writes', () => {
   assert.match(comms, /requireSameOrigin/)
   assert.match(clients, /compass_clients/)
   assert.match(comms, /compass_client_comm_threads/)
-  assert.match(page, /ClientsPanel/)
+  assert.match(page, /OperatorShell/)
+  assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /ClientsPanel/)
   assert.match(detail, /ClientsPanel/)
   assert.match(detail, /initialClientId/)
   assert.match(read('src/components/clients/ClientDirectory.tsx'), /ClientDetailModal/)
@@ -155,9 +158,9 @@ test('operator console uses persistent layout with animated sidebar and sales ov
   assert.match(layout, /OperatorConsoleLayout/)
   assert.match(shell, /OperatorConsoleLayout/)
   assert.match(shell, /router\.prefetch/)
-  // Route prefetch + a single Home plate warm (/api/tasks). Instantly / clients /
-  // campaigns stay hover-only to avoid the old mount-time thundering herd.
+  // Home + Inbox RSC prefetch only. Instantly / clients / campaigns stay hover-only.
   assert.match(shell, /prefetchJson\('\/api\/tasks'/)
+  assert.doesNotMatch(shell, /OPERATOR_PREFETCH/)
   assert.doesNotMatch(shell, /prefetchJson\('\/api\/instantly/)
   assert.doesNotMatch(shell, /prefetchJson\('\/api\/clients/)
   assert.match(navLinks, /prefetchJson/)
@@ -171,8 +174,15 @@ test('operator console uses persistent layout with animated sidebar and sales ov
   assert.match(read('src/components/TaskList.tsx'), /tabular-nums/)
   assert.match(read('src/components/TaskList.tsx'), /min-w-\[11\.5rem\]/)
   assert.match(read('src/components/ConsoleNav.tsx'), /isKeepAlivePath/)
-  assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /seenHome|seenInbox|seenOverview|seenCrm/)
+  assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /seenHome|seenInbox|seenOverview|seenCrm|seenTasks/)
   assert.match(read('next.config.ts'), /staleTimes/)
+  assert.match(read('next.config.ts'), /optimizePackageImports/)
+  assert.match(read('vercel.json'), /icn1/)
+  assert.match(read('src/lib/home-data.ts'), /instantlyBoard: false/)
+  assert.doesNotMatch(read('src/lib/home-data.ts'), /refreshEvidenceIfStale/)
+  assert.match(read('src/lib/pipeline-spine.ts'), /head: true/)
+  assert.match(read('src/app/api/home/route.ts'), /after\(/)
+  assert.match(read('src/app/(console)/loading.tsx'), /Loading/)
   assert.match(read('src/lib/portal-access.ts'), /MEMBERSHIP_CACHE_TTL_MS/)
   assert.match(sidebar, /framer-motion|motion\./)
   assert.match(sidebar, /sticky top-0/)
@@ -185,6 +195,8 @@ test('operator console uses persistent layout with animated sidebar and sales ov
   assert.match(chart, /Lists/)
   assert.match(inbox, /INBOX_TAB_LABELS/)
   assert.match(inbox, /INBOX_TABS/)
+  assert.match(inbox, /history\.replaceState/)
+  assert.doesNotMatch(inbox, /router\.replace/)
   assert.match(inboxApi, /badgeTotal/)
 })
 

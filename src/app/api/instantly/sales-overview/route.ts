@@ -10,7 +10,7 @@ import {
   loadSalesOverviewFromInstantly,
   type SalesOverviewCrmDealRow
 } from '@/lib/sales-overview'
-import { leadStagesInOrder, stageToolHref, type LeadPipelineStage } from '@/lib/pipeline-spine'
+import { countRowsByValue, leadStagesInOrder, stageToolHref, type LeadPipelineStage } from '@/lib/pipeline-spine'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,18 +37,13 @@ async function loadCrmDealRows(
 async function loadSpineCounts(
   supabase: Awaited<ReturnType<typeof requirePortalAccess>>['supabase']
 ): Promise<Array<{ stage: string; count: number; href: string }>> {
-  const stages = leadStagesInOrder()
-  const counts = new Map(stages.map((s) => [s, 0]))
-  const { data } = await supabase.from('lead_contacts').select('pipeline_stage')
-  for (const row of data ?? []) {
-    const stage = String(row.pipeline_stage || 'Lead')
-    counts.set(stage as LeadPipelineStage, (counts.get(stage as LeadPipelineStage) ?? 0) + 1)
-  }
-  return stages.map((stage) => ({
-    stage,
-    count: counts.get(stage) ?? 0,
-    href: stageToolHref(stage)
-  }))
+  return countRowsByValue(
+    supabase,
+    'lead_contacts',
+    'pipeline_stage',
+    [...leadStagesInOrder()],
+    (stage) => stageToolHref(stage as LeadPipelineStage)
+  )
 }
 
 /**
@@ -59,19 +54,24 @@ export async function GET(_request: NextRequest) {
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
 
-    const apiKey = await resolveInstantlyApiKey(supabase)
+    const apiKeyPromise = resolveInstantlyApiKey(supabase)
+    const crmDealsPromise = loadCrmDealRows(supabase)
+    const spinePromise = loadSpineCounts(supabase)
+    const apiKey = await apiKeyPromise
     if (!apiKey) {
+      const spineCounts = await spinePromise
       return portalJsonCached({
         ...SALES_OVERVIEW_DEMO,
+        spineCounts,
         source: 'demo' as const,
         warning: 'Instantly API key is not configured'
       })
     }
 
-    const crmDeals = await loadCrmDealRows(supabase)
+    const crmDeals = await crmDealsPromise
     const [model, spineCounts] = await Promise.all([
       loadSalesOverviewFromInstantly(apiKey, { crmDeals }),
-      loadSpineCounts(supabase)
+      spinePromise
     ])
     return portalJsonCached({ ...model, spineCounts }, {}, 60)
   } catch (err) {

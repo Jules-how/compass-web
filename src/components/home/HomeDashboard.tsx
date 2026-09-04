@@ -8,6 +8,7 @@ import { LoadingBlock } from '@/components/LoadingBlock'
 import type { BrainDumpReorganizeResult, BrainDumpSuggestion } from '@/lib/brain-dump'
 import type { HomePayload } from '@/lib/home-data'
 import type { CompassTask } from '@/lib/types'
+import type { MorningWavePayload } from '@/lib/wave-morning'
 import { MorningWavePanel } from '@/components/home/MorningWavePanel'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
@@ -52,6 +53,9 @@ function SectionHeader({ title, href, hint }: { title: string; href?: string; hi
 export function HomeDashboard() {
   const home = useCachedJson<HomePayload>('/api/home', '/api/home', { staleMs: 60_000 })
   const tasks = useCachedJson<TasksPayload>('/api/tasks', '/api/tasks')
+  const waveLive = useCachedJson<MorningWavePayload>('/api/home/wave', '/api/home/wave', {
+    staleMs: 60_000
+  })
 
   const [dump, setDump] = useState('')
   const [dumpHydrated, setDumpHydrated] = useState(false)
@@ -66,6 +70,7 @@ export function HomeDashboard() {
 
   const data = home.data
   const cold = data?.coldEmail
+  const wave = waveLive.data ?? data?.wave
 
   useEffect(() => {
     try {
@@ -203,8 +208,13 @@ export function HomeDashboard() {
           variants={staggerItem}
           className="grid min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain lg:grid-cols-2 xl:grid-cols-3"
         >
-          {data?.wave ? (
-            <MorningWavePanel wave={data.wave} onReload={() => home.reload(true)} />
+          {wave ? (
+            <MorningWavePanel
+              wave={wave}
+              onReload={async () => {
+                await Promise.all([home.reload(true), waveLive.reload(true)])
+              }}
+            />
           ) : (
             <Card className="lg:col-span-2 xl:col-span-3">
               <CardContent className="p-4 sm:p-5">

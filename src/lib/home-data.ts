@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-import { loadDailyDigest, refreshEvidenceIfStale, type DailyDecisionDigest } from '@/lib/evidence-poller'
+import { loadDailyDigest, type DailyDecisionDigest } from '@/lib/evidence-poller'
 import { getPortalAdminClient } from '@/lib/portal-admin'
 import { loadSyncSnapshot } from '@/lib/sync-snapshots'
 import {
@@ -15,6 +15,7 @@ import type { CompassTask } from '@/lib/types'
 import { taskHasProofClauses, proofProgress } from '@/lib/execution-contract'
 import { isOpenTask } from '@/lib/task-organisation'
 import type { MorningWavePayload } from '@/lib/wave-morning'
+import { countRowsByValue } from '@/lib/pipeline-spine'
 import { loadMorningWavePayload } from '@/lib/wave-morning-server'
 
 export type SpineStageCount = {
@@ -51,32 +52,6 @@ export type HomePayload = {
   overdueTasks: Array<{ id: string; title: string; due: string | null }>
   liveCampaignCount: number
   wave: MorningWavePayload | null
-}
-
-async function countByColumn(
-  supabase: SupabaseClient,
-  table: 'lead_contacts' | 'compass_clients',
-  column: string,
-  stages: string[],
-  hrefFor: (stage: string) => string
-): Promise<SpineStageCount[]> {
-  const counts = new Map<string, number>()
-  for (const stage of stages) counts.set(stage, 0)
-
-  const { data, error } = await supabase.from(table).select(column)
-  if (error) throw new Error(error.message)
-
-  for (const row of data ?? []) {
-    const rec = row as unknown as Record<string, unknown>
-    const value = String(rec[column] || stages[0])
-    counts.set(value, (counts.get(value) ?? 0) + 1)
-  }
-
-  return stages.map((stage) => ({
-    stage,
-    count: counts.get(stage) ?? 0,
-    href: hrefFor(stage)
-  }))
 }
 
 async function buildPullNext(): Promise<PullNextCard | null> {
@@ -142,8 +117,6 @@ async function buildPullNext(): Promise<PullNextCard | null> {
 }
 
 export async function loadHomePayload(supabase: SupabaseClient): Promise<HomePayload> {
-  await refreshEvidenceIfStale(supabase)
-
   const [digest, coldSnap, tasksRes, leadSpine, clientSpine, pullNext, wave] = await Promise.all([
     loadDailyDigest(supabase),
     loadSyncSnapshot<ColdEmailGlance>(supabase, 'instantly_cold_email'),
@@ -153,10 +126,10 @@ export async function loadHomePayload(supabase: SupabaseClient): Promise<HomePay
       .is('parent_task_id', null)
       .order('updated_at', { ascending: false })
       .limit(200),
-    countByColumn(supabase, 'lead_contacts', 'pipeline_stage', [...leadStagesInOrder()], (stage) =>
+    countRowsByValue(supabase, 'lead_contacts', 'pipeline_stage', [...leadStagesInOrder()], (stage) =>
       stageToolHref(stage as LeadPipelineStage)
     ),
-    countByColumn(
+    countRowsByValue(
       supabase,
       'compass_clients',
       'pipeline_stage',
@@ -164,7 +137,7 @@ export async function loadHomePayload(supabase: SupabaseClient): Promise<HomePay
       (stage) => stageToolHref(stage as ClientPipelineStage)
     ),
     buildPullNext(),
-    loadMorningWavePayload(supabase).catch(() => null)
+    loadMorningWavePayload(supabase, 0, { instantlyBoard: false }).catch(() => null)
   ])
 
   const tasks = (tasksRes.data ?? []) as CompassTask[]

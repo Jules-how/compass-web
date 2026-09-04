@@ -52,20 +52,25 @@ function campaignCard(campaign: CompassCampaign | undefined, fallbackId: string)
 
 export async function loadMorningWavePayload(
   supabase: SupabaseClient,
-  instantlyRepliesWaiting = 0
+  instantlyRepliesWaiting = 0,
+  options: { instantlyBoard?: boolean } = {}
 ): Promise<MorningWavePayload> {
   const day = sydneyDateOnly()
-  const apiKey = await resolveInstantlyApiKey(supabase)
-  let board = EMPTY_BOARD
-  if (apiKey) {
-    try {
-      board = await loadOutboundBoardFromInstantly(apiKey)
-    } catch (err) {
-      if (!(err instanceof InstantlyApiError)) throw err
-    }
-  }
+  const liveInstantly = options.instantlyBoard !== false
+  const instantlyBoardPromise = liveInstantly
+    ? resolveInstantlyApiKey(supabase).then(async (apiKey) => {
+        if (!apiKey) return EMPTY_BOARD
+        try {
+          return await loadOutboundBoardFromInstantly(apiKey)
+        } catch (err) {
+          if (!(err instanceof InstantlyApiError)) throw err
+          return EMPTY_BOARD
+        }
+      })
+    : Promise.resolve(EMPTY_BOARD)
 
-  const [campaigns, todayRes, acceptedRes, runsRes] = await Promise.all([
+  const [board, campaigns, todayRes, acceptedRes, runsRes] = await Promise.all([
+    instantlyBoardPromise,
     listPipelineCampaigns(supabase),
     supabase
       .from('compass_wave_briefs')
