@@ -1,13 +1,18 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import type {
   CompassBusinessFunction,
   CompassProject,
-  CompassTask
+  CompassTask,
+  TaskStatus
 } from '@/lib/types'
-import TaskList from '@/components/TaskList'
+import TaskCreate from '@/components/TaskCreate'
+import TaskDetailPanel from '@/components/TaskDetailPanel'
 import { LoadingBlock } from '@/components/LoadingBlock'
+import { KanbanBoard, type KanbanColumn, type KanbanTask } from '@/components/ui/kanban-board'
 import { useCachedJson } from '@/lib/use-cached-json'
+import { normalizeTaskPriority } from '@/lib/task-priority'
 import type { TaskClientMeta } from '@/lib/task-organisation'
 
 interface TasksPayload {
@@ -18,8 +23,107 @@ interface TasksPayload {
   clientsById?: Record<string, TaskClientMeta>
 }
 
+const LANES: Array<{
+  id: TaskStatus
+  title: string
+  color: string
+  hint: string
+}> = [
+  { id: 'not-started', title: 'Todo', color: '#a8a29e', hint: 'Not started.' },
+  { id: 'in-progress', title: 'Doing', color: '#e85d2a', hint: 'In play today.' },
+  { id: 'blocked', title: 'Blocked', color: '#b45309', hint: 'Waiting on someone else.' },
+  { id: 'completed', title: 'Done', color: '#6B8E23', hint: 'Finished or cancelled.' }
+]
+
+function laneForStatus(status: string): TaskStatus {
+  if (status === 'in-progress') return 'in-progress'
+  if (status === 'blocked') return 'blocked'
+  if (status === 'completed' || status === 'cancelled' || status === 'done') return 'completed'
+  return 'not-started'
+}
+
+function dueLabel(due: string | null): string | undefined {
+  if (!due) return undefined
+  const day = due.slice(0, 10)
+  const parsed = new Date(`${day}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) return day
+  return parsed.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })
+}
+
+function taskToKanban(
+  task: CompassTask,
+  projectsById: Record<string, CompassProject>
+): KanbanTask {
+  const priority = normalizeTaskPriority(task.priority)
+  const project = task.project_id ? projectsById[task.project_id] : null
+  const tags = [task.task_type, project?.name].filter(Boolean) as string[]
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.notes?.trim() || undefined,
+    badge: priority === 1 ? 'Urgent' : priority === 2 ? 'High' : undefined,
+    tags,
+    dueDate: dueLabel(task.due)
+  }
+}
+
 export function TasksPanel() {
   const { data, error, loading, reload } = useCachedJson<TasksPayload>('/api/tasks', '/api/tasks')
+  const [createLane, setCreateLane] = useState<TaskStatus | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
+  const [moveError, setMoveError] = useState<string | null>(null)
+
+  const projectsById = useMemo(
+    () => Object.fromEntries((data?.projects ?? []).map((project) => [project.id, project])),
+    [data?.projects]
+  )
+  const businessFunctionsById = useMemo(
+    () => Object.fromEntries((data?.businessFunctions ?? []).map((row) => [row.id, row])),
+    [data?.businessFunctions]
+  )
+
+  const selectedTask = useMemo(() => {
+    if (!selectedId || !data) return null
+    return (
+      data.topTasks.find((task) => task.id === selectedId) ??
+      data.subtasks.find((task) => task.id === selectedId) ??
+      null
+    )
+  }, [selectedId, data])
+
+  const kanbanColumns = useMemo((): KanbanColumn[] => {
+    const tasks = data?.topTasks ?? []
+    return LANES.map((lane) => ({
+      id: lane.id,
+      title: lane.title,
+      color: lane.color,
+      hint: lane.hint,
+      emptyText: 'Drop a task here.',
+      onAdd: () => setCreateLane(lane.id),
+      tasks: tasks
+        .filter((task) => laneForStatus(task.status) === lane.id)
+        .map((task) => taskToKanban(task, projectsById))
+    }))
+  }, [data?.topTasks, projectsById])
+
+  async function moveTask(taskId: string, fromColumnId: string, toColumnId: string) {
+    if (fromColumnId === toColumnId) return
+    if (!LANES.some((lane) => lane.id === toColumnId)) return
+    setMoveError(null)
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: toColumnId })
+      })
+      if (!res.ok) throw new Error('Could not move task')
+      setNote(`Moved to ${LANES.find((lane) => lane.id === toColumnId)?.title ?? toColumnId}.`)
+      await reload(true)
+    } catch (err) {
+      setMoveError(err instanceof Error ? err.message : 'Move failed')
+    }
+  }
 
   if (error && !data) {
     return (
@@ -34,25 +138,44 @@ export function TasksPanel() {
 
   if (loading || !data) return <LoadingBlock label="Loading tasks…" />
 
-  const subtasksByParent = data.subtasks.reduce<Record<string, CompassTask[]>>((acc, task) => {
-    const key = task.parent_task_id ?? ''
-    ;(acc[key] ??= []).push(task)
-    return acc
-  }, {})
-  const projectsById = Object.fromEntries(data.projects.map((p) => [p.id, p]))
-  const businessFunctionsById = Object.fromEntries(data.businessFunctions.map((b) => [b.id, b]))
-  const clientsById = data.clientsById ?? {}
-
   return (
-    <TaskList
-      topTasks={data.topTasks}
-      subtasksByParent={subtasksByParent}
-      projectsById={projectsById}
-      businessFunctionsById={businessFunctionsById}
-      clientsById={clientsById}
-      onRefresh={async () => {
-        await reload(true)
-      }}
-    />
+    <div className="space-y-6">
+      <section className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[12px] text-neutral-500">Drag cards between lanes. Plus adds to that column.</p>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {note ? <p className="text-[12px] text-emerald-800">{note}</p> : null}
+          {moveError ? <p className="text-[12px] text-red-700">{moveError}</p> : null}
+        </div>
+      </section>
+
+      {createLane ? (
+        <TaskCreate
+          projectsById={projectsById}
+          businessFunctionsById={businessFunctionsById}
+          defaultStatus={createLane}
+          hideStatus
+          onCancel={() => setCreateLane(null)}
+          onCreated={async () => {
+            setCreateLane(null)
+            setNote('Task added.')
+            await reload(true)
+          }}
+        />
+      ) : null}
+
+      <KanbanBoard columns={kanbanColumns} onMove={moveTask} onTaskClick={(id) => setSelectedId(id)} />
+
+      {selectedTask ? (
+        <TaskDetailPanel
+          task={selectedTask}
+          projectsById={projectsById}
+          businessFunctionsById={businessFunctionsById}
+          onClose={() => setSelectedId(null)}
+          onChanged={async () => {
+            await reload(true)
+          }}
+        />
+      ) : null}
+    </div>
   )
 }

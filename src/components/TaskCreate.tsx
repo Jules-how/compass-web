@@ -16,6 +16,9 @@ interface TaskCreateProps {
   onCreated: () => void | Promise<void>
   defaultProjectId?: string
   defaultBusinessFunctionId?: string
+  defaultStatus?: TaskStatus
+  hideStatus?: boolean
+  onCancel?: () => void
 }
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -39,10 +42,13 @@ export default function TaskCreate({
   businessFunctionsById,
   onCreated,
   defaultProjectId = '',
-  defaultBusinessFunctionId = ''
+  defaultBusinessFunctionId = '',
+  defaultStatus = 'not-started',
+  hideStatus = false,
+  onCancel
 }: TaskCreateProps) {
   const [title, setTitle] = useState('')
-  const [status, setStatus] = useState<TaskStatus>('not-started')
+  const [status, setStatus] = useState<TaskStatus>(defaultStatus)
   const [projectId, setProjectId] = useState(defaultProjectId)
   const [businessFunctionId, setBusinessFunctionId] = useState(defaultBusinessFunctionId)
   const [taskType, setTaskType] = useState<TaskType | ''>('')
@@ -77,6 +83,7 @@ export default function TaskCreate({
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
       setTitle('')
+      setStatus(defaultStatus)
       setProjectId(defaultProjectId)
       setBusinessFunctionId(defaultBusinessFunctionId)
       setTaskType('')
@@ -151,6 +158,7 @@ export default function TaskCreate({
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {hideStatus ? null : (
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-neutral-500">Status</span>
           <select
@@ -166,6 +174,7 @@ export default function TaskCreate({
             ))}
           </select>
         </label>
+        )}
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-neutral-500">Priority</span>
           <select
@@ -232,6 +241,11 @@ export default function TaskCreate({
         >
           {saving ? 'Creating…' : 'Create task'}
         </button>
+        {onCancel ? (
+          <button type="button" className="compass-btn-secondary" onClick={onCancel} disabled={saving}>
+            Cancel
+          </button>
+        ) : null}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
     </form>

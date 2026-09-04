@@ -3,11 +3,7 @@ import { TasksPanel } from '@/components/TasksPanel'
 
 export default function TasksPage() {
   return (
-    <OperatorShell
-      title="My Tasks"
-      subtitle="Today · week · focus · backlog · done"
-      width="6xl"
-    >
+    <OperatorShell title="My Tasks" subtitle="Todo · doing · blocked · done" width="full">
       <TasksPanel />
     </OperatorShell>
   )

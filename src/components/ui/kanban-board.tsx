@@ -11,6 +11,7 @@ export type KanbanTask = {
   title: string
   description?: string
   priority?: 'low' | 'medium' | 'high'
+  badge?: string
   assignee?: {
     name: string
     avatar?: string
@@ -21,6 +22,7 @@ export type KanbanTask = {
   comments?: number
   href?: string
   externalHref?: string
+  externalLabel?: string
   draggable?: boolean
 }
 
@@ -30,6 +32,7 @@ export type KanbanColumn = {
   color?: string
   tasks: KanbanTask[]
   hint?: string
+  emptyText?: string
   onAdd?: () => void
 }
 
@@ -38,18 +41,15 @@ type DragPayload = {
   sourceColumnId: string
 }
 
-function priorityLabel(priority: KanbanTask['priority']): string | null {
-  if (priority === 'high') return 'Sending'
-  return null
-}
-
 export function KanbanBoard({
   columns,
   onMove,
+  onTaskClick,
   className
 }: {
   columns: KanbanColumn[]
   onMove?: (taskId: string, fromColumnId: string, toColumnId: string) => void
+  onTaskClick?: (taskId: string, columnId: string) => void
   className?: string
 }) {
   const [dropTarget, setDropTarget] = useState<string | null>(null)
@@ -129,7 +129,7 @@ export function KanbanBoard({
           <div className="space-y-3">
             {column.tasks.length === 0 ? (
               <p className="rounded-xl border border-dashed border-stone-200 px-3 py-6 text-[12px] text-neutral-400">
-                Drop a campaign here.
+                {column.emptyText || 'Drop a card here.'}
               </p>
             ) : (
               column.tasks.map((task) => (
@@ -141,6 +141,7 @@ export function KanbanBoard({
                   )}
                   draggable={task.draggable !== false}
                   onDragStart={(event) => handleDragStart(event, task, column.id)}
+                  onClick={() => onTaskClick?.(task.id, column.id)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <h4 className="min-w-0 truncate text-[13px] font-semibold leading-snug text-neutral-900">
@@ -163,11 +164,11 @@ export function KanbanBoard({
                     </p>
                   ) : null}
 
-                  {task.tags?.length || priorityLabel(task.priority) ? (
+                  {task.tags?.length || task.badge ? (
                     <div className="mt-2.5 flex flex-wrap gap-1.5">
-                      {priorityLabel(task.priority) ? (
+                      {task.badge ? (
                         <Badge variant="primary" appearance="light" size="sm">
-                          {priorityLabel(task.priority)}
+                          {task.badge}
                         </Badge>
                       ) : null}
                       {task.tags?.map((tag) => (
@@ -202,9 +203,10 @@ export function KanbanBoard({
                         href={task.externalHref}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={(event) => event.stopPropagation()}
                         className="flex items-center gap-0.5 text-[11px] font-medium text-[#c2410c] hover:underline"
                       >
-                        Instantly
+                        {task.externalLabel || 'Instantly'}
                         <ArrowUpRight className="size-3" />
                       </a>
                     ) : null}

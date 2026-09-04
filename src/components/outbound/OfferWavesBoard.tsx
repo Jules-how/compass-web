@@ -77,6 +77,7 @@ function campaignToKanbanTask(
       campaign.wave_approach ||
       undefined,
     priority: sending ? 'high' : instantly?.status === 'paused' ? 'low' : 'medium',
+    badge: sending ? 'Sending' : undefined,
     tags: [`${trade} · ${city}`],
     dueDate: goLive || undefined,
     comments: instantly?.replyCount ?? 0,
@@ -180,6 +181,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
         id: 'recommended',
         title: OFFER_WAVE_COLUMN_LABELS.recommended,
         color: '#e85d2a',
+        emptyText: 'Drop a campaign here.',
         hint: 'Agent-only until you move it to next.',
         tasks: grouped.recommended.map((campaign) =>
           campaignToKanbanTask(
@@ -195,6 +197,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
         id: 'next',
         title: OFFER_WAVE_COLUMN_LABELS.next,
         color: '#a8a29e',
+        emptyText: 'Drop a campaign here.',
         onAdd: () => setAddToken((value) => value + 1),
         tasks: nextSplit.upcoming.map((campaign) =>
           campaignToKanbanTask(
@@ -210,6 +213,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
         id: 'live',
         title: OFFER_WAVE_COLUMN_LABELS.live,
         color: '#6B8E23',
+        emptyText: 'Drop a campaign here.',
         hint: 'Sending now. Activate stays in Instantly.',
         tasks: liveDesk.sending.map((item) => {
           if (item.campaign) {
@@ -221,6 +225,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
             title: instantly?.name || 'Instantly campaign',
             description: 'Instantly only. Bind it in Compass to move lanes.',
             priority: 'high' as const,
+            badge: 'Sending',
             tags: ['Instantly'],
             comments: instantly?.replyCount,
             attachments: instantly?.remaining,
@@ -233,6 +238,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
         id: 'parked',
         title: 'Parked',
         color: '#78716c',
+        emptyText: 'Drop a campaign here.',
         hint: 'Paused in Instantly. Pause stays in Instantly.',
         tasks: liveDesk.parked.map((campaign) =>
           campaignToKanbanTask(
