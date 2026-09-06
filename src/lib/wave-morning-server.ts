@@ -18,6 +18,7 @@ import {
   type MorningWavePayload,
   type WaveBriefRecord
 } from '@/lib/wave-morning'
+import { DAILY_SETUP_TASK_SOURCE, parseHomeSetupScan, type HomeLeverageTask } from '@/lib/home-setup'
 import type { PathwayRunStatus } from '@/lib/pathway'
 
 const EMPTY_BOARD: OutboundBoard = { live: [], history: [], liveCount: 0 }
@@ -69,12 +70,12 @@ export async function loadMorningWavePayload(
       })
     : Promise.resolve(EMPTY_BOARD)
 
-  const [board, campaigns, todayRes, acceptedRes, runsRes] = await Promise.all([
+  const [board, campaigns, todayRes, acceptedRes, runsRes, leverageRes] = await Promise.all([
     instantlyBoardPromise,
     listPipelineCampaigns(supabase),
     supabase
       .from('compass_wave_briefs')
-      .select('id,next_campaign_ids,next_status,recommendation,generated_at')
+      .select('id,next_campaign_ids,next_status,recommendation,scan,generated_at')
       .eq('id', day)
       .maybeSingle(),
     supabase
@@ -88,6 +89,13 @@ export async function loadMorningWavePayload(
     supabase
       .from('compass_pathway_runs')
       .select('id,campaign_id,status,detail,created_at')
+      .order('created_at', { ascending: false })
+      .limit(40),
+    supabase
+      .from('compass_tasks')
+      .select('id,title,notes,status,priority,due,source,task_type,project_id,created_at')
+      .eq('source', DAILY_SETUP_TASK_SOURCE)
+      .is('parent_task_id', null)
       .order('created_at', { ascending: false })
       .limit(40)
   ])
@@ -155,14 +163,28 @@ export async function loadMorningWavePayload(
     }
   })
 
+  const setup = parseHomeSetupScan(
+    (todayRes.data as { scan?: Record<string, unknown> | null } | null)?.scan ?? null
+  )
+  const markerPrefix = `daily_setup:${day}:`
+  const leverage: HomeLeverageTask[] = ((leverageRes.data ?? []) as HomeLeverageTask[]).filter((row) => {
+    if (row.status === 'completed' || row.status === 'cancelled') return false
+    const dueToday = (row.due || '').slice(0, 10) === day
+    const markedToday = Boolean(row.notes && row.notes.includes(markerPrefix))
+    return dueToday || markedToday
+  })
+
   return {
     sydneyDate: day,
     briefStatus: resolved.briefStatus,
     landUnlocked: resolved.landUnlocked,
     recommendation: todayRes.data?.recommendation ?? acceptedRes.data?.recommendation ?? null,
+    homeBlurb: setup.homeBlurb,
+    writeup: setup.writeup,
     instantlyRepliesWaiting,
     sending: sendingCards,
     activeNext: decorateNext(resolved.activeNextIds),
-    proposedNext: decorateNext(resolved.proposedNextIds)
+    proposedNext: decorateNext(resolved.proposedNextIds),
+    leverage
   }
 }

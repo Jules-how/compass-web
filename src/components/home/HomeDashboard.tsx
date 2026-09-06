@@ -211,6 +211,11 @@ export function HomeDashboard() {
           {wave ? (
             <MorningWavePanel
               wave={wave}
+              glance={{
+                emailsSentToday: cold?.emailsSentToday ?? null,
+                replyRate: cold?.replyRate ?? null,
+                repliesWaiting: cold?.repliesWaiting ?? null
+              }}
               onReload={async () => {
                 await Promise.all([home.reload(true), waveLive.reload(true)])
               }}

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { mergeScanRecords } from '@/lib/home-setup'
 import { sydneyDateOnly } from '@/lib/wave-desk'
 
 export function mergeWaveBriefPayload(
@@ -18,7 +19,7 @@ export function mergeWaveBriefPayload(
   created_at?: string
 } {
   const recommendation = incoming.recommendation?.trim() || existing?.recommendation || null
-  const scan = incoming.scan ?? existing?.scan ?? {}
+  const scan = mergeScanRecords(existing?.scan, incoming.scan)
   return {
     recommendation,
     scan,
@@ -47,19 +48,19 @@ export async function persistDailyWaveScan(
   const day = sydneyDateOnly()
   const { data: existing } = await supabase
     .from('compass_wave_briefs')
-    .select('recommendation')
+    .select('recommendation,scan')
     .eq('id', day)
     .maybeSingle()
   const { error } = await supabase.from('compass_wave_briefs').upsert({
     id: day,
     generated_at: new Date().toISOString(),
     recommendation: existing?.recommendation ?? null,
-    scan: {
+    scan: mergeScanRecords(existing?.scan, {
       emailsSentToday: instantly.emailsSentToday ?? 0,
       repliesWaiting: instantly.repliesWaiting ?? 0,
       replyRate: instantly.replyRate ?? 0,
       campaigns: (instantly.campaigns ?? []).slice(0, 20)
-    }
+    })
   })
   if (error) throw new Error(error.message)
 }

@@ -9,6 +9,8 @@ import {
 } from '@/lib/campaigns'
 import { insertPipelineCampaign, listPipelineCampaigns } from '@/lib/campaigns-server'
 import { mergeWaveBriefPayload } from '@/lib/wave-desk-persist'
+import { parseHomeSetupScan } from '@/lib/home-setup'
+import { upsertDailySetupTasks } from '@/lib/home-setup-server'
 import {
   InstantlyApiError,
   loadOutboundBoardFromInstantly,
@@ -191,18 +193,24 @@ export async function POST(request: Request) {
     const day = sydneyDateOnly()
     const createdCampaigns: Array<{ id: string; name: string }> = []
     const createdActions: Array<{ id: string; title: string }> = []
+    const createdTasks: Array<{ id: string; title: string }> = []
+    let mergedScan: Record<string, unknown> | null = null
+    let mergedRecommendation: string | null = null
 
     const { data: existingBrief } = await admin
       .from('compass_wave_briefs')
       .select('recommendation,scan,created_at,next_campaign_ids,next_status')
       .eq('id', day)
       .maybeSingle()
+    mergedRecommendation = existingBrief?.recommendation ?? null
 
     if (body.recommendation?.trim() || body.scan || body.next_campaign_ids) {
       const merged = mergeWaveBriefPayload(existingBrief, {
         recommendation: body.recommendation,
         scan: body.scan
       })
+      mergedScan = merged.scan
+      mergedRecommendation = merged.recommendation
       const canOverwrite = briefAllowsNextOverwrite(existingBrief?.next_status)
       const nextIds = canOverwrite
         ? clipNextIds(body.next_campaign_ids ?? existingBrief?.next_campaign_ids)
@@ -217,6 +225,11 @@ export async function POST(request: Request) {
         next_status: canOverwrite ? 'proposed' : existingBrief?.next_status || 'proposed'
       })
       if (error) throw new Error(error.message)
+
+      const setup = parseHomeSetupScan(merged.scan)
+      if (setup.julesLed.length > 0) {
+        createdTasks.push(...(await upsertDailySetupTasks(admin, day, setup.julesLed)))
+      }
     }
 
     for (const action of body.actions ?? []) {
@@ -287,8 +300,8 @@ export async function POST(request: Request) {
       const { error: fillError } = await admin.from('compass_wave_briefs').upsert({
         id: day,
         generated_at: stamp,
-        recommendation: existingBrief?.recommendation ?? body.recommendation?.trim() ?? null,
-        scan: existingBrief?.scan ?? body.scan ?? {},
+        recommendation: mergedRecommendation ?? body.recommendation?.trim() ?? null,
+        scan: mergedScan ?? existingBrief?.scan ?? body.scan ?? {},
         next_campaign_ids: filled,
         next_status: 'proposed'
       })
@@ -299,7 +312,8 @@ export async function POST(request: Request) {
       ok: true,
       briefId: body.recommendation?.trim() || body.scan ? day : null,
       campaigns: createdCampaigns,
-      actions: createdActions
+      actions: createdActions,
+      tasks: createdTasks
     })
   } catch (err) {
     console.error('[agent/outbound/waves POST]', err instanceof Error ? err.message : err)

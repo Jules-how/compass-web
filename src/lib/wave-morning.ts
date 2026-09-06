@@ -1,5 +1,7 @@
 /** Morning Home wave loop. Instantly sending + two next slots + accept/dismiss gate. */
 
+import type { HomeLeverageTask } from '@/lib/home-setup'
+
 export const LAND_REMAINING_THRESHOLD = 50
 export const HOME_NEXT_SLOTS = 2
 
@@ -146,8 +148,11 @@ export type MorningWavePayload = {
   briefStatus: ReturnType<typeof resolveHomeNext>['briefStatus']
   landUnlocked: boolean
   recommendation: string | null
+  homeBlurb: string | null
+  writeup: string | null
   instantlyRepliesWaiting: number
   sending: MorningSendingCard[]
   activeNext: MorningNextCard[]
   proposedNext: MorningNextCard[]
+  leverage: HomeLeverageTask[]
 }

@@ -33,9 +33,13 @@ function suggestWaveMoves(input) {
   return suggestions
 }
 
+function mergeScanRecords(existing, incoming) {
+  return { ...(existing ?? {}), ...(incoming ?? {}) }
+}
+
 function mergeWaveBriefPayload(existing, incoming) {
   const recommendation = incoming.recommendation?.trim() || existing?.recommendation || null
-  const scan = incoming.scan ?? existing?.scan ?? {}
+  const scan = mergeScanRecords(existing?.scan, incoming.scan)
   return {
     recommendation,
     scan,
@@ -59,6 +63,15 @@ test('sub 1 percent after 100 sends queues a deliverability pause', () => {
   assert.equal(out[0].kind, 'pause_inspect')
 })
 
+test('morning brief merge keeps writeup when Instantly scan updates', () => {
+  const merged = mergeWaveBriefPayload(
+    { recommendation: 'Wait', scan: { writeup: 'Full day plan', emailsSentToday: 12 } },
+    { scan: { emailsSentToday: 40 } }
+  )
+  assert.equal(merged.scan.writeup, 'Full day plan')
+  assert.equal(merged.scan.emailsSentToday, 40)
+})
+
 test('waves UI and agent route exist', () => {
   const board = read('src/components/outbound/OfferWavesBoard.tsx')
   assert.match(board, /OFFER_WAVE_COLUMN_LABELS/)
@@ -76,7 +89,7 @@ test('waves UI and agent route exist', () => {
   assert.match(read('src/app/api/outbound/wave-desk/route.ts'), /export async function PATCH/)
   assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /normalizeWaveLane\(rec.wave_lane\) \|\| 'recommended'/)
   assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /instantly_campaign_id: instantlyId/)
-  assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /mergeWaveBriefPayload/)
+  assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /upsertDailySetupTasks/)
   assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /next_campaign_ids/)
   assert.match(read('src/app/api/campaigns/route.ts'), /listPipelineCampaigns/)
   assert.match(read('src/lib/outbound-desk.ts'), /DEFAULT_OUTBOUND_DESK: OutboundDeskId = 'waves'/)

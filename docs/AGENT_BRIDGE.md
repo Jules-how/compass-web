@@ -67,7 +67,7 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 | `POST` | `/api/agent/instantly/ensure` | Agent twin of ensure (`campaignId`, `pushSequence`) |
 | `POST` | `/api/agent/instantly/duplicate-template` | Duplicate `[Template] Switchflow Fill & Capture` (`name` or `campaignId`, optional `templateId`). Binds if the Compass campaign is unbound. Stays paused. |
 | `GET` | `/api/agent/outbound/waves` | Morning Waves desk: columns, Instantly rates, 90-day retarget count, suggestions, briefs, actions |
-| `POST` | `/api/agent/outbound/waves` | Write morning brief (`next_campaign_ids` max 2, `next_status` proposed until Jules accepts on Home), recommended list cards, outlook actions. Never activates Instantly. Do not land while `morningWave.landUnlocked` is false |
+| `POST` | `/api/agent/outbound/waves` | Write morning brief (`recommendation` for the Home card, `scan.writeup` for the popup, `scan.julesLed` creates Compass tasks on Home’s right rail). `next_campaign_ids` max 2, `next_status` proposed until Jules accepts on Home. Recommended list cards, outlook actions. Never activates Instantly. Do not land while `morningWave.landUnlocked` is false |
 | `GET` | `/api/agent/outbound/pathway` | Trade/list recipe: stage tools, opener templates. Honour `skip`. Then run list-builds / `generate_openers.py` |
 | `POST` | `/api/agent/outbound/pathway/runs` | Log cost, time, sendable count, opener coverage per run/stage |
 | `POST` | `/api/agent/instantly/push-leads` | Agent twin of lead push |

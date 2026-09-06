@@ -75,7 +75,7 @@ curl -sS "$COMPASS_BASE_URL/api/agent/offers/desk" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 ```
 
-Campaign sequence of record: `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Outbound doctrine is `cold-email/AGENTS.md`. Product/price lock is Compass: `GET /api/agent/offers/desk` (Offers tab). Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact readiness `wave` is on `GET /api/agent/campaigns`. `GET /api/agent/brief` includes `morningWave` (sending, two next, `landUnlocked`). Do not land while `landUnlocked` is false. `POST /api/agent/outbound/waves` writes `next_campaign_ids`. Pathway tools: `GET /api/agent/outbound/pathway`. Runs: `POST /api/agent/outbound/pathway/runs`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. First line goes in `personalization` and `custom_variables.opener`.
+Campaign sequence of record: `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Outbound doctrine is `cold-email/AGENTS.md`. Product/price contract (guide, mix from economics) is Compass: `GET /api/agent/offers/desk` (Offers tab), file `switchflow-offer/fill-capture-trades.md`. Desk `cells` are one Instantly campaign per `offer_key` × first vertical tag × first location tag. Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact readiness `wave` is on `GET /api/agent/campaigns`. `GET /api/agent/brief` includes `morningWave` (sending, two next, `landUnlocked`). Do not land while `landUnlocked` is false. `POST /api/agent/outbound/waves` writes `next_campaign_ids`. Pathway tools: `GET /api/agent/outbound/pathway`. Runs: `POST /api/agent/outbound/pathway/runs`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. First line goes in `personalization` and `custom_variables.opener`.
 
 **Operating model:** Compass = workshop · Instantly = mail truck. Activate stays in Instantly. Outbound doctrine is `cold-email/AGENTS.md`.
 
@@ -211,9 +211,12 @@ Compass Waves is the shared outbound desk. Instantly activate stays in Instantly
    - under 1% replies after 100 sends → propose pause and inspect inboxes before rewriting copy.
    - 0 replies at 1,000 sends → kill / overhaul offer. Do not load more of the same.
 4. Persist the call with `POST /api/agent/outbound/waves`:
-   - `recommendation` + `scan` (the morning brief)
+   - `recommendation`: one or two sentences for the Home yellow card (Switchflow plus Waves)
+   - `scan.writeup`: the full Daily Setup synthesis (day / outbound / delivery, AI vs Jules). Home opens this in a popup.
+   - `scan.julesLed`: Jules-led items only (`[{ title, detail, task_type }]`). Creates Compass tasks (`source: daily-setup`, due today). Home right rail shows unread ones until Jules opens them.
    - `recommend` cards (lane `recommended`: rationale, list_size, offer, copy_strategy, approach)
    - `actions` on the outlook (volume, copy, city, inboxes, …)
+   Do not invent Jules-led busywork. Empty `julesLed` is fine on a wait morning.
 5. Manual Jules adds land in **Next campaigns**. Recommended column is agent-only until Jules moves a card.
 
 Do not invent emails. Do not activate Instantly. Write the brief even when the recommendation is “wait.”
@@ -225,7 +228,7 @@ curl -sS "$COMPASS_BASE_URL/api/agent/outbound/waves" \
 curl -sS -X POST "$COMPASS_BASE_URL/api/agent/outbound/waves" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"recommendation":"Load 150 more Sydney roofers into the live wave. 5% replies, 20 remaining.","recommend":[{"name":"Roofing Sydney top-up","rationale":"Live wave is converting. Keep the same copy.","list_size":150,"offer_key":"booked-jobs-system","copy_strategy":"35-word Fill and Capture","approach":"Maps scrape, filter_leads, generate_openers, push-leads paused","vertical_tags":["roofing"],"location_tags":["Sydney"]}],"actions":[{"title":"Top up Sydney roofing","kind":"volume","detail":"150 sendable, same sequence"}]}'
+  -d '{"recommendation":"Wait on land. Lists are empty. Confirm locksmith copy if you have ten minutes.","scan":{"writeup":"Outbound: locksmith 3.1 percent, roofing 1.1 percent, both exhausted. No 5 percent top-up. Delivery: none due. Jules-led: confirm locksmith copy.","julesLed":[{"title":"Confirm locksmith copy","detail":"Sequence is live. Tick copy if the Instantly body still matches Compass.","task_type":"SELL"}]},"recommend":[{"name":"Roofing Sydney top-up","rationale":"Live wave is converting. Keep the same copy.","list_size":150,"offer_key":"booked-jobs-system","copy_strategy":"35-word Fill and Capture","approach":"Maps scrape, filter_leads, generate_openers, push-leads paused","vertical_tags":["roofing"],"location_tags":["Sydney"]}],"actions":[{"title":"Top up Sydney roofing","kind":"volume","detail":"150 sendable, same sequence"}]}'
 ```
 
 Wave memory lives in Compass (`compass_wave_briefs`, `compass_wave_actions`, campaign `wave_*` fields). Do not copy those facts into a second markdown store.
