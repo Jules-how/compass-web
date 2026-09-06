@@ -181,7 +181,10 @@ export async function createCampaign(
       wave_list_size: input?.wave_list_size,
       wave_copy_strategy: input?.wave_copy_strategy,
       wave_approach: input?.wave_approach,
-      testing_variable: input?.testing_variable
+      testing_variable: input?.testing_variable,
+      sample_size_target: input?.sample_size_target,
+      expression_key: input?.expression_key,
+      cta_type: input?.cta_type
     })
   })
   const body = await readJson<{ campaign: CompassCampaign }>(res)

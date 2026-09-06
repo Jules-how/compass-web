@@ -358,7 +358,18 @@ export const VERTICAL_TAG_HINTS = [
   'agencies'
 ] as const
 
-export const LOCATION_TAG_HINTS = ['nsw', 'qld', 'au-national'] as const
+export const LOCATION_TAG_HINTS = [
+  'sydney',
+  'melbourne',
+  'brisbane',
+  'perth',
+  'adelaide',
+  'gold-coast',
+  'canberra',
+  'nsw',
+  'qld',
+  'au-national'
+] as const
 
 export const COMPLIANCE_FOOTER_SLOTS: OutboundSlot[] = [
   {
@@ -1026,8 +1037,8 @@ export const LIBRARY_FEATURED_EXAMPLES: Record<
   offers: [
     {
       id: 'offer-booked-jobs-system',
-      title: 'Fill and capture',
-      detail: 'Paid demand into a number that answers and books. Testing. Default for new waves.'
+      title: 'Booked jobs',
+      detail: 'Capture then Google then Meta. Showed jobs, not a lead count. Testing. Default for new waves.'
     },
     {
       id: 'offer-growth-system',
@@ -1038,9 +1049,9 @@ export const LIBRARY_FEATURED_EXAMPLES: Record<
   expressions: [
     {
       id: 'expr-proof-fill-capture',
-      title: 'Fill and capture · proof',
+      title: 'Booked jobs · proof',
       detail:
-        'Google search clicks into showed jobs on the calendar the same week. Do not pitch after-hours cover.'
+        'Tighten the line, then Google search into showed jobs. Do not pitch after-hours cover as the product.'
     },
     {
       id: 'expr-growth-mortgage',

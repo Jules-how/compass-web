@@ -14,6 +14,7 @@ import {
   flattenOfferGallery,
   offerKeyFromPath
 } from '@/lib/offer-sku'
+import { TestCellsBoard } from '@/components/offers/TestCellsBoard'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
 
@@ -132,6 +133,7 @@ export function OffersDesk() {
       ) : interiorCard ? (
         <OfferInterior
           card={interiorCard}
+          cells={(desk?.cells ?? []).filter((cell) => cell.offerKey === interiorCard.offer.offer_key)}
           liveCount={liveCount}
           busy={busyId === interiorCard.offer.id}
           error={formError}
@@ -145,6 +147,7 @@ export function OffersDesk() {
           error={error || desk?.error}
           onOpen={(key) => go(`/sales/offers/${key}`)}
           onCreate={() => go('/sales/offers/new')}
+          onReload={() => reload(true)}
         />
       )}
     </OperatorShell>
@@ -156,13 +159,15 @@ function OfferGallery({
   cards,
   error,
   onOpen,
-  onCreate
+  onCreate,
+  onReload
 }: {
   desk: DeskPayload | undefined
   cards: OfferDeskCard[]
   error?: string | null
   onOpen: (offerKey: string) => void
   onCreate: () => void
+  onReload: () => Promise<void>
 }) {
   return (
     <div className="space-y-7">
@@ -171,6 +176,8 @@ function OfferGallery({
           Could not refresh the desk. {error}
         </div>
       ) : null}
+
+      {desk ? <TestCellsBoard desk={desk} onCreated={onReload} /> : null}
 
       <Card>
         <CardContent className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
@@ -253,6 +260,12 @@ function SkuCard({ card, onOpen }: { card: OfferDeskCard; onOpen: () => void }) 
         {card.offer.one_sentence || card.offer.pack_summary}
       </p>
       <div className="mt-4 flex items-end justify-between gap-3">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">Sent</div>
+          <div className="font-display text-2xl font-semibold tabular-nums text-neutral-900">
+            {formatCount(r.sent)}
+          </div>
+        </div>
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">Meetings</div>
           <div className="font-display text-2xl font-semibold tabular-nums text-neutral-900">

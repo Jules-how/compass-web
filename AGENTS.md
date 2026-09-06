@@ -96,6 +96,7 @@ non-obvious bits for working in the Cursor Cloud environment.
 ## Learned Workspace Facts
 
 - Home morning is the wave loop: Instantly sending campaigns, two next slots, accept/dismiss the daily brief before live land. Remaining under 50 is the land cue. Copy confirm and opener review ticks live on the Home row. Inbox count is Instantly replies only. Pathway config (tools, opener templates, run logs) is Outbound → Pathways. Cursor runs list-builds; Compass does not scrape. Activate stays Instantly.
+- Offer test cells on `/sales/offers` are `offer_key` × first `vertical_tags` × first `location_tags`. One Instantly campaign per cell. City is `location_tags`, not the campaign name. `POST /api/offers/cells` (and `/api/agent/offers/cells`) creates the missing grid and tags a no-city campaign for that vertical instead of duplicating it.
 - Vault outbound `.md` files hold process and per-lead work, not a parallel offer/template warehouse.
 - Per-lead first line is stamped from `cold-email/AGENTS.md` into Instantly `personalization` and `custom_variables.opener`.
 - Outbound library rows carry provenance (`source` | `yours`) plus `source_creator` / `source_file`; source inventory seeds from vault playbooks (Nick Saraev Cold Email / ACC / Nick / Platten / Connor), and newly added UI rows default to yours.

@@ -70,6 +70,12 @@ export type OfferCampaignBind = {
   offer_key?: string | null
   instantly_campaign_id?: string | null
   vertical_tags?: string[]
+  location_tags?: string[]
+  testing_variable?: string | null
+  sample_size_target?: number | null
+  expression_key?: string | null
+  copy_status?: string | null
+  hypothesis?: string | null
 }
 
 export type OfferCampaignResult = {
@@ -78,10 +84,48 @@ export type OfferCampaignResult = {
   status: string
   instantlyCampaignId: string | null
   verticalTags: string[]
+  locationTags: string[]
+  testingVariable: string | null
+  sampleSizeTarget: number | null
+  expressionKey: string | null
+  copyStatus: string | null
+  hypothesis: string | null
   cohort: number
   positive: number
   meetings: number
   sent: number | null
+}
+
+export const TEST_CELL_EMPTY = '—'
+
+export type OfferTestCellFlag =
+  | 'unbound'
+  | 'no_vertical'
+  | 'no_city'
+  | 'mixed_variable'
+  | 'multi_campaign'
+  | 'volume_skew'
+  | 'copy_split'
+
+export type OfferTestCell = {
+  key: string
+  offerKey: string
+  offerName: string
+  gtmStatus: GtmStatus | 'unbound'
+  vertical: string
+  city: string
+  testingVariable: string
+  copyStatus: string
+  expressionKey: string | null
+  sampleSizeTarget: number | null
+  campaigns: Array<{ id: string; name: string; status: string }>
+  campaignCount: number
+  cohort: number
+  positive: number
+  meetings: number
+  sent: number | null
+  positiveRate: number | null
+  flags: OfferTestCellFlag[]
 }
 
 export type OfferDeskResults = {
@@ -105,6 +149,7 @@ export type OfferDeskModel = {
   testing: OfferDeskCard[]
   retired: OfferDeskCard[]
   unboundCampaigns: number
+  cells: OfferTestCell[]
   totals: {
     live: number
     testing: number
@@ -453,12 +498,20 @@ export function assembleOfferDesk(input: {
           sentKnown = true
         }
         const verticalTags = Array.isArray(campaign.vertical_tags) ? campaign.vertical_tags : []
+        const locationTags = Array.isArray(campaign.location_tags) ? campaign.location_tags : []
         return {
           id: campaign.id,
           name: campaign.name,
           status: campaign.status,
           instantlyCampaignId: instantlyId,
           verticalTags,
+          locationTags,
+          testingVariable: campaign.testing_variable?.trim() || null,
+          sampleSizeTarget:
+            typeof campaign.sample_size_target === 'number' ? campaign.sample_size_target : null,
+          expressionKey: campaign.expression_key?.trim() || null,
+          copyStatus: campaign.copy_status?.trim() || null,
+          hypothesis: campaign.hypothesis?.trim() || null,
           cohort: rowTally.cohort,
           positive: rowTally.positive,
           meetings: rowTally.meetings,
@@ -491,11 +544,14 @@ export function assembleOfferDesk(input: {
   const liveMeetings = live.reduce((sum, card) => sum + card.results.meetings, 0)
   const livePositive = live.reduce((sum, card) => sum + card.results.positive, 0)
 
+  const cells = assembleTestCells(input)
+
   return {
     live,
     testing,
     retired,
     unboundCampaigns,
+    cells,
     totals: {
       live: live.length,
       testing: testing.length,
@@ -503,6 +559,146 @@ export function assembleOfferDesk(input: {
       positive: livePositive
     }
   }
+}
+
+export function firstCampaignTag(tags?: string[] | null): string {
+  if (!Array.isArray(tags)) return TEST_CELL_EMPTY
+  const tag = tags.map((item) => item.trim()).find(Boolean)
+  return tag || TEST_CELL_EMPTY
+}
+
+export function testCellKey(offerKey: string, vertical: string, city: string): string {
+  return `${offerKey || 'unbound'}|${vertical || TEST_CELL_EMPTY}|${city || TEST_CELL_EMPTY}`
+}
+
+function uniqueOrMixed(values: string[]): { value: string; mixed: boolean } {
+  const uniq = [...new Set(values.map((item) => item.trim()).filter(Boolean))]
+  if (uniq.length === 0) return { value: 'none', mixed: false }
+  if (uniq.length === 1) return { value: uniq[0], mixed: false }
+  return { value: 'mixed', mixed: true }
+}
+
+export function assembleTestCells(input: {
+  offers: OfferSku[]
+  campaigns: OfferCampaignBind[]
+  tallies: Record<string, LeadTally>
+  instantlyById?: Record<string, { sent: number }>
+}): OfferTestCell[] {
+  const instantlyById = input.instantlyById ?? {}
+  const offerName = new Map(input.offers.map((offer) => [offer.offer_key, offer.name]))
+  const offerStatus = new Map(input.offers.map((offer) => [offer.offer_key, offer.gtm_status]))
+  const buckets = new Map<
+    string,
+    {
+      offerKey: string
+      vertical: string
+      city: string
+      rows: OfferCampaignBind[]
+    }
+  >()
+
+  for (const campaign of input.campaigns) {
+    const offerKey = (campaign.offer_key || '').trim()
+    const vertical = firstCampaignTag(campaign.vertical_tags)
+    const city = firstCampaignTag(campaign.location_tags)
+    const key = testCellKey(offerKey, vertical, city)
+    const bucket = buckets.get(key)
+    if (bucket) {
+      bucket.rows.push(campaign)
+    } else {
+      buckets.set(key, { offerKey, vertical, city, rows: [campaign] })
+    }
+  }
+
+  const cells: OfferTestCell[] = []
+  for (const [key, bucket] of buckets) {
+    const tally = emptyTally()
+    let sentSum = 0
+    let sentKnown = false
+    const campaigns = bucket.rows.map((campaign) => {
+      sumTally(tally, input.tallies[campaign.id] ?? emptyTally())
+      const instantlyId = (campaign.instantly_campaign_id || '').trim()
+      const sent = instantlyId && instantlyById[instantlyId] ? instantlyById[instantlyId].sent : null
+      if (typeof sent === 'number') {
+        sentSum += sent
+        sentKnown = true
+      }
+      return { id: campaign.id, name: campaign.name, status: campaign.status }
+    })
+    const variable = uniqueOrMixed(bucket.rows.map((row) => row.testing_variable || 'none'))
+    const copy = uniqueOrMixed(bucket.rows.map((row) => row.copy_status || 'none'))
+    const expression = uniqueOrMixed(bucket.rows.map((row) => row.expression_key || ''))
+    const targets = bucket.rows
+      .map((row) => row.sample_size_target)
+      .filter((n): n is number => typeof n === 'number' && Number.isFinite(n))
+    const sent = sentKnown ? sentSum : null
+    const flags: OfferTestCellFlag[] = []
+    if (!bucket.offerKey) flags.push('unbound')
+    if (bucket.vertical === TEST_CELL_EMPTY) flags.push('no_vertical')
+    if (bucket.city === TEST_CELL_EMPTY) flags.push('no_city')
+    if (variable.mixed) flags.push('mixed_variable')
+    if (campaigns.length > 1) flags.push('multi_campaign')
+    cells.push({
+      key,
+      offerKey: bucket.offerKey,
+      offerName: offerName.get(bucket.offerKey) || (bucket.offerKey ? bucket.offerKey : 'Unbound'),
+      gtmStatus: offerStatus.get(bucket.offerKey) ?? 'unbound',
+      vertical: bucket.vertical,
+      city: bucket.city,
+      testingVariable: variable.value,
+      copyStatus: copy.value,
+      expressionKey: expression.mixed ? 'mixed' : expression.value || null,
+      sampleSizeTarget: targets.length === 1 ? targets[0] : null,
+      campaigns,
+      campaignCount: campaigns.length,
+      cohort: tally.cohort,
+      positive: tally.positive,
+      meetings: tally.meetings,
+      sent,
+      positiveRate: sent != null && sent > 0 ? Math.round((1000 * tally.positive) / sent) / 10 : null,
+      flags
+    })
+  }
+
+  const siblingSent = new Map<string, number[]>()
+  for (const cell of cells) {
+    if (cell.flags.includes('unbound') || cell.sent == null) continue
+    const group = `${cell.offerKey}|${cell.testingVariable}`
+    const list = siblingSent.get(group) ?? []
+    list.push(cell.sent)
+    siblingSent.set(group, list)
+  }
+  for (const cell of cells) {
+    if (cell.sent == null) continue
+    const list = siblingSent.get(`${cell.offerKey}|${cell.testingVariable}`) ?? []
+    if (list.length < 2) continue
+    const min = Math.min(...list)
+    const max = Math.max(...list)
+    if (min > 0 && max / min >= 2) cell.flags.push('volume_skew')
+  }
+
+  const siblingCopy = new Map<string, Set<string>>()
+  for (const cell of cells) {
+    if (cell.flags.includes('unbound')) continue
+    if (cell.city === TEST_CELL_EMPTY || cell.vertical === TEST_CELL_EMPTY) continue
+    const token = `${cell.expressionKey || ''}|${cell.copyStatus}`
+    const group = `${cell.offerKey}|${cell.testingVariable}`
+    const set = siblingCopy.get(group) ?? new Set<string>()
+    set.add(token)
+    siblingCopy.set(group, set)
+  }
+  for (const cell of cells) {
+    const set = siblingCopy.get(`${cell.offerKey}|${cell.testingVariable}`)
+    if (set && set.size > 1) cell.flags.push('copy_split')
+  }
+
+  return cells.sort((a, b) => {
+    const offer = a.offerName.localeCompare(b.offerName)
+    if (offer) return offer
+    const vertical = a.vertical.localeCompare(b.vertical)
+    if (vertical) return vertical
+    return a.city.localeCompare(b.city)
+  })
 }
 
 export function indexInstantlySent(
@@ -548,51 +744,61 @@ export const MISSED_CALL_LOCK: OfferLock = {
 
 export const BOOKED_JOBS_LOCK: OfferLock = {
   ...emptyOfferLock(),
-  icp: 'Owner-led residential trades in major AU cities, 2 to 8 vans, that already pay for demand or whose phone already rings, and that lose book-now jobs if a new lead is not booked in minutes.',
+  icp: 'Owner-led residential trades in major AU cities, 2 to 8 vans, that already pay for demand or will fund Google, and that lose book-now jobs to voicemail, slow callback, or empty slots. Price is a guide; quote from named GP times extra jobs (or leaked jobs).',
   antiIcp: [
-    'Quiet phone and will not fund fill',
+    'Quiet phone and will not fund Google',
     'Wants leads with no capture (ads into voicemail)',
     'CPL or lead volume as the scoreboard',
     'Sparkies commercial BD',
     '60-person contractor, franchise, 1800 desk',
     'Will not point number and forms at the path',
-    'Tilers, kitchens, cleaning, handyman'
+    'Tilers, kitchens, cleaning, handyman',
+    'Website, reactivation, or cold email as the product',
+    'Meta as month-one fill for non-visual book-now work',
+    'Search or LSA into a unit whose cost per showed sits at or above contribution',
+    'Cafe economics (carry too thin for the work)'
   ],
   screen: [
     'What do you already pay for demand (Google Ads, Hipages, nothing)? If nothing, will you fund Google Ads at a floor we name today after a Keyword Planner check on your territory?',
-    'When a new lead comes in (call or form), what happens in the first 10 minutes?',
+    'When a new lead comes in (call or form), what happens in the first 10 minutes, including after hours?',
     'Last month, how many enquiries did you not action the same day?',
-    'Rough contribution margin on a typical book-now job vs a replacement (not revenue).',
-    'Will you point the public number and forms at this booking path for 30 days, and let fill run into that same path?'
+    'Typical job this month. Named contribution, not revenue. Extra jobs they can take, or leaked jobs last month if capture-only. Carry = contribution times that count. Quote at or under carry; use the guide when carry clears it. Fail fill if Planner cost per showed is at or above contribution. Walk cafe economics.',
+    'Will you point the public number and forms at this booking path for 30 days, and let Google run into that path only after capture is on?'
   ],
   machine: {
-    capture: 'Voice/SMS that books in minutes. Overflow / after hours on their number. SMS on miss or form. Calendar. Handoff. Not nurture.',
-    fill: 'Google Search into that path, built paused in their own account, enabled after review. Meta only if search intent is thin. They pay media. Kill switch if enquiries do not book.',
-    convert: 'Landing page only if paid traffic or booking UX is the bottleneck. Never the first conversation.'
+    capture:
+      'Stage 1, required first. Email/SMS speed-to-lead, after-hours speed-to-lead, after-hours voice that books. Overflow on their number. Calendar. Handoff. About 48 hours. Not nurture. Not the product by itself.',
+    fill: 'Stage 2: Google Search emergency/local/high-intent into the live path, built paused in their account, enabled after review. They pay media. Kill switch if enquiries do not book. Stage 3: Meta for planned/proof/aspirational only after Google is booking. Shoot bonus only when Meta is on. Not Email 1.',
+    convert:
+      'Landing page only if paid traffic or booking UX is the bottleneck. Website rebuild, lead reactivation, and cold email sold to the shop are out of scope. Never the first conversation.'
   },
   walk: [
     'Franchise, 1800, store, FM, tiler in the name',
-    'No published email after verify + finder',
+    'No published email after site extract + verify',
     'Wrong in-trade for this campaign',
-    'CPL buyer who will not change answering'
+    'CPL buyer who will not change answering',
+    'Cafe economics (carry too thin for the work)',
+    'Search or LSA when cost per showed sits on or above contribution'
   ],
   mechanism:
-    'Most shops buy more leads and leave voicemail or next-day callback in place. Extra leads walk at the same rate. We put paid demand into a path that answers and books in minutes. Fill and capture are one install.',
-  category: 'Demand in, showed job out. Not an ads shop. Not a receptionist shop.',
+    'Most shops buy more leads and leave voicemail, or tighten the phone and never buy dedicated demand. Extra leads walk; empty weeks stay empty. We tighten capture first, then point Google Search at that line, then Meta for planned work once the line is booking. Showed jobs, not CPL. Fees are a guide; this shop\'s GP sets the quote.',
+  category: 'Demand in, showed job out. Not an ads shop. Not a receptionist shop. Not “fill and capture” as a brand.',
   crowd:
-    'Owner-led residential trades in major AU cities, 2 to 8 vans, owner can say yes this week, that want more booked work and will fund Google Search or already pay for demand.',
+    'Owner-led residential trades in major AU cities, 2 to 8 vans, owner can say yes this week, that want more booked work and will fund Google Search or already pay for demand. Quote from carry, not a locked sticker.',
   verticalIn: ['plumber', 'hvac', 'electrical', 'locksmith', 'roofing', 'pest'],
   verticalOut: ['tilers', 'kitchens', 'cleaning', 'handyman'],
   vehicles: [
     { problem: 'Call while on a job goes to voicemail', vehicle: 'Overflow voice on their public number' },
     { problem: 'After hours is nobody', vehicle: 'After hours voice + SMS' },
     { problem: 'Form or Hipages lead, callback tomorrow, job gone', vehicle: 'Speed-to-lead SMS on miss or form' },
-    { problem: 'Google ads into voicemail', vehicle: 'Fill only into the capture path. Kill switch if it does not book.' },
+    { problem: 'Google ads into voicemail', vehicle: 'Capture on before Search enables. Kill switch if it does not book.' },
+    { problem: 'Empty weeks, will fund demand', vehicle: 'Google Search emergency / local into the live path' },
+    { problem: 'Planned / proof / high-ticket Search will not buy', vehicle: 'Meta after Google is booking. Shoot bonus when Meta is on.' },
+    { problem: 'Unit cannot carry the guide retainer', vehicle: 'Quote from carry. Capture-only until fill unit passes. Walk cafe economics.' },
     { problem: 'Do not want a robot quoting licensed work', vehicle: 'Handoff script. Human for anything licensed.' },
     { problem: 'Do not know if ads work', vehicle: 'Weekly note: new, missed, booked, showed. Metric is showed jobs.' },
     { problem: 'No-shows', vehicle: 'Factual appointment SMS. No promo copy.' },
-    { problem: 'Ads without pickup (Meta lesson)', vehicle: 'Capture on before spend scales' },
-    { problem: 'Next need after yes', vehicle: 'Same machine, more hours, more campaigns. Not a website offer.' }
+    { problem: 'Website / reactivation / outbound as the product', vehicle: 'Walk. Out of scope.' }
   ],
   relevance: [
     { fact: 'Published work email', required: true, source: 'Site or Maps. Never invent.' },
@@ -600,7 +806,7 @@ export const BOOKED_JOBS_LOCK: OfferLock = {
     { fact: 'Suburb', required: true, source: 'Maps / address' },
     { fact: 'Trade on the in-table for this campaign', required: true, source: 'Maps category' },
     { fact: 'Demand proxy (reviews or years trading or visible Google Ads/Hipages)', required: true, source: 'Maps, site' },
-    { fact: 'Paid demand (Hipages, Google Ads)', required: false, source: 'Site extract, not Origami' },
+    { fact: 'Paid demand (Hipages, Google Ads, Meta Ads)', required: false, source: 'Site extract, not Origami' },
     { fact: 'Hours / close time / after hours claim', required: false, source: 'Maps hours' },
     { fact: 'Specialty', required: false, source: 'Services' }
   ]

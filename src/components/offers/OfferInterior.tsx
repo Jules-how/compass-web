@@ -9,11 +9,14 @@ import type {
   OfferDeskCard,
   OfferLock,
   OfferRelevanceFact,
+  OfferTestCell,
   OfferVehicle,
   OfferVerticalVariant,
   VerticalVariantStatus
 } from '@/lib/offer-sku'
 import { emptyOfferLock, slugifyOfferKey, VERTICAL_VARIANT_STATUSES } from '@/lib/offer-sku'
+import { OfferCellRows } from '@/components/offers/TestCellsBoard'
+import { testingVariableLabel } from '@/lib/campaigns'
 
 function linesToList(value: string) {
   return value
@@ -149,6 +152,7 @@ export function EditableOfferTitle({
 
 export function OfferInterior({
   card,
+  cells,
   liveCount,
   busy,
   error,
@@ -156,6 +160,7 @@ export function OfferInterior({
   onPatch
 }: {
   card: OfferDeskCard
+  cells: OfferTestCell[]
   liveCount: number
   busy: boolean
   error: string | null
@@ -239,6 +244,13 @@ export function OfferInterior({
 
       <ResultsStrip card={card} />
 
+      {cells.length > 0 || card.campaigns.length > 0 ? (
+        <section className="compass-panel space-y-3 p-5">
+          <div className="compass-section-label">Cells</div>
+          <OfferCellRows cells={cells} />
+        </section>
+      ) : null}
+
       <OfferLockForm
         key={`${offer.id}-${offer.updated_at}`}
         card={card}
@@ -275,8 +287,11 @@ function ResultsStrip({ card }: { card: OfferDeskCard }) {
                 <span className="truncate font-medium text-neutral-800">{campaign.name}</span>
               </div>
               <div className="text-xs tabular-nums text-neutral-500">
-                {formatCount(campaign.cohort)} cohort · {formatCount(campaign.positive)} positive ·{' '}
-                {formatCount(campaign.meetings)} meetings
+                {campaign.locationTags?.[0] || 'no city'} · {formatCount(campaign.sent)} sent ·{' '}
+                {formatCount(campaign.positive)} positive · {formatCount(campaign.meetings)} meetings
+                {campaign.testingVariable && campaign.testingVariable !== 'none'
+                  ? ` · ${testingVariableLabel(campaign.testingVariable)}`
+                  : ''}
               </div>
             </Link>
           ))}
@@ -1061,8 +1076,8 @@ function VerticalVariantsSection({
                           <span className="truncate font-medium text-neutral-800">{campaign.name}</span>
                         </div>
                         <div className="tabular-nums text-neutral-500">
-                          {formatCount(campaign.cohort)} cohort · {formatCount(campaign.positive)} positive ·{' '}
-                          {formatCount(campaign.meetings)} meetings
+                          {campaign.locationTags?.[0] || 'no city'} · {formatCount(campaign.sent)} sent ·{' '}
+                          {formatCount(campaign.positive)} positive
                         </div>
                       </Link>
                     ))}

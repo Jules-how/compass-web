@@ -69,6 +69,9 @@ export async function POST(request: NextRequest) {
     wave_copy_strategy?: string | null
     wave_approach?: string | null
     testing_variable?: string | null
+    sample_size_target?: number | null
+    expression_key?: string | null
+    cta_type?: string | null
   }
   try {
     body = (await readBoundedJson(request, 256 * 1024)) as typeof body
@@ -125,7 +128,10 @@ export async function POST(request: NextRequest) {
       wave_list_size: body.wave_list_size,
       wave_copy_strategy: body.wave_copy_strategy,
       wave_approach: body.wave_approach,
-      testing_variable: body.testing_variable
+      testing_variable: body.testing_variable,
+      sample_size_target: body.sample_size_target ?? null,
+      expression_key: body.expression_key,
+      cta_type: body.cta_type
     })
     return portalJson({ campaign: created })
   } catch (err) {

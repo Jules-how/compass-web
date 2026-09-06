@@ -235,6 +235,172 @@ test('offer desk lanes split live testing retired and score bound campaigns', ()
   assert.equal(gallery[0].offer.offer_key, 'booked-jobs-system')
 })
 
+test('test cells group offer × vertical × city and flag incomparable volume', () => {
+  const EMPTY = '—'
+  function firstTag(tags) {
+    if (!Array.isArray(tags)) return EMPTY
+    const tag = tags.map((item) => String(item).trim()).find(Boolean)
+    return tag || EMPTY
+  }
+  function cellKey(offerKey, vertical, city) {
+    return `${offerKey || 'unbound'}|${vertical || EMPTY}|${city || EMPTY}`
+  }
+  function assembleTestCells(input) {
+    const instantlyById = input.instantlyById ?? {}
+    const buckets = new Map()
+    for (const campaign of input.campaigns) {
+      const offerKey = (campaign.offer_key || '').trim()
+      const vertical = firstTag(campaign.vertical_tags)
+      const city = firstTag(campaign.location_tags)
+      const key = cellKey(offerKey, vertical, city)
+      const bucket = buckets.get(key)
+      if (bucket) bucket.rows.push(campaign)
+      else buckets.set(key, { offerKey, vertical, city, rows: [campaign] })
+    }
+    const cells = []
+    for (const [key, bucket] of buckets) {
+      let sent = null
+      let sentKnown = false
+      let positive = 0
+      for (const campaign of bucket.rows) {
+        positive += (input.tallies[campaign.id] || {}).positive || 0
+        const instantlyId = (campaign.instantly_campaign_id || '').trim()
+        const rowSent = instantlyId && instantlyById[instantlyId] ? instantlyById[instantlyId].sent : null
+        if (typeof rowSent === 'number') {
+          sent = (sent || 0) + rowSent
+          sentKnown = true
+        }
+      }
+      const flags = []
+      if (!bucket.offerKey) flags.push('unbound')
+      if (bucket.vertical === EMPTY) flags.push('no_vertical')
+      if (bucket.city === EMPTY) flags.push('no_city')
+      if (bucket.rows.length > 1) flags.push('multi_campaign')
+      cells.push({
+        key,
+        offerKey: bucket.offerKey,
+        vertical: bucket.vertical,
+        city: bucket.city,
+        campaignCount: bucket.rows.length,
+        sent: sentKnown ? sent : null,
+        positive,
+        flags
+      })
+    }
+    const siblingSent = new Map()
+    for (const cell of cells) {
+      if (cell.flags.includes('unbound') || cell.sent == null) continue
+      const group = cell.offerKey
+      const list = siblingSent.get(group) ?? []
+      list.push(cell.sent)
+      siblingSent.set(group, list)
+    }
+    for (const cell of cells) {
+      if (cell.sent == null) continue
+      const list = siblingSent.get(cell.offerKey) ?? []
+      if (list.length < 2) continue
+      const min = Math.min(...list)
+      const max = Math.max(...list)
+      if (min > 0 && max / min >= 2) cell.flags.push('volume_skew')
+    }
+    return cells
+  }
+
+  const cells = assembleTestCells({
+    campaigns: [
+      {
+        id: 'a',
+        offer_key: 'booked-jobs-system',
+        vertical_tags: ['locksmith'],
+        location_tags: ['sydney'],
+        instantly_campaign_id: 'i1'
+      },
+      {
+        id: 'b',
+        offer_key: 'booked-jobs-system',
+        vertical_tags: ['locksmith'],
+        location_tags: ['melbourne'],
+        instantly_campaign_id: 'i2'
+      },
+      {
+        id: 'c',
+        offer_key: 'booked-jobs-system',
+        vertical_tags: ['locksmith'],
+        location_tags: [],
+        instantly_campaign_id: 'i3'
+      },
+      {
+        id: 'd',
+        offer_key: null,
+        vertical_tags: ['clinics'],
+        location_tags: ['sydney']
+      }
+    ],
+    tallies: { a: { positive: 2 }, b: { positive: 1 }, c: { positive: 0 }, d: { positive: 0 } },
+    instantlyById: { i1: { sent: 200 }, i2: { sent: 80 }, i3: { sent: 10 } }
+  })
+
+  const sydney = cells.find((c) => c.key === 'booked-jobs-system|locksmith|sydney')
+  const melbourne = cells.find((c) => c.key === 'booked-jobs-system|locksmith|melbourne')
+  const noCity = cells.find((c) => c.key === 'booked-jobs-system|locksmith|—')
+  const unbound = cells.find((c) => c.key === 'unbound|clinics|sydney')
+  assert.equal(sydney.sent, 200)
+  assert.equal(sydney.positive, 2)
+  assert.equal(melbourne.sent, 80)
+  assert.ok(sydney.flags.includes('volume_skew'))
+  assert.ok(melbourne.flags.includes('volume_skew'))
+  assert.ok(noCity.flags.includes('no_city'))
+  assert.ok(unbound.flags.includes('unbound'))
+})
+
+test('missing plan slots skip existing offer × vertical × city keys', () => {
+  function slug(value) {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  }
+  function unique(values) {
+    const out = []
+    const seen = new Set()
+    for (const raw of values) {
+      const tag = slug(raw)
+      if (!tag || seen.has(tag)) continue
+      seen.add(tag)
+      out.push(tag)
+    }
+    return out
+  }
+  function missingPlanSlots(offerKey, verticals, cities, existingKeys) {
+    const have = new Set(existingKeys)
+    const slots = []
+    for (const vertical of unique(verticals)) {
+      for (const city of unique(cities)) {
+        const key = `${offerKey}|${vertical}|${city}`
+        if (!have.has(key)) slots.push({ key, vertical, city })
+      }
+    }
+    return slots
+  }
+
+  const missing = missingPlanSlots(
+    'booked-jobs-system',
+    ['locksmith', 'plumber'],
+    ['sydney', 'melbourne'],
+    ['booked-jobs-system|locksmith|sydney']
+  )
+  assert.equal(missing.length, 3)
+  assert.deepEqual(
+    missing.map((s) => s.key).sort(),
+    [
+      'booked-jobs-system|locksmith|melbourne',
+      'booked-jobs-system|plumber|melbourne',
+      'booked-jobs-system|plumber|sydney'
+    ]
+  )
+})
+
 test('offer gallery path and lock parse', () => {
   assert.equal(offerKeyFromPath('/sales/offers'), null)
   assert.equal(offerKeyFromPath('/sales/offers/'), null)
@@ -293,6 +459,8 @@ test('offer sku desk is wired in Compass not markdown', () => {
 
   const desk = read('src/lib/offer-sku.ts')
   assert.match(desk, /assembleOfferDesk/)
+  assert.match(desk, /assembleTestCells/)
+  assert.match(desk, /testCellKey/)
   assert.match(desk, /BOOKED_JOBS_LOCK/)
   assert.match(desk, /MISSED_CALL_LOCK/)
 
@@ -300,6 +468,14 @@ test('offer sku desk is wired in Compass not markdown', () => {
   assert.match(api, /assembleOfferDesk/)
   const agent = read('src/app/api/agent/offers/desk/route.ts')
   assert.match(agent, /requireAgentAuth/)
+  const cellsApi = read('src/app/api/offers/cells/route.ts')
+  assert.match(cellsApi, /createMissingOfferCells/)
+  const cellsAgent = read('src/app/api/agent/offers/cells/route.ts')
+  assert.match(cellsAgent, /requireAgentAuth/)
+  const plan = read('src/lib/offer-test-cells.ts')
+  assert.match(plan, /missingPlanSlots/)
+  const board = read('src/components/offers/TestCellsBoard.tsx')
+  assert.match(board, /Create \$\{missing.length\} missing cell/)
 
   const ui = read('src/components/offers/OffersDesk.tsx')
   assert.match(ui, /New testing SKU/)
@@ -307,6 +483,7 @@ test('offer sku desk is wired in Compass not markdown', () => {
   assert.match(ui, /sales\/offers\/new/)
   assert.match(ui, /flattenOfferGallery/)
   assert.match(ui, /offerKeyFromPath/)
+  assert.match(ui, /TestCellsBoard/)
   assert.doesNotMatch(ui, /lg:grid-cols-2/)
   assert.doesNotMatch(ui, /switchflow-offer/)
   assert.doesNotMatch(ui, /Scoreboard is showed/)
@@ -317,6 +494,7 @@ test('offer sku desk is wired in Compass not markdown', () => {
   assert.match(interior, /Anti-ICP/)
   assert.match(interior, /Open copy library/)
   assert.match(interior, /EditableOfferTitle/)
+  assert.match(interior, /OfferCellRows/)
   assert.match(ui, /EditableOfferTitle/)
 
   const nested = read('src/app/(console)/sales/offers/[offerKey]/page.tsx')

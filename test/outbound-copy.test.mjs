@@ -65,7 +65,7 @@ test('outbound nav and pages are wired under Sales', () => {
   assert.match(read('src/components/outbound/OutboundLibraryAccordion.tsx'), /LIBRARY_FEATURED_EXAMPLES/)
   const featured = read('src/lib/outbound-copy.ts')
   assert.match(featured, /LIBRARY_FEATURED_EXAMPLES/)
-  assert.match(featured, /title: 'Fill and capture'/)
+  assert.match(featured, /title: 'Booked jobs'/)
   assert.match(featured, /export function evaluatePillarsQa/)
   assert.match(featured, /ECONOMIC_PASS_RE/)
   assert.match(featured, /MECHANISM_PASS_RE/)

@@ -7,6 +7,7 @@ import {
   emptyCampaignCopyFields,
   normalizeCampaignHealth,
   normalizeCampaignStatus,
+  normalizeCtaType,
   normalizeLabels,
   normalizeOutboundTagList,
   normalizeTestingVariable,
@@ -94,6 +95,9 @@ export type CampaignWriteInput = {
   wave_copy_strategy?: string | null
   wave_approach?: string | null
   testing_variable?: string | null
+  sample_size_target?: number | null
+  expression_key?: string | null
+  cta_type?: string | null
 }
 
 function nowIso(): string {
@@ -137,6 +141,12 @@ export function buildCampaignInsert(input: CampaignWriteInput): Record<string, u
     wave_copy_strategy: input.wave_copy_strategy?.trim() || null,
     wave_approach: input.wave_approach?.trim() || null,
     testing_variable: normalizeTestingVariable(input.testing_variable),
+    sample_size_target:
+      typeof input.sample_size_target === 'number' && Number.isFinite(input.sample_size_target)
+        ? Math.max(1, Math.floor(input.sample_size_target))
+        : null,
+    expression_key: input.expression_key?.trim() || null,
+    cta_type: normalizeCtaType(input.cta_type),
     created_at: stamp,
     updated_at: stamp
   }
