@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { cn } from '@/lib/utils'
 import type {
   CompassBusinessFunction,
   CompassProject,
@@ -268,7 +269,7 @@ export default function TaskList({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <div
-            className="inline-flex shrink-0 rounded-xl border border-stone-200 bg-white p-0.5 text-xs"
+            className="compass-seg shrink-0 text-xs"
             role="tablist"
             aria-label="Task windows"
           >
@@ -279,11 +280,10 @@ export default function TaskList({
                 role="tab"
                 aria-selected={filters.window === window}
                 onClick={() => patchFilters({ window })}
-                className={`rounded-lg px-2.5 py-1.5 font-medium transition ${
-                  filters.window === window
-                    ? 'bg-neutral-900 text-white'
-                    : 'text-neutral-500 hover:text-neutral-800'
-                }`}
+                className={cn(
+                  'compass-seg-btn',
+                  filters.window === window && 'compass-seg-btn-active'
+                )}
               >
                 {WINDOW_LABELS[window]}
                 <span className="ml-1.5 inline-block min-w-[1.25rem] text-right tabular-nums opacity-70">

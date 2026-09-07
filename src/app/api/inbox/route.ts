@@ -27,7 +27,6 @@ import {
   type TriageLookup
 } from '@/lib/inbox-triage'
 import { INSTANTLY_INBOX_OUTBOUND_STATUSES } from '@/lib/instantly-leads-sync'
-import { fetchInstantlyUnreadCount, resolveInstantlyApiKey } from '@/lib/instantly'
 import type { CompassTask, LeadContact } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -249,14 +248,9 @@ export async function GET(request: NextRequest) {
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
 
-    // Instantly Unibox unread runs alongside DB work (was a serial waterfall).
-    const instantlyKey = await resolveInstantlyApiKey(supabase)
-    const [all, instantlyUnread] = await Promise.all([
-      loadAllChannelItems(supabase),
-      instantlyKey
-        ? fetchInstantlyUnreadCount(instantlyKey).catch(() => null)
-        : Promise.resolve(null)
-    ])
+    // Compass DB counts are enough for the badge and tabs. Instantly Unibox is a
+    // US hop and used to block every console mount that warmed /api/inbox.
+    const all = await loadAllChannelItems(supabase)
 
     const linkedAgents = linkRelatedInboxItems([...all.agents, ...all.instantly, ...all.leads])
     const byId = new Map(linkedAgents.map((item) => [item.id, item]))
@@ -265,13 +259,7 @@ export async function GET(request: NextRequest) {
     const leads = all.leads.map((item) => byId.get(item.id) ?? item)
 
     const counts = countActionableBadge({ agents, instantly, leads })
-    let badgeTotal = counts.agents + counts.instantly + counts.leads
-
-    if (typeof instantlyUnread === 'number' && instantlyUnread > counts.instantly) {
-      // Prefer mirror triage for accuracy; only lift Instantly tab count toward Unibox.
-      counts.instantly = Math.max(counts.instantly, Math.min(instantlyUnread, LEAD_PAGE_SIZE))
-      badgeTotal = counts.agents + counts.instantly + counts.leads
-    }
+    const badgeTotal = counts.agents + counts.instantly + counts.leads
 
     const needsYou = pickNeedsYou([...agents, ...instantly, ...leads])
     const channels = buildChannels(agents, instantly, leads)

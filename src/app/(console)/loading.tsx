@@ -2,12 +2,20 @@ export default function ConsoleLoading() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8">
       <div className="space-y-3" aria-busy="true" aria-live="polite">
-        <p className="text-sm text-neutral-500">Loading…</p>
-        <div className="space-y-2.5">
-          <div className="h-11 animate-pulse rounded-xl bg-gradient-to-r from-stone-200/80 via-stone-100 to-stone-200/80" />
-          <div className="h-11 animate-pulse rounded-xl bg-gradient-to-r from-stone-200/70 via-stone-100 to-stone-200/70 [animation-delay:75ms]" />
-          <div className="h-11 w-[88%] animate-pulse rounded-xl bg-gradient-to-r from-stone-200/60 via-stone-100 to-stone-200/60 [animation-delay:150ms]" />
-          <div className="h-11 w-[72%] animate-pulse rounded-xl bg-gradient-to-r from-stone-200/50 via-stone-100 to-stone-200/50 [animation-delay:225ms]" />
+        <p className="sr-only">Loading…</p>
+        <div className="mb-6 space-y-2">
+          <div className="compass-skeleton h-3 w-28" />
+          <div className="compass-skeleton h-8 w-48" />
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="compass-panel space-y-3 p-5">
+            <div className="compass-skeleton h-4 w-32" />
+            <div className="compass-skeleton h-24 w-full" />
+          </div>
+          <div className="compass-panel space-y-3 p-5">
+            <div className="compass-skeleton h-4 w-24" />
+            <div className="compass-skeleton h-24 w-full" />
+          </div>
         </div>
       </div>
     </div>

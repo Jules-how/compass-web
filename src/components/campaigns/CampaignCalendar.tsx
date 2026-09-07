@@ -367,7 +367,7 @@ function MonthGrid({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white">
-      <div className="grid grid-cols-7 border-b border-neutral-200 bg-[#f7f8f9]">
+      <div className="grid grid-cols-7 border-b border-neutral-200 bg-stone-50">
         {WEEKDAY_LABELS.map((label) => (
           <div
             key={label}
@@ -400,13 +400,13 @@ function MonthGrid({
                     onClick={() => onCreateSlot(day, 9)}
                     {...inventoryDropHandlers(nextOpenGoLiveAt(day, 9, occupiedIsos), onDropInventory)}
                     className={`group/slot w-full border-r border-neutral-100 text-left last:border-r-0 hover:bg-[var(--compass-accent)]/[0.04] ${
-                      isToday ? 'bg-[#5e6ad2]/[0.06]' : ''
+                      isToday ? 'bg-[#e85d2a]/[0.06]' : ''
                     } ${dropHere ? 'bg-[var(--compass-accent)]/[0.08]' : ''}`}
                   >
                     <div
                       className={`px-2 pt-1.5 text-[12px] tabular-nums ${
                         isToday
-                          ? 'font-semibold text-[#5e6ad2]'
+                          ? 'font-semibold text-[#e85d2a]'
                           : inMonth
                             ? 'text-neutral-600'
                             : 'text-neutral-300'
@@ -538,7 +538,7 @@ function TimedDayColumn({
   return (
     <div
       className={`relative min-w-0 overflow-hidden border-r border-neutral-100 last:border-r-0 ${
-        isToday ? 'bg-[#5e6ad2]/[0.04]' : ''
+        isToday ? 'bg-[#e85d2a]/[0.04]' : ''
       }`}
     >
       {Array.from({ length: CALENDAR_HOURS }, (_, hour) => (
@@ -894,7 +894,7 @@ function WeekGrid({
         onCursorChange={onCursorChange}
         onDropInventory={onDropInventory}
         header={
-          <div className="flex border-b border-neutral-200 bg-[#f7f8f9]">
+          <div className="flex border-b border-neutral-200 bg-stone-50">
             <div className="shrink-0" style={{ width: CALENDAR_GUTTER_PX }} />
             <div
               className="grid min-w-0 flex-1"
@@ -912,7 +912,7 @@ function WeekGrid({
                     onClick={() => onCreateSlot(day, 9)}
                     {...inventoryDropHandlers(nextOpenGoLiveAt(day, 9, occupiedIsos), onDropInventory)}
                     className={`border-r border-neutral-100 px-3 py-2 text-left last:border-r-0 hover:bg-[var(--compass-accent)]/[0.04] ${
-                      isToday ? 'bg-[#5e6ad2]/[0.06]' : 'bg-[#f7f8f9]'
+                      isToday ? 'bg-[#e85d2a]/[0.06]' : 'bg-stone-50'
                     }`}
                   >
                     <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
@@ -920,7 +920,7 @@ function WeekGrid({
                     </div>
                     <div
                       className={`text-[15px] tabular-nums ${
-                        isToday ? 'font-semibold text-[#5e6ad2]' : 'text-neutral-800'
+                        isToday ? 'font-semibold text-[#e85d2a]' : 'text-neutral-800'
                       }`}
                     >
                       {day.getDate()}
@@ -967,7 +967,7 @@ function DayList({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white">
-      <div className="flex shrink-0 border-b border-neutral-200 bg-[#f7f8f9] px-3 py-2">
+      <div className="flex shrink-0 border-b border-neutral-200 bg-stone-50 px-3 py-2">
         <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
           {day.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })}
         </div>

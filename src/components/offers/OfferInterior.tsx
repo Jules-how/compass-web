@@ -833,14 +833,12 @@ function VerticalVariantsSection({
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-stone-200 pb-2">
+      <div className="compass-seg">
         <button
           type="button"
           className={cn(
-            'rounded-lg px-3 py-1.5 text-xs font-medium transition',
-            activeKey === 'overview'
-              ? 'bg-neutral-900 text-white'
-              : 'bg-stone-100 text-neutral-600 hover:bg-stone-200'
+            'compass-seg-btn',
+            activeKey === 'overview' && 'compass-seg-btn-active'
           )}
           onClick={() => onChangeActiveKey('overview')}
         >
@@ -851,10 +849,8 @@ function VerticalVariantsSection({
             key={v.key}
             type="button"
             className={cn(
-              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition',
-              activeKey === v.key
-                ? 'bg-neutral-900 text-white'
-                : 'bg-stone-100 text-neutral-600 hover:bg-stone-200'
+              'compass-seg-btn flex items-center gap-1.5',
+              activeKey === v.key && 'compass-seg-btn-active'
             )}
             onClick={() => onChangeActiveKey(v.key)}
           >

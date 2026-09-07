@@ -280,8 +280,8 @@ function ToolbarIconButton({
       title={label}
       onClick={onClick}
       className={cn(
-        'flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-800',
-        active && 'bg-neutral-100 text-neutral-900'
+        'flex size-7 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-stone-100 hover:text-neutral-800',
+        active && 'bg-white text-[#c2410c] shadow-soft'
       )}
     >
       {children}
@@ -971,7 +971,7 @@ export function ProjectManager({
                 <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
                   Display
                 </div>
-                <div className="mb-3 flex rounded-lg border border-neutral-200 p-0.5 text-xs">
+                <div className="compass-seg mb-3 text-xs">
                   {(
                     [
                       ['list', 'List', <ListIcon key="list" />],
@@ -984,8 +984,8 @@ export function ProjectManager({
                       type="button"
                       onClick={() => setView(mode)}
                       className={cn(
-                        'flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1.5 font-medium',
-                        view === mode ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-800'
+                        'compass-seg-btn flex flex-1 items-center justify-center gap-1',
+                        view === mode && 'compass-seg-btn-active'
                       )}
                       title={label}
                     >
@@ -1298,14 +1298,14 @@ export function ProjectManager({
                     setCreating(false)
                   }
                 }}
-                className="rounded-md px-3 py-1.5 text-[13px] font-medium text-neutral-600 hover:bg-neutral-100"
+                className="compass-btn-ghost"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving || !name.trim()}
-                className="rounded-md bg-[#5e6ad2] px-3 py-1.5 text-[13px] font-medium text-white hover:bg-[#5058c1] disabled:opacity-50"
+                className="compass-btn-primary disabled:opacity-50"
               >
                 {saving ? 'Creating…' : 'Create project'}
               </button>

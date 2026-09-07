@@ -259,15 +259,13 @@ export function ClientWorkPlanner({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-stone-200 bg-white p-0.5 text-xs">
+          <div className="compass-seg text-xs">
             {(['list', 'board', 'timeline'] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
                 onClick={() => setView(mode)}
-                className={`rounded-md px-2.5 py-1 font-medium capitalize transition ${
-                  view === mode ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-800'
-                }`}
+                className={`compass-seg-btn capitalize ${view === mode ? 'compass-seg-btn-active' : ''}`}
               >
                 {mode}
               </button>

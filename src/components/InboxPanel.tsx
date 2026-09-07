@@ -166,7 +166,8 @@ function ActionButton({
       onClick={onClick}
       className={cn(
         'rounded-xl border px-2.5 py-1.5 text-[12px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40 disabled:opacity-50',
-        tone === 'primary' && 'border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800',
+        tone === 'primary' &&
+          'border-transparent bg-[var(--compass-accent)] text-white hover:bg-[var(--compass-accent-hover)]',
         tone === 'danger' && 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100',
         tone === 'neutral' && 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
       )}
@@ -765,7 +766,7 @@ export function InboxPanel() {
   // Only blank the panel on the very first load — tab switches never hit this gate.
   if (loading || !data) {
     return (
-      <div className="flex flex-1 items-center justify-center p-6">
+      <div className="flex flex-1 p-3 sm:p-4">
         <LoadingBlock label="Loading inbox…" />
       </div>
     )
@@ -774,10 +775,11 @@ export function InboxPanel() {
   const empty = EMPTY_COPY[tab]
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-white text-neutral-900">
+    <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4">
+      <div className="compass-panel flex min-h-0 flex-1 flex-col overflow-hidden text-neutral-900">
       <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-stone-100 px-5">
         <div className="min-w-0">
-          <h1 className="text-[15px] font-semibold tracking-tight">Inbox</h1>
+          <h1 className="compass-page-title-compact">Inbox</h1>
           <p className="truncate text-[12px] text-neutral-500">{INBOX_TAB_HINTS[tab]}</p>
         </div>
         <div className="rounded-xl bg-stone-50 px-2 py-1 text-[12px] tabular-nums text-neutral-500 ring-1 ring-stone-200/70">
@@ -797,19 +799,14 @@ export function InboxPanel() {
                 className={cn(
                   'inline-flex max-w-[220px] shrink-0 items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40',
                   item.id === selectedId
-                    ? 'border-neutral-900 bg-neutral-900 text-white shadow-soft'
+                    ? 'border-[#e85d2a]/40 bg-[#e85d2a]/10 shadow-soft'
                     : 'border-stone-200 bg-white text-neutral-800 hover:border-stone-300'
                 )}
               >
                 <SourceGlyph tab={item.tab} />
                 <span className="min-w-0">
-                  <span className="block truncate text-[12px] font-medium">{item.title}</span>
-                  <span
-                    className={cn(
-                      'block truncate text-[11px]',
-                      item.id === selectedId ? 'text-white/70' : 'text-neutral-500'
-                    )}
-                  >
+                  <span className="block truncate text-[12px] font-medium text-neutral-900">{item.title}</span>
+                  <span className="block truncate text-[11px] text-neutral-500">
                     {INBOX_TAB_LABELS[item.tab]} · {formatInboxRelative(item.occurredAt)}
                   </span>
                 </span>
@@ -822,7 +819,7 @@ export function InboxPanel() {
       <div
         role="tablist"
         aria-label="Inbox channels"
-        className="flex shrink-0 gap-1 overflow-x-auto border-b border-stone-100 px-3 py-2"
+        className="mx-3 mt-2 flex shrink-0 gap-0.5 overflow-x-auto rounded-xl border border-stone-200/80 bg-stone-50/80 p-0.5 shadow-soft"
       >
         {INBOX_TABS.map((key) => {
           const count = counts?.[key] ?? 0
@@ -835,17 +832,15 @@ export function InboxPanel() {
               aria-selected={active}
               onClick={() => setTab(key)}
               className={cn(
-                'inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[13px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40',
-                active
-                  ? 'bg-neutral-900 text-white shadow-soft'
-                  : 'text-neutral-500 hover:bg-stone-100 hover:text-neutral-800'
+                'compass-seg-btn inline-flex shrink-0 items-center gap-1.5',
+                active && 'compass-seg-btn-active'
               )}
             >
               {INBOX_TAB_LABELS[key]}
               <span
                 className={cn(
                   'rounded-md px-1 text-[11px] tabular-nums',
-                  active ? 'bg-white/15 text-white' : 'bg-stone-100 text-neutral-500'
+                  active ? 'bg-[#e85d2a]/10 text-[#c2410c]' : 'bg-stone-100 text-neutral-500'
                 )}
               >
                 {count}
@@ -920,6 +915,7 @@ export function InboxPanel() {
             />
           </div>
         </section>
+      </div>
       </div>
     </div>
   )

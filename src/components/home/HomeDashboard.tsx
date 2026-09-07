@@ -17,18 +17,6 @@ const BRAIN_DUMP_KEY = 'compass.home.brainDump'
 
 type TasksPayload = { topTasks: CompassTask[] }
 
-const easeOut = [0.22, 1, 0.36, 1] as const
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.03 } }
-}
-
-const staggerItem = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.28, ease: easeOut } }
-}
-
 function formatDayHeading(date: Date) {
   return date.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })
 }
@@ -183,31 +171,32 @@ export function HomeDashboard() {
 
   if (home.error && !data) {
     return (
-      <div className="p-6 text-sm text-red-700">
-        {home.error}{' '}
-        <button type="button" className="underline" onClick={() => void home.reload(true)}>
-          Retry home
-        </button>
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
+        <div className="compass-panel p-5 text-sm text-red-700">
+          {home.error}{' '}
+          <button type="button" className="font-medium text-[#c2410c] hover:underline" onClick={() => void home.reload(true)}>
+            Retry home
+          </button>
+        </div>
       </div>
     )
   }
 
-  if (home.loading && !data) return <LoadingBlock label="Loading home…" />
+  if (home.loading && !data) {
+    return (
+      <div className="px-4 py-3 sm:px-6 lg:px-8">
+        <LoadingBlock label="Loading home…" />
+      </div>
+    )
+  }
 
   return (
     <>
-      <motion.div
-        className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden px-4 py-3 sm:px-6 lg:px-8"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="show"
-      >
-        <motion.div variants={staggerItem} className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+      <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 py-3 sm:px-6 lg:px-8">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-              Operator home
-            </p>
-            <h1 className="mt-0.5 text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
+            <p className="compass-section-label">Operator home</p>
+            <h1 className="compass-page-title mt-1 text-[1.45rem] sm:text-[1.65rem]">
               {formatDayHeading(new Date())}
             </h1>
           </div>
@@ -223,12 +212,9 @@ export function HomeDashboard() {
               <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#e85d2a] ring-2 ring-white" aria-hidden />
             ) : null}
           </button>
-        </motion.div>
+        </div>
 
-        <motion.div
-          variants={staggerItem}
-          className="grid min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain lg:grid-cols-2 xl:grid-cols-3"
-        >
+        <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain lg:grid-cols-2 xl:grid-cols-3">
           {wave ? (
             <MorningWavePanel
               wave={wave}
@@ -259,18 +245,14 @@ export function HomeDashboard() {
               <SectionHeader title="Emails going out" href="/sales/outbound" actionLabel="Open outbound" />
               <div className="flex flex-wrap gap-4">
                 <div>
-                  <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-400">
-                    Sent today
-                  </div>
-                  <div className="text-2xl font-semibold tabular-nums text-neutral-900">
+                  <div className="compass-section-label">Sent today</div>
+                  <div className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
                     {cold?.emailsSentToday?.toLocaleString() ?? '—'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-400">
-                    Reply rate
-                  </div>
-                  <div className="text-2xl font-semibold tabular-nums text-neutral-900">
+                  <div className="compass-section-label">Reply rate</div>
+                  <div className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
                     {cold ? `${cold.replyRate}%` : '—'}
                   </div>
                 </div>
@@ -294,8 +276,8 @@ export function HomeDashboard() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
       <AnimatePresence>
         {dumpOpen ? (

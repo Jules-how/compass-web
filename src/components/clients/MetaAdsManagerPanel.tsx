@@ -223,7 +223,7 @@ export function MetaAdsManagerPanel({
       <div className="compass-panel overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-lg border border-stone-200 p-0.5">
+            <div className="compass-seg">
               {(
                 [
                   ['campaigns', 'Campaigns'],
@@ -238,11 +238,7 @@ export function MetaAdsManagerPanel({
                     setLevel(key)
                     closeEditor()
                   }}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                    level === key
-                      ? 'bg-neutral-900 text-white'
-                      : 'text-neutral-600 hover:bg-stone-50'
-                  }`}
+                  className={`compass-seg-btn ${level === key ? 'compass-seg-btn-active' : ''}`}
                 >
                   {label}
                 </button>

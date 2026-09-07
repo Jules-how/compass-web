@@ -51,7 +51,7 @@ function Chip({
       className={cn(
         'rounded-xl border px-3 py-1.5 text-xs font-medium',
         on
-          ? 'border-neutral-900 bg-neutral-900 text-white'
+          ? 'border-[#e85d2a]/35 bg-white text-[#c2410c] shadow-soft'
           : 'border-stone-200/80 bg-white text-neutral-600 shadow-soft hover:bg-stone-50'
       )}
       onClick={onClick}

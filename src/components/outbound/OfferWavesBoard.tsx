@@ -92,9 +92,18 @@ function campaignToKanbanTask(
 function WaveSkeleton() {
   return (
     <div className="space-y-3" aria-busy="true" aria-label="Loading waves">
-      <div className="h-24 animate-pulse rounded-2xl bg-stone-100" />
-      <div className="h-40 animate-pulse rounded-2xl bg-stone-100" />
-      <div className="h-40 animate-pulse rounded-2xl bg-stone-100" />
+      <div className="compass-panel space-y-3 p-5">
+        <div className="compass-skeleton h-4 w-28" />
+        <div className="compass-skeleton h-16 w-full" />
+      </div>
+      <div className="compass-panel space-y-3 p-5">
+        <div className="compass-skeleton h-4 w-24" />
+        <div className="compass-skeleton h-28 w-full" />
+      </div>
+      <div className="compass-panel space-y-3 p-5">
+        <div className="compass-skeleton h-4 w-32" />
+        <div className="compass-skeleton h-28 w-full" />
+      </div>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { LoadingBlock } from '@/components/LoadingBlock'
+import { cn } from '@/lib/utils'
 import type { CsArtifact, CsBoard, CsCard, CsRoiProjection } from '@/lib/cs-dept/types'
 
 type BoardPayload = CsBoard & { roi?: Array<CsRoiProjection | null> }
@@ -138,7 +139,7 @@ export function CsDeptBoard() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div
-          className="flex rounded-xl border border-stone-200 bg-white p-0.5 text-sm"
+          className="compass-seg text-sm"
           role="tablist"
           aria-label="Retention views"
         >
@@ -149,9 +150,10 @@ export function CsDeptBoard() {
               role="tab"
               aria-selected={tab === key}
               onClick={() => setTab(key)}
-              className={`rounded-lg px-3 py-1.5 font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40 ${
-                tab === key ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-800'
-              }`}
+              className={cn(
+                'compass-seg-btn',
+                tab === key && 'compass-seg-btn-active'
+              )}
             >
               {key === 'review' ? 'Monday review' : key === 'roi' ? 'ROI portal' : 'QBR'}
             </button>

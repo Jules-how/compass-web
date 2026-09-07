@@ -18,7 +18,7 @@ export function OutboundDeskSwitch({
 }) {
   return (
     <div
-      className="flex flex-wrap rounded-xl border border-stone-200/80 bg-stone-50/80 p-0.5 shadow-soft"
+      className="compass-seg"
       role="tablist"
       aria-label="Outbound desk"
     >
@@ -31,12 +31,7 @@ export function OutboundDeskSwitch({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(desk.id)}
-            className={cn(
-              'rounded-lg px-2.5 py-1 text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40',
-              active
-                ? 'bg-white text-[#c2410c] shadow-soft'
-                : 'text-neutral-500 hover:text-neutral-800'
-            )}
+            className={cn('compass-seg-btn', active && 'compass-seg-btn-active')}
           >
             {desk.label}
           </button>

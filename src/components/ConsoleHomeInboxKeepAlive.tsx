@@ -7,58 +7,66 @@ import { LoadingBlock } from '@/components/LoadingBlock'
 import { OperatorShell } from '@/components/OperatorShell'
 import { cn } from '@/lib/utils'
 
+function DeskLoading({ label }: { label: string }) {
+  return (
+    <div className="px-4 py-3 sm:px-6">
+      <LoadingBlock label={label} />
+    </div>
+  )
+}
+
 const HomeDashboard = dynamic(
   () => import('@/components/home/HomeDashboard').then((m) => ({ default: m.HomeDashboard })),
-  { loading: () => <LoadingBlock label="Loading home…" /> }
+  { loading: () => <DeskLoading label="Loading home…" /> }
 )
 const InboxPanel = dynamic(
   () => import('@/components/InboxPanel').then((m) => ({ default: m.InboxPanel })),
-  { loading: () => <LoadingBlock label="Loading inbox…" /> }
+  { loading: () => <DeskLoading label="Loading inbox…" /> }
 )
 const SalesOverview = dynamic(
   () => import('@/components/sales/SalesOverview').then((m) => ({ default: m.SalesOverview })),
-  { loading: () => <LoadingBlock label="Loading sales…" /> }
+  { loading: () => <DeskLoading label="Loading sales…" /> }
 )
 const OffersDesk = dynamic(
   () => import('@/components/offers/OffersDesk').then((m) => ({ default: m.OffersDesk })),
-  { loading: () => <LoadingBlock label="Loading offers…" /> }
+  { loading: () => <DeskLoading label="Loading offers…" /> }
 )
 const OutboundDesk = dynamic(
   () => import('@/components/outbound/OutboundDesk').then((m) => ({ default: m.OutboundDesk })),
-  { loading: () => <LoadingBlock label="Loading outbound…" /> }
+  { loading: () => <DeskLoading label="Loading outbound…" /> }
 )
 const LeadsPanel = dynamic(
   () => import('@/components/LeadsPanel').then((m) => ({ default: m.LeadsPanel })),
-  { loading: () => <LoadingBlock label="Loading leads…" /> }
+  { loading: () => <DeskLoading label="Loading leads…" /> }
 )
 const TasksPanel = dynamic(
   () => import('@/components/TasksPanel').then((m) => ({ default: m.TasksPanel })),
-  { loading: () => <LoadingBlock label="Loading tasks…" /> }
+  { loading: () => <DeskLoading label="Loading tasks…" /> }
 )
 const ProjectsPanel = dynamic(
   () => import('@/components/ProjectsPanel').then((m) => ({ default: m.ProjectsPanel })),
-  { loading: () => <LoadingBlock label="Loading projects…" /> }
+  { loading: () => <DeskLoading label="Loading projects…" /> }
 )
 const FunctionsPanel = dynamic(
   () => import('@/components/FunctionsPanel').then((m) => ({ default: m.FunctionsPanel })),
-  { loading: () => <LoadingBlock label="Loading functions…" /> }
+  { loading: () => <DeskLoading label="Loading functions…" /> }
 )
 const ClientsPanel = dynamic(
   () => import('@/components/ClientsPanel').then((m) => ({ default: m.ClientsPanel })),
-  { loading: () => <LoadingBlock label="Loading clients…" /> }
+  { loading: () => <DeskLoading label="Loading clients…" /> }
 )
 const FinancesBoard = dynamic(
   () => import('@/components/finances/FinancesBoard').then((m) => ({ default: m.FinancesBoard })),
-  { loading: () => <LoadingBlock label="Loading finances…" /> }
+  { loading: () => <DeskLoading label="Loading finances…" /> }
 )
 const InstallKanban = dynamic(
   () =>
     import('@/components/delivery-dept/InstallKanban').then((m) => ({ default: m.InstallKanban })),
-  { loading: () => <LoadingBlock label="Loading installs…" /> }
+  { loading: () => <DeskLoading label="Loading installs…" /> }
 )
 const CsDeptBoard = dynamic(
   () => import('@/components/cs-dept/CsDeptBoard').then((m) => ({ default: m.CsDeptBoard })),
-  { loading: () => <LoadingBlock label="Loading retention…" /> }
+  { loading: () => <DeskLoading label="Loading retention…" /> }
 )
 
 function KeepAlivePane({
@@ -160,7 +168,7 @@ export function ConsoleHomeInboxKeepAlive() {
           <main className="flex h-[100dvh] min-h-0 flex-1 flex-col md:h-auto">
             <Suspense
               fallback={
-                <div className="flex flex-1 items-center justify-center p-6">
+                <div className="flex flex-1 p-3 sm:p-4">
                   <LoadingBlock label="Loading inbox…" />
                 </div>
               }
@@ -230,7 +238,7 @@ export function ConsoleHomeInboxKeepAlive() {
       {seenCrm ? (
         <KeepAlivePane active={showCrm}>
           <OperatorShell active="leads" role="owner" title="Leads" compact width="full">
-            <Suspense fallback={<LoadingBlock label="Loading leads…" />}>
+            <Suspense fallback={<DeskLoading label="Loading leads…" />}>
               <LeadsPanel />
             </Suspense>
           </OperatorShell>

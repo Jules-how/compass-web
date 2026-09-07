@@ -420,7 +420,7 @@ export function ClientCommsPanel({
                           type="button"
                           onClick={() => void addMessage(thread.id)}
                           disabled={saving || !messageBody.trim()}
-                          className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                          className="compass-btn-primary disabled:opacity-50"
                         >
                           Add message
                         </button>

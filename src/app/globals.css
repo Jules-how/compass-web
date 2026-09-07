@@ -150,6 +150,30 @@ body {
     @apply mt-1.5 max-w-2xl text-sm leading-relaxed text-neutral-500;
     text-wrap: pretty;
   }
+
+  .compass-skeleton {
+    @apply animate-pulse rounded-xl bg-stone-200/70;
+  }
+
+  .compass-seg {
+    @apply inline-flex flex-wrap rounded-xl border bg-stone-50/80 p-0.5;
+    border-color: color-mix(in srgb, var(--compass-line) 90%, transparent);
+    box-shadow: var(--compass-shadow-sm);
+  }
+
+  .compass-seg-btn {
+    @apply rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-neutral-500 transition hover:text-neutral-800;
+  }
+
+  .compass-seg-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--compass-accent-soft);
+  }
+
+  .compass-seg-btn-active {
+    @apply bg-white shadow-soft;
+    color: var(--compass-accent-hover);
+  }
 }
 
 /* Lead database CRM grid — scoped so Compass tokens stay locked. */

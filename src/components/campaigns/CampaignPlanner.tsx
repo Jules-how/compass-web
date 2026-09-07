@@ -793,7 +793,7 @@ export function CampaignPlanner({
                                 key={campaign.id}
                                 className={`group relative rounded-[8px] border bg-white p-2.5 shadow-[0_1px_1px_rgba(16,24,40,0.04)] transition hover:border-neutral-300 ${
                                   selectedId === campaign.id
-                                    ? 'border-[#5e6ad2]'
+                                    ? 'border-[#e85d2a]'
                                     : 'border-neutral-200/90'
                                 }`}
                               >
@@ -905,14 +905,12 @@ export function CampaignPlanner({
                       </div>
                     ))}
                     <div
-                      className="pointer-events-none absolute bottom-0 top-0 z-10 bg-[#5e6ad2]/15"
+                      className="pointer-events-none absolute bottom-0 top-0 z-10 bg-[#e85d2a]/15"
                       style={{ left: todayX, width: Math.max(dayWidth, 2) }}
                     >
-                      <div className="absolute inset-y-0 left-0 w-px bg-[#5e6ad2]" />
-                      <span className="absolute left-1/2 top-1 z-20 -translate-x-1/2 whitespace-nowrap rounded-[4px] bg-[#5e6ad2] px-1.5 py-[2px] text-[10px] font-semibold text-white">
-                        {range.today
-                          .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                          .toUpperCase()}
+                      <div className="absolute inset-y-0 left-0 w-px bg-[#e85d2a]" />
+                      <span className="absolute left-1/2 top-1 z-20 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#e85d2a] px-1.5 py-[2px] text-[10px] font-semibold text-white">
+                        {range.today.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
                       </span>
                     </div>
                     {hoverDate && hoverX !== null && !drag ? (
@@ -955,10 +953,10 @@ export function CampaignPlanner({
                       />
                     ))}
                     <div
-                      className="absolute bottom-0 top-0 bg-[#5e6ad2]/10"
+                      className="absolute bottom-0 top-0 bg-[#e85d2a]/10"
                       style={{ left: todayX, width: Math.max(dayWidth, 2) }}
                     >
-                      <div className="absolute inset-y-0 left-0 w-px bg-[#5e6ad2]/50" />
+                      <div className="absolute inset-y-0 left-0 w-px bg-[#e85d2a]/50" />
                     </div>
                   </div>
 
@@ -1091,7 +1089,7 @@ export function CampaignPlanner({
                             <div
                               className={`absolute top-1/2 h-7 -translate-y-1/2 cursor-grab overflow-clip rounded-md border bg-white active:cursor-grabbing ${
                                 isSelected
-                                  ? 'border-[#5e6ad2] shadow-[0_0_0_1px_rgba(94,106,210,0.28)]'
+                                  ? 'border-[#e85d2a] shadow-[0_0_0_1px_rgba(232,93,42,0.28)]'
                                   : 'border-neutral-200 shadow-sm'
                               }`}
                               style={{ left, width }}

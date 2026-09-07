@@ -18,7 +18,7 @@ import { UndoProvider } from '@/components/UndoProvider'
 import { Sidebar, SidebarBody } from '@/components/ui/sidebar'
 import { INBOX_CACHE_KEY, type InboxPayload } from '@/lib/inbox-ui'
 import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
-import { loadQueryCache } from '@/lib/query-cache'
+import { loadQueryCache, peekQueryCache } from '@/lib/query-cache'
 import { prefetchJson } from '@/lib/use-cached-json'
 
 const WIDTH = {
@@ -124,7 +124,13 @@ function OperatorConsoleLayoutInner({
   const viewPath = useConsoleViewPath()
   const operator = isOperatorRole(role)
   const active = useMemo(() => navKeyFromPathname(viewPath), [viewPath])
-  const [inboxCount, setInboxCount] = useState<number | null>(null)
+  const [inboxCount, setInboxCount] = useState<number | null>(() => {
+    const cached = peekQueryCache<InboxPayload>(INBOX_CACHE_KEY)?.data
+    if (!cached) return null
+    if (typeof cached.badgeTotal === 'number') return cached.badgeTotal
+    if (typeof cached.total === 'number') return cached.total
+    return cached.leads?.length ?? null
+  })
   // Mobile drawer open state only — desktop sidebar stays permanently expanded.
   const [open, setOpen] = useState(false)
 
@@ -172,7 +178,7 @@ function OperatorConsoleLayoutInner({
 
   return (
     <ConsoleChromeContext.Provider value={true}>
-      <div className="compass-shell min-h-screen md:flex md:h-[100dvh] md:max-h-[100dvh] md:overflow-hidden">
+      <div className="compass-shell min-h-dvh md:flex md:h-[100dvh] md:max-h-[100dvh] md:overflow-hidden">
         <a
           href="#compass-main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[110] focus:rounded-xl focus:bg-white focus:px-3.5 focus:py-2 focus:text-sm focus:font-medium focus:text-neutral-900 focus:shadow-soft"

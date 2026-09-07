@@ -85,7 +85,7 @@ From the render-path and data-waterfall audits after the first ship. Do these wh
 - Duplicate Instantly analytics fetch in `agent-sync`.
 - `acceptTemplateProposal` writes leads one id at a time.
 - Layout still `force-dynamic` + `getUser` (keep-alive hides it on list clicks; Settings/`[id]` still pay it).
-- Inbox badge warm still fetches the full `/api/inbox` payload.
+- Inbox badge warm still fetches the full `/api/inbox` payload. Instantly Unibox unread no longer sits on that request.
 - Offers desk `limit 8000` lead rows.
 
 ## Out of scope unless Jules asks

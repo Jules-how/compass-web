@@ -128,7 +128,7 @@ export default function TaskCreate({
             onClick={() => setTaskType((current) => (current === type ? '' : type))}
             className={`rounded-full px-3 py-1 text-xs font-medium transition ${
               taskType === type
-                ? 'bg-neutral-900 text-white'
+                ? 'border border-[#e85d2a]/40 bg-[#e85d2a]/10 text-[#c2410c]'
                 : 'border border-stone-200 bg-stone-50 text-neutral-600 hover:border-stone-300'
             }`}
             aria-pressed={taskType === type}

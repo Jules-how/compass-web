@@ -527,15 +527,13 @@ export function ClientDetailPanel({
             <span className="font-medium text-neutral-800">{client.name}</span>
           </div>
         )}
-        <div className="flex flex-wrap rounded-xl border border-stone-200 bg-white p-0.5 text-sm">
+        <div className="compass-seg text-sm">
           {tabs.map(([key, label]) => (
             <button
               key={key}
               type="button"
               onClick={() => setTab(key)}
-              className={`rounded-lg px-3 py-1.5 font-medium transition ${
-                tab === key ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-800'
-              }`}
+              className={`compass-seg-btn ${tab === key ? 'compass-seg-btn-active' : ''}`}
             >
               {label}
             </button>
@@ -1025,14 +1023,12 @@ export function ClientDetailPanel({
       {tab === 'meta' ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="inline-flex rounded-lg border border-stone-200 p-0.5">
+            <div className="compass-seg">
               <button
                 type="button"
                 onClick={() => setMetaSubView('ads_manager')}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                  metaSubView === 'ads_manager'
-                    ? 'bg-neutral-900 text-white'
-                    : 'text-neutral-600 hover:bg-stone-50'
+                className={`compass-seg-btn ${
+                  metaSubView === 'ads_manager' ? 'compass-seg-btn-active' : ''
                 }`}
               >
                 Ads Manager
@@ -1040,10 +1036,8 @@ export function ClientDetailPanel({
               <button
                 type="button"
                 onClick={() => setMetaSubView('channel_log')}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                  metaSubView === 'channel_log'
-                    ? 'bg-neutral-900 text-white'
-                    : 'text-neutral-600 hover:bg-stone-50'
+                className={`compass-seg-btn ${
+                  metaSubView === 'channel_log' ? 'compass-seg-btn-active' : ''
                 }`}
               >
                 Channel log

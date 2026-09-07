@@ -56,7 +56,7 @@ export function InboundLeadTable({
         </label>
         <button
           type="submit"
-          className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white"
+          className="compass-btn-primary"
         >
           Filter
         </button>

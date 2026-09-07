@@ -360,7 +360,7 @@ export function ProjectDetailPanel({
     .filter(Boolean)
 
   const tabs = (
-    <div className="flex rounded-lg border border-stone-200 bg-white p-0.5 text-sm">
+    <div className="compass-seg text-sm">
       {(
         [
           ['overview', 'Overview'],
@@ -372,9 +372,7 @@ export function ProjectDetailPanel({
           key={key}
           type="button"
           onClick={() => setTab(key)}
-          className={`rounded-md px-3 py-1.5 font-medium transition ${
-            tab === key ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-800'
-          }`}
+          className={`compass-seg-btn ${tab === key ? 'compass-seg-btn-active' : ''}`}
         >
           {label}
         </button>

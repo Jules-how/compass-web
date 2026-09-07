@@ -43,7 +43,7 @@ const ROW_HEIGHT = 68
 const LABEL_WIDTH = 300
 const EMPTY_ROWS = 10
 const HEADER_HEIGHT = 52
-const TODAY_PURPLE = '#5e6ad2'
+const TODAY_ACCENT = '#e85d2a'
 const BAR_TOP = 22
 const BAR_HEIGHT = 22
 
@@ -85,7 +85,7 @@ function statusDotClass(status: string): string {
     case 'in_progress':
       return 'border-[#f2c94c] bg-[#f2c94c]/30'
     case 'planned':
-      return 'border-[#5e6ad2] bg-[#5e6ad2]/20'
+      return 'border-stone-400 bg-stone-400/20'
     case 'completed':
       return 'border-emerald-500 bg-emerald-500'
     case 'canceled':
@@ -457,7 +457,7 @@ export const ProjectTimeline = forwardRef<
   }, [barDragActive, range, zoom])
 
   return (
-    <div className="flex min-h-[560px] flex-col overflow-hidden rounded-xl border border-neutral-200/80 bg-[#f7f8f9]">
+    <div className="flex min-h-[560px] flex-col overflow-hidden rounded-xl border border-neutral-200/80 bg-stone-50">
       {showToolbar ? (
         <div className="flex h-10 shrink-0 items-center justify-between gap-3 border-b border-neutral-200/80 bg-white px-3">
           <div className="text-[12px] text-neutral-500">
@@ -486,11 +486,11 @@ export const ProjectTimeline = forwardRef<
           }}
         >
           <div
-            className="sticky top-0 z-30 flex border-b border-neutral-200/80 bg-[#f7f8f9]"
+            className="sticky top-0 z-30 flex border-b border-neutral-200/80 bg-stone-50"
             style={{ height: HEADER_HEIGHT }}
           >
             <div
-              className="sticky left-0 z-40 flex items-end border-r border-neutral-200/80 bg-[#f7f8f9] px-3 pb-2 text-[12px] font-medium text-neutral-500"
+              className="sticky left-0 z-40 flex items-end border-r border-neutral-200/80 bg-stone-50 px-3 pb-2 text-[12px] font-medium text-neutral-500"
               style={{ width: LABEL_WIDTH }}
             >
               Projects
@@ -529,13 +529,13 @@ export const ProjectTimeline = forwardRef<
                 style={{
                   left: todayX,
                   width: Math.max(pxPerDay(zoom), 2),
-                  background: `${TODAY_PURPLE}26`
+                  background: `${TODAY_ACCENT}26`
                 }}
               >
-                <div className="absolute inset-y-0 left-0 w-px" style={{ background: TODAY_PURPLE }} />
+                <div className="absolute inset-y-0 left-0 w-px" style={{ background: TODAY_ACCENT }} />
                 <span
                   className="absolute left-1/2 top-1 z-20 -translate-x-1/2 whitespace-nowrap rounded-[4px] px-1.5 py-[2px] text-[10px] font-semibold text-white"
-                  style={{ background: TODAY_PURPLE }}
+                  style={{ background: TODAY_ACCENT }}
                 >
                   {range.today
                     .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -577,12 +577,12 @@ export const ProjectTimeline = forwardRef<
                 style={{
                   left: todayX,
                   width: Math.max(pxPerDay(zoom), 2),
-                  background: `${TODAY_PURPLE}1a`
+                  background: `${TODAY_ACCENT}1a`
                 }}
               >
                 <div
                   className="absolute inset-y-0 left-0 w-px"
-                  style={{ background: `${TODAY_PURPLE}80` }}
+                  style={{ background: `${TODAY_ACCENT}80` }}
                 />
               </div>
             </div>
@@ -737,7 +737,7 @@ export const ProjectTimeline = forwardRef<
                         </span>
                         {isCreating ? (
                           <span
-                            className="relative block overflow-hidden rounded-[6px] border border-[#5e6ad2] bg-white shadow-[0_0_0_1px_rgba(94,106,210,0.2)]"
+                            className="relative block overflow-hidden rounded-[6px] border border-[#e85d2a] bg-white shadow-[0_0_0_1px_rgba(232,93,42),0.2)]"
                             style={{ width, height: BAR_HEIGHT }}
                           >
                             <span
@@ -751,7 +751,7 @@ export const ProjectTimeline = forwardRef<
                             tabIndex={0}
                             className={`relative block touch-none overflow-hidden rounded-[6px] border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition select-none ${
                               isBarDragging
-                                ? 'cursor-grabbing border-[#5e6ad2] shadow-[0_0_0_1px_rgba(94,106,210,0.28)]'
+                                ? 'cursor-grabbing border-[#e85d2a] shadow-[0_0_0_1px_rgba(232,93,42),0.28)]'
                                 : 'cursor-grab border-neutral-300 group-hover:border-neutral-400 active:cursor-grabbing'
                             }`}
                             style={{ width, height: BAR_HEIGHT }}
@@ -842,7 +842,7 @@ export const ProjectTimeline = forwardRef<
                         className="pointer-events-none absolute z-20 -translate-x-1/2"
                         style={{ left: hoverX, top: BAR_TOP - 18 }}
                       >
-                        <div className="mb-1.5 whitespace-nowrap rounded-md bg-[#5e6ad2] px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
+                        <div className="mb-1.5 whitespace-nowrap rounded-md bg-[#e85d2a] px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
                           {hoverDate.toLocaleDateString('en-US', {
                             weekday: 'short',
                             month: 'short',
@@ -860,7 +860,7 @@ export const ProjectTimeline = forwardRef<
                         className="pointer-events-none absolute z-20 -translate-x-1/2"
                         style={{ left: hoverX ?? left, top: 4 }}
                       >
-                        <div className="whitespace-nowrap rounded-md bg-[#5e6ad2] px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
+                        <div className="whitespace-nowrap rounded-md bg-[#e85d2a] px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
                           {hoverDate.toLocaleDateString('en-US', {
                             weekday: 'short',
                             month: 'short',
@@ -881,7 +881,7 @@ export const ProjectTimeline = forwardRef<
                 style={{ height: ROW_HEIGHT }}
               >
                 <div
-                  className="sticky left-0 z-20 border-r border-neutral-200/80 bg-[#f7f8f9]"
+                  className="sticky left-0 z-20 border-r border-neutral-200/80 bg-stone-50"
                   style={{ width: LABEL_WIDTH }}
                 />
                 <div style={{ width: range.widthPx }} />
