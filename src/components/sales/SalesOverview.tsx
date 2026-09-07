@@ -22,7 +22,7 @@ type SalesOverviewPayload = SalesOverviewModel & {
 }
 
 function formatMoney(value: number) {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-AU', {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0
@@ -125,7 +125,7 @@ const EMPTY_MODEL: SalesOverviewModel = {
 }
 
 export function SalesOverview() {
-  const { data, error, loading } = useCachedJson<SalesOverviewPayload>(
+  const { data, error, loading, reload } = useCachedJson<SalesOverviewPayload>(
     '/api/instantly/sales-overview',
     '/api/instantly/sales-overview',
     { staleMs: 60_000 }
@@ -154,12 +154,17 @@ export function SalesOverview() {
           </span>
         )}
         {data?.warning || error ? (
-          <span className="rounded-md bg-stone-100 px-2 py-1 text-neutral-600">
+          <span className="rounded-xl bg-stone-100 px-2 py-1 text-neutral-600">
             {data?.warning === 'INSTANTLY_API_KEY is not configured'
               ? 'Add INSTANTLY_API_KEY to load live metrics'
               : error
-                ? 'Could not refresh Instantly — showing last available figures'
+                ? 'Could not refresh Instantly — showing last available figures. '
                 : data?.warning}
+            {error ? (
+              <button type="button" className="font-medium text-[#c2410c] hover:underline" onClick={() => void reload(true)}>
+                Retry
+              </button>
+            ) : null}
           </span>
         ) : null}
       </div>

@@ -91,6 +91,12 @@ body {
 
   .compass-btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition;
+    touch-action: manipulation;
+  }
+
+  .compass-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--compass-accent-soft);
   }
 
   .compass-btn-primary {
@@ -100,6 +106,10 @@ body {
 
   .compass-btn-primary:hover {
     background: var(--compass-accent-hover);
+  }
+
+  .compass-btn-primary:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--compass-accent) 40%, white);
   }
 
   .compass-btn-primary:disabled {
@@ -129,6 +139,7 @@ body {
 
   .compass-page-title {
     @apply font-display text-[1.65rem] font-semibold tracking-tight text-neutral-900;
+    text-wrap: balance;
   }
 
   .compass-page-title-compact {
@@ -137,6 +148,7 @@ body {
 
   .compass-page-subtitle {
     @apply mt-1.5 max-w-2xl text-sm leading-relaxed text-neutral-500;
+    text-wrap: pretty;
   }
 }
 
@@ -535,4 +547,19 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

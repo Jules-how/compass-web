@@ -88,8 +88,14 @@ function SendingRow({
           </p>
         </div>
         {row.instantlyHref ? (
-          <a href={row.instantlyHref} target="_blank" rel="noreferrer" className="text-xs font-medium text-[#c2410c] hover:underline">
+          <a
+            href={row.instantlyHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-[#c2410c] hover:underline"
+          >
             Instantly
+            <span className="sr-only"> (opens in a new tab)</span>
           </a>
         ) : null}
       </div>
@@ -326,10 +332,11 @@ function ChunkDialog({
               <a
                 href={row.instantlyHref}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="compass-btn-secondary"
               >
                 Open Instantly
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             ) : null}
           </div>

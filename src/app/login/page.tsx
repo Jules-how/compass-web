@@ -24,7 +24,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const openOperator = isOpenOperatorEnabled()
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-10">
+    <main className="flex min-h-dvh items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm animate-fade-up rounded-2xl border border-stone-200/70 bg-white/95 p-8 shadow-lift backdrop-blur-sm">
         <div className="mb-7 text-center">
           <div

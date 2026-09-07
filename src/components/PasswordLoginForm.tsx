@@ -40,12 +40,17 @@ export default function PasswordLoginForm({ invitationId }: { invitationId?: str
       <label className="block">
         <span className="mb-1.5 block text-sm font-medium text-neutral-700">Email</span>
         <input
+          id="login-email"
+          name="email"
           type="email"
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="you@example.com"
           autoComplete="email"
+          spellCheck={false}
+          aria-invalid={status === 'error'}
+          aria-describedby={error ? 'login-error' : undefined}
           className="compass-input"
           disabled={status === 'signing_in'}
         />
@@ -53,6 +58,8 @@ export default function PasswordLoginForm({ invitationId }: { invitationId?: str
       <label className="block">
         <span className="mb-1.5 block text-sm font-medium text-neutral-700">Password</span>
         <input
+          id="login-password"
+          name="password"
           type="password"
           required
           minLength={8}
@@ -60,12 +67,17 @@ export default function PasswordLoginForm({ invitationId }: { invitationId?: str
           onChange={(event) => setPassword(event.target.value)}
           placeholder="••••••••"
           autoComplete="current-password"
+          spellCheck={false}
+          aria-invalid={status === 'error'}
+          aria-describedby={error ? 'login-error' : undefined}
           className="compass-input"
           disabled={status === 'signing_in'}
         />
       </label>
       {error && (
-        <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>
+        <p id="login-error" role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </p>
       )}
       <button
         type="submit"

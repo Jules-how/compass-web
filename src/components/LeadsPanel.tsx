@@ -101,11 +101,11 @@ export function LeadsPanel() {
       const data = await res.json()
       setSyncMessage(`Synced ${data.total} leads from local files`)
       reload()
+      window.setTimeout(() => setSyncMessage(null), 4000)
     } catch {
-      setSyncMessage('Failed to sync local files')
+      setSyncMessage('Failed to sync local files. Try again.')
     } finally {
       setSyncing(false)
-      setTimeout(() => setSyncMessage(null), 4000)
     }
   }
 
@@ -116,7 +116,7 @@ export function LeadsPanel() {
       <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 shadow-soft">
         {list.error}{' '}
         <button type="button" className="underline" onClick={() => void reloadList(true)}>
-          Retry
+          Retry leads
         </button>
       </div>
     )
@@ -156,7 +156,7 @@ export function LeadsPanel() {
             disabled={syncing}
             className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 shadow-sm transition hover:bg-stone-50 disabled:opacity-50"
           >
-            <RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} aria-hidden />
             {syncing ? 'Syncing…' : 'Sync local files'}
           </button>
         </div>

@@ -36,7 +36,10 @@ export default async function DeliveryPage() {
     >
       {error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          Delivery work is temporarily unavailable.
+          Delivery work is temporarily unavailable.{' '}
+          <Link href="/delivery" className="font-medium underline">
+            Retry
+          </Link>
         </div>
       ) : projects.length === 0 ? (
         <div className="rounded-xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500">

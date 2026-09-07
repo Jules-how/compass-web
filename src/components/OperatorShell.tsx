@@ -90,7 +90,11 @@ function ConsoleMain({ children }: { children: ReactNode }) {
   const showChildren = !isKeepAlivePath(pathname) && !keepAliveRoute
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col md:overflow-y-auto md:scrollbar-gutter-stable">
+    <div
+      id="compass-main"
+      tabIndex={-1}
+      className="flex min-h-0 min-w-0 flex-1 flex-col md:overflow-y-auto md:scrollbar-gutter-stable"
+    >
       {/*
         min-h-full + flex-1 lets flush pages (Inbox, Campaign Planner) fill the
         viewport like Linear, while still growing with tall non-flush pages so
@@ -169,6 +173,12 @@ function OperatorConsoleLayoutInner({
   return (
     <ConsoleChromeContext.Provider value={true}>
       <div className="compass-shell min-h-screen md:flex md:h-[100dvh] md:max-h-[100dvh] md:overflow-hidden">
+        <a
+          href="#compass-main"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[110] focus:rounded-xl focus:bg-white focus:px-3.5 focus:py-2 focus:text-sm focus:font-medium focus:text-neutral-900 focus:shadow-soft"
+        >
+          Skip to main content
+        </a>
         <Sidebar open={open} setOpen={setOpen} animate={false}>
           <ConsoleSidebarFrame role={role} active={active} inboxCount={inboxCount} />
         </Sidebar>

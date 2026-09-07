@@ -32,7 +32,7 @@ export function OutboundDeskSwitch({
             aria-selected={active}
             onClick={() => onChange(desk.id)}
             className={cn(
-              'rounded-lg px-2.5 py-1 text-[12px] font-medium',
+              'rounded-lg px-2.5 py-1 text-[12px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40',
               active
                 ? 'bg-white text-[#c2410c] shadow-soft'
                 : 'text-neutral-500 hover:text-neutral-800'

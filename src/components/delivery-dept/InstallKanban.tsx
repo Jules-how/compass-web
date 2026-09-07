@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils'
 import { InstallSopGraph } from './InstallSopGraph'
 import type { SopPlan } from '@/lib/delivery-dept/sop-template'
+import { LoadingBlock } from '@/components/LoadingBlock'
 
 type BoardCard = {
   id: string
@@ -149,10 +150,21 @@ export function InstallKanban() {
   }
 
   if (error && !board) {
-    return <div className="compass-panel p-6 text-sm text-red-600">{error}</div>
+    return (
+      <div className="compass-panel p-6 text-sm text-red-600">
+        {error}{' '}
+        <button
+          type="button"
+          className="font-medium text-[#c2410c] hover:underline"
+          onClick={() => void load().catch((err) => setError(err instanceof Error ? err.message : String(err)))}
+        >
+          Retry installs
+        </button>
+      </div>
+    )
   }
   if (!board) {
-    return <div className="compass-panel p-6 text-sm text-neutral-500">Loading installs…</div>
+    return <LoadingBlock label="Loading installs…" />
   }
 
   const cap = board.capacity

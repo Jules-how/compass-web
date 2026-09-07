@@ -20,7 +20,7 @@ export default function SignOutButton({
 
   const className =
     variant === 'sidebar'
-      ? 'w-full rounded-xl px-2.5 py-2 text-left text-[14px] font-medium text-neutral-500 transition hover:bg-white hover:text-neutral-900'
+      ? 'w-full rounded-xl px-2.5 py-2 text-left text-[14px] font-medium text-neutral-500 transition hover:bg-white hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40'
       : 'compass-btn-secondary'
 
   return (

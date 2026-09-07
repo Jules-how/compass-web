@@ -131,6 +131,7 @@ export default function TaskCreate({
                 ? 'bg-neutral-900 text-white'
                 : 'border border-stone-200 bg-stone-50 text-neutral-600 hover:border-stone-300'
             }`}
+            aria-pressed={taskType === type}
             title={TYPE_HINTS[type]}
             disabled={saving}
           >
@@ -164,7 +165,7 @@ export default function TaskCreate({
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as TaskStatus)}
-            className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm focus:border-sf-orange focus:outline-none"
+            className="compass-input"
             disabled={saving}
           >
             {TASK_STATUSES.map((s) => (
@@ -180,7 +181,7 @@ export default function TaskCreate({
           <select
             value={priority}
             onChange={(e) => setPriority(Number(e.target.value))}
-            className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+            className="compass-input"
             disabled={saving}
           >
             {TASK_PRIORITIES.map((row) => (
@@ -196,7 +197,7 @@ export default function TaskCreate({
             type="date"
             value={due}
             onChange={(e) => setDue(e.target.value)}
-            className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+            className="compass-input"
             disabled={saving}
           />
         </label>
@@ -205,7 +206,7 @@ export default function TaskCreate({
           <select
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
-            className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm focus:border-sf-orange focus:outline-none"
+            className="compass-input"
             disabled={saving}
           >
             <option value="">—</option>
@@ -221,7 +222,7 @@ export default function TaskCreate({
           <select
             value={businessFunctionId}
             onChange={(e) => setBusinessFunctionId(e.target.value)}
-            className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm focus:border-sf-orange focus:outline-none"
+            className="compass-input"
             disabled={saving}
           >
             <option value="">—</option>
@@ -246,7 +247,11 @@ export default function TaskCreate({
             Cancel
           </button>
         ) : null}
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-red-600">
+            {error}
+          </p>
+        )}
       </div>
     </form>
   )

@@ -240,7 +240,7 @@ export function NavLinks({
   if (!isOperatorRole(role)) {
     const vertical = orientation === 'vertical'
     return (
-      <nav className={vertical ? 'flex flex-col gap-0.5' : 'flex flex-wrap items-center gap-1'}>
+      <nav aria-label="Operator" className={vertical ? 'flex flex-col gap-0.5' : 'flex flex-wrap items-center gap-1'}>
         {CUSTOMER_LINKS.map((item) => (
           <NavItemLink key={item.href} item={item} active={active} />
         ))}
@@ -255,7 +255,7 @@ export function NavLinks({
       ...OPERATOR_FOOTER
     ]
     return (
-      <nav className="flex flex-wrap items-center gap-1">
+      <nav aria-label="Operator" className="flex flex-wrap items-center gap-1">
         {flat.map((item) => (
           <NavItemLink key={item.href} item={item} active={active} inboxCount={inboxCount} />
         ))}
@@ -264,7 +264,7 @@ export function NavLinks({
   }
 
   return (
-    <nav className="flex h-full flex-col gap-4">
+    <nav aria-label="Operator" className="flex h-full flex-col gap-4">
       <div className="flex flex-col gap-0.5">
         {OPERATOR_TOP.map((item) => (
           <NavItemLink key={item.href} item={item} active={active} inboxCount={inboxCount} />

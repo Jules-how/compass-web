@@ -18,7 +18,7 @@ function formatWhen(value: string | null | undefined): string {
   if (!value) return '—'
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return value
-  return d.toLocaleString(undefined, {
+  return d.toLocaleString('en-AU', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -70,10 +70,10 @@ export function LeadSidecar({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close"
-          className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+          aria-label="Close lead details"
+          className="rounded-xl p-1.5 text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40"
         >
-          <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75">
+          <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
             <path d="m4 4 8 8M12 4 4 12" />
           </svg>
         </button>

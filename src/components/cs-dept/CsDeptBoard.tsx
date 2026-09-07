@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
+import { LoadingBlock } from '@/components/LoadingBlock'
 import type { CsArtifact, CsBoard, CsCard, CsRoiProjection } from '@/lib/cs-dept/types'
 
 type BoardPayload = CsBoard & { roi?: Array<CsRoiProjection | null> }
@@ -112,11 +113,18 @@ export function CsDeptBoard() {
   }, [data])
 
   if (error && !data) {
-    return <div className="compass-panel p-6 text-sm text-red-600">{error}</div>
+    return (
+      <div className="compass-panel p-6 text-sm text-red-600">
+        {error}{' '}
+        <button type="button" className="font-medium text-[#c2410c] hover:underline" onClick={() => void load()}>
+          Retry retention
+        </button>
+      </div>
+    )
   }
 
   if (!data) {
-    return <div className="compass-panel p-6 text-sm text-neutral-500">Loading retention…</div>
+    return <LoadingBlock label="Loading retention…" />
   }
 
   return (
@@ -129,13 +137,19 @@ export function CsDeptBoard() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex rounded-xl border border-stone-200 bg-white p-0.5 text-sm">
+        <div
+          className="flex rounded-xl border border-stone-200 bg-white p-0.5 text-sm"
+          role="tablist"
+          aria-label="Retention views"
+        >
           {(['review', 'roi', 'qbr'] as TabKey[]).map((key) => (
             <button
               key={key}
               type="button"
+              role="tab"
+              aria-selected={tab === key}
               onClick={() => setTab(key)}
-              className={`rounded-lg px-3 py-1.5 font-medium transition ${
+              className={`rounded-lg px-3 py-1.5 font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40 ${
                 tab === key ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-800'
               }`}
             >

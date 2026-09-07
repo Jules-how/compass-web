@@ -123,7 +123,7 @@ export const MobileSidebar = ({
     <>
       <div
         className={cn(
-          'compass-sidebar flex w-full items-center justify-between border-b border-stone-200/70 px-3 py-3 md:hidden'
+          'compass-sidebar flex w-full items-center justify-between border-b border-stone-200/70 px-3 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:hidden'
         )}
         {...props}
       >
@@ -150,11 +150,13 @@ export const MobileSidebar = ({
           </Link>
           <button
             type="button"
-            aria-label="Open navigation"
-            className="rounded-xl p-1.5 text-neutral-700 transition hover:bg-white/80"
+            aria-label={open ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={open}
+            aria-controls="compass-mobile-nav"
+            className="rounded-xl p-1.5 text-neutral-700 transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40"
             onClick={() => setOpen(!open)}
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-5 w-5" aria-hidden />
           </button>
         </div>
         <AnimatePresence>
@@ -164,6 +166,7 @@ export const MobileSidebar = ({
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ duration: 0.28, ease: 'easeInOut' }}
+              id="compass-mobile-nav"
               className={cn(
                 'compass-sidebar fixed inset-0 z-[100] flex h-full w-full flex-col p-6',
                 className
@@ -172,10 +175,10 @@ export const MobileSidebar = ({
               <button
                 type="button"
                 aria-label="Close navigation"
-                className="absolute right-6 top-6 z-50 rounded-xl p-1.5 text-neutral-700 transition hover:bg-white/80"
+                className="absolute right-6 top-6 z-50 rounded-xl p-1.5 text-neutral-700 transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40"
                 onClick={() => setOpen(!open)}
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5" aria-hidden />
               </button>
               {children}
             </motion.div>
@@ -203,8 +206,9 @@ export const SidebarLink = ({
     <Link
       href={link.href}
       prefetch
+      aria-current={active ? 'page' : undefined}
       className={cn(
-        'group/sidebar relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[14px] font-medium transition',
+        'group/sidebar relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[14px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40',
         active
           ? 'bg-white text-neutral-900 shadow-soft ring-1 ring-black/[0.03]'
           : 'text-neutral-600 hover:bg-white/75 hover:text-neutral-900',

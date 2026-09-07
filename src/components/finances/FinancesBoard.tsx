@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import type { FinancesPayload, FinanceInvoiceRow } from '@/lib/qbo-finance-types'
 import type { QboBoardBucket, QboDisplayState } from '@/lib/qbo-types'
+import { LoadingBlock } from '@/components/LoadingBlock'
 
 function money(value: number) {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(value)
@@ -54,11 +55,18 @@ export function FinancesBoard() {
   }, [load])
 
   if (error && !data) {
-    return <div className="compass-panel p-6 text-sm text-red-600">{error}</div>
+    return (
+      <div className="compass-panel p-6 text-sm text-red-600">
+        {error}{' '}
+        <button type="button" className="font-medium text-[#c2410c] hover:underline" onClick={() => void load()}>
+          Retry finances
+        </button>
+      </div>
+    )
   }
 
   if (!data) {
-    return <div className="compass-panel p-6 text-sm text-neutral-500">Loading finances…</div>
+    return <LoadingBlock label="Loading finances…" />
   }
 
   if (!data.connected) {

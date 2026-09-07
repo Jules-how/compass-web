@@ -79,6 +79,7 @@ function SourceGlyph({ tab }: { tab: InboxTab }) {
   const label = tab === 'agents' ? 'A' : tab === 'instantly' ? 'I' : 'L'
   return (
     <span
+      aria-hidden
       className={cn(
         'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold',
         tab === 'agents' && 'bg-amber-100 text-amber-800',
@@ -91,6 +92,10 @@ function SourceGlyph({ tab }: { tab: InboxTab }) {
   )
 }
 
+function relatedTabLabels(item: InboxItem) {
+  return [...new Set(item.related.map((r) => INBOX_TAB_LABELS[r.tab]))]
+}
+
 function NotificationRow({
   item,
   selected,
@@ -100,12 +105,14 @@ function NotificationRow({
   selected: boolean
   onSelect: () => void
 }) {
+  const alsoIn = relatedTabLabels(item)
   return (
     <button
       type="button"
       onClick={onSelect}
+      aria-current={selected ? 'true' : undefined}
       className={cn(
-        'flex w-full gap-3 border-b border-stone-100 px-3.5 py-3 text-left transition',
+        'flex w-full gap-3 border-b border-stone-100 px-3.5 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#e85d2a]/40',
         selected ? 'bg-[#e85d2a]/[0.06]' : 'hover:bg-stone-50/80',
         !item.unread && 'opacity-75'
       )}
@@ -118,10 +125,8 @@ function NotificationRow({
             <div className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-500">
               {item.preview}
             </div>
-            {item.related.length > 0 ? (
-              <div className="mt-1 text-[11px] text-neutral-400">
-                Also in {item.related.map((r) => INBOX_TAB_LABELS[r.tab]).join(', ')}
-              </div>
+            {alsoIn.length > 0 ? (
+              <div className="mt-1 text-[11px] text-neutral-400">Also in {alsoIn.join(', ')}</div>
             ) : null}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1 pt-0.5">
@@ -129,7 +134,10 @@ function NotificationRow({
               {formatInboxRelative(item.occurredAt)}
             </span>
             {item.unread ? (
-              <span className="h-1.5 w-1.5 rounded-full bg-[#e85d2a]" aria-label="Unread" />
+              <>
+                <span className="sr-only">Unread</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#e85d2a]" aria-hidden />
+              </>
             ) : (
               <span className="h-1.5 w-1.5 rounded-full border border-stone-300" aria-hidden />
             )}
@@ -157,7 +165,7 @@ function ActionButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'rounded-md border px-2.5 py-1.5 text-[12px] font-medium transition disabled:opacity-50',
+        'rounded-xl border px-2.5 py-1.5 text-[12px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40 disabled:opacity-50',
         tone === 'primary' && 'border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800',
         tone === 'danger' && 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100',
         tone === 'neutral' && 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
@@ -223,6 +231,7 @@ function ContextPane({
                 className="compass-btn-secondary shrink-0 !px-2.5 !py-1.5 text-[12px]"
               >
                 Unibox
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             ) : (
               <Link href={item.href} className="compass-btn-secondary shrink-0 !px-2.5 !py-1.5 text-[12px]">
@@ -238,6 +247,7 @@ function ContextPane({
               className="compass-btn-secondary shrink-0 !px-2.5 !py-1.5 text-[12px]"
             >
               Gmail
+              <span className="sr-only"> (opens in a new tab)</span>
             </a>
           ) : null}
           {item.crmHref ? (
@@ -304,7 +314,7 @@ function ContextPane({
         ) : null}
 
         {suggestion ? (
-          <div className="mt-5 rounded-lg border border-neutral-200/80 bg-neutral-50/70 px-3 py-3">
+          <div className="mt-5 rounded-xl border border-neutral-200/80 bg-neutral-50/70 px-3 py-3">
             <div className="flex items-start justify-between gap-2">
               <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
                 Suggested next step
@@ -345,7 +355,7 @@ function ContextPane({
 
         <dl className="mt-6 grid gap-3 sm:grid-cols-2">
           {(item.contactName || item.email || item.phone) && (
-            <div className="rounded-lg border border-neutral-200/80 bg-neutral-50/60 px-3 py-2.5 sm:col-span-2">
+            <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/60 px-3 py-2.5 sm:col-span-2">
               <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
                 Contact
               </dt>
@@ -745,7 +755,7 @@ export function InboxPanel() {
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}{' '}
           <button type="button" className="underline" onClick={() => void reload(true)}>
-            Retry
+            Retry inbox
           </button>
         </div>
       </div>
@@ -770,7 +780,7 @@ export function InboxPanel() {
           <h1 className="text-[15px] font-semibold tracking-tight">Inbox</h1>
           <p className="truncate text-[12px] text-neutral-500">{INBOX_TAB_HINTS[tab]}</p>
         </div>
-        <div className="rounded-md bg-stone-50 px-2 py-1 text-[12px] tabular-nums text-neutral-500 ring-1 ring-stone-200/70">
+        <div className="rounded-xl bg-stone-50 px-2 py-1 text-[12px] tabular-nums text-neutral-500 ring-1 ring-stone-200/70">
           {data.badgeTotal} need{data.badgeTotal === 1 ? 's' : ''} you · {items.length} shown
         </div>
       </header>
@@ -785,7 +795,7 @@ export function InboxPanel() {
                 type="button"
                 onClick={() => selectItem(item)}
                 className={cn(
-                  'inline-flex max-w-[220px] shrink-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left transition',
+                  'inline-flex max-w-[220px] shrink-0 items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40',
                   item.id === selectedId
                     ? 'border-neutral-900 bg-neutral-900 text-white shadow-soft'
                     : 'border-stone-200 bg-white text-neutral-800 hover:border-stone-300'
@@ -809,7 +819,11 @@ export function InboxPanel() {
         </div>
       ) : null}
 
-      <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-stone-100 px-3 py-2">
+      <div
+        role="tablist"
+        aria-label="Inbox channels"
+        className="flex shrink-0 gap-1 overflow-x-auto border-b border-stone-100 px-3 py-2"
+      >
         {INBOX_TABS.map((key) => {
           const count = counts?.[key] ?? 0
           const active = tab === key
@@ -817,9 +831,11 @@ export function InboxPanel() {
             <button
               key={key}
               type="button"
+              role="tab"
+              aria-selected={active}
               onClick={() => setTab(key)}
               className={cn(
-                'inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition',
+                'inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[13px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40',
                 active
                   ? 'bg-neutral-900 text-white shadow-soft'
                   : 'text-neutral-500 hover:bg-stone-100 hover:text-neutral-800'

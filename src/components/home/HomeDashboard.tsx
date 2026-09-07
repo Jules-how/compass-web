@@ -30,10 +30,20 @@ const staggerItem = {
 }
 
 function formatDayHeading(date: Date) {
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+  return date.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })
 }
 
-function SectionHeader({ title, href, hint }: { title: string; href?: string; hint?: string }) {
+function SectionHeader({
+  title,
+  href,
+  actionLabel,
+  hint
+}: {
+  title: string
+  href?: string
+  actionLabel?: string
+  hint?: string
+}) {
   return (
     <div className="mb-2 flex items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-2">
@@ -43,7 +53,7 @@ function SectionHeader({ title, href, hint }: { title: string; href?: string; hi
       </div>
       {href ? (
         <Link href={href} className="text-xs font-medium text-[#c2410c] hover:underline">
-          Open
+          {actionLabel ?? 'Open'}
         </Link>
       ) : null}
     </div>
@@ -90,6 +100,15 @@ export function HomeDashboard() {
       /* ignore */
     }
   }, [dump, dumpHydrated])
+
+  useEffect(() => {
+    if (!dumpOpen) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setDumpOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [dumpOpen])
 
   const dumpPending = dump.trim().length > 0
 
@@ -167,7 +186,7 @@ export function HomeDashboard() {
       <div className="p-6 text-sm text-red-700">
         {home.error}{' '}
         <button type="button" className="underline" onClick={() => void home.reload(true)}>
-          Retry
+          Retry home
         </button>
       </div>
     )
@@ -195,11 +214,13 @@ export function HomeDashboard() {
           <button
             type="button"
             onClick={() => setDumpOpen(true)}
+            aria-haspopup="dialog"
+            aria-label={dumpPending ? 'Brain dump, notes waiting' : 'Brain dump'}
             className={cn('compass-btn-secondary relative', dumpPending && 'ring-1 ring-[#e85d2a]/35')}
           >
             Brain dump
             {dumpPending ? (
-              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#e85d2a] ring-2 ring-white" />
+              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#e85d2a] ring-2 ring-white" aria-hidden />
             ) : null}
           </button>
         </motion.div>
@@ -223,14 +244,19 @@ export function HomeDashboard() {
           ) : (
             <Card className="lg:col-span-2 xl:col-span-3">
               <CardContent className="p-4 sm:p-5">
-                <p className="text-sm text-neutral-500">Morning wave did not load. Retry or check the brief tables.</p>
+                <p className="text-sm text-neutral-500">
+                  Morning wave did not load.{' '}
+                  <button type="button" className="font-medium text-[#c2410c] hover:underline" onClick={() => void home.reload(true)}>
+                    Retry
+                  </button>
+                </p>
               </CardContent>
             </Card>
           )}
 
           <Card>
             <CardContent className="p-4 sm:p-5">
-              <SectionHeader title="Emails going out" href="/sales/outbound" />
+              <SectionHeader title="Emails going out" href="/sales/outbound" actionLabel="Open outbound" />
               <div className="flex flex-wrap gap-4">
                 <div>
                   <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-400">
@@ -254,7 +280,7 @@ export function HomeDashboard() {
 
           <Card>
             <CardContent className="p-4 sm:p-5">
-              <SectionHeader title="Replies coming in" href="/inbox?tab=instantly" />
+              <SectionHeader title="Replies coming in" href="/inbox?tab=instantly" actionLabel="Open inbox" />
               <div className="flex items-baseline justify-between gap-3 rounded-xl bg-amber-50/60 px-3 py-2.5">
                 <span className="text-sm text-neutral-600">Waiting in Instantly</span>
                 <span
@@ -273,12 +299,28 @@ export function HomeDashboard() {
 
       <AnimatePresence>
         {dumpOpen ? (
-          <motion.div className="fixed inset-0 z-50 flex justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div
+            className="fixed inset-0 z-50 flex justify-end"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            role="presentation"
+          >
             <button type="button" className="absolute inset-0 bg-neutral-950/35" aria-label="Close brain dump" onClick={() => setDumpOpen(false)} />
-            <motion.aside className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-stone-200/80 bg-white shadow-soft" initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}>
+            <motion.aside
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="brain-dump-title"
+              className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-stone-200/80 bg-white shadow-soft"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+            >
               <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-5 py-4">
                 <div>
-                  <h2 className="text-base font-semibold text-neutral-900">Brain dump</h2>
+                  <h2 id="brain-dump-title" className="text-base font-semibold text-neutral-900">
+                    Brain dump
+                  </h2>
                   <p className="mt-0.5 text-xs text-neutral-500">Creates compass_tasks only</p>
                 </div>
                 <button type="button" onClick={() => setDumpOpen(false)} className="compass-btn-ghost">
@@ -286,7 +328,16 @@ export function HomeDashboard() {
                 </button>
               </div>
               <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
-                <textarea value={dump} onChange={(e) => setDump(e.target.value)} placeholder="One thought per line…" rows={8} className="compass-input min-h-[10rem] flex-1 resize-y" autoFocus />
+                <textarea
+                  id="brain-dump-notes"
+                  value={dump}
+                  onChange={(e) => setDump(e.target.value)}
+                  placeholder="One thought per line…"
+                  rows={8}
+                  className="compass-input min-h-[10rem] flex-1 resize-y"
+                  aria-label="Brain dump notes"
+                  autoFocus
+                />
                 <button type="button" onClick={() => void runReorganize()} disabled={!dump.trim() || reorganizing} className="compass-btn-primary">
                   {reorganizing ? 'Thinking…' : 'Reorganize with AI'}
                 </button>
@@ -333,11 +384,18 @@ function SuggestionRow({
 }) {
   return (
     <li className="flex items-start gap-2.5 px-3 py-2.5">
-      <input type="checkbox" checked={checked} onChange={onToggle} className="mt-1 h-3.5 w-3.5 rounded border-stone-300" />
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-neutral-900">{item.title}</div>
-        <p className="mt-0.5 text-xs text-neutral-500">{item.rationale}</p>
-      </div>
+      <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onToggle}
+          className="mt-1 h-3.5 w-3.5 rounded border-stone-300"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-neutral-900">{item.title}</span>
+          <span className="mt-0.5 block text-xs text-neutral-500">{item.rationale}</span>
+        </span>
+      </label>
     </li>
   )
 }
