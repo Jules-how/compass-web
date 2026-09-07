@@ -3,6 +3,7 @@
 export const PATHWAY_STAGE_IDS = [
   'maps',
   'filter',
+  'site_extract',
   'verify',
   'finder',
   'names',
@@ -18,6 +19,7 @@ export const PATHWAY_TOOLS = [
   'parallel',
   'firecrawl',
   'filter_leads',
+  'site_extract',
   'generate_openers',
   'skip'
 ] as const
@@ -57,12 +59,13 @@ export type OpenerTemplateDraft = {
 export const DEFAULT_PATHWAY_STAGES: PathwayStage[] = [
   { id: 'maps', tool: 'apify', skip: false },
   { id: 'filter', tool: 'filter_leads', skip: false },
+  { id: 'site_extract', tool: 'site_extract', skip: false },
   { id: 'verify', tool: 'apify', skip: false },
-  { id: 'finder', tool: 'apify', skip: false },
-  { id: 'names', tool: 'firecrawl', skip: false },
-  { id: 'hipages', tool: 'firecrawl', skip: false },
-  { id: 'google_ads', tool: 'apify', skip: false },
-  { id: 'meta_ads', tool: 'apify', skip: false },
+  { id: 'finder', tool: 'skip', skip: true },
+  { id: 'names', tool: 'skip', skip: true },
+  { id: 'hipages', tool: 'skip', skip: true },
+  { id: 'google_ads', tool: 'skip', skip: true },
+  { id: 'meta_ads', tool: 'skip', skip: true },
   { id: 'openers', tool: 'generate_openers', skip: false }
 ]
 

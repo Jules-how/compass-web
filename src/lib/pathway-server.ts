@@ -70,7 +70,21 @@ export async function ensureDefaultRecipe(
     .eq('kind', 'default')
     .eq('trade', slug)
     .maybeSingle()
-  if (existing?.id) return String(existing.id)
+  if (existing?.id) {
+    const { data: row } = await supabase
+      .from('compass_pathway_recipes')
+      .select('stages')
+      .eq('id', existing.id)
+      .maybeSingle()
+    const ids = Array.isArray(row?.stages) ? row.stages.map((stage: { id?: string }) => String(stage?.id || '')) : []
+    if (!ids.includes('site_extract')) {
+      await supabase
+        .from('compass_pathway_recipes')
+        .update({ stages: DEFAULT_PATHWAY_STAGES, updated_at: new Date().toISOString() })
+        .eq('id', existing.id)
+    }
+    return String(existing.id)
+  }
 
   const id = `pathway-default-${slug}`
   const { error } = await supabase.from('compass_pathway_recipes').insert({

@@ -91,7 +91,7 @@ Most {{trade}} shops wait on word of mouth and hit quiet weeks between bigger jo
 
 We point local Google search at a line that books onto the calendar in minutes.
 
-Looking to add 10 to 15 jobs this month, or is the crew at capacity?`,
+Looking to add {extra_jobs} {job_type} this month, or is the crew at capacity?`,
       waitDays: 0,
       ...metrics[0]
     },

@@ -77,11 +77,11 @@ export function seedOffers(): OutboundOffer[] {
     {
       id: 'offer-booked-jobs-system',
       offer_key: 'booked-jobs-system',
-      name: 'Fill and capture',
+      name: 'Booked jobs',
       pack_summary:
-        'Paid demand into their number, then answer and book in minutes so jobs they paid for actually show',
+        'Guide price. Mix from their GP. Capture then Google. Showed jobs, not CPL.',
       positioning_line:
-        'Fill and capture for established local trades: ads into a number that answers',
+        'Guide price. Mix from their GP. Capture then Google then Meta.',
       vertical_tags: ['tradies', 'plumber', 'hvac'],
       location_tags: ['au-national'],
       sort_order: 25,
@@ -92,8 +92,14 @@ export function seedOffers(): OutboundOffer[] {
       ...emptyOfferSkuFields(),
       gtm_status: 'testing',
       one_sentence:
-        'We fill and capture jobs for established trade shops: paid demand into their number, then answer and book in minutes, so the diary fills and the jobs they paid for actually show.',
+        'Established trade shops get more showed jobs by tightening the booking line, then buying emergency and local Google into that line.',
       dream_outcome: 'Showed jobs this month, not a lead count.',
+      install_aud: 2997,
+      retainer_low_aud: 2497,
+      retainer_high_aud: 2997,
+      term_days: 30,
+      guarantee:
+        'If gross profit from showed jobs booked by this system does not exceed the first month retainer within the first 30 days of live Search traffic, that retainer is refunded. Install and media never refund.',
       lock: BOOKED_JOBS_LOCK
     },
     {
@@ -311,7 +317,7 @@ function yoursCtas(): OutboundCta[] {
     {
       id: 'cta-consultative',
       label: '[Yours] Consultative capacity',
-      body: 'Are you looking to add 10 to 15 showed jobs this month, or is the crew already at capacity?',
+      body: 'Are you looking to add {extra_jobs} {job_type} in {suburb} this month, or is the crew already at capacity?',
       cta_type: 'permission',
       vertical_tags: ['tradies', 'electricians'],
       location_tags: ['nsw', 'qld'],
@@ -478,7 +484,7 @@ function yoursTemplates(): OutboundTemplate[] {
   const exprFour = emailFour.slots.find((s) => s.key === 'cold_expression')
   if (exprFour) exprFour.body = '{{cold_expression}}'
   const ctaFour = emailFour.slots.find((s) => s.key === 'cta')
-  if (ctaFour) ctaFour.body = 'Are you looking to add 10 to 15 showed jobs this month, or is the crew already at capacity?'
+  if (ctaFour) ctaFour.body = 'Are you looking to add {extra_jobs} {job_type} in {suburb} this month, or is the crew already at capacity?'
   const fuAngle = emptyFollowUpStep(1, 3)
   const bumpAngle = fuAngle.slots.find((s) => s.key === 'opener')
   if (bumpAngle) {
@@ -666,10 +672,10 @@ export function seedCopyArchive(): CopyArchiveEntry[] {
     proof: 'Shops like yours turn Google search clicks into showed jobs on the calendar the same week.',
     expression:
       'Dedicated local search into a booking line so residential repair jobs land on the calendar in minutes instead of sitting in voicemail.',
-    cta: 'Are you looking to add 10 to 15 emergency jobs this month, or is the crew already at capacity?',
+    cta: 'Are you looking to add {extra_jobs} {job_type} in {suburb} this month, or is the crew already at capacity?',
     followUp: {
       bump: 'Quick bump — still happy to send the 1-page demand snapshot for {{companyName}}.',
-      cta: 'Still room for 10 to 15 more showed jobs this month?'
+      cta: 'Still room for {extra_jobs} more {job_type} this month?'
     }
   })
 
@@ -737,7 +743,7 @@ export function seedCopyArchive(): CopyArchiveEntry[] {
     proof: 'QLD trade shops fill quiet weeks by pointing Google search at a line that books.',
     expression:
       'Google Search into a booking line so showed jobs land on the calendar instead of a next-day callback.',
-    cta: 'Are you looking to add 10 to 15 emergency jobs this month, or is the crew already at capacity?',
+    cta: 'Are you looking to add {extra_jobs} {job_type} in {suburb} this month, or is the crew already at capacity?',
     followUp: {
       bump: 'Still relevant if the board has gaps between bigger jobs.',
       cta: 'Still room for more showed jobs this month?'
