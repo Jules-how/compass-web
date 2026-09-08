@@ -25,6 +25,9 @@ import { LEAD_PAGE_SIZE } from '@/lib/list-columns'
 import { cn } from '@/lib/utils'
 
 export type NavKey =
+  | 'planning'
+  | 'offer-plan'
+  | 'experiments'
   | 'home'
   | 'inbox'
   | 'tasks'
@@ -70,6 +73,7 @@ const OPERATOR_SECTIONS: NavSection[] = [
     id: 'workspace',
     label: 'Workspace',
     items: [
+      { href: '/planning', label: 'Goals & notes', key: 'planning', icon: TasksIcon },
       { href: '/tasks', label: 'My Tasks', key: 'tasks', icon: TasksIcon, api: '/api/tasks' },
       { href: '/projects', label: 'Projects', key: 'projects', icon: ProjectsIcon, api: '/api/projects' },
       {
@@ -87,6 +91,8 @@ const OPERATOR_SECTIONS: NavSection[] = [
     label: 'Sales',
     items: [
       { href: '/sales', label: 'Overview', key: 'sales-overview', icon: OverviewIcon, api: '/api/instantly/sales-overview' },
+      { href: '/sales/offer-plan', label: 'Offer & economics', key: 'offer-plan', icon: OffersIcon },
+      { href: '/sales/experiments', label: 'Email tests', key: 'experiments', icon: OutboundIcon },
       {
         href: '/sales/offers',
         label: 'Offers',
@@ -143,7 +149,10 @@ export const OPERATOR_PREFETCH = [
 
 export function navKeyFromPathname(pathname: string | null): NavKey {
   if (!pathname) return 'home'
+  if (pathname.startsWith('/planning')) return 'planning'
   if (pathname === '/sales' || pathname.startsWith('/sales/')) {
+    if (pathname.startsWith('/sales/offer-plan')) return 'offer-plan'
+    if (pathname.startsWith('/sales/experiments')) return 'experiments'
     if (pathname.startsWith('/sales/offers')) return 'offers'
     if (pathname.startsWith('/sales/pipeline')) return 'outbound'
     if (pathname.startsWith('/sales/outbound')) return 'outbound'

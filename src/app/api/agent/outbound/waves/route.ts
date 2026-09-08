@@ -48,11 +48,13 @@ export async function GET(request: Request) {
     const admin = getPortalAdminClient()
     const apiKey = await resolveInstantlyApiKey(admin)
     let board = EMPTY_BOARD
+    let instantlySource = apiKey ? 'live' : 'unavailable'
     if (apiKey) {
       try {
         board = await loadOutboundBoardFromInstantly(apiKey)
       } catch (err) {
         if (!(err instanceof InstantlyApiError)) throw err
+        instantlySource = 'unavailable'
       }
     }
 
@@ -96,6 +98,7 @@ export async function GET(request: Request) {
         liveCampaigns: forecast.liveCampaigns
       },
       instantly: {
+        source: instantlySource,
         liveCount: board.liveCount,
         live: board.live.map((row) => ({
           id: row.id,

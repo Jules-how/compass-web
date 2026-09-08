@@ -1,7 +1,7 @@
 import { requireAgentAuth } from '@/lib/agent-auth'
 import { getPortalAdminClient } from '@/lib/portal-admin'
 import { portalJson, readBoundedJson } from '@/lib/portal-http'
-import { runCsDept, demoBoardForInspect } from '@/lib/cs-dept/run'
+import { runCsDept } from '@/lib/cs-dept/run'
 import { roiProjection } from '@/lib/cs-dept/engine.mjs'
 
 export const runtime = 'nodejs'
@@ -10,18 +10,18 @@ export const maxDuration = 120
 
 /**
  * Weekly CS run for Cursor automations.
- * GET = current board (demo if empty). POST = recompute and persist drafts.
+ * GET = current real board; absence or failure is explicit. POST = recompute and persist drafts.
  */
 export async function GET(request: Request) {
   const authError = requireAgentAuth(request)
   if (authError) return authError
   try {
     const admin = getPortalAdminClient()
-    const board = await runCsDept(admin, { includeDemo: true, persist: false })
+    const board = await runCsDept(admin, { includeDemo: false, persist: false })
     return portalJson({
       ok: true,
       generated_at: board.generated_at,
-      source: board.source,
+      source: board.counts.clients === 0 ? 'empty' : board.source,
       counts: board.counts,
       at_risk: board.cards
         .filter((card) => card.snapshot.at_risk)
@@ -33,14 +33,7 @@ export async function GET(request: Request) {
       roi: board.artifacts.filter((row) => row.kind === 'weekly_summary').map(roiProjection)
     })
   } catch (err) {
-    const board = demoBoardForInspect()
-    return portalJson({
-      ok: true,
-      source: 'demo',
-      generated_at: board.generated_at,
-      counts: board.counts,
-      fallback: err instanceof Error ? err.message : 'demo'
-    })
+    return portalJson({ ok: false, source: 'unavailable', error: err instanceof Error ? err.message : 'cs_unavailable' }, { status: 503 })
   }
 }
 
@@ -58,12 +51,12 @@ export async function POST(request: Request) {
 
   try {
     const admin = getPortalAdminClient()
-    const board = await runCsDept(admin, { includeDemo: true, persist })
+    const board = await runCsDept(admin, { includeDemo: false, persist })
     return portalJson({
       ok: true,
       persisted: persist,
       generated_at: board.generated_at,
-      source: board.source,
+      source: board.counts.clients === 0 ? 'empty' : board.source,
       counts: board.counts,
       review_url: '/operations/cs',
       cards: board.cards.map((card) => ({

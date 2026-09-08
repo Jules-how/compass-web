@@ -70,7 +70,7 @@ export function TestCellsBoard({
 }) {
   const cells = desk.cells ?? []
   const offers = useMemo(
-    () => [...desk.testing, ...desk.live, ...desk.retired].map((card) => card.offer),
+    () => [...desk.testing, ...desk.live].map((card) => card.offer),
     [desk]
   )
   const defaultOffer = offers.find((o) => o.gtm_status === 'testing')?.offer_key || offers[0]?.offer_key || ''
@@ -78,7 +78,7 @@ export function TestCellsBoard({
   const selectedOffer = offers.find((o) => o.offer_key === offerKey)
   const offerVerticals = selectedOffer ? verticalsForOffer(selectedOffer) : []
   const [pickedVerticals, setPickedVerticals] = useState<string[]>(offerVerticals)
-  const [pickedCities, setPickedCities] = useState<string[]>([...CITY_PLAN_TAGS.slice(0, 5)])
+  const [pickedCities, setPickedCities] = useState<string[]>(selectedOffer?.location_tags?.length ? selectedOffer.location_tags : [])
   const [testingVariable, setTestingVariable] = useState('audience')
   const [cloneId, setCloneId] = useState('')
   const [target, setTarget] = useState('')

@@ -52,11 +52,8 @@ export function uniqueTags(values: string[]): string[] {
 }
 
 export function verticalsForOffer(offer: Pick<OfferSku, 'lock' | 'vertical_tags'>): string[] {
-  return uniqueTags([
-    ...offer.lock.verticals.map((row) => row.key || row.name),
-    ...offer.lock.verticalIn,
-    ...offer.vertical_tags
-  ])
+  // Narrative ICP descriptions are not vertical identifiers.
+  return uniqueTags(offer.vertical_tags.length ? offer.vertical_tags : offer.lock.verticals.map(row => row.key || row.name))
 }
 
 export type PlanSlot = {

@@ -39,6 +39,7 @@ export type InstantlyCampaignAnalytics = {
   unsubscribed_count?: number
   completed_count: number
   total_opportunities: number
+  total_meeting_booked?: number
   total_opportunity_value?: number
 }
 
@@ -401,13 +402,8 @@ export function buildColdEmailGlance(input: {
   const replies30 = Number(input.rolling30d.reply_count_unique) || 0
   const replyRate = sent30 > 0 ? Math.round((1000 * replies30) / sent30) / 10 : 0
 
-  // Prefer Instantly's meeting-booked status; fall back to interested/opportunities
-  // when the workspace tracks outcomes there instead.
-  const meetingsToday =
-    Number(input.today.total_meeting_booked) ||
-    Number(input.today.total_interested) ||
-    Number(input.today.total_opportunities) ||
-    0
+  // Interest and opportunities are not evidence of a booked meeting.
+  const meetingsToday = Math.max(0, Number(input.today.total_meeting_booked) || 0)
 
   return {
     emailsSentToday: Number(input.today.emails_sent_count) || 0,
@@ -420,7 +416,7 @@ export function buildColdEmailGlance(input: {
       status: mapInstantlyCampaignStatus(row.campaign_status),
       sent: Number(row.emails_sent_count) || 0,
       replies: Number(row.reply_count_unique) || Number(row.reply_count) || 0,
-      meetings: Number(row.total_opportunities) || 0,
+      meetings: Math.max(0, Number(row.total_meeting_booked) || 0),
       progress: campaignProgress(row)
     }))
   }

@@ -1,3 +1,4 @@
+import { isPermanentSuppression } from '@/lib/outreach-suppression.mjs'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import {
@@ -501,6 +502,7 @@ export function shouldOverwriteOutbound(
   existing: string | null | undefined,
   incoming: string
 ): boolean {
+  if (isPermanentSuppression(existing)) return false
   if (!existing) return true
   const existingKey = existing.toLowerCase()
   const incomingKey = incoming.toLowerCase()

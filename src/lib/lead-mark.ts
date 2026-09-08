@@ -98,6 +98,10 @@ export function applySharedMarkFields(
       return { ok: false, error: 'invalid_outbound_status' }
     }
     patch.outbound_status = status
+    if (status === 'unsubscribed' || status === 'suppressed') {
+      patch.recontact_ok = 0
+      patch.suppression_reason = status === 'unsubscribed' ? 'explicit_unsubscribe' : 'operator_suppressed'
+    }
   }
   const leadId = parseOptionalText(body.instantly_lead_id)
   if (body.instantly_lead_id !== undefined) patch.instantly_lead_id = leadId

@@ -73,6 +73,7 @@ export type AgentBrief = {
   morningWave: MorningWavePayload | null
   /** One-line operator hint for agents — keep prompts short. */
   hint: string
+  schemaVersion: number
 }
 
 export type WaveCampaignPick = {
@@ -160,7 +161,7 @@ async function countExact(
     count: number | null
     error: unknown
   }
-  if (result?.error) return 0
+  if (result?.error) throw new Error('Lead counts unavailable; do not infer zero.')
   return result?.count ?? 0
 }
 
@@ -171,7 +172,7 @@ async function countExact(
 export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBrief> {
   const generatedAt = new Date().toISOString()
 
-  const [adsGlance, instantlySnap, lastSync, pipelineRows, focusCampaigns, lastBatch, total, replied, interested, meetingBooked, inInstantly, needsReview] =
+  const [adsGlance, instantlySnap, lastSync, pipelineRows, activeCount, focusCampaigns, lastBatch, total, replied, interested, meetingBooked, inInstantly, needsReview] =
     await Promise.all([
       loadHomeGlance(supabase),
       loadSyncSnapshot<ColdEmailGlance>(supabase, 'instantly_cold_email'),
@@ -179,9 +180,10 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
       supabase
         .from('compass_pipeline_campaigns')
         .select('id,name,status,health,instantly_campaign_id')
-        .neq('status', 'archived')
+        .in('status', ['active', 'planned', 'draft', 'paused'])
         .order('priority', { ascending: false })
         .limit(12),
+      supabase.from('compass_pipeline_campaigns').select('id', {count:'exact',head:true}).eq('status','active'),
       supabase
         .from('compass_pipeline_campaigns')
         .select('id,name,status,priority,vertical_tags,location_tags')
@@ -209,6 +211,7 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
       )
     ])
 
+  if (activeCount.error || pipelineRows.error) throw new Error('Campaign counts unavailable; do not infer zero.')
   const cold = instantlySnap?.payload
   const instantlyCampaigns = (cold?.campaigns ?? []).slice(0, 5).map((c) => ({
     id: c.id,
@@ -300,6 +303,7 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
 
   return {
     generatedAt,
+    schemaVersion: 2,
     lastSyncAt: lastSync?.payload?.ranAt || lastSync?.syncedAt || null,
     ads: {
       source: adsGlance.source,
@@ -329,7 +333,7 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
       needsReview
     },
     pipeline: {
-      activeCampaigns: pipeline.length,
+      activeCampaigns: activeCount.error ? 0 : activeCount.count ?? 0,
       campaigns: pipeline
     },
     currentWave,
