@@ -116,3 +116,8 @@ Goals, notes, actual human effort, agent run receipts and preparation requests a
 Read GET /api/agent/workspace?page=0 for projects, open tasks and clients; follow hasMore. /sales/offer-plan explains the active offer and optional work, with a cost scenario calculator and disqualifying evidence. /sales/experiments creates separate draft challengers and queues preparation with a frozen snapshot. The existing cold-email engine remains responsible for list preparation, rendered-merge checks and actual upload. Visual setup does not yet provide automatic paid execution or company-level random assignment.
 
 The Whimsical September board is an idea source. Challenge whether there is a valuable booking gap, whether demand or capacity is the actual bottleneck, whether recurring work justifies a retainer, and what evidence would reject the offer. Do not adopt its proposed setup fee or Q4 forecast automatically. Productivity is accepted output versus human effort and rework for comparable work; agent count is not a business outcome.
+
+
+## Five-morning pilot measurement
+
+Use docs/DAILY_OPERATOR_SCORECARD.md for the measurement contract. Save one stable dated pilot receipt in Compass per weekday, including failed or partial runs. Record real timestamps, source coverage, planned/attempted/verified actions, retries, Jules-confirmed time, costs when available, review status and later business outcomes separately. Unknowns remain unknown. Read current Compass opportunity notes before promoting an old email into a new task. End the five-morning pilot with an evidence-based review; same-day integration checks do not count as separate days.
