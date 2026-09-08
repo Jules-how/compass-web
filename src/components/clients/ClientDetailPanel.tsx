@@ -48,7 +48,7 @@ import { CsClientHealth } from '@/components/cs-dept/CsClientHealth'
 
 const clientDetailCacheKey = (id: string) => `/api/clients/${id}`
 
-type TabKey = 'overview' | 'activity' | 'comms' | 'issues' | 'meta' | 'google' | 'projects'
+type TabKey = 'agreement' | 'delivery-tools' | 'overview' | 'activity' | 'comms' | 'issues' | 'meta' | 'google' | 'projects'
 type MetaSubView = 'ads_manager' | 'channel_log'
 
 interface ClientDetailPayload {
@@ -470,12 +470,14 @@ export function ClientDetailPanel({
   const { client, updates, activity } = data
   const tabs: Array<[TabKey, string]> = [
     ['overview', 'Overview'],
+    ['agreement', 'Agreement & payment'],
     ['activity', `Activity (${activity.length})`],
     ['comms', 'Comms'],
     ['issues', `Issues (${data.issues.length})`],
     ['meta', 'Meta'],
     ['google', 'Google'],
-    ['projects', `Projects (${data.projects.length})`]
+    ['projects', `Projects (${data.projects.length})`],
+    ['delivery-tools', 'Earlier tools']
   ]
 
   const refresh = () => load(true)
@@ -531,6 +533,7 @@ export function ClientDetailPanel({
               key={key}
               type="button"
               onClick={() => setTab(key)}
+              aria-pressed={tab === key}
               className={`compass-seg-btn ${tab === key ? 'compass-seg-btn-active' : ''}`}
             >
               {label}
@@ -840,9 +843,12 @@ export function ClientDetailPanel({
         </div>
       ) : null}
 
-      {tab === 'overview' ? (
+      <div hidden={tab !== 'agreement'}>
+        <ClientAgreementCard key={clientId} clientId={clientId} clientName={data.client.name} />
+      </div>
+      {tab === 'delivery-tools' ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          <ClientAgreementCard key={clientId} clientId={clientId} clientName={data.client.name} />
+          <p className="text-sm text-neutral-500 lg:col-span-2">Earlier delivery workflows, retained for existing engagements and separately reviewed scope.</p>
           <ClientVoicePanel clientId={clientId} />
           <ClientReactivationPanel clientId={clientId} />
           <ClientMetaAttachPanel clientId={clientId} />

@@ -84,7 +84,7 @@ export function ClientAgreementCard({
       <CardHeader>
         <CardTitle>Agreement & payment</CardTitle>
         <p className="text-sm text-neutral-500">
-          Installation booking · explicit terms · no QuickBooks dependency
+          Prepare the agreement, collect acceptance and confirm the first payment.
         </p>
       </CardHeader>
       <CardContent>
