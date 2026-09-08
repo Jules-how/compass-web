@@ -1,0 +1,291 @@
+[
+  {
+    "variant": "relay",
+    "screen": "home",
+    "fonts": "loaded",
+    "scroll": 1440,
+    "title": "Make the next handoff.",
+    "width": 1440
+  },
+  {
+    "variant": "relay",
+    "screen": "inbox",
+    "fonts": "loaded",
+    "scroll": 1440,
+    "title": "Keep the next action in view.",
+    "width": 1440
+  },
+  {
+    "variant": "relay",
+    "screen": "outbound",
+    "fonts": "loaded",
+    "scroll": 1440,
+    "title": "Outbound",
+    "width": 1440
+  },
+  {
+    "variant": "relay",
+    "screen": "editor",
+    "fonts": "loaded",
+    "scroll": 1440,
+    "title": "Write it. Then review it.",
+    "width": 1440
+  },
+  {
+    "variant": "folio",
+    "screen": "home",
+    "fonts": "loaded",
+    "scroll": 1440,
+    "title": "A little more clarity.",
+    "width": 1440
+  },
+  {
+    "variant": "folio",
+    "screen": "inbox",
+    "fonts": "loaded",
+    "scroll": 1440,
+    "title": "Inbox, with context.",
+    "width": 1440
+  },
+  {
+    "variant": "folio",
+    "screen": "outbound",
+    "fonts": "loaded",
+    "scroll": 1440,
+    "title": "Outbound",
+    "width": 1440
+  },
+  {
+    "variant": "folio",
+    "screen": "editor",
+    "fonts": "loaded",
+    "scroll": 1440,
+    "title": "Sydney Hvac",
+    "width": 1440
+  },
+  {
+    "variant": "index",
+    "screen": "home",
+    "fonts": "loaded",
+    "scroll": 1440,
+    "title": "The operating register.",
+    "width": 1440
+  },
+  {
+    "variant": "index",
+    "screen": "inbox",
+    "fonts": "loaded",
+    "scroll": 1440,
+    "title": "Inbox",
+    "width": 1440
+  },
+  {
+    "variant": "index",
+    "screen": "outbound",
+    "fonts": "loaded",
+    "scroll": 1440,
+    "title": "Outbound",
+    "width": 1440
+  },
+  {
+    "variant": "index",
+    "screen": "editor",
+    "fonts": "loaded",
+    "scroll": 1440,
+    "title": "Sydney Hvac",
+    "width": 1440
+  },
+  {
+    "variant": "relay",
+    "screen": "home",
+    "fonts": "loaded",
+    "scroll": 768,
+    "title": "Make the next handoff.",
+    "width": 768
+  },
+  {
+    "variant": "relay",
+    "screen": "inbox",
+    "fonts": "loaded",
+    "scroll": 768,
+    "title": "Keep the next action in view.",
+    "width": 768
+  },
+  {
+    "variant": "relay",
+    "screen": "outbound",
+    "fonts": "loaded",
+    "scroll": 768,
+    "title": "Outbound",
+    "width": 768
+  },
+  {
+    "variant": "relay",
+    "screen": "editor",
+    "fonts": "loaded",
+    "scroll": 768,
+    "title": "Write it. Then review it.",
+    "width": 768,
+    "verified_after_fix": true
+  },
+  {
+    "variant": "folio",
+    "screen": "home",
+    "fonts": "loaded",
+    "scroll": 768,
+    "title": "A little more clarity.",
+    "width": 768
+  },
+  {
+    "variant": "folio",
+    "screen": "inbox",
+    "fonts": "loaded",
+    "scroll": 768,
+    "title": "Inbox, with context.",
+    "width": 768
+  },
+  {
+    "variant": "folio",
+    "screen": "outbound",
+    "fonts": "loaded",
+    "scroll": 768,
+    "title": "Outbound",
+    "width": 768
+  },
+  {
+    "variant": "folio",
+    "screen": "editor",
+    "fonts": "loaded",
+    "scroll": 768,
+    "title": "Sydney Hvac",
+    "width": 768
+  },
+  {
+    "variant": "index",
+    "screen": "home",
+    "fonts": "loaded",
+    "scroll": 768,
+    "title": "The operating register.",
+    "width": 768
+  },
+  {
+    "variant": "index",
+    "screen": "inbox",
+    "fonts": "loaded",
+    "scroll": 768,
+    "title": "Inbox",
+    "width": 768
+  },
+  {
+    "variant": "index",
+    "screen": "outbound",
+    "fonts": "loaded",
+    "scroll": 768,
+    "title": "Outbound",
+    "width": 768
+  },
+  {
+    "variant": "index",
+    "screen": "editor",
+    "fonts": "loaded",
+    "scroll": 768,
+    "title": "Sydney Hvac",
+    "width": 768
+  },
+  {
+    "variant": "relay",
+    "screen": "home",
+    "fonts": "loaded",
+    "scroll": 390,
+    "title": "Make the next handoff.",
+    "width": 390
+  },
+  {
+    "variant": "relay",
+    "screen": "inbox",
+    "fonts": "loaded",
+    "scroll": 390,
+    "title": "Keep the next action in view.",
+    "width": 390
+  },
+  {
+    "variant": "relay",
+    "screen": "outbound",
+    "fonts": "loaded",
+    "scroll": 390,
+    "title": "Outbound",
+    "width": 390
+  },
+  {
+    "variant": "relay",
+    "screen": "editor",
+    "fonts": "loaded",
+    "scroll": 390,
+    "title": "Write it. Then review it.",
+    "width": 390
+  },
+  {
+    "variant": "folio",
+    "screen": "home",
+    "fonts": "loaded",
+    "scroll": 390,
+    "title": "A little more clarity.",
+    "width": 390
+  },
+  {
+    "variant": "folio",
+    "screen": "inbox",
+    "fonts": "loaded",
+    "scroll": 390,
+    "title": "Inbox, with context.",
+    "width": 390
+  },
+  {
+    "variant": "folio",
+    "screen": "outbound",
+    "fonts": "loaded",
+    "scroll": 390,
+    "title": "Outbound",
+    "width": 390
+  },
+  {
+    "variant": "folio",
+    "screen": "editor",
+    "fonts": "loaded",
+    "scroll": 390,
+    "title": "Sydney Hvac",
+    "width": 390
+  },
+  {
+    "variant": "index",
+    "screen": "home",
+    "fonts": "loaded",
+    "scroll": 390,
+    "title": "The operating register.",
+    "width": 390
+  },
+  {
+    "variant": "index",
+    "screen": "inbox",
+    "fonts": "loaded",
+    "scroll": 390,
+    "title": "Inbox",
+    "width": 390
+  },
+  {
+    "variant": "index",
+    "screen": "outbound",
+    "fonts": "loaded",
+    "scroll": 390,
+    "title": "Outbound",
+    "width": 390
+  },
+  {
+    "variant": "index",
+    "screen": "editor",
+    "fonts": "loaded",
+    "scroll": 390,
+    "title": "Sydney Hvac",
+    "width": 390
+  }
+]
