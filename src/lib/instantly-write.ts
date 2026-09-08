@@ -61,9 +61,9 @@ export async function instantlyAddLeadsBulk(
     body: JSON.stringify({
       campaign_id: input.campaignId,
       leads: input.leads,
-      skip_if_in_workspace: input.skipIfInWorkspace !== false,
+      skip_if_in_workspace: input.skipIfInWorkspace === true,
       skip_if_in_campaign: input.skipIfInCampaign !== false,
-      verify_leads_on_import: input.verifyOnImport !== false
+      verify_leads_on_import: input.verifyOnImport === true
     })
   })
 }

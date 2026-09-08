@@ -11,7 +11,10 @@ import {
   sequenceEmailBodyText,
   type OutboundSequence
 } from '@/lib/outbound-copy'
-import { isHotOutboundStatus, isRecontactBlocked } from '@/lib/recontact-eligibility'
+import {
+  isHotOutboundStatus,
+  isRecontactBlocked
+} from '@/lib/recontact-eligibility'
 import { leadPreviewValues, splitPersonName } from '@/lib/sequence-preview'
 import { isIcpSkip } from '@/lib/lead-icp'
 import type { LeadContact } from '@/lib/types'
@@ -43,7 +46,11 @@ export type PushSkipReason =
   | 'missing_opener'
   | 'icp_skip'
 
-export type PushSkip = { id: string; email: string | null; reason: PushSkipReason }
+export type PushSkip = {
+  id: string
+  email: string | null
+  reason: PushSkipReason
+}
 
 export type InstantlyPushPreview = {
   eligible: Array<{ id: string; email: string }>
@@ -90,10 +97,13 @@ export function outboundSequenceToInstantlySequences(
         const body = sequenceEmailBodyText(sequence, index)
         return {
           type: 'email',
-          delay: index === 0 ? 0 : Math.max(1, step.delay_days ?? 3),
+          delay:
+            index === sequence.steps.length - 1
+              ? 0
+              : Math.max(2, sequence.steps[index + 1].delay_days ?? 2),
           variants: [
             {
-              subject: trim(step.subject) || '{{firstName}}',
+              subject: trim(step.subject),
               body: textToInstantlyHtml(body || '{{opener}}')
             }
           ]
@@ -104,7 +114,9 @@ export function outboundSequenceToInstantlySequences(
 }
 
 /** Instantly drops unknown top-level keys. Opener must be personalization + custom_variables.opener. */
-export function leadContactToInstantlyLead(lead: LeadContact): InstantlyLeadPayload | null {
+export function leadContactToInstantlyLead(
+  lead: LeadContact
+): InstantlyLeadPayload | null {
   const email = trim(lead.email).toLowerCase()
   if (!email || !email.includes('@')) return null
   const values = leadPreviewValues(lead)
@@ -211,9 +223,10 @@ export async function loadPipelineCampaign(
     labels: Array.isArray((data as CompassCampaign).labels)
       ? (data as CompassCampaign).labels
       : [],
-    priority: typeof (data as CompassCampaign).priority === 'number'
-      ? (data as CompassCampaign).priority
-      : 0,
+    priority:
+      typeof (data as CompassCampaign).priority === 'number'
+        ? (data as CompassCampaign).priority
+        : 0,
     health: (data as CompassCampaign).health || 'no_updates',
     color: (data as CompassCampaign).color || '#94a3b8'
   })
@@ -230,7 +243,8 @@ async function loadCohortLeads(
     .eq('pipeline_campaign_id', campaignId)
     .order('email', { ascending: true, nullsFirst: false })
     .limit(INSTANTLY_PUSH_MAX)
-  if (leadIds?.length) query = query.in('id', leadIds.slice(0, INSTANTLY_PUSH_MAX))
+  if (leadIds?.length)
+    query = query.in('id', leadIds.slice(0, INSTANTLY_PUSH_MAX))
   const { data, error } = await query
   if (error) throw new Error(error.message)
   return (data ?? []) as LeadContact[]
@@ -241,13 +255,24 @@ export async function ensureInstantlyCampaign(input: {
   campaign: CompassCampaign
   apiKey: string
   pushSequence?: boolean
-}): Promise<{ campaign: CompassCampaign; instantlyCampaignId: string; created: boolean }> {
+}): Promise<{
+  campaign: CompassCampaign
+  instantlyCampaignId: string
+  created: boolean
+}> {
+  if (input.campaign.offer_key === 'installation-booking' && input.pushSequence)
+    throw new InstantlyApiError(
+      'Use the reviewed preparation and browser CSV path for this offer',
+      409
+    )
   const existing = trim(input.campaign.instantly_campaign_id)
   const sequences = input.pushSequence
     ? outboundSequenceToInstantlySequences(input.campaign.sequence_draft)
     : []
   if (existing) {
-    await instantlyGetCampaign(input.apiKey, existing)
+    const remote = await instantlyGetCampaign(input.apiKey, existing)
+    if (![0, 2].includes(remote.status ?? -1))
+      throw new InstantlyApiError('Campaign must be paused before editing', 409)
     if (sequences.length) {
       await instantlyUpdateCampaign(input.apiKey, existing, { sequences })
     }
@@ -271,9 +296,15 @@ export async function ensureInstantlyCampaign(input: {
     emailList: emailList.length ? emailList : undefined,
     timezone: getInstantlyTimezone()
   })
-  const instantlyId = trim(created.id) || trim((created as { campaign_id?: string }).campaign_id)
-  if (!instantlyId) throw new InstantlyApiError('Instantly did not return a campaign id', 502)
+  const instantlyId =
+    trim(created.id) || trim((created as { campaign_id?: string }).campaign_id)
+  if (!instantlyId)
+    throw new InstantlyApiError('Instantly did not return a campaign id', 502)
 
+  await instantlyPauseCampaign(input.apiKey, instantlyId)
+  const paused = await instantlyGetCampaign(input.apiKey, instantlyId)
+  if (![0, 2].includes(paused.status ?? -1))
+    throw new InstantlyApiError('Could not confirm campaign is paused', 409)
   const stamp = new Date().toISOString()
   const { data, error } = await input.supabase
     .from('compass_pipeline_campaigns')
@@ -305,12 +336,30 @@ export async function pushSequenceToInstantly(input: {
   apiKey: string
   campaign: CompassCampaign
 }): Promise<{ instantlyCampaignId: string; steps: number }> {
+  if (input.campaign.offer_key === 'installation-booking')
+    throw new InstantlyApiError(
+      'Use the approved preparation copy for this offer',
+      409
+    )
   const instantlyId = trim(input.campaign.instantly_campaign_id)
-  if (!instantlyId) throw new InstantlyApiError('Bind or create an Instantly campaign first', 400)
-  const sequences = outboundSequenceToInstantlySequences(input.campaign.sequence_draft)
-  if (!sequences.length) throw new InstantlyApiError('No sequence draft to push', 400)
+  if (!instantlyId)
+    throw new InstantlyApiError(
+      'Bind or create an Instantly campaign first',
+      400
+    )
+  const sequences = outboundSequenceToInstantlySequences(
+    input.campaign.sequence_draft
+  )
+  if (!sequences.length)
+    throw new InstantlyApiError('No sequence draft to push', 400)
+  const remote = await instantlyGetCampaign(input.apiKey, instantlyId)
+  if (![0, 2].includes(remote.status ?? -1))
+    throw new InstantlyApiError('Campaign must be paused before editing', 409)
   await instantlyUpdateCampaign(input.apiKey, instantlyId, { sequences })
-  return { instantlyCampaignId: instantlyId, steps: sequences[0]?.steps.length ?? 0 }
+  return {
+    instantlyCampaignId: instantlyId,
+    steps: sequences[0]?.steps.length ?? 0
+  }
 }
 
 export async function pushLeadsToInstantly(input: {
@@ -323,10 +372,23 @@ export async function pushLeadsToInstantly(input: {
   verifyOnImport?: boolean
   requireOpener?: boolean
 }): Promise<InstantlyPushLeadsResult> {
+  if (input.campaign.offer_key === 'installation-booking')
+    throw new InstantlyApiError(
+      'Use the approved preparation CSV and receipt reconciliation for this offer',
+      409
+    )
   const instantlyId = trim(input.campaign.instantly_campaign_id)
-  if (!instantlyId) throw new InstantlyApiError('Bind or create an Instantly campaign first', 400)
+  if (!instantlyId)
+    throw new InstantlyApiError(
+      'Bind or create an Instantly campaign first',
+      400
+    )
 
-  const leads = await loadCohortLeads(input.supabase, input.campaign.id, input.leadIds)
+  const leads = await loadCohortLeads(
+    input.supabase,
+    input.campaign.id,
+    input.leadIds
+  )
   const preview = previewPushLeads(leads, instantlyId, {
     requireOpener: input.requireOpener !== false
   })
@@ -344,6 +406,9 @@ export async function pushLeadsToInstantly(input: {
     }
   }
 
+  const remote = await instantlyGetCampaign(input.apiKey, instantlyId)
+  if (![0, 2].includes(remote.status ?? -1))
+    throw new InstantlyApiError('Campaign must be paused before importing', 409)
   const byEmail = new Map(
     leads
       .filter((row) => preview.eligible.some((e) => e.id === row.id))
@@ -364,55 +429,82 @@ export async function pushLeadsToInstantly(input: {
   let uploaded = 0
   let instantlySkipped = 0
   let invalidEmails = 0
+  let marked = 0
+  let offset = 0
 
   for (const chunk of chunkItems(payloads, INSTANTLY_PUSH_CHUNK)) {
+    const latest = await instantlyGetCampaign(input.apiKey, instantlyId)
+    if (![0, 2].includes(latest.status ?? -1))
+      throw new InstantlyApiError(
+        'Campaign must stay paused during import',
+        409
+      )
+    const chunkCreated: InstantlyPushLeadsResult['created'] = []
     const result = await instantlyAddLeadsBulk(input.apiKey, {
       campaignId: instantlyId,
       leads: chunk,
-      skipIfInWorkspace: input.skipIfInWorkspace !== false,
+      skipIfInWorkspace: input.skipIfInWorkspace === true,
       skipIfInCampaign: true,
-      verifyOnImport: input.verifyOnImport !== false
+      verifyOnImport: input.verifyOnImport === true
     })
     uploaded += Number(result.leads_uploaded) || 0
     instantlySkipped += Number(result.skipped_count) || 0
     invalidEmails += Number(result.invalid_email_count) || 0
     for (const row of result.created_leads ?? []) {
       const email = trim(row.email).toLowerCase()
-      const lead = email ? byEmail.get(email) : payloadLeads[row.index]
-      if (!lead || !row.id) continue
-      created.push({
+      const lead = email
+        ? byEmail.get(email)
+        : Number.isInteger(row.index) &&
+            row.index >= 0 &&
+            row.index < chunk.length
+          ? payloadLeads[offset + row.index]
+          : undefined
+      if (
+        !lead ||
+        !row.id ||
+        !chunk.some((p) => p.email === trim(lead.email).toLowerCase())
+      )
+        continue
+      chunkCreated.push({
         id: lead.id,
         email: trim(lead.email).toLowerCase(),
         instantlyLeadId: row.id
       })
     }
+    created.push(...chunkCreated)
+    offset += chunk.length
+    const stamp = new Date().toISOString()
+    // Persist each returned chunk before another remote request can fail.
+    for (const row of chunkCreated) {
+      const lead = byEmail.get(row.email)
+      const patch: Record<string, unknown> = {
+        instantly_lead_id: row.instantlyLeadId,
+        instantly_campaign_id: instantlyId,
+        instantly_campaign_ids: [instantlyId],
+        instantly_campaign_name: input.campaign.name,
+        instantly_campaign: input.campaign.name,
+        instantly_uploaded_at: stamp,
+        instantly_synced_at: stamp,
+        enrich_status: 'uploaded',
+        updated_at: stamp
+      }
+      if (canStampInInstantly(lead?.outbound_status)) {
+        patch.outbound_status = 'in_instantly'
+      }
+      const { data, error } = await input.supabase
+        .from('lead_contacts')
+        .update(patch)
+        .eq('id', row.id)
+        .in('outbound_status', ['uncontacted', 'in_instantly'])
+        .select('id')
+      if (error)
+        throw new Error(
+          'Import receipt could not be persisted: ' + error.message
+        )
+      if (data?.length) marked += 1
+    }
   }
-
   const stamp = new Date().toISOString()
-  let marked = 0
-  for (const row of created) {
-    const lead = byEmail.get(row.email)
-    const patch: Record<string, unknown> = {
-      instantly_lead_id: row.instantlyLeadId,
-      instantly_campaign_id: instantlyId,
-      instantly_campaign_ids: [instantlyId],
-      instantly_campaign_name: input.campaign.name,
-      instantly_campaign: input.campaign.name,
-      instantly_uploaded_at: stamp,
-      instantly_synced_at: stamp,
-      enrich_status: 'uploaded',
-      updated_at: stamp
-    }
-    if (canStampInInstantly(lead?.outbound_status)) {
-      patch.outbound_status = 'in_instantly'
-    }
-    const { data, error } = await input.supabase
-      .from('lead_contacts')
-      .update(patch)
-      .eq('id', row.id)
-      .select('id')
-    if (!error && data?.length) marked += 1
-  }
 
   if (created.length) {
     await input.supabase.from('compass_pipeline_activity').insert({
@@ -450,9 +542,16 @@ export async function resolveFillCaptureTemplateId(
     search: FILL_CAPTURE_TEMPLATE_SEARCH,
     limit: 50
   })
-  const named = rows.find((row) =>
-    /template/i.test(row.name || '') && /fill/i.test(row.name || '') && /capture/i.test(row.name || '')
-  ) || rows.find((row) => /fill/i.test(row.name || '') && /capture/i.test(row.name || ''))
+  const named =
+    rows.find(
+      (row) =>
+        /template/i.test(row.name || '') &&
+        /fill/i.test(row.name || '') &&
+        /capture/i.test(row.name || '')
+    ) ||
+    rows.find(
+      (row) => /fill/i.test(row.name || '') && /capture/i.test(row.name || '')
+    )
   const id = trim(named?.id)
   if (!id) {
     throw new InstantlyApiError(
@@ -476,11 +575,26 @@ export async function duplicateFillCaptureTemplate(input: {
   bound: boolean
   campaign: CompassCampaign | null
 }> {
-  const templateId = await resolveFillCaptureTemplateId(input.apiKey, input.templateId)
+  if (input.campaign?.offer_key === 'installation-booking')
+    throw new InstantlyApiError(
+      'Historical Fill and Capture templates cannot seed this offer',
+      409
+    )
+  const templateId = await resolveFillCaptureTemplateId(
+    input.apiKey,
+    input.templateId
+  )
   const copyName = trim(input.name) || undefined
-  const duplicated = await instantlyDuplicateCampaign(input.apiKey, templateId, copyName)
-  const instantlyId = trim(duplicated.id) || trim((duplicated as { campaign_id?: string }).campaign_id)
-  if (!instantlyId) throw new InstantlyApiError('Instantly did not return a campaign id', 502)
+  const duplicated = await instantlyDuplicateCampaign(
+    input.apiKey,
+    templateId,
+    copyName
+  )
+  const instantlyId =
+    trim(duplicated.id) ||
+    trim((duplicated as { campaign_id?: string }).campaign_id)
+  if (!instantlyId)
+    throw new InstantlyApiError('Instantly did not return a campaign id', 502)
 
   if (duplicated.status === 1) {
     await instantlyPauseCampaign(input.apiKey, instantlyId)
