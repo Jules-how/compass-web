@@ -60,7 +60,7 @@ function taskToKanban(
   return {
     id: task.id,
     title: task.title,
-    description: task.notes?.trim() || undefined,
+    description: task.notes?.replace(/^daily_setup:[^\n]+\n*/, '').trim() || undefined,
     badge: priority === 1 ? 'Urgent' : priority === 2 ? 'High' : undefined,
     tags,
     dueDate: dueLabel(task.due)
@@ -111,6 +111,7 @@ export function TasksPanel() {
     if (fromColumnId === toColumnId) return
     if (!LANES.some((lane) => lane.id === toColumnId)) return
     setMoveError(null)
+    setNote('Moving task…')
     try {
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
@@ -121,6 +122,7 @@ export function TasksPanel() {
       setNote(`Moved to ${LANES.find((lane) => lane.id === toColumnId)?.title ?? toColumnId}.`)
       await reload(true)
     } catch (err) {
+      setNote(null)
       setMoveError(err instanceof Error ? err.message : 'Move failed')
     }
   }
@@ -141,10 +143,10 @@ export function TasksPanel() {
   return (
     <div className="space-y-6">
       <section className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[12px] text-neutral-500">Drag cards between lanes. Plus adds to that column.</p>
+        <p className="text-[12px] text-neutral-500">Drag cards or use Move to. Plus adds a task to that column.</p>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {note ? <p className="text-[12px] text-emerald-800">{note}</p> : null}
-          {moveError ? <p className="text-[12px] text-red-700">{moveError}</p> : null}
+          {note ? <p role="status" className="text-[12px] text-emerald-800">{note}</p> : null}
+          {moveError ? <p role="alert" className="text-[12px] text-red-700">{moveError}</p> : null}
         </div>
       </section>
 

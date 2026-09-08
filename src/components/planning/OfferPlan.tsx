@@ -85,8 +85,8 @@ export function OfferPlan() {
     ],
   ];
   return (
-    <div className="mx-auto max-w-7xl space-y-5 p-4 md:p-6">
-      <div className="flex flex-wrap justify-between gap-3">
+    <div className="mx-auto max-w-7xl space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="compass-page-title">Offer & economics</h1>
           <p className="compass-page-subtitle">
@@ -104,7 +104,7 @@ export function OfferPlan() {
         </p>
       )}
       <section className="compass-panel p-6">
-        <div className="flex flex-wrap justify-between gap-5">
+        <div className="flex flex-wrap items-start justify-between gap-5">
           <div className="max-w-2xl">
             <p className="compass-section-label">
               Current offer · {offer?.gtm_status || "loading"}

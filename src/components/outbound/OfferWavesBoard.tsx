@@ -80,8 +80,14 @@ function campaignToKanbanTask(
     badge: sending ? 'Sending' : undefined,
     tags: [`${trade} · ${city}`],
     dueDate: goLive || undefined,
-    comments: instantly?.replyCount ?? 0,
-    attachments: instantly?.remaining ?? campaign.wave_list_size ?? undefined,
+    metrics: [
+      ...(instantly ? [{ label: 'Replies', value: instantly.replyCount }] : []),
+      ...(instantly?.remaining != null
+        ? [{ label: 'Remaining', value: instantly.remaining }]
+        : campaign.wave_list_size != null
+          ? [{ label: 'List size', value: campaign.wave_list_size }]
+          : [])
+    ],
     href: `/sales/outbound/editor/${encodeURIComponent(campaign.id)}`,
     externalHref: instantly ? INSTANTLY_CAMPAIGN_APP(instantly.id) : campaign.instantly_campaign_id
       ? INSTANTLY_CAMPAIGN_APP(campaign.instantly_campaign_id)
@@ -236,8 +242,10 @@ export function OfferWavesBoard({ className }: { className?: string }) {
             priority: 'high' as const,
             badge: 'Sending',
             tags: ['Instantly'],
-            comments: instantly?.replyCount,
-            attachments: instantly?.remaining,
+            metrics: instantly ? [
+              { label: 'Replies', value: instantly.replyCount },
+              { label: 'Remaining', value: instantly.remaining }
+            ] : [],
             externalHref: instantly ? INSTANTLY_CAMPAIGN_APP(instantly.id) : undefined,
             draggable: false
           }

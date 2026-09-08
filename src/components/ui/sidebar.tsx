@@ -10,9 +10,10 @@
  */
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import React, { createContext, useContext, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import React, { createContext, useContext, useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
+import { ModalFrame } from '@/components/ui/ModalFrame'
 
 interface Links {
   label: string
@@ -119,11 +120,18 @@ export const MobileSidebar = ({
   ...props
 }: React.ComponentProps<'div'>) => {
   const { open, setOpen } = useSidebar()
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 768px)')
+    const closeOnDesktop = () => { if (desktop.matches) setOpen(false) }
+    closeOnDesktop()
+    desktop.addEventListener('change', closeOnDesktop)
+    return () => desktop.removeEventListener('change', closeOnDesktop)
+  }, [setOpen])
   return (
     <>
       <div
         className={cn(
-          'compass-sidebar flex w-full items-center justify-between border-b border-stone-200/70 px-3 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:hidden'
+          'compass-sidebar flex w-full shrink-0 items-center justify-between border-b border-stone-200/70 px-3 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:hidden'
         )}
         {...props}
       >
@@ -153,37 +161,34 @@ export const MobileSidebar = ({
             aria-label={open ? 'Close navigation' : 'Open navigation'}
             aria-expanded={open}
             aria-controls="compass-mobile-nav"
-            className="rounded-xl p-1.5 text-neutral-700 transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-xl p-2 text-neutral-700 transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40"
             onClick={() => setOpen(!open)}
           >
             <Menu className="h-5 w-5" aria-hidden />
           </button>
         </div>
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              initial={{ x: '-100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: '-100%', opacity: 0 }}
-              transition={{ duration: 0.28, ease: 'easeInOut' }}
-              id="compass-mobile-nav"
-              className={cn(
-                'compass-sidebar fixed inset-0 z-[100] flex h-full w-full flex-col p-6',
-                className
-              )}
-            >
-              <button
-                type="button"
-                aria-label="Close navigation"
-                className="absolute right-6 top-6 z-50 rounded-xl p-1.5 text-neutral-700 transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40"
-                onClick={() => setOpen(!open)}
-              >
-                <X className="h-5 w-5" aria-hidden />
-              </button>
-              {children}
-            </motion.div>
+        <ModalFrame
+          open={open}
+          onClose={() => setOpen(false)}
+          label="Navigation"
+          overlayClassName="md:hidden"
+          contentClassName={cn(
+            'compass-sidebar compass-mobile-drawer fixed inset-0 z-[100] flex h-[100dvh] w-full flex-col p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]',
+            className
           )}
-        </AnimatePresence>
+        >
+          <button
+            type="button"
+            aria-label="Close navigation"
+            className="absolute right-4 top-4 z-50 flex min-h-11 min-w-11 items-center justify-center rounded-xl p-2 text-neutral-700 transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40"
+            onClick={() => setOpen(false)}
+          >
+            <X className="h-5 w-5" aria-hidden />
+          </button>
+          <div id="compass-mobile-nav" className="flex min-h-0 flex-1 flex-col justify-between gap-6">
+            {children}
+          </div>
+        </ModalFrame>
       </div>
     </>
   )
@@ -194,6 +199,7 @@ export const SidebarLink = ({
   className,
   active,
   badge,
+  onClick,
   ...props
 }: {
   link: Links
@@ -201,11 +207,15 @@ export const SidebarLink = ({
   active?: boolean
   badge?: React.ReactNode
 } & Omit<React.ComponentProps<typeof Link>, 'href'>) => {
-  const { open, animate } = useSidebarOptional()
+  const { open, animate, setOpen } = useSidebarOptional()
   return (
     <Link
       href={link.href}
       prefetch
+      onClick={(event) => {
+        if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) setOpen(false)
+        onClick?.(event)
+      }}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'group/sidebar relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[14px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40',
@@ -270,7 +280,7 @@ export const SidebarLabel = ({
         height: animate ? (open ? 'auto' : 0) : 'auto'
       }}
       className={cn(
-        'overflow-hidden px-2.5 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400',
+        'overflow-hidden px-2.5 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500',
         className
       )}
     >

@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { CompassMark } from '@/components/nav-icons'
 import { ConsoleHomeInboxKeepAlive } from '@/components/ConsoleHomeInboxKeepAlive'
 import {
@@ -15,10 +15,10 @@ import {
 import { NavLinks, navKeyFromPathname, type NavKey } from '@/components/NavLinks'
 import SignOutButton from '@/components/SignOutButton'
 import { UndoProvider } from '@/components/UndoProvider'
-import { Sidebar, SidebarBody } from '@/components/ui/sidebar'
+import { Sidebar, SidebarBody, useSidebar } from '@/components/ui/sidebar'
 import { INBOX_CACHE_KEY, type InboxPayload } from '@/lib/inbox-ui'
 import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
-import { loadQueryCache, peekQueryCache } from '@/lib/query-cache'
+import { loadQueryCache, peekQueryCache, subscribeQueryCache } from '@/lib/query-cache'
 import { prefetchJson } from '@/lib/use-cached-json'
 
 const WIDTH = {
@@ -33,6 +33,7 @@ const ConsoleChromeContext = createContext(false)
 
 function Brand({ href = '/home' }: { href?: string }) {
   const consoleNav = useConsoleNav()
+  const { setOpen } = useSidebar()
   return (
     <Link
       href={href}
@@ -41,6 +42,7 @@ function Brand({ href = '/home' }: { href?: string }) {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
         if (event.button !== 0) return
         event.preventDefault()
+        setOpen(false)
         consoleNav.navigate(href)
       }}
       className="group flex items-center gap-2.5 rounded-xl px-1.5 py-1 transition hover:bg-white/60"
@@ -93,7 +95,7 @@ function ConsoleMain({ children }: { children: ReactNode }) {
     <div
       id="compass-main"
       tabIndex={-1}
-      className="flex min-h-0 min-w-0 flex-1 flex-col md:overflow-y-auto md:scrollbar-gutter-stable"
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto scrollbar-gutter-stable"
     >
       {/*
         min-h-full + flex-1 lets flush pages (Inbox, Campaign Planner) fill the
@@ -124,19 +126,17 @@ function OperatorConsoleLayoutInner({
   const viewPath = useConsoleViewPath()
   const operator = isOperatorRole(role)
   const active = useMemo(() => navKeyFromPathname(viewPath), [viewPath])
-  const [inboxCount, setInboxCount] = useState<number | null>(() => {
-    const cached = peekQueryCache<InboxPayload>(INBOX_CACHE_KEY)?.data
-    if (!cached) return null
-    if (typeof cached.badgeTotal === 'number') return cached.badgeTotal
-    if (typeof cached.total === 'number') return cached.total
-    return cached.leads?.length ?? null
-  })
+  const inboxData = useSyncExternalStore(
+    (listener) => subscribeQueryCache(INBOX_CACHE_KEY, listener),
+    () => peekQueryCache<InboxPayload>(INBOX_CACHE_KEY)?.data ?? null,
+    () => null
+  )
+  const inboxCount = inboxData?.badgeTotal ?? inboxData?.total ?? inboxData?.leads?.length ?? null
   // Mobile drawer open state only — desktop sidebar stays permanently expanded.
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     if (!operator) return
-    let cancelled = false
 
     // Prefetch RSC routes only. Eager API prefetch of Instantly / clients /
     // projects / campaigns on every console mount was a thundering herd —
@@ -158,27 +158,12 @@ function OperatorConsoleLayoutInner({
       },
       { force: false }
     )
-      .then((entry) => {
-        if (cancelled || !entry.data) return
-        const body = entry.data
-        const count =
-          typeof body.badgeTotal === 'number'
-            ? body.badgeTotal
-            : typeof body.total === 'number'
-              ? body.total
-              : body.leads?.length ?? null
-        if (typeof count === 'number') setInboxCount(count)
-      })
       .catch(() => {})
-
-    return () => {
-      cancelled = true
-    }
   }, [operator, router])
 
   return (
     <ConsoleChromeContext.Provider value={true}>
-      <div className="compass-shell min-h-dvh md:flex md:h-[100dvh] md:max-h-[100dvh] md:overflow-hidden">
+      <div className="compass-shell flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden md:flex-row">
         <a
           href="#compass-main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[110] focus:rounded-xl focus:bg-white focus:px-3.5 focus:py-2 focus:text-sm focus:font-medium focus:text-neutral-900 focus:shadow-soft"
@@ -230,7 +215,7 @@ function PageMain({
 }) {
   if (flush) {
     return (
-      <main className="flex h-[100dvh] min-h-0 flex-1 flex-col md:h-auto">{children}</main>
+      <main className="flex min-h-0 flex-1 flex-col">{children}</main>
     )
   }
 

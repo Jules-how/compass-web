@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, ChevronDown, Eye, EyeOff, Monitor, Plus, Rocket, Smartphone, X, Zap } from 'lucide-react'
@@ -168,6 +168,9 @@ export function SequenceEditor({
   const [instantlyUnbound, setInstantlyUnbound] = useState(false)
   const [focusField, setFocusField] = useState<string>('body')
   const [componentsWidth, setComponentsWidth] = useState(COMPONENTS_WIDTH_DEFAULT)
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false)
+  const [variablesOpen, setVariablesOpen] = useState(false)
+  const mobileComposeRef = useRef<HTMLButtonElement>(null)
   const [railTab, setRailTab] = useState<'library' | 'pillars' | 'levers'>('library')
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resizeDrag = useRef<{ startX: number; startWidth: number } | null>(null)
@@ -751,8 +754,8 @@ export function SequenceEditor({
   return shell(
     <>
       {/* Top chrome */}
-      <header className="relative z-10 flex shrink-0 flex-wrap items-center gap-3 border-b border-stone-200/80 bg-white px-4 py-3 shadow-soft">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+      <header className="relative z-10 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-stone-200/80 bg-white px-4 py-3 shadow-soft">
+        <div className="flex min-w-0 basis-full items-center gap-2 sm:flex-1 sm:basis-auto">
           <button
             type="button"
             onClick={() => {
@@ -760,11 +763,12 @@ export function SequenceEditor({
               else if (typeof window !== 'undefined') window.history.back()
             }}
             className="rounded-xl p-2 text-neutral-500 transition hover:bg-stone-50 hover:text-neutral-800"
-            aria-label="Close editor"
+            aria-label={variant === 'overlay' ? 'Close editor' : 'Back from editor'}
           >
             {variant === 'overlay' ? <X className="size-4" /> : <ArrowLeft className="size-4" />}
           </button>
           <input
+            aria-label="Campaign name"
             value={campaign.name}
             onChange={(e) => {
               if (instantlyUnbound || !sequence) {
@@ -776,31 +780,12 @@ export function SequenceEditor({
               setCampaign(next)
               scheduleAutosave()
             }}
-            className="min-w-0 flex-1 truncate border-0 bg-transparent text-[15px] font-semibold text-neutral-900 outline-none placeholder:text-neutral-400"
+            className="min-w-0 flex-1 truncate border-0 bg-transparent text-[15px] font-semibold text-neutral-900 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/50 placeholder:text-neutral-400"
             placeholder="Untitled Campaign"
           />
         </div>
 
-        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-0.5 sm:flex">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={cn(
-                'relative px-2.5 py-1.5 text-[13px] font-medium transition md:px-3',
-                tab === t.id ? 'text-neutral-900' : 'text-neutral-500 hover:text-neutral-800'
-              )}
-            >
-              {t.label}
-              {tab === t.id ? (
-                <span className="absolute inset-x-2 -bottom-[11px] h-0.5 rounded-full bg-[#e85d2a]" />
-              ) : null}
-            </button>
-          ))}
-        </nav>
-
-        <div className="flex flex-1 items-center justify-end gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
           <span className="hidden items-center gap-1.5 text-[12px] text-neutral-500 sm:inline-flex">
             <span className="size-1.5 rounded-full bg-stone-300" />
             {campaign.copy_status === 'live' ? 'Live' : 'Draft'}
@@ -810,12 +795,13 @@ export function SequenceEditor({
               Previewing {previewingName}
             </span>
           ) : null}
-          <span className="text-[11px] text-neutral-400">
-            {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Autosave on'}
+          <span role="status" aria-live="polite" aria-atomic="true" className="text-[11px] text-neutral-500">
+            {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : instantlyUnbound ? 'Not linked' : unbound ? 'Autosave on this device' : 'Autosave on'}
           </span>
           <button
             type="button"
             onClick={saveExplicit}
+            disabled={saveState === 'saving' || instantlyUnbound}
             className="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-neutral-800 shadow-soft"
           >
             Save
@@ -839,12 +825,40 @@ export function SequenceEditor({
             {launchBusy ? 'Pushing…' : 'Push to Instantly'}
           </button>
         </div>
+        <nav aria-label="Campaign views" className="flex w-full items-center gap-0.5 overflow-x-auto pb-1">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              aria-pressed={tab === t.id}
+              className={cn(
+                'relative shrink-0 rounded-lg px-2.5 py-2 text-[13px] font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e85d2a] md:px-3',
+                tab === t.id ? 'text-neutral-900' : 'text-neutral-500 hover:text-neutral-800'
+              )}
+            >
+              {t.label}
+              {tab === t.id ? (
+                <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-[#e85d2a]" />
+              ) : null}
+            </button>
+          ))}
+        </nav>
       </header>
+
+      {tab === 'editor' && sequence ? (
+        <nav aria-label="Editor workspace" className="flex shrink-0 gap-1 overflow-x-auto border-b border-stone-200/80 bg-white px-3 py-2 lg:hidden">
+          <button ref={mobileComposeRef} type="button" aria-pressed={!mobileToolsOpen} onClick={() => setMobileToolsOpen(false)} className={cn('shrink-0 rounded-xl px-3 py-2 text-xs font-semibold', !mobileToolsOpen ? 'bg-stone-100 text-neutral-900' : 'text-neutral-500')}>Compose</button>
+          {([['library', 'Library'], ['levers', 'Levers'], ['pillars', 'QA']] as const).map(([id, label]) => (
+            <button key={id} type="button" aria-pressed={mobileToolsOpen && railTab === id} onClick={() => { setRailTab(id); setMobileToolsOpen(true) }} className={cn('shrink-0 rounded-xl px-3 py-2 text-xs font-semibold', mobileToolsOpen && railTab === id ? 'bg-[#e85d2a]/10 text-[#c2410c]' : 'text-neutral-500')}>{label}</button>
+          ))}
+        </nav>
+      ) : null}
 
       <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1">
         {/* Canvas */}
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className={cn("relative flex min-h-0 min-w-0 flex-1 flex-col", tab === 'editor' && mobileToolsOpen && "max-lg:hidden")}>
           {tab === 'archive' && sequence ? (
             <div className="min-h-0 flex-1 overflow-hidden">
               <CopyArchivePanel
@@ -978,6 +992,7 @@ export function SequenceEditor({
                 onFocusSlot={(slotKey) => {
                   setActiveStepId(sequence.steps[0]?.id ?? null)
                   setFocusField(slotKey)
+                  if (mobileToolsOpen) { setMobileToolsOpen(false); mobileComposeRef.current?.focus() }
                 }}
               />
               </div>
@@ -1259,10 +1274,13 @@ export function SequenceEditor({
             <div className="shrink-0 border-t border-stone-200/80 bg-white px-4 py-3 shadow-soft">
               <div className="mx-auto flex max-w-2xl flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+                  <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
                     <Zap className="size-3.5 text-[#e85d2a]" />
-                    Instantly variables
-                    <span className="font-normal normal-case tracking-normal text-neutral-400">
+                    <span className="hidden md:inline">Instantly variables</span>
+                    <button type="button" aria-expanded={variablesOpen} aria-controls="editor-variable-tray" onClick={() => setVariablesOpen((open) => !open)} className="inline-flex items-center gap-1 rounded-lg py-1 md:hidden">
+                      Variables <ChevronDown className={cn('size-3.5 transition-transform', variablesOpen && 'rotate-180')} />
+                    </button>
+                    <span className="hidden font-normal normal-case tracking-normal text-neutral-500 sm:inline">
                       · insert into {focusField === 'subject' ? 'subject' : focusField === 'body' ? 'body' : focusField}
                     </span>
                   </div>
@@ -1296,6 +1314,7 @@ export function SequenceEditor({
                       type="button"
                       title="Desktop width"
                       aria-label="Desktop width"
+                      aria-pressed={previewDevice === 'desktop'}
                       onClick={() => setPreviewDevice('desktop')}
                       className={cn(
                         'rounded-xl p-1.5 text-neutral-400 transition hover:bg-stone-50 hover:text-neutral-700',
@@ -1308,6 +1327,7 @@ export function SequenceEditor({
                       type="button"
                       title="Mobile width"
                       aria-label="Mobile width"
+                      aria-pressed={previewDevice === 'mobile'}
                       onClick={() => setPreviewDevice('mobile')}
                       className={cn(
                         'rounded-xl p-1.5 text-neutral-400 transition hover:bg-stone-50 hover:text-neutral-700',
@@ -1318,7 +1338,7 @@ export function SequenceEditor({
                     </button>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div id="editor-variable-tray" className={cn("max-h-32 flex-wrap gap-1.5 overflow-y-auto md:flex md:max-h-none", variablesOpen ? "flex" : "hidden")}>
                   {INSTANTLY_BASE_VARIABLES.map((variable) => (
                     <button
                       key={variable.key}
@@ -1339,22 +1359,35 @@ export function SequenceEditor({
         {/* Right accordion rail */}
         {tab === 'editor' && sequence ? (
           <aside
-            className="relative hidden shrink-0 border-l border-stone-200/80 bg-white lg:flex lg:flex-col"
-            style={{ width: componentsWidth }}
+            aria-label="Writing tools"
+            className={cn("relative min-h-0 w-full flex-col border-stone-200/80 bg-white lg:flex lg:w-[var(--components-width)] lg:max-w-[55%] lg:shrink-0 lg:border-l", mobileToolsOpen ? "flex" : "hidden")}
+            style={{ '--components-width': `${componentsWidth}px` } as CSSProperties}
           >
             <div
               role="separator"
               aria-orientation="vertical"
               aria-label="Resize components panel"
+              tabIndex={0}
+              aria-valuemin={COMPONENTS_WIDTH_MIN}
+              aria-valuemax={COMPONENTS_WIDTH_MAX}
+              aria-valuenow={componentsWidth}
+              onKeyDown={(event) => {
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+                event.preventDefault()
+                const width = event.key === 'Home' ? COMPONENTS_WIDTH_MIN : event.key === 'End' ? COMPONENTS_WIDTH_MAX
+                  : Math.max(COMPONENTS_WIDTH_MIN, Math.min(COMPONENTS_WIDTH_MAX, componentsWidth + (event.key === 'ArrowLeft' ? 40 : -40)))
+                setComponentsWidth(width)
+                try { window.localStorage.setItem(COMPONENTS_WIDTH_KEY, String(width)) } catch { /* Optional local preference. */ }
+              }}
               onMouseDown={(e) => {
                 e.preventDefault()
                 resizeDrag.current = { startX: e.clientX, startWidth: componentsWidthRef.current }
                 document.body.style.cursor = 'col-resize'
                 document.body.style.userSelect = 'none'
               }}
-              className="absolute inset-y-0 -left-1 z-10 w-2 cursor-col-resize"
+              className="absolute inset-y-0 -left-1 z-10 hidden w-2 cursor-col-resize focus-visible:bg-[#e85d2a]/20 focus-visible:outline-none lg:block"
             />
-            <div className="flex shrink-0 gap-0.5 border-b border-stone-100 bg-stone-50/80 px-2 py-1.5">
+            <div className="hidden shrink-0 gap-0.5 border-b border-stone-100 bg-stone-50/80 px-2 py-1.5 lg:flex">
               {(
                 [
                   ['library', 'Library'],
@@ -1366,6 +1399,7 @@ export function SequenceEditor({
                   key={id}
                   type="button"
                   onClick={() => setRailTab(id)}
+                  aria-pressed={railTab === id}
                   className={cn(
                     'rounded-xl px-2.5 py-1 text-[11px] font-semibold',
                     railTab === id
@@ -1390,7 +1424,10 @@ export function SequenceEditor({
               <PillarsQaInspector sequence={sequence} className="min-h-0 flex-1" />
             ) : (
               <EditorComponentsAccordion
-                onInsert={(payload) => void applyLibraryPayload(payload)}
+                onInsert={(payload) => {
+                  void applyLibraryPayload(payload)
+                  if (mobileToolsOpen) { setMobileToolsOpen(false); mobileComposeRef.current?.focus() }
+                }}
                 className="min-h-0 flex-1"
                 campaignContext={{
                   offer_key: campaign?.offer_key ?? null,
@@ -1406,7 +1443,7 @@ export function SequenceEditor({
 
       {tab === 'editor' && showLeadsPane ? (
         <div
-          className="flex shrink-0 flex-col border-t border-stone-200/80 bg-white"
+          className={cn("flex shrink-0 flex-col border-t border-stone-200/80 bg-white", mobileToolsOpen && "max-lg:hidden")}
           style={{ height: leadsCollapsed ? 40 : `${leadsHeightVh}vh` }}
         >
           <div className="flex shrink-0 items-center gap-2 border-b border-stone-100 px-3 py-1.5">

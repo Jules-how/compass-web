@@ -83,7 +83,11 @@ export function ConsoleNavProvider({ children }: { children: ReactNode }) {
     (href: string) => {
       const next = pathKey(href)
       const current = pathKey(optimisticPath ?? pathname)
-      if (next === current) return
+      if (next === current) {
+        const currentHref = window.location.pathname + window.location.search + window.location.hash
+        if (href !== currentHref) router.push(href)
+        return
+      }
 
       // Instantly swap only when the destination is a keep-alive surface.
       // Leaving those routes stays on the current panel until the real RSC

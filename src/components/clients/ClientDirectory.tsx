@@ -151,14 +151,16 @@ export function ClientDirectory({
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-1 items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            type="search"
+            aria-label="Search clients"
             placeholder="Search clients…"
             className="compass-input max-w-sm"
           />
-          <span className="text-xs tabular-nums text-neutral-500">{filtered.length} active</span>
+          <span className="shrink-0 text-xs tabular-nums text-neutral-500">{filtered.length} {filtered.length === 1 ? 'client' : 'clients'}</span>
         </div>
         <button
           type="button"
@@ -302,6 +304,9 @@ export function ClientDirectory({
               <div className="flex items-start justify-between gap-3">
                 <h3 className="font-display text-base font-semibold text-neutral-900">
                   {client.name}
+                  {client.tags?.includes('cs-demo') ? (
+                    <span className="ml-2 inline-flex rounded-md bg-amber-50 px-2 py-0.5 align-middle text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-200">Demo</span>
+                  ) : null}
                 </h3>
                 <span className="shrink-0 rounded-md bg-stone-50 px-2 py-0.5 text-[11px] font-medium text-neutral-600 ring-1 ring-inset ring-stone-200/80">
                   {clientStatusLabel(client.status)}

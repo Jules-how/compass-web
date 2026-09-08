@@ -166,8 +166,9 @@ test('operator console uses persistent layout with animated sidebar and sales ov
   assert.match(navLinks, /prefetchJson/)
   assert.match(shell, /ConsoleHomeInboxKeepAlive/)
   assert.match(shell, /ConsoleNavProvider/)
-  assert.match(shell, /md:h-\[100dvh\]/)
-  assert.match(shell, /md:overflow-y-auto/)
+  // The mobile header and main content now share one viewport-height shell.
+  assert.match(shell, /compass-shell flex h-\[100dvh\]/)
+  assert.match(shell, /overflow-y-auto scrollbar-gutter-stable/)
   assert.match(shell, /scrollbar-gutter-stable/)
   assert.match(shell, /mx-auto w-full/)
   assert.match(read('src/components/TaskList.tsx'), /role="tablist"/)

@@ -687,8 +687,9 @@ export function ClientDetailPanel({
                 <div>Next action: {client.next_action || 'No open issues'}</div>
                 <div>Last touch: {formatRelativeTouch(client.last_touch_at)}</div>
                 <div>
-                  Progress: {issueProgress.completed}% complete · {issueProgress.started} started ·{' '}
-                  {issueProgress.total} scoped
+                  {issueProgress.total === 0
+                    ? 'Progress: No work scoped'
+                    : `Progress: ${issueProgress.percent}% complete · ${issueProgress.started} started · ${issueProgress.total} scoped`}
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
@@ -721,17 +722,19 @@ export function ClientDetailPanel({
               <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
                 Progress
               </div>
-              <div className="mt-2 flex items-center gap-3">
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-stone-100">
-                  <div
-                    className="h-full rounded-full bg-sf-orange"
-                    style={{ width: `${issueProgress.percent}%` }}
-                  />
+              {issueProgress.total > 0 ? (
+                <div className="mt-2 flex items-center gap-3">
+                  <div role="progressbar" aria-label="Scoped work complete" aria-valuemin={0} aria-valuemax={100} aria-valuenow={issueProgress.percent} className="h-2 flex-1 overflow-hidden rounded-full bg-stone-100">
+                    <div
+                      className="h-full rounded-full bg-sf-orange"
+                      style={{ width: `${issueProgress.percent}%` }}
+                    />
+                  </div>
+                  <span className="text-sm tabular-nums text-neutral-700">
+                    {formatPercentComplete(issueProgress.percent)}
+                  </span>
                 </div>
-                <span className="text-sm tabular-nums text-neutral-700">
-                  {formatPercentComplete(issueProgress.percent)}
-                </span>
-              </div>
+              ) : <p className="mt-2 text-sm text-neutral-600">No work scoped</p>}
               <p className="mt-2 text-xs text-neutral-500">
                 Scope {issueProgress.total} · Started {issueProgress.started} · Completed{' '}
                 {issueProgress.completed}

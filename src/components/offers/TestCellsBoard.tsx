@@ -55,6 +55,7 @@ function Chip({
           : 'border-stone-200/80 bg-white text-neutral-600 shadow-soft hover:bg-stone-50'
       )}
       onClick={onClick}
+      aria-pressed={on}
     >
       {children}
     </button>
@@ -170,7 +171,7 @@ export function TestCellsBoard({
         <label className="text-xs">
           <span className="mb-1.5 block text-neutral-600">Offer</span>
           <select
-            className="compass-input h-9 bg-white"
+            className="compass-input h-9 !py-1.5 bg-white"
             value={offerKey}
             onChange={(e) => selectOffer(e.target.value)}
           >
@@ -184,7 +185,7 @@ export function TestCellsBoard({
         <label className="text-xs">
           <span className="mb-1.5 block text-neutral-600">Variable under test</span>
           <select
-            className="compass-input h-9 bg-white"
+            className="compass-input h-9 !py-1.5 bg-white"
             value={testingVariable}
             onChange={(e) => setTestingVariable(e.target.value)}
           >
@@ -198,7 +199,7 @@ export function TestCellsBoard({
         <label className="text-xs">
           <span className="mb-1.5 block text-neutral-600">Clone copy from</span>
           <select
-            className="compass-input h-9 bg-white"
+            className="compass-input h-9 !py-1.5 bg-white"
             value={cloneId}
             onChange={(e) => setCloneId(e.target.value)}
           >
@@ -213,7 +214,7 @@ export function TestCellsBoard({
         <label className="text-xs">
           <span className="mb-1.5 block text-neutral-600">Target sends (optional)</span>
           <input
-            className="compass-input h-9 bg-white"
+            className="compass-input h-9 !py-1.5 bg-white"
             inputMode="numeric"
             placeholder="Keep volume equal"
             value={target}
@@ -259,7 +260,7 @@ export function TestCellsBoard({
       <label className="block text-xs">
         <span className="mb-1.5 block text-neutral-600">Hypothesis for new cells</span>
         <input
-          className="compass-input h-9"
+          className="compass-input h-9 !py-1.5"
           placeholder="Optional. Same line on every new cell."
           value={hypothesis}
           onChange={(e) => setHypothesis(e.target.value)}
@@ -271,11 +272,19 @@ export function TestCellsBoard({
           type="button"
           className="compass-btn-primary"
           disabled={busy || missing.length === 0}
+          aria-describedby={missing.length === 0 ? 'test-cell-creation-help' : undefined}
           onClick={() => void createSlots(pickedVerticals, pickedCities)}
         >
           {busy ? 'Creating…' : `Create ${missing.length} missing cell${missing.length === 1 ? '' : 's'}`}
         </button>
-        {error ? <p className="text-sm text-red-700">{error}</p> : null}
+        {missing.length === 0 ? (
+          <p id="test-cell-creation-help" className="text-sm text-neutral-500">
+            {!offerKey ? 'Choose an offer to plan cells.' : pickedVerticals.length === 0 || pickedCities.length === 0
+              ? 'Select at least one vertical and one city to create cells.'
+              : 'Every selected vertical and city combination already has a campaign cell.'}
+          </p>
+        ) : null}
+        {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
       </div>
 
       {pickedVerticals.length > 0 && pickedCities.length > 0 ? (
@@ -323,7 +332,7 @@ export function TestCellsBoard({
         </div>
         <div className="flex flex-wrap gap-2">
           <select
-            className="compass-input h-8 min-w-[8rem] px-3 text-xs"
+            className="compass-input h-8 !py-1 min-w-[8rem] px-3 text-xs"
             value={offerFilter}
             onChange={(e) => setOfferFilter(e.target.value)}
             aria-label="Filter offer"
@@ -336,7 +345,7 @@ export function TestCellsBoard({
             ))}
           </select>
           <select
-            className="compass-input h-8 min-w-[7rem] px-3 text-xs"
+            className="compass-input h-8 !py-1 min-w-[7rem] px-3 text-xs"
             value={verticalFilter}
             onChange={(e) => setVerticalFilter(e.target.value)}
             aria-label="Filter vertical"
@@ -349,7 +358,7 @@ export function TestCellsBoard({
             ))}
           </select>
           <select
-            className="compass-input h-8 min-w-[7rem] px-3 text-xs"
+            className="compass-input h-8 !py-1 min-w-[7rem] px-3 text-xs"
             value={cityFilter}
             onChange={(e) => setCityFilter(e.target.value)}
             aria-label="Filter city"
@@ -365,7 +374,7 @@ export function TestCellsBoard({
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-sm text-neutral-500">No cells yet. Create missing cells above.</p>
+        <p className="text-sm text-neutral-500">{cells.length === 0 ? 'No cells yet. Create missing cells above.' : 'No cells match these filters. Try another offer, vertical or city.'}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[52rem] text-left text-xs">

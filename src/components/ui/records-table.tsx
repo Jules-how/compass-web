@@ -313,6 +313,7 @@ export default function RecordsTable({
                   <th
                     key={id}
                     className="records-header-cell records-resizable"
+                    aria-sort={active ? (sort.dir === 1 ? 'ascending' : 'descending') : undefined}
                     draggable={Boolean(onColumnsChange)}
                     onDragStart={(event) => {
                       if (!onColumnsChange) return
@@ -350,7 +351,6 @@ export default function RecordsTable({
                             : { key: id, dir: 1 }
                         )
                       }
-                      aria-sort={active ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}
                     >
                       <span className="records-header-icon">{COLUMN_ICONS[id]}</span>
                       <span className="truncate">{def?.label ?? id}</span>

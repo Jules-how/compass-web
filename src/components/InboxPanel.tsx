@@ -5,11 +5,13 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
   type ReactNode
 } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useConsoleViewPath } from '@/components/ConsoleNav'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import {
   countActionableBadge,
@@ -34,9 +36,10 @@ import { useCachedJson } from '@/lib/use-cached-json'
 import { useUndo } from '@/components/UndoProvider'
 import { cn } from '@/lib/utils'
 
-function replaceInboxUrl(pathname: string, params: URLSearchParams) {
-  const url = `${pathname}?${params.toString()}`
-  window.history.replaceState(window.history.state, '', url)
+function replaceInboxUrl(params: URLSearchParams) {
+  const url = `/inbox?${params.toString()}`
+  // Fresh state lets Next update useSearchParams without a server round-trip.
+  window.history.replaceState(null, '', url)
 }
 
 const EMPTY_COPY: Record<InboxTab, { title: string; body: string }> = {
@@ -109,6 +112,7 @@ function NotificationRow({
   return (
     <button
       type="button"
+      id={`inbox-row-${item.id}`}
       onClick={onSelect}
       aria-current={selected ? 'true' : undefined}
       className={cn(
@@ -463,10 +467,22 @@ function applyOptimisticInboxUpdate(
 export function InboxPanel() {
   const router = useRouter()
   const pathname = usePathname()
+  const viewPath = useConsoleViewPath()
+  const activeRoute = pathname === '/inbox' && viewPath === '/inbox'
   const searchParams = useSearchParams()
   const tab = parseInboxTab(searchParams.get('tab'))
   const selectedParam = searchParams.get('id')
   const [mobileShowContext, setMobileShowContext] = useState(false)
+  const backButton = useRef<HTMLButtonElement>(null)
+  const returnToList = useRef(false)
+  useEffect(() => {
+    if (!window.matchMedia('(max-width: 1023px)').matches) return
+    if (mobileShowContext) backButton.current?.focus()
+    else if (returnToList.current) {
+      document.getElementById(`inbox-row-${selectedParam}`)?.focus()
+      returnToList.current = false
+    }
+  }, [mobileShowContext, selectedParam])
   const [suggestion, setSuggestion] = useState<InboxSuggestion | null>(null)
   const [busy, startTransition] = useTransition()
   const [actionError, setActionError] = useState<string | null>(null)
@@ -490,12 +506,12 @@ export function InboxPanel() {
   const selected = items.find((item) => item.id === selectedId) ?? null
 
   useEffect(() => {
-    if (selectedParam || !items[0]?.id) return
+    if (!activeRoute || selectedParam || !items[0]?.id) return
     const params = new URLSearchParams()
     params.set('tab', tab)
     params.set('id', items[0].id)
-    replaceInboxUrl(pathname, params)
-  }, [items, pathname, selectedParam, tab])
+    replaceInboxUrl(params)
+  }, [activeRoute, items, pathname, selectedParam, tab])
 
   const loadSuggestion = useCallback(async (item: InboxItem, signal?: AbortSignal) => {
     setSuggestion(null)
@@ -528,14 +544,14 @@ export function InboxPanel() {
   }, [])
 
   useEffect(() => {
-    if (!selected) {
+    if (!activeRoute || !selected) {
       setSuggestion(null)
       return
     }
     const controller = new AbortController()
     void loadSuggestion(selected, controller.signal)
     return () => controller.abort()
-  }, [selected, loadSuggestion])
+  }, [activeRoute, selected, loadSuggestion])
 
   function setTab(next: InboxTab) {
     if (next === tab) return
@@ -544,7 +560,7 @@ export function InboxPanel() {
     setMobileShowContext(false)
     // Transition keeps the previous list painted while the URL/selection updates.
     startTransition(() => {
-      replaceInboxUrl(pathname, params)
+      replaceInboxUrl(params)
     })
   }
 
@@ -554,7 +570,7 @@ export function InboxPanel() {
     params.set('id', item.id)
     setMobileShowContext(true)
     startTransition(() => {
-      replaceInboxUrl(pathname, params)
+      replaceInboxUrl(params)
     })
     if (item.unread) {
       void patchTriage(item, 'read', { silent: true })
@@ -777,12 +793,12 @@ export function InboxPanel() {
   return (
     <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4">
       <div className="compass-panel flex min-h-0 flex-1 flex-col overflow-hidden text-neutral-900">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-stone-100 px-5">
+      <header className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-4 py-2.5">
         <div className="min-w-0">
           <h1 className="compass-page-title-compact">Inbox</h1>
           <p className="truncate text-[12px] text-neutral-500">{INBOX_TAB_HINTS[tab]}</p>
         </div>
-        <div className="rounded-xl bg-stone-50 px-2 py-1 text-[12px] tabular-nums text-neutral-500 ring-1 ring-stone-200/70">
+        <div className="shrink-0 rounded-xl bg-stone-50 px-2 py-1 text-[12px] tabular-nums text-neutral-500 ring-1 ring-stone-200/70">
           {data.badgeTotal} need{data.badgeTotal === 1 ? 's' : ''} you · {items.length} shown
         </div>
       </header>
@@ -829,7 +845,21 @@ export function InboxPanel() {
               key={key}
               type="button"
               role="tab"
+              id={`inbox-tab-${key}`}
               aria-selected={active}
+              aria-controls={`inbox-panel-${key}`}
+              tabIndex={active ? 0 : -1}
+              onKeyDown={(event) => {
+                const index = INBOX_TABS.indexOf(key)
+                const nextIndex = event.key === 'ArrowRight' ? (index + 1) % INBOX_TABS.length
+                  : event.key === 'ArrowLeft' ? (index + INBOX_TABS.length - 1) % INBOX_TABS.length
+                    : event.key === 'Home' ? 0 : event.key === 'End' ? INBOX_TABS.length - 1 : null
+                if (nextIndex === null) return
+                event.preventDefault()
+                const next = INBOX_TABS[nextIndex]
+                setTab(next)
+                document.getElementById(`inbox-tab-${next}`)?.focus()
+              }}
               onClick={() => setTab(key)}
               className={cn(
                 'compass-seg-btn inline-flex shrink-0 items-center gap-1.5',
@@ -856,11 +886,11 @@ export function InboxPanel() {
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1">
+      <div role="tabpanel" id={`inbox-panel-${tab}`} aria-labelledby={`inbox-tab-${tab}`} className="flex min-h-0 flex-1">
         <section
           className={cn(
-            'flex min-h-0 w-full shrink-0 flex-col border-neutral-200/80 md:w-[340px] md:border-r lg:w-[380px]',
-            mobileShowContext ? 'hidden md:flex' : 'flex'
+            'flex min-h-0 w-full shrink-0 flex-col border-neutral-200/80 lg:w-[340px] lg:border-r xl:w-[380px]',
+            mobileShowContext ? 'hidden lg:flex' : 'flex'
           )}
         >
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -888,15 +918,19 @@ export function InboxPanel() {
         <section
           className={cn(
             'min-h-0 min-w-0 flex-1 bg-white',
-            mobileShowContext ? 'flex' : 'hidden md:flex'
+            mobileShowContext ? 'flex' : 'hidden lg:flex'
           )}
         >
           <div className="flex min-h-0 w-full flex-col">
             {mobileShowContext ? (
               <button
                 type="button"
-                className="border-b border-neutral-200 px-4 py-2 text-left text-[13px] text-neutral-600 md:hidden"
-                onClick={() => setMobileShowContext(false)}
+                ref={backButton}
+                className="border-b border-neutral-200 px-4 py-2 text-left text-[13px] text-neutral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c2410c] lg:hidden"
+                onClick={() => {
+                  returnToList.current = true
+                  setMobileShowContext(false)
+                }}
               >
                 ← Back to inbox
               </button>

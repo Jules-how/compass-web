@@ -104,7 +104,7 @@ body {
     background: var(--compass-accent);
   }
 
-  .compass-btn-primary:hover {
+  .compass-btn-primary:hover:not(:disabled) {
     background: var(--compass-accent-hover);
   }
 
@@ -112,7 +112,11 @@ body {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--compass-accent) 40%, white);
   }
 
-  .compass-btn-primary:disabled {
+  .compass-btn:disabled,
+  .compass-btn-primary:disabled,
+  .compass-btn-secondary:disabled,
+  .compass-btn-ghost:disabled,
+  .compass-seg-btn:disabled {
     @apply cursor-not-allowed opacity-50;
   }
 
@@ -121,7 +125,7 @@ body {
     border-color: var(--compass-line-strong);
   }
 
-  .compass-btn-secondary:hover {
+  .compass-btn-secondary:hover:not(:disabled) {
     @apply bg-stone-50 text-neutral-900;
   }
 
@@ -129,12 +133,12 @@ body {
     @apply compass-btn text-neutral-600;
   }
 
-  .compass-btn-ghost:hover {
+  .compass-btn-ghost:hover:not(:disabled) {
     @apply bg-white/80 text-neutral-900;
   }
 
   .compass-section-label {
-    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400;
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500;
   }
 
   .compass-page-title {
@@ -218,6 +222,11 @@ body {
   max-height: calc(100dvh - 11.5rem);
   overflow: auto;
   outline: none;
+}
+
+.records-scroll:focus-visible {
+  outline: 2px solid var(--compass-accent-hover);
+  outline-offset: -2px;
 }
 
 .records-shell-fill .records-scroll {
@@ -541,6 +550,11 @@ body {
   color: white;
 }
 
+.records-checkbox input:focus-visible + .records-checkbox-box {
+  outline: 2px solid var(--compass-accent-hover);
+  outline-offset: 3px;
+}
+
 .records-checkbox-box.is-active {
   border-color: var(--compass-accent);
   background: var(--compass-accent);
@@ -571,6 +585,15 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
+}
+
+@keyframes compass-nav-enter {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.compass-mobile-drawer[data-state="open"] {
+  animation: compass-nav-enter 0.28s ease-in-out;
 }
 
 @media (prefers-reduced-motion: reduce) {

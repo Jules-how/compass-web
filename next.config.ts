@@ -2,6 +2,9 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  outputFileTracingIncludes: {
+    '/api/delivery-dept/**/*': ['./src/lib/delivery-dept/*.json']
+  },
   reactStrictMode: true,
   transpilePackages: ['@switchflow/compass-core'],
   // Keep the Next.js badge off the sidebar Sign out control.

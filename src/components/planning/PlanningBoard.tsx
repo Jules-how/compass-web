@@ -7,6 +7,14 @@ const today = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }).format(
     new Date(),
   );
+const displayNumber = (value: unknown) =>
+  value == null || value === "" ? "Unknown" : Number.isFinite(Number(value))
+    ? new Intl.NumberFormat("en-AU").format(Number(value)) : String(value);
+const displayDate = (value: string) => {
+  if (!value) return "No due date";
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric" }).format(date);
+};
 const empty = (kind: string): Record<string, any> =>
   kind === "goal"
     ? {
@@ -165,8 +173,8 @@ export function PlanningBoard() {
       JSON.stringify(r.data).toLowerCase().includes(query.toLowerCase()),
   );
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-5 p-4 md:p-6">
-      <div className="flex flex-wrap justify-between gap-4">
+    <div className="mx-auto w-full max-w-7xl space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="compass-page-title">Goals & notes</h1>
           <p className="compass-page-subtitle">
@@ -174,7 +182,7 @@ export function PlanningBoard() {
             distinct.
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Link className="compass-btn-secondary" href="/sales/offer-plan">
             Offer & economics
           </Link>
@@ -277,11 +285,11 @@ export function PlanningBoard() {
               {kind === "goal" ? (
                 <>
                   <p className="mt-2 text-sm text-neutral-600">
-                    {r.data.period} · due {r.data.due} ·{" "}
-                    {r.data.actual ?? "Unknown"} / {r.data.regular}{" "}
+                    {r.data.period} · {r.data.due ? `due ${displayDate(r.data.due)}` : "No due date"} ·{" "}
+                    {displayNumber(r.data.actual)} / {displayNumber(r.data.regular)}{" "}
                     {r.data.unit}
                     {r.data.stretch != null
-                      ? ` · stretch ${r.data.stretch}`
+                      ? ` · stretch ${displayNumber(r.data.stretch)}`
                       : ""}
                   </p>
                   {r.data.parentId && (
@@ -318,7 +326,7 @@ export function PlanningBoard() {
               Previous
             </button>
             <span>
-              {total} records · page {page + 1}
+              {total} {total === 1 ? 'record' : 'records'} · page {page + 1}
             </span>
             <button
               disabled={(page + 1) * 100 >= total}
@@ -503,7 +511,7 @@ export function PlanningBoard() {
                   onChange={(e) => change("links", e.target.value)}
                 />
               </label>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <button disabled={busy} className="compass-btn-primary">
                   {busy ? "Saving…" : "Save"}
                 </button>

@@ -6,12 +6,14 @@ export default function PasswordLoginForm({ invitationId }: { invitationId?: str
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState<'idle' | 'signing_in' | 'error'>('idle')
+  const [credentialsInvalid, setCredentialsInvalid] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     setStatus('signing_in')
     setError(null)
+    setCredentialsInvalid(false)
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -24,13 +26,17 @@ export default function PasswordLoginForm({ invitationId }: { invitationId?: str
         error?: string
       }
       if (!response.ok || !body.ok || !body.redirectTo) {
-        setError('Email or password is incorrect.')
+        const rejected = response.status === 401
+        setCredentialsInvalid(rejected)
+        setError(rejected ? 'Email or password is incorrect.'
+          : response.status === 429 ? 'Too many sign-in attempts. Please wait a moment and try again.'
+            : 'Sign-in is temporarily unavailable. Please try again shortly.')
         setStatus('error')
         return
       }
       window.location.assign(body.redirectTo)
     } catch {
-      setError('Email or password is incorrect.')
+      setError('Could not connect. Check your connection and try again.')
       setStatus('error')
     }
   }
@@ -49,7 +55,7 @@ export default function PasswordLoginForm({ invitationId }: { invitationId?: str
           placeholder="you@example.com"
           autoComplete="email"
           spellCheck={false}
-          aria-invalid={status === 'error'}
+          aria-invalid={credentialsInvalid}
           aria-describedby={error ? 'login-error' : undefined}
           className="compass-input"
           disabled={status === 'signing_in'}
@@ -68,7 +74,7 @@ export default function PasswordLoginForm({ invitationId }: { invitationId?: str
           placeholder="••••••••"
           autoComplete="current-password"
           spellCheck={false}
-          aria-invalid={status === 'error'}
+          aria-invalid={credentialsInvalid}
           aria-describedby={error ? 'login-error' : undefined}
           className="compass-input"
           disabled={status === 'signing_in'}

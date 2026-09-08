@@ -135,6 +135,8 @@ export function FunctionManager({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            type="search"
+            aria-label="Search functions"
             placeholder="Search functions…"
             className="compass-input max-w-sm"
           />
@@ -166,6 +168,8 @@ export function FunctionManager({
           <input
             autoFocus
             type="text"
+            aria-label="Function name"
+            required
             placeholder="Function name"
             value={name}
             onChange={(e) => {

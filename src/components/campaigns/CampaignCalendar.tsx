@@ -26,6 +26,7 @@ import {
   goLiveFallsInPeriod,
   hourLabel,
   layoutWeekBars,
+  layoutTimedEvents,
   minutesFromMidnight,
   monthWeeks,
   nextOpenGoLiveAt,
@@ -535,6 +536,11 @@ function TimedDayColumn({
   onDropInventory?: (goLiveAt: string, card: InventoryCard) => void
   suppressClick: { current: boolean }
 }) {
+  const timedEvents = layoutTimedEvents(campaigns.flatMap((campaign) => {
+    const minutes = minutesFromMidnight(campaign.go_live_at)
+    return minutes == null ? [] : [{ id: campaign.id, minutes }]
+  }))
+  const eventLanes = new Map(timedEvents.map((event) => [event.id, event]))
   return (
     <div
       className={`relative min-w-0 overflow-hidden border-r border-neutral-100 last:border-r-0 ${
@@ -566,6 +572,9 @@ function TimedDayColumn({
         const minutes = minutesFromMidnight(campaign.go_live_at)
         if (minutes == null) return null
         const dragging = drag?.id === campaign.id
+        const placement = eventLanes.get(campaign.id)
+        const laneCount = placement?.laneCount ?? 1
+        const lane = placement?.lane ?? 0
         return (
           <div
             key={campaign.id}
@@ -573,8 +582,8 @@ function TimedDayColumn({
             style={{
               top: eventOffsetPx(minutes) + (CALENDAR_HOUR_HEIGHT - CALENDAR_EVENT_HEIGHT) / 2,
               height: CALENDAR_EVENT_HEIGHT,
-              left: 2,
-              right: 2
+              left: `calc(${(lane / laneCount) * 100}% + 2px)`,
+              width: `calc(${100 / laneCount}% - 4px)`
             }}
           >
             <EventChip

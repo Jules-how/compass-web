@@ -9,6 +9,7 @@ import type {
   TaskType
 } from '@/lib/types'
 import { TASK_STATUSES, TASK_TYPES } from '@/lib/types'
+import { ModalFrame } from '@/components/ui/ModalFrame'
 import NotesEditor from '@/components/NotesEditor'
 import { TASK_PRIORITIES } from '@/lib/task-priority'
 
@@ -58,14 +59,6 @@ export default function TaskDetailPanel({
     setError(null)
   }, [task])
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   const projectOptions = Object.values(projectsById).sort((a, b) => a.name.localeCompare(b.name))
   const bfOptions = Object.values(businessFunctionsById).sort((a, b) => a.sort_order - b.sort_order)
 
@@ -103,172 +96,166 @@ export default function TaskDetailPanel({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-950/40 px-4 py-10 sm:py-16">
-      <button
-        type="button"
-        className="absolute inset-0 cursor-default"
-        aria-label="Close task"
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="task-detail-title"
-        className="relative z-10 w-full max-w-2xl rounded-2xl border border-stone-200/80 bg-white p-5 shadow-soft"
-      >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-              Task
-            </p>
-            <h2 id="task-detail-title" className="text-lg font-semibold text-neutral-900">
-              Edit task
-            </h2>
-          </div>
+    <ModalFrame
+      open
+      onClose={onClose}
+      labelledBy="task-detail-title"
+      overlayClassName="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-950/40 px-4 py-10 sm:py-16"
+      contentClassName="relative z-10 w-full max-w-2xl rounded-2xl border border-stone-200/80 bg-white p-5 shadow-soft"
+    >
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+            Task
+          </p>
+          <h2 id="task-detail-title" className="text-lg font-semibold text-neutral-900">
+            Edit task
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-xl border border-stone-200 px-2.5 py-1.5 text-xs text-neutral-600 transition hover:bg-stone-50"
+        >
+          Close
+        </button>
+      </div>
+
+      <form onSubmit={handleSave} className="space-y-4">
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-neutral-500">Title</span>
+          <input
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="compass-input"
+            disabled={saving}
+          />
+        </label>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-neutral-500">Status</span>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as TaskStatus)}
+              className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
+              disabled={saving}
+            >
+              {TASK_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-neutral-500">Priority</span>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(Number(e.target.value))}
+              className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
+              disabled={saving}
+            >
+              {TASK_PRIORITIES.map((row) => (
+                <option key={row.value} value={row.value}>
+                  {row.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-neutral-500">Due</span>
+            <input
+              type="date"
+              value={due}
+              onChange={(e) => setDue(e.target.value)}
+              className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
+              disabled={saving}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-neutral-500">Project</span>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
+              disabled={saving}
+            >
+              <option value="">—</option>
+              {projectOptions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-neutral-500">Function</span>
+            <select
+              value={businessFunctionId}
+              onChange={(e) => setBusinessFunctionId(e.target.value)}
+              className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
+              disabled={saving}
+            >
+              <option value="">—</option>
+              {bfOptions.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-neutral-500">Type</span>
+            <select
+              value={taskType}
+              onChange={(e) => setTaskType(e.target.value as TaskType | '')}
+              className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
+              disabled={saving}
+            >
+              <option value="">—</option>
+              {TASK_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-neutral-500">
+            Definition of done / notes
+          </span>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            className="compass-input"
+            disabled={saving}
+            placeholder="What done looks like"
+          />
+        </label>
+
+        <div className="rounded-2xl border border-stone-200/70 bg-stone-50/50 p-4">
+          <NotesEditor task={task} />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button type="submit" disabled={saving} className="compass-btn-primary">
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-stone-200 px-2.5 py-1.5 text-xs text-neutral-600 transition hover:bg-stone-50"
+            className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-600 transition hover:bg-stone-50"
           >
-            Close
+            Cancel
           </button>
+          {error ? <p role="alert" className="text-sm text-red-600">{error}</p> : null}
         </div>
-
-        <form onSubmit={handleSave} className="space-y-4">
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-neutral-500">Title</span>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="compass-input"
-              disabled={saving}
-            />
-          </label>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-neutral-500">Status</span>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
-                disabled={saving}
-              >
-                {TASK_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-neutral-500">Priority</span>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(Number(e.target.value))}
-                className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
-                disabled={saving}
-              >
-                {TASK_PRIORITIES.map((row) => (
-                  <option key={row.value} value={row.value}>
-                    {row.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-neutral-500">Due</span>
-              <input
-                type="date"
-                value={due}
-                onChange={(e) => setDue(e.target.value)}
-                className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
-                disabled={saving}
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-neutral-500">Project</span>
-              <select
-                value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
-                disabled={saving}
-              >
-                <option value="">—</option>
-                {projectOptions.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-neutral-500">Function</span>
-              <select
-                value={businessFunctionId}
-                onChange={(e) => setBusinessFunctionId(e.target.value)}
-                className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
-                disabled={saving}
-              >
-                <option value="">—</option>
-                {bfOptions.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-neutral-500">Type</span>
-              <select
-                value={taskType}
-                onChange={(e) => setTaskType(e.target.value as TaskType | '')}
-                className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
-                disabled={saving}
-              >
-                <option value="">—</option>
-                {TASK_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-neutral-500">
-              Definition of done / notes
-            </span>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              className="compass-input"
-              disabled={saving}
-              placeholder="What done looks like"
-            />
-          </label>
-
-          <div className="rounded-2xl border border-stone-200/70 bg-stone-50/50 p-4">
-            <NotesEditor task={task} />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button type="submit" disabled={saving || !title.trim()} className="compass-btn-primary">
-              {saving ? 'Saving…' : 'Save changes'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-600 transition hover:bg-stone-50"
-            >
-              Cancel
-            </button>
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ModalFrame>
   )
 }

@@ -253,10 +253,21 @@ export function layoutTimedEvents(
   const sorted = events
     .slice()
     .sort((a, b) => a.minutes - b.minutes || a.id.localeCompare(b.id))
-  const laneEnds: number[] = []
-  const placed: Array<{ id: string; minutes: number; lane: number; end: number }> = []
+  const result: TimedLane[] = []
+  let group: Array<{ id: string; minutes: number; lane: number }> = []
+  let laneEnds: number[] = []
+  let groupEnd = -Infinity
+
+  function flushGroup() {
+    for (const item of group) result.push({ ...item, laneCount: laneEnds.length })
+    group = []
+    laneEnds = []
+  }
 
   for (const event of sorted) {
+    // Keep one column width throughout a connected overlap group. Per-event
+    // widths can collide when A overlaps B and B overlaps C, but A misses C.
+    if (event.minutes >= groupEnd) flushGroup()
     const end = event.minutes + durationMinutes
     let lane = laneEnds.findIndex((laneEnd) => laneEnd <= event.minutes)
     if (lane === -1) {
@@ -265,16 +276,11 @@ export function layoutTimedEvents(
     } else {
       laneEnds[lane] = end
     }
-    placed.push({ id: event.id, minutes: event.minutes, lane, end })
+    group.push({ id: event.id, minutes: event.minutes, lane })
+    groupEnd = Math.max(groupEnd, end)
   }
-
-  return placed.map((item) => {
-    const overlapping = placed.filter(
-      (other) => other.minutes < item.end && other.end > item.minutes
-    )
-    const laneCount = overlapping.reduce((max, row) => Math.max(max, row.lane + 1), 1)
-    return { id: item.id, minutes: item.minutes, lane: item.lane, laneCount }
-  })
+  flushGroup()
+  return result
 }
 
 export function formatPeriodLabel(cursor: Date, grain: CalendarGrain): string {

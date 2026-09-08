@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type DragEvent } from 'react'
+import { useEffect, useRef, useState, type DragEvent } from 'react'
 import Link from 'next/link'
 import { ArrowUpRight, Calendar, GripVertical, MessageCircle, Paperclip, Plus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +20,7 @@ export type KanbanTask = {
   dueDate?: string
   attachments?: number
   comments?: number
+  metrics?: Array<{ label: string; value: number | string }>
   href?: string
   externalHref?: string
   externalLabel?: string
@@ -52,6 +53,16 @@ export function KanbanBoard({
   onTaskClick?: (taskId: string, columnId: string) => void
   className?: string
 }) {
+  const boardRef = useRef<HTMLDivElement>(null)
+  const keyboardMove = useRef<{ taskId: string; targetId: string } | null>(null)
+  useEffect(() => {
+    const pending = keyboardMove.current
+    if (!pending || !columns.find(column => column.id === pending.targetId)?.tasks.some(task => task.id === pending.taskId)) return
+    const control = Array.from(boardRef.current?.querySelectorAll<HTMLSelectElement>('select[data-task-id]') ?? [])
+      .find(select => select.dataset.taskId === pending.taskId)
+    control?.focus()
+    keyboardMove.current = null
+  }, [columns])
   const [dropTarget, setDropTarget] = useState<string | null>(null)
 
   function handleDragStart(event: DragEvent, task: KanbanTask, columnId: string) {
@@ -87,7 +98,7 @@ export function KanbanBoard({
   }
 
   return (
-    <div className={cn('grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4', className)}>
+    <div ref={boardRef} className={cn('grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4', className)}>
       {columns.map((column) => (
         <div
           key={column.id}
@@ -137,23 +148,31 @@ export function KanbanBoard({
                   key={task.id}
                   className={cn(
                     'rounded-xl border border-stone-200/80 bg-stone-50/70 p-4',
-                    task.draggable === false ? 'cursor-default' : 'cursor-move'
+                    task.draggable === false || !onMove ? 'cursor-default' : 'cursor-move'
                   )}
-                  draggable={task.draggable !== false}
+                  draggable={Boolean(onMove) && task.draggable !== false}
                   onDragStart={(event) => handleDragStart(event, task, column.id)}
-                  onClick={() => onTaskClick?.(task.id, column.id)}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h4 className="min-w-0 truncate text-[13px] font-semibold leading-snug text-neutral-900">
+                    <h4 className="min-w-0 text-[13px] font-semibold leading-snug text-neutral-900">
                       {task.href ? (
-                        <Link href={task.href} className="hover:text-[#c2410c] hover:underline">
+                        <Link href={task.href} title={task.title} className="line-clamp-2 break-words hover:text-[#c2410c] hover:underline">
                           {task.title}
                         </Link>
+                      ) : onTaskClick ? (
+                        <button
+                          type="button"
+                          onClick={() => onTaskClick(task.id, column.id)}
+                          title={task.title}
+                          className="line-clamp-2 break-words text-left hover:text-[#c2410c] hover:underline"
+                        >
+                          {task.title}
+                        </button>
                       ) : (
-                        task.title
+                        <span className="line-clamp-2 break-words" title={task.title}>{task.title}</span>
                       )}
                     </h4>
-                    {task.draggable === false ? null : (
+                    {task.draggable === false || !onMove ? null : (
                       <GripVertical className="size-4 shrink-0 text-neutral-400" aria-hidden />
                     )}
                   </div>
@@ -179,38 +198,69 @@ export function KanbanBoard({
                     </div>
                   ) : null}
 
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-neutral-500">
-                    {task.dueDate ? (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="size-3.5" />
-                        <span className="text-[11px] font-medium tabular-nums">{task.dueDate}</span>
-                      </div>
-                    ) : null}
-                    {task.comments != null ? (
-                      <div className="flex items-center gap-1">
-                        <MessageCircle className="size-3.5" />
-                        <span className="text-[11px] font-medium tabular-nums">{task.comments}</span>
-                      </div>
-                    ) : null}
-                    {task.attachments != null ? (
-                      <div className="flex items-center gap-1">
-                        <Paperclip className="size-3.5" />
-                        <span className="text-[11px] font-medium tabular-nums">{task.attachments}</span>
-                      </div>
-                    ) : null}
-                    {task.externalHref ? (
-                      <a
-                        href={task.externalHref}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(event) => event.stopPropagation()}
-                        className="flex items-center gap-0.5 text-[11px] font-medium text-[#c2410c] hover:underline"
+                  {task.metrics?.length ? (
+                    <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-neutral-600">
+                      {task.metrics.map((metric) => (
+                        <div key={metric.label}>
+                          <dt>{metric.label}</dt>
+                          <dd className="font-semibold tabular-nums text-neutral-800">{metric.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : null}
+                  {task.dueDate || task.comments != null || task.attachments != null || task.externalHref ? (
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-neutral-500">
+                      {task.dueDate ? (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="size-3.5" />
+                          <span className="text-[11px] font-medium tabular-nums">{task.dueDate}</span>
+                        </div>
+                      ) : null}
+                      {task.comments != null ? (
+                        <div className="flex items-center gap-1">
+                          <MessageCircle className="size-3.5" aria-hidden />
+                          <span className="text-[11px] font-medium tabular-nums">{task.comments}<span className="sr-only"> comments</span></span>
+                        </div>
+                      ) : null}
+                      {task.attachments != null ? (
+                        <div className="flex items-center gap-1">
+                          <Paperclip className="size-3.5" aria-hidden />
+                          <span className="text-[11px] font-medium tabular-nums">{task.attachments}<span className="sr-only"> attachments</span></span>
+                        </div>
+                      ) : null}
+                      {task.externalHref ? (
+                        <a
+                          href={task.externalHref}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(event) => event.stopPropagation()}
+                          className="flex items-center gap-0.5 text-[11px] font-medium text-[#c2410c] hover:underline"
+                        >
+                          {task.externalLabel || 'Instantly'}
+                          <ArrowUpRight className="size-3" />
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {onMove && task.draggable !== false ? (
+                    <label className="mt-3 flex items-center gap-2 text-[11px] text-neutral-600">
+                      <span>Move to</span>
+                      <select
+                        data-task-id={task.id}
+                        aria-label={`Move ${task.title} to`}
+                        value={column.id}
+                        onChange={(event) => {
+                          if (event.target.value !== column.id) {
+                            keyboardMove.current = { taskId: task.id, targetId: event.target.value }
+                            onMove(task.id, column.id, event.target.value)
+                          }
+                        }}
+                        className="min-h-9 min-w-0 flex-1 rounded-xl border border-stone-200 bg-white px-2 py-1.5 text-xs"
                       >
-                        {task.externalLabel || 'Instantly'}
-                        <ArrowUpRight className="size-3" />
-                      </a>
-                    ) : null}
-                  </div>
+                        {columns.map((target) => <option key={target.id} value={target.id}>{target.title}</option>)}
+                      </select>
+                    </label>
+                  ) : null}
                 </div>
               ))
             )}

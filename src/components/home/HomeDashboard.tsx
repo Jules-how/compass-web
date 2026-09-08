@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { ModalFrame } from '@/components/ui/ModalFrame'
 import { Card, CardContent } from '@/components/ui/card'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import type { BrainDumpReorganizeResult, BrainDumpSuggestion } from '@/lib/brain-dump'
@@ -88,15 +88,6 @@ export function HomeDashboard() {
       /* ignore */
     }
   }, [dump, dumpHydrated])
-
-  useEffect(() => {
-    if (!dumpOpen) return
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setDumpOpen(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [dumpOpen])
 
   const dumpPending = dump.trim().length > 0
 
@@ -214,31 +205,33 @@ export function HomeDashboard() {
           </button>
         </div>
 
-        <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain lg:grid-cols-2 xl:grid-cols-3">
-          {wave ? (
-            <MorningWavePanel
-              wave={wave}
-              glance={{
-                emailsSentToday: cold?.emailsSentToday ?? null,
-                replyRate: cold?.replyRate ?? null,
-                repliesWaiting: cold?.repliesWaiting ?? null
-              }}
-              onReload={async () => {
-                await Promise.all([home.reload(true), waveLive.reload(true)])
-              }}
-            />
-          ) : (
-            <Card className="lg:col-span-2 xl:col-span-3">
-              <CardContent className="p-4 sm:p-5">
-                <p className="text-sm text-neutral-500">
-                  Morning wave did not load.{' '}
-                  <button type="button" className="font-medium text-[#c2410c] hover:underline" onClick={() => void home.reload(true)}>
-                    Retry
-                  </button>
-                </p>
-              </CardContent>
-            </Card>
-          )}
+        <div className="grid min-h-0 flex-1 content-start items-start gap-3 overflow-y-auto overscroll-contain lg:grid-cols-2">
+          <div className="lg:col-span-2">
+            {wave ? (
+              <MorningWavePanel
+                wave={wave}
+                glance={{
+                  emailsSentToday: cold?.emailsSentToday ?? null,
+                  replyRate: cold?.replyRate ?? null,
+                  repliesWaiting: cold?.repliesWaiting ?? null
+                }}
+                onReload={async () => {
+                  await Promise.all([home.reload(true), waveLive.reload(true)])
+                }}
+              />
+            ) : (
+              <Card>
+                <CardContent className="p-4 sm:p-5">
+                  <p className="text-sm text-neutral-500">
+                    Morning wave did not load.{' '}
+                    <button type="button" className="font-medium text-[#c2410c] hover:underline" onClick={() => void home.reload(true)}>
+                      Retry
+                    </button>
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
           <Card>
             <CardContent className="p-4 sm:p-5">
@@ -279,78 +272,62 @@ export function HomeDashboard() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {dumpOpen ? (
-          <motion.div
-            className="fixed inset-0 z-50 flex justify-end"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            role="presentation"
-          >
-            <button type="button" className="absolute inset-0 bg-neutral-950/35" aria-label="Close brain dump" onClick={() => setDumpOpen(false)} />
-            <motion.aside
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="brain-dump-title"
-              className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-stone-200/80 bg-white shadow-soft"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-            >
-              <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-5 py-4">
-                <div>
-                  <h2 id="brain-dump-title" className="text-base font-semibold text-neutral-900">
-                    Brain dump
-                  </h2>
-                  <p className="mt-0.5 text-xs text-neutral-500">Creates compass_tasks only</p>
-                </div>
-                <button type="button" onClick={() => setDumpOpen(false)} className="compass-btn-ghost">
-                  Close
-                </button>
-              </div>
-              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
-                <textarea
-                  id="brain-dump-notes"
-                  value={dump}
-                  onChange={(e) => setDump(e.target.value)}
-                  placeholder="One thought per line…"
-                  rows={8}
-                  className="compass-input min-h-[10rem] flex-1 resize-y"
-                  aria-label="Brain dump notes"
-                  autoFocus
-                />
-                <button type="button" onClick={() => void runReorganize()} disabled={!dump.trim() || reorganizing} className="compass-btn-primary">
-                  {reorganizing ? 'Thinking…' : 'Reorganize with AI'}
-                </button>
-                {applyNote ? <p className="text-sm text-emerald-700">{applyNote}</p> : null}
-                {reorganizeError ? <p className="text-sm text-red-600">{reorganizeError}</p> : null}
-                {applyError ? <p className="text-sm text-red-600">{applyError}</p> : null}
-                {plan ? (
-                  <div className="space-y-3 border-t border-stone-100 pt-3">
-                    <p className="text-sm text-neutral-700">{plan.summary}</p>
-                    <ul className="divide-y divide-stone-100 rounded-xl border border-stone-200/70">
-                      {plan.suggestions.map((item) => (
-                        <SuggestionRow key={item.id} item={item} checked={selected.has(item.id)} onToggle={() => {
-                          setSelected((prev) => {
-                            const next = new Set(prev)
-                            if (next.has(item.id)) next.delete(item.id)
-                            else next.add(item.id)
-                            return next
-                          })
-                        }} />
-                      ))}
-                    </ul>
-                    <button type="button" onClick={() => void applySuggestions()} disabled={applying || selected.size === 0} className="compass-btn-secondary">
-                      {applying ? 'Applying…' : 'Apply selected'}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            </motion.aside>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      <ModalFrame
+        open={dumpOpen}
+        onClose={() => setDumpOpen(false)}
+        labelledBy="brain-dump-title"
+        overlayClassName="fixed inset-0 z-50 flex justify-end bg-neutral-950/35"
+        contentClassName="relative z-10 flex h-full w-full max-w-md flex-col border-l border-stone-200/80 bg-white shadow-soft"
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-5 py-4">
+          <div>
+            <h2 id="brain-dump-title" className="text-base font-semibold text-neutral-900">
+              Brain dump
+            </h2>
+            <p className="mt-0.5 text-xs text-neutral-500">Turn your notes into suggested tasks, then review what to add.</p>
+          </div>
+          <button type="button" onClick={() => setDumpOpen(false)} className="compass-btn-ghost">
+            Close
+          </button>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
+          <textarea
+            id="brain-dump-notes"
+            value={dump}
+            onChange={(e) => setDump(e.target.value)}
+            placeholder="One thought per line…"
+            rows={8}
+            className="compass-input min-h-[10rem] flex-1 resize-y"
+            aria-label="Brain dump notes"
+          />
+          <button type="button" onClick={() => void runReorganize()} disabled={!dump.trim() || reorganizing} className="compass-btn-primary">
+            {reorganizing ? 'Thinking…' : 'Reorganize with AI'}
+          </button>
+          {applyNote ? <p role="status" className="text-sm text-emerald-700">{applyNote}</p> : null}
+          {reorganizeError ? <p role="alert" className="text-sm text-red-600">{reorganizeError}</p> : null}
+          {applyError ? <p role="alert" className="text-sm text-red-600">{applyError}</p> : null}
+          {plan ? (
+            <div className="space-y-3 border-t border-stone-100 pt-3">
+              <p className="text-sm text-neutral-700">{plan.summary}</p>
+              <ul className="divide-y divide-stone-100 rounded-xl border border-stone-200/70">
+                {plan.suggestions.map((item) => (
+                  <SuggestionRow key={item.id} item={item} checked={selected.has(item.id)} onToggle={() => {
+                    setSelected((prev) => {
+                      const next = new Set(prev)
+                      if (next.has(item.id)) next.delete(item.id)
+                      else next.add(item.id)
+                      return next
+                    })
+                  }} />
+                ))}
+              </ul>
+              <button type="button" onClick={() => void applySuggestions()} disabled={applying || selected.size === 0} className="compass-btn-secondary">
+                {applying ? 'Applying…' : 'Apply selected'}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </ModalFrame>
     </>
   )
 }

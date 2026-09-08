@@ -113,7 +113,7 @@ export function InstallKanban() {
     setError(null)
     const res = await fetch('/api/delivery-dept/installs?source=all', { cache: 'no-store' })
     const body = (await res.json()) as BoardPayload & { error?: string }
-    if (!res.ok) throw new Error(body.error || `Failed (${res.status})`)
+    if (!res.ok) throw new Error('Installs could not be loaded. Please try again.')
     setBoard(body)
   }, [])
 
@@ -151,11 +151,12 @@ export function InstallKanban() {
 
   if (error && !board) {
     return (
-      <div className="compass-panel p-6 text-sm text-red-600">
-        {error}{' '}
+      <div role="alert" className="compass-panel space-y-3 p-6 text-sm">
+        <p className="font-semibold text-neutral-900">Installs are temporarily unavailable</p>
+        <p className="text-neutral-600">We couldn’t load the install board. Try again to reconnect.</p>
         <button
           type="button"
-          className="font-medium text-[#c2410c] hover:underline"
+          className="compass-btn-secondary"
           onClick={() => void load().catch((err) => setError(err instanceof Error ? err.message : String(err)))}
         >
           Retry installs
