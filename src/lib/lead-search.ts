@@ -140,7 +140,7 @@ export async function searchLeadContacts(
   const last = leads[leads.length - 1]
   const next_cursor =
     leads.length === limit && last
-      ? encodeLeadCursor(String(last.email ?? ''), String(last.id ?? ''))
+      ? encodeLeadCursor(last.email == null ? null : String(last.email), String(last.id ?? ''))
       : null
   return {
     leads,
@@ -166,7 +166,7 @@ export async function streamLeadContacts(
   const total = count ?? 0
 
   async function* iterator() {
-    let cursor: { email: string; id: string } | null = null
+    let cursor: { email: string | null; id: string } | null = null
     while (true) {
       let query = applyLeadFilters(
         admin.from('lead_contacts').select(select) as unknown as LeadFilterQuery,
@@ -185,7 +185,7 @@ export async function streamLeadContacts(
       for (const row of rows) yield row
       if (rows.length < AGENT_LEAD_STREAM_RANGE) return
       const last = rows[rows.length - 1]
-      cursor = { email: String(last.email ?? ''), id: String(last.id ?? '') }
+      cursor = { email: last.email == null ? null : String(last.email), id: String(last.id ?? '') }
     }
   }
 

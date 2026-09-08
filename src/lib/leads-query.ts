@@ -249,10 +249,10 @@ function applyCsvOrEq(query: LeadFilterQuery, column: string, raw: string): Lead
   return query.in(column, values)
 }
 
-export type LeadKeysetCursor = { email: string; id: string }
+export type LeadKeysetCursor = { email: string | null; id: string }
 
-export function encodeLeadCursor(email: string, id: string): string {
-  return Buffer.from(`${email}\t${id}`, 'utf8').toString('base64url')
+export function encodeLeadCursor(email: string | null, id: string): string {
+  return Buffer.from(JSON.stringify([email, id]), 'utf8').toString('base64url')
 }
 
 export function decodeLeadCursor(raw: string | null | undefined): LeadKeysetCursor | null {
@@ -260,6 +260,14 @@ export function decodeLeadCursor(raw: string | null | undefined): LeadKeysetCurs
   if (!value) return null
   try {
     const decoded = Buffer.from(value, 'base64url').toString('utf8')
+    if (decoded.startsWith('[')) {
+      const value: unknown = JSON.parse(decoded)
+      if (!Array.isArray(value) || value.length !== 2 ||
+          (value[0] !== null && typeof value[0] !== 'string') ||
+          typeof value[1] !== 'string' || !value[1].trim()) return null
+      return { email: value[0], id: value[1] }
+    }
+    // Accept existing non-null email cursors issued before the null-safe format.
     const tab = decoded.indexOf('\t')
     if (tab < 0) return null
     const email = decoded.slice(0, tab)
@@ -273,9 +281,10 @@ export function decodeLeadCursor(raw: string | null | undefined): LeadKeysetCurs
 
 /** Keyset on (email, id) ascending. */
 export function applyLeadKeyset<T extends LeadFilterQuery>(query: T, cursor: LeadKeysetCursor): T {
-  const email = escapePostgrestOrValue(cursor.email)
   const id = escapePostgrestOrValue(cursor.id)
-  return query.or(`email.gt.${email},and(email.eq.${email},id.gt.${id})`) as T
+  if (cursor.email === null) return query.or(`and(email.is.null,id.gt.${id})`) as T
+  const email = escapePostgrestOrValue(cursor.email)
+  return query.or(`email.gt.${email},and(email.eq.${email},id.gt.${id}),email.is.null`) as T
 }
 
 const LEGACY_AGENT_LEAD_PARAMS = new Set(['status', 'limit', 'q'])
