@@ -63,10 +63,7 @@ non-obvious bits for working in the Cursor Cloud environment.
   NEXT_PUBLIC_SUPABASE_URL...", `.env.local` is missing/stale — re-run the update
   script (or regenerate it from the `SUPABASE_*` env vars).
 - `.env.local` is gitignored on purpose; never commit real credentials.
-- Auth uses the "open operator" auto-login (`COMPASS_OPEN_OPERATOR=1`, default on).
-  Middleware auto-signs-in the default operator account defined in
-  `src/lib/open-operator.ts`, so hitting `/` redirects to `/tasks` with no login
-  screen. Set `COMPASS_OPEN_OPERATOR=0` to restore the normal password login screen.
+- Hosted Compass requires private operator sign-in. Open-operator auto-login is disabled in hosted builds; local development requires an explicit flag and configured credentials. Public signing links expose only their individual agreement. Account security cutovers invalidate earlier sessions through the operator session cutoff.
 - The customer delivery portal (`/delivery/**`) is gated behind
   `COMPASS_PORTAL_V1=1` and is left disabled (`0`) by default; the operator
   console works without it.

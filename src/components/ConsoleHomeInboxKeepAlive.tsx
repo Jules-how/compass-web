@@ -56,7 +56,7 @@ const ClientsPanel = dynamic(
   { loading: () => <DeskLoading label="Loading clients…" /> }
 )
 const FinancesBoard = dynamic(
-  () => import('@/components/finances/FinancesBoard').then((m) => ({ default: m.FinancesBoard })),
+  () => import('@/components/finances/ExpenseBoard').then((m) => ({ default: m.ExpenseBoard })),
   { loading: () => <DeskLoading label="Loading finances…" /> }
 )
 const InstallKanban = dynamic(
@@ -246,7 +246,7 @@ export function ConsoleHomeInboxKeepAlive() {
       ) : null}
       {seenFinances ? (
         <KeepAlivePane active={showFinances}>
-          <OperatorShell title="Finances" subtitle="QuickBooks is the only ledger">
+          <OperatorShell title="Finances" subtitle="Expenses with source records">
             <FinancesBoard />
           </OperatorShell>
         </KeepAlivePane>

@@ -39,9 +39,7 @@ import { ClientChannelPanel } from '@/components/clients/ClientChannelPanel'
 import { ClientCommsPanel } from '@/components/clients/ClientCommsPanel'
 import { ClientWorkPlanner } from '@/components/clients/ClientWorkPlanner'
 import { MetaAdsManagerPanel } from '@/components/clients/MetaAdsManagerPanel'
-import { ClientDealTermsCard } from '@/components/clients/ClientDealTermsCard'
-import { ClientInvoicesCard } from '@/components/clients/ClientInvoicesCard'
-import { ClientOnboardingCard } from '@/components/clients/ClientOnboardingCard'
+import { ClientAgreementCard } from '@/components/clients/ClientAgreementCard'
 import { ClientVoicePanel } from '@/components/ClientVoicePanel'
 import { ClientReactivationPanel } from '@/components/clients/ClientReactivationPanel'
 import { ClientMetaAttachPanel } from '@/components/clients/ClientMetaAttachPanel'
@@ -844,9 +842,7 @@ export function ClientDetailPanel({
 
       {tab === 'overview' ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          <ClientOnboardingCard clientId={clientId} />
-          <ClientDealTermsCard clientId={clientId} />
-          <ClientInvoicesCard clientId={clientId} />
+          <ClientAgreementCard key={clientId} clientId={clientId} clientName={data.client.name} />
           <ClientVoicePanel clientId={clientId} />
           <ClientReactivationPanel clientId={clientId} />
           <ClientMetaAttachPanel clientId={clientId} />

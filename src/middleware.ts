@@ -2,11 +2,14 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
 import { openOperatorCredentials } from '@/lib/open-operator'
+import { isSessionCurrent } from '@/lib/session-current'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 export async function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith('/sign/')) return NextResponse.next()
+
   if (!supabaseUrl || !supabaseAnonKey) {
     return NextResponse.next({
       request: { headers: request.headers }
@@ -33,6 +36,14 @@ export async function middleware(request: NextRequest) {
   let {
     data: { user }
   } = await supabase.auth.getUser()
+
+  if (user?.app_metadata?.compass_session_not_before) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!isSessionCurrent(user, session?.access_token)) {
+      await supabase.auth.signOut({ scope: 'local' })
+      user = null
+    }
+  }
 
   if (!user) {
     const credentials = openOperatorCredentials()
