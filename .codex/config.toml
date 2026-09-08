@@ -1,0 +1,3 @@
+[mcp_servers.compass]
+command = "node"
+args = ["/Users/Jules/switchflow-os/compass-web/mcp/server.mjs"]

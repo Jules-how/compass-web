@@ -1,15 +1,15 @@
 ---
 name: compass-agent
-description: Connect Cursor local/cloud agents to Switchflow Compass (Compass-Web) for lean daily sync, campaign briefs, Instantly lead push/sync, ads data, and outbound offers/copy libraries. Use when syncing Instantly/Google/Meta, pushing cohort leads into Instantly (no CSV), reading/writing outbound offers expressions templates CTAs, running the weekly CS/retention board, or operator metrics without opening the UI.
+description: Use the Switchflow Compass agent API or MCP for requested campaign briefs, lead-ledger operations, syncs, offers, copy, and operator metrics. Includes local CSV loading limits and API payload details.
 ---
 
 # Compass agent bridge
 
-Compass is the **operator UI + Supabase store**. Cursor agents (local and cloud) are the **connector** to Instantly, Google Ads, Meta Ads, email automations, and outbound copy libraries. Do not dump full tables into context — use the lean agent API.
+Compass is the **operator UI + Supabase store**. Codex agents (local and cloud) are the **connector** to Instantly, Google Ads, Meta Ads, email automations, and outbound copy libraries. Do not dump full tables into context — use the lean agent API.
 
 ## Auth
 
-Set secrets (Cloud Agents → Secrets / local `.env`):
+Use the current environment's secret settings or the local `compass-web/.env.local` file:
 
 - `COMPASS_BASE_URL` — e.g. `https://compass-web-eosin.vercel.app` or `http://localhost:3100`
 - `COMPASS_AGENT_SECRET` — shared with the deployment env
@@ -28,16 +28,19 @@ Compass is the lead store. Use `/api/agent/*` or Compass MCP. Do not query `lead
 
 - Counts / recency / campaign-id overlap: `GET /api/agent/leads/ledger?vertical=broker` (optional `campaign_ids`, `later_campaign_ids`)
 - Page a local CSV: `GET /api/agent/leads/export?vertical=broker&limit=200&cursor=` (max 200, email required)
-- Insert: `POST /api/agent/leads` (`commit`). Email and company required. Domain dupe skipped. Never raw table insert.
+- Search inventory: `leads.search` / `GET /api/agent/leads?view=rows` supports keyset `cursor`, `columns=cohort`, and `pipeline_campaign_id=none`; default page 2000, transport cap 5000. Use only the rows and columns needed.
+- Insert: `POST /api/agent/leads` (`leads.commit` or `commit`). Email and company required. Domain dupe skipped. Never raw table insert.
 
 ```bash
 curl -sS "$COMPASS_BASE_URL/api/agent/leads/ledger?vertical=broker" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 ```
 
-## Token-efficient workflow
+## API recipes
 
-1. **Start with the brief** (cached after daily sync):
+Choose the endpoint needed for the request. These examples are not a mandatory daily sequence or authorisation to sync, write, or activate anything.
+
+1. **General status: brief** (cached after daily sync):
 
 ```bash
 curl -sS "$COMPASS_BASE_URL/api/agent/brief" \
@@ -69,13 +72,7 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/expressions/<id>" \
   -d '{"notes":"..."}'
 ```
 
-```bash
-# SKU desk (live / testing / retired gallery + campaign results)
-curl -sS "$COMPASS_BASE_URL/api/agent/offers/desk" \
-  -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
-```
-
-Campaign sequence of record: `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Outbound doctrine is `cold-email/AGENTS.md`. Product/price contract (guide, mix from economics) is Compass: `GET /api/agent/offers/desk` (Offers tab), file `switchflow-offer/fill-capture-trades.md`. Desk `cells` are one Instantly campaign per `offer_key` × first vertical tag × first location tag. `POST /api/agent/offers/cells` creates missing cells and tags a no-city campaign instead of duplicating it. Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact readiness `wave` is on `GET /api/agent/campaigns`. `GET /api/agent/brief` includes `morningWave` (sending, two next, `landUnlocked`). Do not land while `landUnlocked` is false. `POST /api/agent/outbound/waves` writes `next_campaign_ids`. Pathway tools: `GET /api/agent/outbound/pathway`. Runs: `POST /api/agent/outbound/pathway/runs`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. First line goes in `personalization` and `custom_variables.opener`.
+Campaign sequence of record: `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Outbound doctrine is `cold-email/AGENTS.md`. Product/price contract (guide, mix from economics) is `switchflow-offer/fill-capture-trades.md`. Compass desk if Jules has a row. `GET /api/agent/offers/desk` includes `cells`: one Instantly campaign per `offer_key` × first `vertical_tags` × first `location_tags`. City lives in `location_tags`, not the campaign name. One `testing_variable` per cell. Create missing cells with `POST /api/agent/offers/cells` `{ offer_key, verticals, cities, testing_variable, clone_campaign_id?, sample_size_target?, hypothesis? }`. A campaign with the vertical and no city is tagged, not duplicated. Clone copies sequence so only the named variable changes. Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact readiness `wave` is on `GET /api/agent/campaigns`. `GET /api/agent/brief` includes `morningWave` (sending, two next, `landUnlocked`). Do not land live remaining while `landUnlocked` is false. Write today’s next with `POST /api/agent/outbound/waves` `{ next_campaign_ids }`. Tools/templates: `GET /api/agent/outbound/pathway`. Log runs: `POST /api/agent/outbound/pathway/runs`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. First line goes in `personalization` and `custom_variables.opener`.
 
 **Operating model:** Compass = workshop · Instantly = mail truck. Activate stays in Instantly. Outbound doctrine is `cold-email/AGENTS.md`.
 
@@ -105,19 +102,8 @@ Inbox Instantly classify writes `outbound_status` then marks triage done: positi
 4. **Drill Instantly / pipeline only when needed**:
 
 ```bash
-# Legacy Instantly-hot lean list (status/limit/q only)
 curl -sS "$COMPASS_BASE_URL/api/agent/leads?limit=40" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
-
-# leads.search: unattached harvest (keyset, 2000/page)
-curl -sS "$COMPASS_BASE_URL/api/agent/leads?view=rows&columns=cohort&pipeline_campaign_id=none&vertical=plumber&state=NSW&limit=2000" \
-  -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
-
-# Commit a list (email upsert; company dupe does not insert). Per-row lead_facts / opener go here or PATCH /mark rows.
-curl -sS -X POST "$COMPASS_BASE_URL/api/agent/leads" \
-  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"defaults":{"vertical":"plumber","source":"apify"},"rows":[{"email":"shop@example.com.au","company":"Example Plumbing","city":"Marrickville","state":"NSW"}],"on_conflict":"email"}'
 
 # After landing keepers: attach campaign + ICP (company-only name is fine)
 curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/leads/mark" \
@@ -153,7 +139,7 @@ curl -sS "$COMPASS_BASE_URL/api/agent/campaigns" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 ```
 
-**Push to Instantly** (no CSV). Never activate from Compass.
+**Push to Instantly** (no CSV). Never activate from Compass. Not from this Mac: Instantly REST add-leads from here returns Cloudflare 1010, and Compass push uses that same API. On this Mac, load the CSV on the campaign Leads tab with Browser Use (see the `instantly-load` skill). The calls below are for hosted Compass / cloud agents.
 
 ```bash
 # Create a paused Instantly campaign if unbound (optional pushSequence)
@@ -246,13 +232,13 @@ Wave memory lives in Compass (`compass_wave_briefs`, `compass_wave_actions`, cam
 - Call cookie-session `/api/outbound/*` from headless agents (use `/api/agent/outbound/*`).
 - Pass `full=1` or dump all kinds unless the turn is editing that row.
 - Re-run ads/Instantly sync just to read/write copy libraries.
-- Pull unbounded lead lists — page with `cursor` / `limit` (transport cap 5000). Ledger export pages at 200; write a file.
-- Use Instantly MCP to add or create leads. Land with Compass MCP `land` or `/api/agent/instantly/push-leads`.
-- Download CSVs to load Instantly.
+- Pull unbounded lead lists — always pass `limit` and status filters. Export pages at 200; write a file.
+- Use Instantly MCP to add or create leads. On this Mac, do not `land` / `push-leads` either (Cloudflare 1010); Browser Use CSV upload on the Leads tab is the load path here.
+- Download CSVs to load Instantly from hosted/cloud runs. (This Mac's load path is the one local CSV the mill just wrote, uploaded via Browser Use.)
 - Activate Instantly campaigns from the agent.
 
-## Cursor MCP
+## Codex MCP
 
 Lean stdio server: `node mcp/server.mjs` from `compass-web/` (or `node compass-web/mcp/server.mjs` from switchflow-os). Loads `compass-web/.env.local` then `COMPASS_BASE_URL` / `COMPASS_AGENT_SECRET`. Hosted default `https://compass-web-eosin.vercel.app`.
 
-Tools: `brief`, `campaigns`, `leads.search`, `leads.commit`, deprecated `leads`/`mark`, `copy`, `land`, `commit`, `ledger`, `export`. Not an Instantly clone. `land.push_leads` defaults to dry-run. This workspace wires it in `.cursor/mcp.json` as server `compass`.
+Tools: `brief`, `campaigns`, `leads.search`, `leads.commit`, legacy `leads` / `mark`, `copy`, `land`, `commit`, `ledger`, `export`. Not an Instantly clone. `land.push_leads` defaults to dry-run. Codex loads server `compass` from `.codex/config.toml`; the nested Compass configuration supports opening that repository directly.

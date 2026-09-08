@@ -177,6 +177,7 @@ export function groupCampaignsByWave(
     live: []
   }
   for (const campaign of campaigns) {
+    if (['cancelled', 'archived', 'completed'].includes(campaign.status)) continue
     const instantly = campaign.instantly_campaign_id
       ? instantlyById.get(campaign.instantly_campaign_id)
       : undefined

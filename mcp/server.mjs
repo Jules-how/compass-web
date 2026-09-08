@@ -24,30 +24,44 @@ if (!cfg.secret) {
   process.exit(1)
 }
 
-function writeMessage(obj) {
+function writeMessage(obj, framed) {
   const json = JSON.stringify(obj)
-  const buf = Buffer.from(json, 'utf8')
-  process.stdout.write(`Content-Length: ${buf.length}\r\n\r\n`)
-  process.stdout.write(buf)
+  if (framed) {
+    process.stdout.write(`Content-Length: ${Buffer.byteLength(json)}\r\n\r\n${json}`)
+  } else {
+    process.stdout.write(`${json}\n`)
+  }
 }
 
 let buffer = Buffer.alloc(0)
 
 function consume() {
   while (true) {
-    const headerEnd = buffer.indexOf('\r\n\r\n')
-    if (headerEnd === -1) return
-    const header = buffer.subarray(0, headerEnd).toString('utf8')
-    const match = /Content-Length:\s*(\d+)/i.exec(header)
-    if (!match) {
-      buffer = buffer.subarray(headerEnd + 4)
-      continue
+    if (!buffer.length) return
+    // MCP stdio uses newline-delimited JSON. Retain the previous custom
+    // Content-Length transport for clients that already use this bridge.
+    const framed = buffer[0] === 67 || buffer[0] === 99
+    let body
+    if (framed) {
+      const headerEnd = buffer.indexOf('\r\n\r\n')
+      if (headerEnd === -1) return
+      const header = buffer.subarray(0, headerEnd).toString('utf8')
+      const match = /Content-Length:\s*(\d+)/i.exec(header)
+      if (!match) {
+        buffer = buffer.subarray(headerEnd + 4)
+        continue
+      }
+      const len = Number(match[1])
+      const start = headerEnd + 4
+      if (buffer.length < start + len) return
+      body = buffer.subarray(start, start + len).toString('utf8')
+      buffer = buffer.subarray(start + len)
+    } else {
+      const end = buffer.indexOf('\n')
+      if (end === -1) return
+      body = buffer.subarray(0, end).toString('utf8')
+      buffer = buffer.subarray(end + 1)
     }
-    const len = Number(match[1])
-    const start = headerEnd + 4
-    if (buffer.length < start + len) return
-    const body = buffer.subarray(start, start + len).toString('utf8')
-    buffer = buffer.subarray(start + len)
     let msg
     try {
       msg = JSON.parse(body)
@@ -56,7 +70,7 @@ function consume() {
     }
     Promise.resolve(handleRpc(msg, { cfg, fetchImpl: fetch }))
       .then((res) => {
-        if (res) writeMessage(res)
+        if (res) writeMessage(res, framed)
       })
       .catch((err) => {
         if (msg.id !== undefined && msg.id !== null) {
@@ -64,7 +78,7 @@ function consume() {
             jsonrpc: '2.0',
             id: msg.id,
             error: { code: -32603, message: err instanceof Error ? err.message : 'internal' }
-          })
+          }, framed)
         }
       })
   }
@@ -74,4 +88,4 @@ process.stdin.on('data', (chunk) => {
   buffer = Buffer.concat([buffer, chunk])
   consume()
 })
-process.stdin.on('end', () => process.exit(0))
+// Let pending RPC responses drain naturally when the client closes stdin.

@@ -1,6 +1,7 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 
 import { getSupabaseServerClient } from './supabase-server'
+import { isSessionCurrent } from './session-current'
 import { isOperatorRole, type PortalRole } from './portal-redirect'
 
 export interface PortalMembership {
@@ -83,6 +84,10 @@ export async function requirePortalAccess(
   } = await supabase.auth.getUser()
 
   if (authError || !user) throw new PortalAccessError('unauthorized')
+  if (user.app_metadata?.compass_session_not_before) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!isSessionCurrent(user, session?.access_token)) throw new PortalAccessError('unauthorized')
+  }
 
   const cached = membershipCache.get(user.id)
   let memberships: PortalMembership[]

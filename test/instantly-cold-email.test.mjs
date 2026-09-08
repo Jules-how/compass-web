@@ -71,10 +71,7 @@ function buildColdEmailGlance({ today, rolling30d, repliesWaiting, campaigns }) 
   const replies30 = Number(rolling30d.reply_count_unique) || 0
   const replyRate = sent30 > 0 ? Math.round((1000 * replies30) / sent30) / 10 : 0
   const meetingsToday =
-    Number(today.total_meeting_booked) ||
-    Number(today.total_interested) ||
-    Number(today.total_opportunities) ||
-    0
+    Math.max(0, Number(today.total_meeting_booked) || 0)
 
   return {
     emailsSentToday: Number(today.emails_sent_count) || 0,
@@ -87,7 +84,7 @@ function buildColdEmailGlance({ today, rolling30d, repliesWaiting, campaigns }) 
       status: mapInstantlyCampaignStatus(row.campaign_status),
       sent: Number(row.emails_sent_count) || 0,
       replies: Number(row.reply_count_unique) || Number(row.reply_count) || 0,
-      meetings: Number(row.total_opportunities) || 0,
+      meetings: Math.max(0, Number(row.total_meeting_booked) || 0),
       progress: campaignProgress(row)
     }))
   }
@@ -158,7 +155,7 @@ test('cold email glance prefers live campaigns and computes reply rate', () => {
 
   assert.equal(glance.emailsSentToday, 74)
   assert.equal(glance.repliesWaiting, 0)
-  assert.equal(glance.meetingsBooked, 2)
+  assert.equal(glance.meetingsBooked, 0)
   assert.equal(glance.replyRate, 0.8)
   assert.equal(glance.campaigns[0].id, 'live-a')
   assert.equal(glance.campaigns[0].status, 'live')

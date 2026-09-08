@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { isSessionCurrent } from './session-current'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -43,5 +44,9 @@ export async function getAuthenticatedUser() {
   const {
     data: { user }
   } = await supabase.auth.getUser()
+  if (user?.app_metadata?.compass_session_not_before) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!isSessionCurrent(user, session?.access_token)) return null
+  }
   return user
 }

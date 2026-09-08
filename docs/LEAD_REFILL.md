@@ -48,5 +48,5 @@ MCP twins: `leads.search` and `leads.commit`. Deprecated aliases: `GET /inventor
 
 - Re-scrape a trade/city Compass already has as uncontacted with email.
 - Treat `view=counts` top-level keys as the totals. Read `totals.uncontacted` / `totals.uncontactedWithEmail`.
-- Use Instantly MCP or CSV download to load Instantly. Land with `POST /api/agent/instantly/push-leads`.
+- Use Instantly MCP to load Instantly. On this Mac, do not `POST /api/agent/instantly/push-leads` either: Instantly REST add-leads from here returns Cloudflare 1010. This Mac uploads the mill CSV on the campaign Leads tab with Browser Use (`instantly-load` skill). Hosted Compass / cloud agents may still push-leads.
 - Activate Instantly from this app.

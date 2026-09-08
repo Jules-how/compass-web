@@ -74,7 +74,7 @@ export const DEFAULT_OPENER_TEMPLATES: OpenerTemplateDraft[] = [
     label: 'Paid demand',
     signalWhen: { field: 'paid_demand', op: 'present' },
     structure:
-      'Saw {company} runs paid demand around {suburb}. Reaching out because a lot of paid search clicks walk to voicemail when crews are out on site.',
+      'Saw {company} runs paid demand around {suburb}.',
     subject: '{suburb} paid demand jobs',
     style: 'paid_demand',
     sortOrder: 0

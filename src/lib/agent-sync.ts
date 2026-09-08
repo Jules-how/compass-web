@@ -31,7 +31,6 @@ export const ALL_AGENT_SYNC_SOURCES: AgentSyncSource[] = [
   'ads',
   'instantly',
   'instantly_leads',
-  'qbo',
   'evidence',
   'reactivation'
 ]

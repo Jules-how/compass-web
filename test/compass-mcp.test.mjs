@@ -3,7 +3,53 @@ import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { spawn } from 'node:child_process'
 import { callTool, clampExportLimit, clampLimit, handleRpc, parseEnvFile, resolveConfig, TOOLS } from '../mcp/lib.mjs'
+
+for (const framed of [false, true]) {
+  test(`stdio handshake and tool discovery (${framed ? 'legacy framing' : 'MCP newlines'})`, { timeout: 5000 }, async (t) => {
+    const child = spawn(process.execPath, [resolve(dirname(fileURLToPath(import.meta.url)), '../mcp/server.mjs')], {
+      env: { ...process.env, COMPASS_AGENT_SECRET: 'transport-test-only' },
+      stdio: ['pipe', 'pipe', 'pipe']
+    })
+    t.after(() => child.kill())
+    const output = []
+    child.stdout.on('data', chunk => output.push(chunk))
+    const completed = new Promise((resolve, reject) => {
+      child.on('error', reject)
+      child.on('close', code => code === 0 ? resolve() : reject(new Error(`server exit ${code}`)))
+    })
+    const requests = [
+      { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'Migration — test', version: '1' } } },
+      { jsonrpc: '2.0', method: 'notifications/initialized' },
+      { jsonrpc: '2.0', id: 2, method: 'tools/list' }
+    ]
+    const input = Buffer.from(requests.map(request => {
+      const json = JSON.stringify(request)
+      return framed ? `Content-Length: ${Buffer.byteLength(json)}\r\n\r\n${json}` : `${json}\n`
+    }).join(''))
+    // Exercise partial messages and EOF without any network calls or live secrets.
+    for (let i = 0; i < input.length; i += 7) child.stdin.write(input.subarray(i, i + 7))
+    child.stdin.end()
+    await completed
+    let remaining = Buffer.concat(output)
+    const responses = []
+    if (framed) {
+      while (remaining.length) {
+        const end = remaining.indexOf('\r\n\r\n')
+        assert.ok(end > 0)
+        const length = Number(/Content-Length: (\d+)/.exec(remaining.subarray(0, end).toString())[1])
+        responses.push(JSON.parse(remaining.subarray(end + 4, end + 4 + length).toString()))
+        remaining = remaining.subarray(end + 4 + length)
+      }
+    } else {
+      responses.push(...remaining.toString().trim().split('\n').map(line => JSON.parse(line)))
+    }
+    assert.equal(responses.length, 2, 'notifications must not produce a response')
+    assert.equal(responses.find(r => r.id === 1).result.protocolVersion, '2024-11-05')
+    assert.equal(responses.find(r => r.id === 2).result.tools.length, TOOLS.length)
+  })
+}
 
 test('search, commit, ledger, and export tools', () => {
   assert.deepEqual(

@@ -1,0 +1,47 @@
+# Compass operator release — 8 September 2026
+
+Scope: goals and notes, lightweight actual-time records, offer explanation and economics, visual experiment preparation, and trustworthy supervised operator inputs. Based on commercial release 469ea53 in an isolated release checkout; unrelated workspace work is excluded.
+
+## User surfaces
+
+- `/planning`: daily through yearly goals, regular/stretch thresholds, separate actuals and forecasts, evidence, parent goals, revision history, notes, actual/planned human effort, agent receipts and preparation queue.
+- `/sales/offer-plan`: the current installation-booking contract, client and Switchflow benefits, three scope choices, separately scoped add-ons, scenario economics, diagnostic questions and reasons to decline or narrow the offer. Whimsical ideas are hypotheses, not approvals or proof.
+- `/sales/experiments`: separate draft challengers, explicit changed dimension, planned sample and earliest review, link to existing copy editor, snapshot-backed preparation requests, selection of the specific challenger and manual outcome assessment gates. A queued request is not paid execution. Actual company-level assignment, running the existing mill and Instantly upload still require agent execution and destination verification; activation remains Jules-led.
+
+## Reporting fixes
+
+- Agent brief counts active pipeline campaigns rather than the first 12 records; cancelled rows do not appear in the working campaign list. Lead/campaign query failures no longer silently become zero.
+- Waves excludes cancelled, archived and completed pipeline records from preparation lanes and reports unavailable Instantly data explicitly.
+- Agent retention API no longer supplies demonstration clients as business facts.
+- Interested leads and opportunities are not substituted for booked meetings.
+- Opt-out status is preserved against later weaker Instantly sync classifications. Explicit unsubscribe marking disables recontact.
+- Test-cell creation excludes retired offers and uses actual vertical tags rather than prose descriptions; it does not preselect five cities.
+
+## Validation
+
+Production build and type checks passed. Deploy guards passed. 56 focused tests passed. The broader run: 375 passed, 24 failed. Comparison with the unchanged commercial-release source reproduces the legacy failures (including missing surrounding workspace migrations/packs, existing timezone/UI expectations and older commercial-route boundary expectations); the full legacy suite is not green. No claim of whole-app certification.
+
+Hosted preview: private agent workspace reads returned real project/task records; three unauthenticated route requests returned 401. An archived QA note was created, retried without duplication, edited with preserved history and rejected on a stale revision. Production destination and visual checks are recorded after release.
+
+No new subscription, bank feed or Instantly activation is included. Unknown current MRR, bank details, client economics and unresolved commercial terms remain unknown. No automatic calendar surveillance or blended productivity score is introduced.
+
+## Production verification
+
+Production at https://compass-web-eosin.vercel.app deployed through commit `390419f`. The operator session loaded the three new pages. Notes were created through the UI. The calculator correctly evaluated a clearly labelled temporary scenario; these inputs were not stored as client economics. Desktop and narrow-screen layouts were inspected, with no horizontal overflow in the narrow-screen check. The final Email tests page defaults to the current installation-booking offer, shows the Sydney draft, displays unavailable metrics as unavailable and disables winner decisions without two eligible arms and review evidence.
+
+The full day/outbound/delivery plan was saved to Waves for 8 September and matched on read-back. Replaying the same plan preserved both Jules-led task IDs and workspace record totals. Three completed run receipts are visible through the planning API: initial input audit, refresh/action/verification, and replay/persistence. These are three supervised same-day integration checks, not three mornings of performance evidence. No unattended automation or paid preparation worker was enabled.
+
+The Instantly refresh updated 197 existing lead records with zero inserted. Three explicit opt-outs were added to the Instantly blocklist and marked unsubscribed in Compass; both destinations retained those exclusions after another sync. Actual reply content was reviewed, so automated replies and unsubscribe requests were not treated as positive conversations. CRM record counts do not establish current revenue or paying-client status.
+
+The 90-day regular/stretch MRR goal, offer hypotheses, market and banking notes, productivity-trial note, and a draft client process outline were saved in Compass. Existing future delivery projects were verified. A Sydney installation-booking campaign and two-email draft were saved and read back, with a three-day follow-up delay. Its lead cohort, actual safe inbox capacity and send readiness are still unverified; it has no Instantly binding and is not ready to launch. Preparation is queued with those requirements stated explicitly.
+
+Outstanding validation: a deduplicated reachable market estimate; client-specific booking-gap and contribution economics; a complete prepared lead cohort and rendered-merge review; company-level test assignment and exposure evidence; actual delivery outcomes over an appropriate review window. There is no new campaign launch, full historical 655-lead re-audit, automatic bank connection or completed card-payment test in this release.
+
+
+## Follow-up readiness review, 8 September evening
+
+Published commits `67a3d61` and `fd46666`: null-safe lead pagination (including missing-email records) and current-offer default in the new-campaign picker. Production read-back returned 899 unique HVAC records over five pages, including 435 without emails that the former cursor excluded. Type checks/build passed; 16 focused Compass tests passed. The local current-offer runner and vocabulary were corrected, with 29 runner, 43 opener and 33 filter tests passing. The old HVAC targeting specification was preserved in the offer-transition archive. These local changes are in the main workspace; they do not constitute a hosted paid execution worker.
+
+Clarified the Compass offer lock and local contract: research fit from published residential ducted service, geography and quote journey is distinct from client qualification on demand, a recoverable booking gap, capacity and economics. Saved source-backed sample facts on three existing leads without changing outreach states or campaign assignments. Five notes, the revised day plan and preserved offer lock matched production read-back. Updated the exploratory draft copy to homeowner ducted-installation enquiries, with no approved guarantee or result claim.
+
+Corrected Smart Handy and Roof Safety task/context records from Jules' account. Scheduled the five-weekday 8am morning pilot in the current task (`compass-morning-pilot`) with a defined scorecard and a final review. This readiness audit is not one of those future morning runs. The user-supplied Apify credential was recovered from this task, authenticated and restored to the ignored private local configuration; verified US$65 monthly cap and about US$50.89 usage. No paid job or budget increase was initiated. Card checkout remains disabled pending provider connection and its real test-mode verification; no client agreement or charge was issued.
