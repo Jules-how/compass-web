@@ -275,7 +275,7 @@ export function ExperimentsDesk() {
           old review. Queueing does not start paid scraping automatically.
         </p>
       </section>
-      <OutboundExperimentCompare />
+      <OutboundExperimentCompare offerKey={legacy ? undefined : 'installation-booking'} />
     </div>
   );
 }

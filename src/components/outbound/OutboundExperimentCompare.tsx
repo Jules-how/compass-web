@@ -152,7 +152,7 @@ function ArmCard({
   );
 }
 
-export function OutboundExperimentCompare() {
+export function OutboundExperimentCompare({offerKey}: {offerKey?: string} = {}) {
   const board = useCachedJson<OutboundBoardPayload>(
     "/api/instantly/outbound-campaigns",
     "/api/instantly/outbound-campaigns",
@@ -178,6 +178,7 @@ export function OutboundExperimentCompare() {
     void listCampaigns()
       .then((rows) => {
         if (cancelled) return;
+        rows = rows.filter(r => (!offerKey || r.offer_key === offerKey) && !['cancelled','archived'].includes(r.status));
         setPipeline(rows);
         const controls = rows.filter(
           (r) =>
@@ -186,13 +187,13 @@ export function OutboundExperimentCompare() {
               r.experiment_status &&
               r.experiment_status !== "none"),
         );
-        if (!controlId && controls[0]) setControlId(controls[0].id);
+        if (!controls.some(r => r.id === controlId)) setControlId(controls[0]?.id || "");
       })
       .catch((e) => setError(e.message));
     return () => {
       cancelled = true;
     };
-  }, [controlId]);
+  }, [controlId, offerKey]);
 
   const enrichedBoard = useMemo(() => {
     const live = board.data?.source === 'instantly' ? board.data.live : [];
@@ -277,7 +278,7 @@ export function OutboundExperimentCompare() {
         });
       }
       const rows = await listCampaigns({ force: true });
-      setPipeline(rows);
+      setPipeline(rows.filter(r => (!offerKey || r.offer_key === offerKey) && !['cancelled','archived'].includes(r.status)));
     } catch (e) {
       setError(
         e instanceof Error

@@ -260,6 +260,7 @@ export function PlanningBoard() {
           {shown.map((r) => (
             <button
               key={r.id}
+              aria-label={`Open ${r.data.title}`}
               className={`block w-full rounded-xl border p-4 text-left ${edit?.id === r.id ? "border-orange-300 bg-orange-50/30" : "border-stone-200 bg-white"}`}
               onClick={() => {
                 setEdit(r);
