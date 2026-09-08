@@ -46,3 +46,12 @@ test('security reset rejects sessions issued before cutoff, including missing or
   assert.equal(isSessionCurrent(user, 'bad'), false)
   assert.equal(isSessionCurrent({}, token(1)), true)
 })
+
+import {parsePasswordSetup} from '../src/lib/password-setup.ts'
+test('password setup accepts current provider SHA224 tokens and rejects malformed input',()=>{
+ assert.equal(parsePasswordSetup({tokenHash:'a'.repeat(56),password:'strong-test-password'}).tokenHash.length,56)
+ assert.equal(parsePasswordSetup({tokenHash:'a'.repeat(64),password:'strong-test-password'}).tokenHash.length,64)
+ assert.throws(()=>parsePasswordSetup({tokenHash:'a'.repeat(56),password:'short'}))
+ assert.throws(()=>parsePasswordSetup({tokenHash:'bad',password:'strong-test-password'}))
+ assert.throws(()=>parsePasswordSetup(null))
+})

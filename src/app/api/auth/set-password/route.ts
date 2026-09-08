@@ -6,6 +6,7 @@ import {
   requireSameOrigin,
 } from '@/lib/portal-http'
 import { checkOnboardingRateLimit } from '@/lib/onboarding-rate-limit'
+import { parsePasswordSetup } from '@/lib/password-setup'
 export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   const origin = requireSameOrigin(request)
@@ -17,20 +18,7 @@ export async function POST(request: NextRequest) {
       { status: 429 },
     )
   try {
-    const input = (await readBoundedJson(request, 4096)) as {
-      tokenHash?: string
-      password?: string
-    }
-    if (
-      typeof input.tokenHash !== 'string' ||
-      !/^[a-f0-9]{64}$/.test(input.tokenHash) ||
-      typeof input.password !== 'string' ||
-      input.password.length < 12 ||
-      input.password.length > 200
-    )
-      throw new Error(
-        'Use the private setup link and a password of at least 12 characters.',
-      )
+    const input = parsePasswordSetup(await readBoundedJson(request, 4096))
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
       key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if (!url || !key) throw new Error('Sign-in is not configured.')
