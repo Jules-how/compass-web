@@ -1,5 +1,7 @@
 'use client'
 
+import { workFetch } from '@/lib/workspace-change'
+
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type {
@@ -131,12 +133,12 @@ export function ProjectDetailPanel({
   const load = useCallback(async () => {
     setError(null)
     try {
-      const detailPromise = fetch(`/api/projects/${projectId}`, {
+      const detailPromise = workFetch(`/api/projects/${projectId}`, {
         headers: { Accept: 'application/json' }
       })
       const listPromise = projectsProp
         ? null
-        : fetch('/api/projects', { headers: { Accept: 'application/json' } })
+        : workFetch('/api/projects', { headers: { Accept: 'application/json' } })
 
       const detailRes = await detailPromise
       if (detailRes.status === 404) throw new Error('Project not found')
@@ -223,7 +225,7 @@ export function ProjectDetailPanel({
     setSaveMessage(null)
     setError(null)
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
+      const res = await workFetch(`/api/projects/${projectId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -273,7 +275,7 @@ export function ProjectDetailPanel({
     setSaving(true)
     setError(null)
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
+      const res = await workFetch(`/api/projects/${projectId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

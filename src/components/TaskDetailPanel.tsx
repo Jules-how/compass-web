@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { workFetch } from '@/lib/workspace-change'
+
+import { useEffect, useRef, useState } from 'react'
 import type {
   CompassBusinessFunction,
   CompassProject,
@@ -36,6 +38,7 @@ export default function TaskDetailPanel({
   onClose,
   onChanged
 }: TaskDetailPanelProps) {
+  const loadedStamp = useRef(task.updated_at)
   const [title, setTitle] = useState(task.title)
   const [status, setStatus] = useState<TaskStatus>(task.status)
   const [priority, setPriority] = useState(task.priority)
@@ -57,7 +60,11 @@ export default function TaskDetailPanel({
     setTaskType(task.task_type ?? '')
     setNotes(task.notes ?? '')
     setError(null)
-  }, [task])
+    loadedStamp.current = task.updated_at
+    // Background refresh must not replace a draft being edited. The save compares
+    // the version opened here and returns a conflict if another writer changed it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task.id])
 
   const projectOptions = Object.values(projectsById).sort((a, b) => a.name.localeCompare(b.name))
   const bfOptions = Object.values(businessFunctionsById).sort((a, b) => a.sort_order - b.sort_order)
@@ -68,10 +75,11 @@ export default function TaskDetailPanel({
     setSaving(true)
     setError(null)
     try {
-      const res = await fetch(`/api/tasks/${task.id}`, {
+      const res = await workFetch(`/api/tasks/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          expected_updated_at: loadedStamp.current,
           title: title.trim(),
           status,
           priority,
@@ -84,7 +92,7 @@ export default function TaskDetailPanel({
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? `Request failed (${res.status})`)
+        throw new Error(body.detail ?? body.error ?? `Request failed (${res.status})`)
       }
       await onChanged()
       onClose()

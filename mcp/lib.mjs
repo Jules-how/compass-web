@@ -16,6 +16,18 @@ const SEARCH_DEFAULT_LIMIT = 2000
 
 export const TOOLS = [
   {
+    name: 'pathfinder',
+    description: 'Read approved outcomes, supporting canonical work, outcome evidence and persistent findings. Optional goal_id narrows the context. Use before daily planning; missing capacity remains unknown.',
+    inputSchema: {type:'object',properties:{goal_id:{type:'string'}},additionalProperties:false}
+  },
+  {
+    name: 'pathfinder.review',
+    description: 'Record or revise the same goal-linked finding using a stable issue_key and current revision (0 on create). Preserves task identity and history. No task creation, spending or external actions.',
+    inputSchema: {type:'object',required:['goal_id','issue_key','revision','title','symptom','next_action','source'],properties:{
+      goal_id:{type:'string'},issue_key:{type:'string'},revision:{type:'integer'},title:{type:'string'},symptom:{type:'string'},hypothesis:{type:'string'},alternatives:{type:'string'},next_action:{type:'string'},expected_benefit:{type:'string'},effort_minutes:{type:['integer','null']},uncertainty:{type:'string'},prerequisites:{type:'string'},opportunity_cost:{type:'string'},review_on:{type:['string','null']},source:{type:'string'},evidence_ids:{type:'array',items:{type:'string'}},status:{type:'string',enum:['open','watching','resolved','dismissed']}
+    },additionalProperties:false}
+  },
+  {
     name: 'brief',
     description:
       'Compact daily brief plus currentWave (trade, cluster, remaining). Cached unless fresh=true. Start here. Live targeting is Compass, not markdown.',
@@ -303,6 +315,15 @@ export async function callTool(name, args = {}, { cfg, fetchImpl }) {
   if (!cfg.secret) return toolError('missing COMPASS_AGENT_SECRET')
 
   switch (name) {
+    case 'pathfinder': {
+      const path='/api/agent/pathfinder'+(args.goal_id?'?goal_id='+encodeURIComponent(args.goal_id):'');
+      const r=await compassFetch(cfg,{method:'GET',path,fetchImpl});
+      return r.status>=400?toolError(JSON.stringify(r.json)):toolOk(r.json);
+    }
+    case 'pathfinder.review': {
+      const r=await compassFetch(cfg,{method:'POST',path:'/api/agent/pathfinder',body:{...args,action:'review'},fetchImpl});
+      return r.status>=400?toolError(JSON.stringify(r.json)):toolOk(r.json);
+    }
     case 'brief': {
       const r = await compassFetch(cfg, {
         method: 'GET',

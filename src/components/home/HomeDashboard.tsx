@@ -1,5 +1,7 @@
 'use client'
 
+import { workFetch } from '@/lib/workspace-change'
+
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { ModalFrame } from '@/components/ui/ModalFrame'
@@ -9,6 +11,7 @@ import type { BrainDumpReorganizeResult, BrainDumpSuggestion } from '@/lib/brain
 import type { HomePayload } from '@/lib/home-data'
 import type { CompassTask } from '@/lib/types'
 import type { MorningWavePayload } from '@/lib/wave-morning'
+import { PathfinderHome } from '@/components/pathfinder/PathfinderHome'
 import { MorningWavePanel } from '@/components/home/MorningWavePanel'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { cn } from '@/lib/utils'
@@ -101,7 +104,7 @@ export function HomeDashboard() {
       const openTasks = (tasks.data?.topTasks ?? []).filter(
         (t) => t.status !== 'completed' && t.status !== 'cancelled'
       )
-      const res = await fetch('/api/brain-dump/reorganize', {
+      const res = await workFetch('/api/brain-dump/reorganize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
@@ -134,7 +137,7 @@ export function HomeDashboard() {
     try {
       const creatable = chosen.filter((s) => s.kind === 'task' || s.kind === 'priority')
       for (const item of creatable) {
-        const res = await fetch('/api/tasks', {
+        const res = await workFetch('/api/tasks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({
@@ -206,6 +209,7 @@ export function HomeDashboard() {
         </div>
 
         <div className="grid min-h-0 flex-1 content-start items-start gap-3 overflow-y-auto overscroll-contain lg:grid-cols-2">
+          <div className="lg:col-span-2"><PathfinderHome /></div>
           <div className="lg:col-span-2">
             {wave ? (
               <MorningWavePanel

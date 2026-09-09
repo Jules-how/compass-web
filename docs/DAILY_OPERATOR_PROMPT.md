@@ -121,3 +121,15 @@ The Whimsical September board is an idea source. Challenge whether there is a va
 ## Five-morning pilot measurement
 
 Use docs/DAILY_OPERATOR_SCORECARD.md for the measurement contract. Save one stable dated pilot receipt in Compass per weekday, including failed or partial runs. Record real timestamps, source coverage, planned/attempted/verified actions, retries, Jules-confirmed time, costs when available, review status and later business outcomes separately. Unknowns remain unknown. Read current Compass opportunity notes before promoting an old email into a new task. End the five-morning pilot with an evidence-based review; same-day integration checks do not count as separate days.
+
+## Pathfinder integration
+
+Read `GET /api/agent/pathfinder` (MCP `pathfinder`) after the brief. It contains the approved outcome definitions, observations, active/proposed links, canonical work, persistent findings and explicit coverage gaps. Narrow subsequent reads with `goal_id`. Do not treat unknown capacity as available time or an estimate as achievement.
+
+Write findings using `POST /api/agent/pathfinder` with `action: review` (MCP `pathfinder.review`). Identify the same underlying issue with a stable `goal_id + issue_key`, independent of day/title. On the next review, read its current revision and update it; preserve its existing task. Inspect all relevant existing tasks and projects first. Record the symptom separately from suspected causes, alternative explanations, next test/action, expected benefit, effort or unknown, prerequisites, uncertainty, opportunity cost and a review date. An unchanged issue needs no write. Do not reopen dismissed/resolved issues automatically or change a live intervention before its observation window matures without material evidence.
+
+Agent observations use `action: observe` and provenance `reported` or `estimate`, with a stable idempotency key, current goal revision, source, reporting period and observation timestamp. Operator source verification is required before measured achievement. Agents may propose links with `state: proposed`. Committed goals are protected by the server; record a recommendation instead of editing them. Scenario exploration never changes a goal or creates a task.
+
+A Pathfinder finding is already the recommendation record shown on Home. Do not also put it into `scan.julesLed` as a new task. Reference its existing task ID in the writeup if one exists. The operator's Create linked task action uses the standard task creation RPC and is idempotent. A task is an internal work record, not permission to spend, send, activate or change commercial terms. Continue supported execution through the existing action-specific workflow and permissions, and attach the real result/source before claiming completion.
+
+Re-read the saved finding/observation and compare IDs, revisions and evidence. A successful HTTP request alone is not proof that an external action occurred. This integration changes no schedule and introduces no second daily reasoning agent.

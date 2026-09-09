@@ -46,7 +46,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const originError = requireSameOrigin(request)
   if (originError) return originError
   const { id } = await context.params
-  let body: CompassTaskUpdate
+  let body: CompassTaskUpdate & { expected_updated_at?: string }
   try {
     body = (await readBoundedJson(request)) as CompassTaskUpdate
   } catch {
@@ -61,11 +61,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
-    const { data, error } = await supabase.rpc('portal_operator_apply_task_mutation', {
-      p_task_id: id,
-      p_patch: patch,
-      p_base_entity_version: null
-    })
+    const { data, error } = body.expected_updated_at
+      ? await supabase.rpc('pathfinder_apply_task', { p_task_id: id, p_patch: patch, p_expected_updated_at: body.expected_updated_at })
+      : await supabase.rpc('portal_operator_apply_task_mutation', { p_task_id: id, p_patch: patch, p_base_entity_version: null })
     if (error) {
       const message = error.message ?? ''
       if (/resource not found/i.test(message)) return portalJson({ error: 'not_found' }, { status: 404 })

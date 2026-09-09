@@ -1,5 +1,7 @@
 'use client'
 
+import { workFetch } from '@/lib/workspace-change'
+
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -388,7 +390,7 @@ export function MorningWavePanel({
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch('/api/home/wave', {
+      const res = await workFetch('/api/home/wave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ action })
@@ -441,7 +443,7 @@ export function MorningWavePanel({
     if (completing || task.status === 'completed' || task.status === 'cancelled') return
     setCompleting(true)
     try {
-      const res = await fetch(`/api/tasks/${task.id}`, {
+      const res = await workFetch(`/api/tasks/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ status: 'completed' })

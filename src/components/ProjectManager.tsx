@@ -1,5 +1,7 @@
 'use client'
 
+import { workFetch } from '@/lib/workspace-change'
+
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import type { CompassBusinessFunction, CompassProjectWithStats } from '@/lib/types'
@@ -637,7 +639,7 @@ export function ProjectManager({
     setSaving(false)
 
     try {
-      const res = await fetch('/api/projects', {
+      const res = await workFetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -685,7 +687,7 @@ export function ProjectManager({
     }
     setError(null)
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
+      const res = await workFetch(`/api/projects/${projectId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
@@ -713,7 +715,7 @@ export function ProjectManager({
       })
     }
     setError(null)
-    const res = await fetch(`/api/projects/${projectId}`, {
+    const res = await workFetch(`/api/projects/${projectId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ start_date: start, target_date: end })
@@ -737,7 +739,7 @@ export function ProjectManager({
     setError(null)
     removeCachedProject(project.id)
     try {
-      const res = await fetch(`/api/projects/${project.id}`, { method: 'DELETE' })
+      const res = await workFetch(`/api/projects/${project.id}`, { method: 'DELETE' })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)

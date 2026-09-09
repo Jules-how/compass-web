@@ -1,5 +1,7 @@
 'use client'
 
+import { workFetch } from '@/lib/workspace-change'
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -223,7 +225,7 @@ export default function TaskList({
     const nextStatus = task.status === 'completed' ? 'not-started' : 'completed'
     setTogglingIds((prev) => ({ ...prev, [task.id]: true }))
     try {
-      const res = await fetch(`/api/tasks/${task.id}`, {
+      const res = await workFetch(`/api/tasks/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })

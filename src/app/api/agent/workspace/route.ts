@@ -25,6 +25,7 @@ export async function GET(request: Request) {
         { count: "exact" },
       )
       .neq("status", "done")
+      .neq("status", "completed")
       .neq("status", "cancelled")
       .order("id")
       .range(page * 100, page * 100 + 99),
