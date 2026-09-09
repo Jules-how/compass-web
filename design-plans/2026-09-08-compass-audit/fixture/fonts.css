@@ -1,0 +1,3 @@
+@font-face { font-family: 'Fixture Geist'; src: url('./geist-sans.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Fixture Geist Mono'; src: url('./geist-mono.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
+:root { --font-geist-sans: 'Fixture Geist'; --font-geist-mono: 'Fixture Geist Mono'; }

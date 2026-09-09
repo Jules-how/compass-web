@@ -21,7 +21,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verify
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Outbound companion regressions
+        run: |
+          python3 -m unittest discover -s workers/outbound/cold-email -p 'test_*.py'
+          python3 -m unittest discover -s workers/outbound/cold-email/openers -p 'test_*.py'
+          python3 -m unittest discover -s workers/outbound/cold-email/list-builds -p 'test_*.py'
+          python3 -m unittest discover -s workers/outbound/.agents/skills/instantly-load -p 'test_*.py'
       - run: node --test test/outbound-preparation*.test.mjs
+        env:
+          SWITCHFLOW_WORKSPACE: ${{ github.workspace }}/workers/outbound
       - run: node --test --test-concurrency=2 test/delivery-engine.test.mjs test/delivery-route-access.test.mjs test/lead-lists.test.mjs test/campaign-workspace.test.mjs test/service-role-boundary.test.mjs
       - name: Production build
         env:

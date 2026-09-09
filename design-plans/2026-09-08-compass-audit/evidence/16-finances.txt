@@ -1,0 +1,102 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- complementary:
+  - link "switchflow compass":
+    - /url: /home
+    - generic: switchflow compass
+  - navigation "Operator":
+    - link "Home":
+      - /url: /home
+      - generic: Home
+    - link "Inbox 87":
+      - /url: /inbox
+      - generic: Inbox
+      - generic: "87"
+    - generic: Workspace
+    - link "Goals & notes":
+      - /url: /planning
+      - generic: Goals & notes
+    - link "My Tasks":
+      - /url: /tasks
+      - generic: My Tasks
+    - link "Projects":
+      - /url: /projects
+      - generic: Projects
+    - link "Functions":
+      - /url: /functions
+      - generic: Functions
+    - link "Clients":
+      - /url: /clients
+      - generic: Clients
+    - generic: Sales
+    - link "Overview":
+      - /url: /sales
+      - generic: Overview
+    - link "Offer & economics":
+      - /url: /sales/offer-plan
+      - generic: Offer & economics
+    - link "Email tests":
+      - /url: /sales/experiments
+      - generic: Email tests
+    - link "Offers":
+      - /url: /sales/offers
+      - generic: Offers
+    - link "Outbound":
+      - /url: /sales/outbound
+      - generic: Outbound
+    - link "CRM":
+      - /url: /leads
+      - generic: CRM
+    - generic: Operations
+    - link "Finances" [active]:
+      - /url: /operations/finances
+      - generic: Finances
+    - link "Installs":
+      - /url: /operations/installs
+      - generic: Installs
+    - link "Retention":
+      - /url: /operations/cs
+      - generic: Retention
+    - link "Settings":
+      - /url: /settings
+      - generic: Settings
+  - button "Sign out"
+- main:
+  - heading "Finances" [level=1]
+  - paragraph: Expenses with source records
+  - heading "Expenses" [level=3]
+  - paragraph: Record actual AUD expenses with their bank or receipt reference. No QuickBooks connection is needed. These are manually recorded costs; there is no automatic bank feed or GST-credit calculation.
+  - text: Date paid
+  - textbox "Date paid": 2026-09-08
+  - text: Vendor
+  - textbox "Vendor"
+  - text: Amount paid (AUD)
+  - spinbutton "Amount paid (AUD)"
+  - text: Category
+  - textbox "Category": Software
+  - text: Paid from (bank / Wise / card)
+  - textbox "Paid from (bank / Wise / card)"
+  - text: Transaction or receipt reference
+  - textbox "Transaction or receipt reference"
+  - text: Receipt link (optional)
+  - textbox "Receipt link (optional)"
+  - text: Notes (optional)
+  - textbox "Notes (optional)"
+  - button "Record expense"
+  - heading "$0.00 on this page" [level=3]
+  - paragraph: 0 recorded expenses · newest expense dates first
+  - table:
+    - rowgroup:
+      - row "Date Vendor Category Account Reference Amount":
+        - columnheader "Date"
+        - columnheader "Vendor"
+        - columnheader "Category"
+        - columnheader "Account"
+        - columnheader "Reference"
+        - columnheader "Amount"
+    - rowgroup
+  - paragraph: No expenses recorded on this page.
+  - button "Previous" [disabled]
+  - button "Next" [disabled]
+- alert
+- generic: "0"

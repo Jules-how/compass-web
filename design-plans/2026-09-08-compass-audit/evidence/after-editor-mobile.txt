@@ -1,0 +1,99 @@
+- main:
+  - strong: LOCAL VERIFICATION FIXTURE · actual components, synthetic data
+  - button "editor" [pressed]
+  - button "calendar"
+  - button "board"
+  - button "modals"
+  - button "inbox"
+  - button "Back from editor":
+  - textbox "Campaign name":
+    - /placeholder: Untitled Campaign
+    - text: Fixture · Sydney HVAC sequence
+  - status: Autosave on
+  - button "Save"
+  - button "Push to Instantly":
+    - text: Push to Instantly
+  - navigation "Campaign views":
+    - button "Analytics"
+    - button "Editor" [pressed]: Editor
+    - button "Experiment"
+    - button "Archive"
+    - button "Settings"
+  - navigation "Editor workspace":
+    - button "Compose" [pressed]
+    - button "Library"
+    - button "Levers"
+    - button "QA"
+  - paragraph: No Instantly bind yet. Rates show here after you push.
+  - button "Vertical hvac":
+    - generic: Vertical
+    - generic: hvac
+  - button "Offer empty":
+    - generic: Offer
+    - generic: empty
+  - button "Template nick-3step":
+    - generic: Template
+    - generic: nick-3step
+  - 'button "Opener {{personalization}}"':
+    - generic: Opener
+    - generic: "{{personalization}}"
+  - 'button "Subject A fixture subject for {{companyName}}"':
+    - generic: Subject
+    - generic: "A fixture subject for {{companyName}}"
+  - button "Body empty":
+    - generic: Body
+    - generic: empty
+  - button "Risk empty":
+    - generic: Risk
+    - generic: empty
+  - button "CTA empty":
+    - generic: CTA
+    - generic: empty
+  - button "P.S. empty":
+    - generic: P.S.
+    - generic: empty
+  - generic: Email 1
+  - generic: "1"
+  - button "Remove step":
+  - textbox "Subject line": "A fixture subject for {{companyName}}"
+  - generic: Opener
+  - textbox "Opener":
+    - /placeholder: "{{personalization}}"
+    - text: "{{personalization}}"
+  - generic: Cold expression
+  - textbox "Cold expression"
+  - generic: Risk reversal
+  - textbox "Risk reversal":
+    - /placeholder: You carry the risk. They pay on results.
+  - generic: CTA
+  - textbox "CTA"
+  - generic: P.S.
+  - textbox "P.S.":
+    - /placeholder: P.S. half-done work, objection, or give-first.
+  - paragraph: "Inbox preview · {{personalization}} · 3 words"
+  - paragraph: Compiled body is 3 words (research band is about 50–125, footer included).
+  - text: Wait
+  - spinbutton: "3"
+  - text: days
+  - generic: Follow-up 1
+  - generic: "2"
+  - button "Remove step":
+  - textbox "Leave empty to use previous step's subject"
+  - generic: Bump
+  - textbox "Bump":
+    - /placeholder: "{{personalization}}"
+  - generic: Risk reversal
+  - textbox "Risk reversal":
+    - /placeholder: You carry the risk. They pay on results.
+  - generic: CTA
+  - textbox "CTA"
+  - generic: P.S.
+  - textbox "P.S.":
+    - /placeholder: P.S. half-done work, objection, or give-first.
+  - button "Add follow-up":
+  - button "Variables":
+    - text: Variables
+  - button "Preview delivered email":
+  - button "Desktop width" [pressed]:
+  - button "Mobile width":
+  - status: All records below are synthetic. No live data or network writes.

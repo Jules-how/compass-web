@@ -1,0 +1,40 @@
+- main:
+  - strong: LOCAL VERIFICATION FIXTURE · actual components, synthetic data
+  - button "editor"
+  - button "calendar"
+  - button "board"
+  - button "modals"
+  - button "inbox"
+  - button "home" [active] [pressed]
+  - button "login"
+  - paragraph: Operator home
+  - heading "Tuesday 8 Sept" [level=1]
+  - button "Brain dump"
+  - heading "Morning wave" [level=2]
+  - paragraph: Brief accepted. List-builds may run for empty next. Live land is open.
+  - link "Waves":
+    - /url: /sales/outbound
+  - button "Synthetic morning brief for layout verification."
+  - paragraph: "Pinned next: Fixture · next campaign"
+  - heading "Sending" [level=3]
+  - generic: Fixture · active Sydney campaign
+  - paragraph: 130 remaining
+  - generic: Copy confirmed
+  - button "Re-tick openers"
+  - button "Open chunk"
+  - heading "Highest leverage" [level=3]
+  - paragraph: No Jules-led items from this morning’s run.
+  - paragraph: Land is Cursor after remaining is under 50. Activate stays Instantly. Type replies in Instantly or Gmail.
+  - heading "Emails going out" [level=2]
+  - link "Open outbound":
+    - /url: /sales/outbound
+  - generic: Sent today
+  - generic: "120"
+  - generic: Reply rate
+  - generic: 2.5%
+  - heading "Replies coming in" [level=2]
+  - link "Open inbox":
+    - /url: /inbox?tab=instantly
+  - generic: Waiting in Instantly
+  - generic: "2"
+  - status: Moved task-a to done

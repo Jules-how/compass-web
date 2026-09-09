@@ -1,0 +1,273 @@
+
+> compass-web@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.20
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · staleTimes
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 6.3s
+   Linting and checking validity of types ...
+
+./src/components/LeadTable.tsx
+107:6  Warning: React Hook useEffect has a missing dependency: 'onLeadSelect'. Either include it or remove the dependency array. If 'onLeadSelect' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./src/components/campaigns/CampaignPlanner.tsx
+129:9  Warning: The 'campaigns' logical expression could make the dependencies of useMemo Hook (at line 184) change on every render. To fix this, wrap the initialization of 'campaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+164:6  Warning: React Hook useCallback has a missing dependency: 'campaignsQuery'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/campaigns/CampaignReviewModal.tsx
+107:6  Warning: React Hook useEffect has a missing dependency: 'initialCampaign'. Either include it or remove the dependency array. If 'setCampaign' needs the current value of 'initialCampaign', you can also switch to useReducer instead of useState and read 'initialCampaign' in the reducer.  react-hooks/exhaustive-deps
+
+./src/components/offers/TestCellsBoard.tsx
+72:9  Warning: The 'cells' logical expression could make the dependencies of useMemo Hook (at line 95) change on every render. To fix this, wrap the initialization of 'cells' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+72:9  Warning: The 'cells' logical expression could make the dependencies of useMemo Hook (at line 100) change on every render. To fix this, wrap the initialization of 'cells' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+72:9  Warning: The 'cells' logical expression could make the dependencies of useMemo Hook (at line 109) change on every render. To fix this, wrap the initialization of 'cells' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./src/components/outbound/EditorComponentsAccordion.tsx
+399:9  Warning: The 'ctx' logical expression could make the dependencies of useMemo Hook (at line 538) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./src/components/outbound/OutboundHistorySection.tsx
+69:9  Warning: The 'instantlyHistory' logical expression could make the dependencies of useMemo Hook (at line 170) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'instantlyHistory' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./src/components/outbound/mock/ClocksPreview.tsx
+155:6  Warning: React Hook useCallback has missing dependencies: 'campaignsQuery' and 'queueQuery'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/outbound/mock/FactoryPreview.tsx
+124:9  Warning: The 'allCampaigns' logical expression could make the dependencies of useMemo Hook (at line 127) change on every render. To fix this, wrap the initialization of 'allCampaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+124:9  Warning: The 'allCampaigns' logical expression could make the dependencies of useMemo Hook (at line 135) change on every render. To fix this, wrap the initialization of 'allCampaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./src/components/outbound/mock/RunwayPreview.tsx
+199:9  Warning: The 'campaigns' logical expression could make the dependencies of useMemo Hook (at line 214) change on every render. To fix this, wrap the initialization of 'campaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+199:9  Warning: The 'campaigns' logical expression could make the dependencies of useMemo Hook (at line 222) change on every render. To fix this, wrap the initialization of 'campaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/6) ...
+   Generating static pages (1/6) 
+   Generating static pages (2/6) 
+   Generating static pages (4/6) 
+ ✓ Generating static pages (6/6)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                                          Size  First Load JS
+┌ ƒ /                                                               490 B         103 kB
+├ ○ /_not-found                                                      1 kB         104 kB
+├ ƒ /api/ads/accounts                                               490 B         103 kB
+├ ƒ /api/ads/accounts/[id]                                          490 B         103 kB
+├ ƒ /api/ads/accounts/[id]/sync                                     490 B         103 kB
+├ ƒ /api/ads/discover                                               490 B         103 kB
+├ ƒ /api/ads/glance                                                 490 B         103 kB
+├ ƒ /api/ads/oauth/meta                                             490 B         103 kB
+├ ƒ /api/ads/oauth/meta/callback                                    490 B         103 kB
+├ ƒ /api/agent/brief                                                490 B         103 kB
+├ ƒ /api/agent/campaigns                                            490 B         103 kB
+├ ƒ /api/agent/cs                                                   490 B         103 kB
+├ ƒ /api/agent/instantly/backfill                                   490 B         103 kB
+├ ƒ /api/agent/instantly/duplicate-template                         490 B         103 kB
+├ ƒ /api/agent/instantly/ensure                                     490 B         103 kB
+├ ƒ /api/agent/instantly/push-leads                                 490 B         103 kB
+├ ƒ /api/agent/instantly/push-sequence                              490 B         103 kB
+├ ƒ /api/agent/leads                                                490 B         103 kB
+├ ƒ /api/agent/leads/cohort                                         490 B         103 kB
+├ ƒ /api/agent/leads/export                                         490 B         103 kB
+├ ƒ /api/agent/leads/inventory                                      490 B         103 kB
+├ ƒ /api/agent/leads/ledger                                         490 B         103 kB
+├ ƒ /api/agent/leads/mark                                           490 B         103 kB
+├ ƒ /api/agent/offers/cells                                         490 B         103 kB
+├ ƒ /api/agent/offers/desk                                          490 B         103 kB
+├ ƒ /api/agent/outbound/[kind]                                      490 B         103 kB
+├ ƒ /api/agent/outbound/[kind]/[id]                                 490 B         103 kB
+├ ƒ /api/agent/outbound/campaigns/[campaignId]/copy                 490 B         103 kB
+├ ƒ /api/agent/outbound/pathway                                     490 B         103 kB
+├ ƒ /api/agent/outbound/pathway/runs                                490 B         103 kB
+├ ƒ /api/agent/outbound/summary                                     490 B         103 kB
+├ ƒ /api/agent/outbound/waves                                       490 B         103 kB
+├ ƒ /api/agent/planning                                             490 B         103 kB
+├ ƒ /api/agent/sync                                                 490 B         103 kB
+├ ƒ /api/agent/workspace                                            490 B         103 kB
+├ ƒ /api/auth/login                                                 490 B         103 kB
+├ ƒ /api/auth/set-password                                          490 B         103 kB
+├ ƒ /api/brain-dump/reorganize                                      490 B         103 kB
+├ ƒ /api/calendar/oauth                                             490 B         103 kB
+├ ƒ /api/calendar/oauth/callback                                    490 B         103 kB
+├ ƒ /api/calendar/settings                                          490 B         103 kB
+├ ƒ /api/campaigns                                                  490 B         103 kB
+├ ƒ /api/campaigns/[id]                                             490 B         103 kB
+├ ƒ /api/campaigns/[id]/challenger                                  490 B         103 kB
+├ ƒ /api/campaigns/[id]/instantly/duplicate-template                490 B         103 kB
+├ ƒ /api/campaigns/[id]/instantly/ensure                            490 B         103 kB
+├ ƒ /api/campaigns/[id]/instantly/push-leads                        490 B         103 kB
+├ ƒ /api/campaigns/[id]/instantly/push-sequence                     490 B         103 kB
+├ ƒ /api/campaigns/[id]/milestones                                  490 B         103 kB
+├ ƒ /api/campaigns/queue                                            490 B         103 kB
+├ ƒ /api/clients                                                    490 B         103 kB
+├ ƒ /api/clients/[id]                                               490 B         103 kB
+├ ƒ /api/clients/[id]/agreements                                    490 B         103 kB
+├ ƒ /api/clients/[id]/channel                                       490 B         103 kB
+├ ƒ /api/clients/[id]/comms                                         490 B         103 kB
+├ ƒ /api/clients/[id]/comms/[threadId]                              490 B         103 kB
+├ ƒ /api/clients/[id]/comms/[threadId]/messages                     490 B         103 kB
+├ ƒ /api/clients/[id]/deal-terms                                    490 B         103 kB
+├ ƒ /api/clients/[id]/google-attach                                 490 B         103 kB
+├ ƒ /api/clients/[id]/google-attach/[attachId]                      490 B         103 kB
+├ ƒ /api/clients/[id]/invoices                                      490 B         103 kB
+├ ƒ /api/clients/[id]/issues                                        490 B         103 kB
+├ ƒ /api/clients/[id]/meta-ads                                      490 B         103 kB
+├ ƒ /api/clients/[id]/meta-attach                                   490 B         103 kB
+├ ƒ /api/clients/[id]/meta-attach/[attachId]                        490 B         103 kB
+├ ƒ /api/clients/[id]/onboarding                                    490 B         103 kB
+├ ƒ /api/clients/[id]/reactivation                                  490 B         103 kB
+├ ƒ /api/clients/[id]/reactivation/[listId]                         490 B         103 kB
+├ ƒ /api/clients/[id]/reactivation/[listId]/contacts/[contactId]    490 B         103 kB
+├ ƒ /api/clients/[id]/voice                                         490 B         103 kB
+├ ƒ /api/component-stats                                            490 B         103 kB
+├ ƒ /api/cron/daily-sync                                            490 B         103 kB
+├ ƒ /api/cs                                                         490 B         103 kB
+├ ƒ /api/cs/artifacts/[id]                                          490 B         103 kB
+├ ƒ /api/delivery-dept/installs                                     490 B         103 kB
+├ ƒ /api/delivery-dept/installs/[id]                                490 B         103 kB
+├ ƒ /api/delivery-dept/sop                                          490 B         103 kB
+├ ƒ /api/delivery/attachments/[attachmentId]/download               490 B         103 kB
+├ ƒ /api/delivery/items/[itemId]/attachments                        490 B         103 kB
+├ ƒ /api/delivery/items/[itemId]/comments                           490 B         103 kB
+├ ƒ /api/delivery/items/[itemId]/complete                           490 B         103 kB
+├ ƒ /api/delivery/items/[itemId]/decisions                          490 B         103 kB
+├ ƒ /api/delivery/projects                                          490 B         103 kB
+├ ƒ /api/delivery/projects/[projectId]                              490 B         103 kB
+├ ƒ /api/digest                                                     490 B         103 kB
+├ ƒ /api/expenses                                                   490 B         103 kB
+├ ƒ /api/experiments/prepare                                        490 B         103 kB
+├ ƒ /api/functions                                                  490 B         103 kB
+├ ƒ /api/functions/[id]                                             490 B         103 kB
+├ ƒ /api/home                                                       490 B         103 kB
+├ ƒ /api/home/wave                                                  490 B         103 kB
+├ ƒ /api/inbox                                                      490 B         103 kB
+├ ƒ /api/inbox/suggest                                              490 B         103 kB
+├ ƒ /api/inbox/triage                                               490 B         103 kB
+├ ƒ /api/ingest/comms                                               490 B         103 kB
+├ ƒ /api/ingest/leads                                               490 B         103 kB
+├ ƒ /api/ingest/site-events                                         490 B         103 kB
+├ ƒ /api/instantly/campaigns/[id]/analytics                         490 B         103 kB
+├ ƒ /api/instantly/cold-email                                       490 B         103 kB
+├ ƒ /api/instantly/outbound-campaigns                               490 B         103 kB
+├ ƒ /api/instantly/sales-overview                                   490 B         103 kB
+├ ƒ /api/instantly/settings                                         490 B         103 kB
+├ ƒ /api/leads/[id]                                                 490 B         103 kB
+├ ƒ /api/leads/[id]/outreach                                        490 B         103 kB
+├ ƒ /api/leads/bulk                                                 490 B         103 kB
+├ ƒ /api/leads/facets                                               490 B         103 kB
+├ ƒ /api/leads/list                                                 490 B         103 kB
+├ ƒ /api/leads/local-sync                                           490 B         103 kB
+├ ƒ /api/leads/summary                                              490 B         103 kB
+├ ƒ /api/leads/targeting-map                                        490 B         103 kB
+├ ƒ /api/leads/upload                                               490 B         103 kB
+├ ƒ /api/offers/cells                                               490 B         103 kB
+├ ƒ /api/offers/desk                                                490 B         103 kB
+├ ƒ /api/onboarding/[token]                                         490 B         103 kB
+├ ƒ /api/operator/invitations                                       490 B         103 kB
+├ ƒ /api/outbound/copy-archive                                      490 B         103 kB
+├ ƒ /api/outbound/copy-archive/[id]                                 490 B         103 kB
+├ ƒ /api/outbound/ctas                                              490 B         103 kB
+├ ƒ /api/outbound/ctas/[id]                                         490 B         103 kB
+├ ƒ /api/outbound/expressions                                       490 B         103 kB
+├ ƒ /api/outbound/expressions/[id]                                  490 B         103 kB
+├ ƒ /api/outbound/library                                           490 B         103 kB
+├ ƒ /api/outbound/library-lock                                      490 B         103 kB
+├ ƒ /api/outbound/offers                                            490 B         103 kB
+├ ƒ /api/outbound/offers/[id]                                       490 B         103 kB
+├ ƒ /api/outbound/opener-chunk                                      490 B         103 kB
+├ ƒ /api/outbound/openers                                           490 B         103 kB
+├ ƒ /api/outbound/openers/[id]                                      490 B         103 kB
+├ ƒ /api/outbound/pathways                                          490 B         103 kB
+├ ƒ /api/outbound/pathways/templates                                490 B         103 kB
+├ ƒ /api/outbound/seed                                              490 B         103 kB
+├ ƒ /api/outbound/structures                                        490 B         103 kB
+├ ƒ /api/outbound/structures/[id]                                   490 B         103 kB
+├ ƒ /api/outbound/subjects                                          490 B         103 kB
+├ ƒ /api/outbound/subjects/[id]                                     490 B         103 kB
+├ ƒ /api/outbound/templates                                         490 B         103 kB
+├ ƒ /api/outbound/templates/[id]                                    490 B         103 kB
+├ ƒ /api/outbound/wave-desk                                         490 B         103 kB
+├ ƒ /api/payments/stripe-webhook                                    490 B         103 kB
+├ ƒ /api/planning                                                   490 B         103 kB
+├ ƒ /api/projects                                                   490 B         103 kB
+├ ƒ /api/projects/[id]                                              490 B         103 kB
+├ ƒ /api/qbo/callback                                               490 B         103 kB
+├ ƒ /api/qbo/connect                                                490 B         103 kB
+├ ƒ /api/qbo/finances                                               490 B         103 kB
+├ ƒ /api/qbo/settings                                               490 B         103 kB
+├ ƒ /api/qbo/webhook                                                490 B         103 kB
+├ ƒ /api/reactivation/sms                                           490 B         103 kB
+├ ƒ /api/signing/[token]                                            490 B         103 kB
+├ ƒ /api/tasks                                                      490 B         103 kB
+├ ƒ /api/tasks/[id]                                                 490 B         103 kB
+├ ƒ /api/tasks/[id]/notes                                           490 B         103 kB
+├ ƒ /api/voice/inbound                                              490 B         103 kB
+├ ƒ /api/voice/postcall                                             490 B         103 kB
+├ ƒ /api/voice/sms                                                  490 B         103 kB
+├ ƒ /api/voice/tools                                                490 B         103 kB
+├ ƒ /api/webhooks/instantly                                         490 B         103 kB
+├ ƒ /auth/callback                                                  490 B         103 kB
+├ ƒ /clients                                                        212 B         244 kB
+├ ƒ /clients/[id]                                                 50.2 kB         294 kB
+├ ƒ /delivery                                                       188 B         244 kB
+├ ƒ /delivery/[projectId]                                         1.49 kB         245 kB
+├ ƒ /functions                                                      212 B         244 kB
+├ ƒ /functions/[id]                                               7.43 kB         251 kB
+├ ƒ /home                                                           212 B         244 kB
+├ ƒ /inbox                                                          212 B         244 kB
+├ ƒ /leads                                                          212 B         244 kB
+├ ƒ /leads/upload                                                 11.4 kB         255 kB
+├ ƒ /login                                                        1.08 kB         104 kB
+├ ƒ /onboard/[token]                                              2.92 kB         106 kB
+├ ƒ /operations/cs                                                  212 B         244 kB
+├ ƒ /operations/finances                                            212 B         244 kB
+├ ƒ /operations/installs                                            212 B         244 kB
+├ ƒ /planning                                                     4.44 kB         248 kB
+├ ƒ /projects                                                       212 B         244 kB
+├ ƒ /projects/[id]                                                6.98 kB         251 kB
+├ ƒ /sales                                                          212 B         244 kB
+├ ƒ /sales/experiments                                            3.67 kB         264 kB
+├ ƒ /sales/offer-plan                                             4.73 kB         249 kB
+├ ƒ /sales/offers                                                   212 B         244 kB
+├ ƒ /sales/offers/[offerKey]                                        212 B         244 kB
+├ ƒ /sales/outbound                                                 212 B         244 kB
+├ ƒ /sales/outbound/craft                                           793 B         369 kB
+├ ƒ /sales/outbound/ctas                                            160 B         289 kB
+├ ƒ /sales/outbound/editor/[campaignId]                           1.42 kB         343 kB
+├ ƒ /sales/outbound/editor/live/[instantlyId]                     1.43 kB         343 kB
+├ ƒ /sales/outbound/editor/new                                    1.38 kB         343 kB
+├ ƒ /sales/outbound/expressions                                     159 B         289 kB
+├ ƒ /sales/outbound/mock                                          1.19 kB         245 kB
+├ ƒ /sales/outbound/mock/cassette                                 5.21 kB         355 kB
+├ ƒ /sales/outbound/mock/clocks                                    5.3 kB         355 kB
+├ ƒ /sales/outbound/mock/compare                                  8.56 kB         255 kB
+├ ƒ /sales/outbound/mock/factory                                  4.41 kB         354 kB
+├ ƒ /sales/outbound/mock/runway                                   3.72 kB         261 kB
+├ ƒ /sales/outbound/offers                                          159 B         289 kB
+├ ƒ /sales/outbound/openers                                         159 B         289 kB
+├ ƒ /sales/outbound/structures                                      159 B         289 kB
+├ ƒ /sales/outbound/subjects                                        159 B         289 kB
+├ ƒ /sales/outbound/templates                                       159 B         289 kB
+├ ƒ /sales/pipeline                                                 490 B         103 kB
+├ ƒ /sales/pipeline/[id]                                          9.55 kB         351 kB
+├ ○ /set-password                                                 1.13 kB         104 kB
+├ ƒ /settings                                                     6.21 kB         250 kB
+├ ƒ /sign/[token]                                                 3.61 kB         106 kB
+└ ƒ /tasks                                                          212 B         244 kB
++ First Load JS shared by all                                      103 kB
+  ├ chunks/1255-d3a86a180c7e60d3.js                                 46 kB
+  ├ chunks/4bd1b696-100b9d70ed4e49c1.js                           54.2 kB
+  └ other shared chunks (total)                                   2.58 kB
+
+
+ƒ Middleware                                                      90.8 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

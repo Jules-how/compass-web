@@ -1,41 +1,15 @@
 ---
-description: Locked Compass operator UI aesthetic — depth, rounding, separation, and sidebar motion. Do not restyle unless explicitly asked.
-alwaysApply: true
+description: Compass design identity and the scope of requested UI changes
+globs: src/**/*.tsx, src/**/*.css, tailwind.config.*
+alwaysApply: false
 ---
 
-# Compass UI lock (do not casually restyle)
+# Compass UI guidance
 
-The operator console visual language is **intentional and locked**. Preserve it on every change unless the user **explicitly** asks to change look, theme, depth, rounding, spacing, typography, or sidebar motion.
+For incidental code changes, preserve the existing visual identity: warm surfaces, soft depth, rounded controls and panels, Geist typography, restrained orange accents, and the current sidebar interaction. Reuse the project's components and tokens.
 
-## What must stay
+A request to improve UI or UX authorises relevant changes to hierarchy, spacing, layout, feedback, and interaction within the requested surface. Make the result meaningfully better and explain the evidence. It does not require preserving a demonstrated usability problem. Change the broader brand, theme, or navigation model only when that is within the requested scope.
 
-1. **Depth** — Soft layered elevation: white panels float on the warm wash via `shadow-soft` / `--compass-shadow` / `--compass-shadow-sm`. Do not flatten cards, remove shadows, or switch to harsh/heavy shadows.
-2. **Rounded corners** — Primary surfaces use `rounded-2xl` (cards, panels). Controls and nav rows use `rounded-xl`. Do not square off the UI or mix in sharp/minimal radii for main containers.
-3. **Separation** — Generous gaps between cards and padding inside them (card content `p-5`, airy page grids). Do not tighten into dense dashboards or collapse whitespace for “efficiency.”
-4. **Surface stack** — Warm wash background (`--compass-wash` + subtle radial gradients) → white cards (`bg-white`, light stone borders) → nested inner surfaces when needed. Keep the card-based hierarchy.
-5. **Typography** — Geist Sans for body/UI and page titles (`.font-display` / `.compass-page-title`). Do not reintroduce a serif display face or swap to Inter/DM Sans unless explicitly asked.
-6. **Accent** — Muted orange `--compass-accent` / `sf-orange` sparingly for CTAs, active states, badges, and emphasis — not as a purple/indigo redesign or dark-mode flip.
-7. **Sidebar (sidecar) UI + animations** — Keep the current nav chrome and motion from `src/components/ui/sidebar.tsx` / `OperatorShell` / `NavLinks`:
-   - Desktop hover expand/collapse: **72px → 248px** with framer-motion (`duration: 0.22`, ease `[0.22, 1, 0.36, 1]`).
-   - Label/badge fade with width (`~0.15s`); section labels collapse height when closed.
-   - Active link: white pill + `shadow-soft` + left orange rail + orange icon.
-   - Inactive: muted text, soft white hover wash.
-   - Brand mark + “switchflow compass” wordmark treatment.
-   - Section labels (WORKSPACE / SALES / OPERATIONS) as small uppercase tracked captions.
-   - Mobile: full-screen slide-in (`x: -100% → 0`, `~0.28s easeInOut`) via `AnimatePresence`.
-   - Do **not** remove hover-expand, switch to a permanently expanded/collapsed rail, rewrite easing, or replace this sidebar with a different nav pattern unless explicitly asked.
+For a review, recommend valuable changes even if implementation is a separate task. Separate verified defects from design proposals. Do not treat a checklist or a tool's preferred style as the verdict.
 
-## Source of truth
-
-- Tokens & utilities: `src/app/globals.css` (`--compass-*`, `.compass-panel`, `.compass-input`, `.compass-btn-*`, `.compass-sidebar`)
-- Shadows: `tailwind.config.ts` → `boxShadow.soft` / `boxShadow.lift`
-- Cards: `src/components/ui/card.tsx` (`rounded-2xl`, `shadow-soft`, soft borders)
-- Sidebar motion & link chrome: `src/components/ui/sidebar.tsx`
-- Shell / nav composition: `src/components/OperatorShell.tsx`, `src/components/NavLinks.tsx`
-
-## Rules of engagement
-
-- **Default:** reuse `Card`, `Sidebar*` primitives, `compass-*` classes, and existing tokens. Prefer matching Sales / Home / current shell patterns over inventing new chrome.
-- **Forbidden without explicit ask:** new themes, dark mode, flattening elevation, card-less full-bleed layouts for operator pages, redesigning radius/shadow/spacing tokens, swapping display fonts, rewriting sidebar expand/collapse animation or active-state treatment, or “cleaning up” the look into a different aesthetic.
-- **Allowed without ask:** content, copy, data wiring, bugfixes, accessibility, adding/removing nav *items* while reusing `SidebarLink`/`SidebarLabel`, and new screens that **follow** this language.
-- If a change would alter depth, rounding, separation, or sidebar motion/UI, **stop** and keep the current treatment unless the user directed the visual change.
+Inspect current sources when needed: `src/app/globals.css`, `tailwind.config.ts`, `src/components/ui/card.tsx`, `src/components/ui/sidebar.tsx`, `src/components/OperatorShell.tsx`, and `src/components/NavLinks.tsx`. Use their actual values rather than an old prose snapshot.

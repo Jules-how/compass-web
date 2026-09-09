@@ -1,0 +1,120 @@
+- main:
+  - strong: LOCAL FIXTURE · synthetic Inbox
+  - button "Exit Inbox fixture"
+  - button "Update cached Inbox badge"
+  - button "History back"
+  - button "History forward"
+  - link "Skip to main content":
+    - /url: "#compass-main"
+  - complementary:
+    - link "switchflow compass":
+      - /url: /home
+      - generic: switchflow compass
+    - navigation "Operator":
+      - link "Home":
+        - /url: /home
+        - generic: Home
+      - link "Inbox 3":
+        - /url: /inbox
+        - generic: Inbox
+        - generic: "3"
+      - generic: Workspace
+      - link "Goals & notes":
+        - /url: /planning
+        - generic: Goals & notes
+      - link "My Tasks":
+        - /url: /tasks
+        - generic: My Tasks
+      - link "Projects":
+        - /url: /projects
+        - generic: Projects
+      - link "Functions":
+        - /url: /functions
+        - generic: Functions
+      - link "Clients":
+        - /url: /clients
+        - generic: Clients
+      - generic: Sales
+      - link "Overview":
+        - /url: /sales
+        - generic: Overview
+      - link "Offer & economics":
+        - /url: /sales/offer-plan
+        - generic: Offer & economics
+      - link "Email tests":
+        - /url: /sales/experiments
+        - generic: Email tests
+      - link "Offers":
+        - /url: /sales/offers
+        - generic: Offers
+      - link "Outbound":
+        - /url: /sales/outbound
+        - generic: Outbound
+      - link "CRM":
+        - /url: /leads
+        - generic: CRM
+      - generic: Operations
+      - link "Finances":
+        - /url: /operations/finances
+        - generic: Finances
+      - link "Installs":
+        - /url: /operations/installs
+        - generic: Installs
+      - link "Retention":
+        - /url: /operations/cs
+        - generic: Retention
+      - link "Settings":
+        - /url: /settings
+        - generic: Settings
+    - button "Sign out"
+  - main:
+    - heading "Inbox" [level=1]
+    - paragraph: Instantly replies — positive, negative, and OOO — ranked by intent
+    - generic: 3 need you · 2 shown
+    - generic: Needs you
+    - button "Fixture instantly notification 2 Instantly · 11h":
+      - generic: I
+      - generic: Fixture instantly notification 2
+      - generic: Instantly · 11h
+    - button "Fixture leads notification 1 Leads · 11h":
+      - generic: L
+      - generic: Fixture leads notification 1
+      - generic: Leads · 11h
+    - button "Fixture leads notification 2 Leads · 11h":
+      - generic: L
+      - generic: Fixture leads notification 2
+      - generic: Leads · 11h
+    - tablist "Inbox channels":
+      - tab "Agents 0":
+        - text: Agents
+        - generic: "0"
+      - tab "Instantly 1" [selected]:
+        - text: Instantly
+        - generic: "1"
+      - tab "Leads 2":
+        - text: Leads
+        - generic: "2"
+    - tabpanel "Instantly 1":
+      - button "← Back to inbox"
+      - generic: Instantly · instantly
+      - heading "Fixture instantly notification 1" [level=2]
+      - heading "Fixture instantly notification 1" [level=3]
+      - paragraph: 08 Sept 2026, 09:00 am
+      - button "Mark unread"
+      - button "Snooze 24h"
+      - button "Done"
+      - button "Positive"
+      - button "Not now"
+      - button "Wrong person"
+      - button "Bad offer"
+      - button "OOO"
+      - heading "Suggested next step" [level=4]
+      - button "Refresh"
+      - paragraph
+      - paragraph
+      - term: Contact
+      - definition:
+        - generic: Fixture Contact
+      - heading "Context" [level=4]
+      - generic: This is synthetic notification content for validating Inbox layout and keyboard navigation. No person was contacted.
+  - status: "Fixture cache badge: 3"

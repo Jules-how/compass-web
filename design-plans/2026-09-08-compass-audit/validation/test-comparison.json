@@ -1,0 +1,70 @@
+{
+  "baseline": {
+    "counts": [
+      "\u2139 tests 405",
+      "\u2139 pass 381",
+      "\u2139 fail 24"
+    ],
+    "failures": [
+      "lead facts parser and per-row mark path are wired",
+      "computeTimelineBounds expands around project and task dates",
+      "client overview includes a mini project/task planner with timeline",
+      "voice-lab is visible from the compass copy",
+      "test/portal-contracts.test.mjs",
+      "tenancy migration derives membership from auth.uid and forces RLS",
+      "delivery migration separates customer data from private task links",
+      "customer writes are constrained RPCs and storage is private",
+      "operator-boundary migration removes all-authenticated private policies",
+      "inbound leads migration is tenant-scoped and select-only for members",
+      "inbox triage migration adds lifecycle and cross-channel triage table",
+      "project management migration and API cover Linear board fields",
+      "all four pack files exist with STOP on every SMS touch",
+      "broker pack requires licensee signoff and is advice-preserving",
+      "import hygiene rejects missing consent",
+      "import hygiene rejects invalid consent basis",
+      "inferred consent expires beyond max_inferred_age_days",
+      "STOP handling classifies stop variants",
+      "recontact module and wiring contracts",
+      "customer and legacy operator data routes never import a service-role client",
+      "every cookie-authenticated mutation route enforces a same-origin request",
+      "all trade packs exist and share required keys",
+      "electrical and roofing emergency rules match trade protocol",
+      "emergency job types are not bookable"
+    ]
+  },
+  "current": {
+    "counts": [
+      "\u2139 tests 411",
+      "\u2139 pass 387",
+      "\u2139 fail 24"
+    ],
+    "failures": [
+      "lead facts parser and per-row mark path are wired",
+      "computeTimelineBounds expands around project and task dates",
+      "client overview includes a mini project/task planner with timeline",
+      "voice-lab is visible from the compass copy",
+      "test/portal-contracts.test.mjs",
+      "tenancy migration derives membership from auth.uid and forces RLS",
+      "delivery migration separates customer data from private task links",
+      "customer writes are constrained RPCs and storage is private",
+      "operator-boundary migration removes all-authenticated private policies",
+      "inbound leads migration is tenant-scoped and select-only for members",
+      "inbox triage migration adds lifecycle and cross-channel triage table",
+      "project management migration and API cover Linear board fields",
+      "all four pack files exist with STOP on every SMS touch",
+      "broker pack requires licensee signoff and is advice-preserving",
+      "import hygiene rejects missing consent",
+      "import hygiene rejects invalid consent basis",
+      "inferred consent expires beyond max_inferred_age_days",
+      "STOP handling classifies stop variants",
+      "recontact module and wiring contracts",
+      "customer and legacy operator data routes never import a service-role client",
+      "every cookie-authenticated mutation route enforces a same-origin request",
+      "all trade packs exist and share required keys",
+      "electrical and roofing emergency rules match trade protocol",
+      "emergency job types are not bookable"
+    ]
+  },
+  "new_failures": [],
+  "resolved_failures": []
+}

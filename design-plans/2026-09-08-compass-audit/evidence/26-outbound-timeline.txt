@@ -1,0 +1,247 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- complementary:
+  - link "switchflow compass":
+    - /url: /home
+    - generic: switchflow compass
+  - navigation "Operator":
+    - link "Home":
+      - /url: /home
+      - generic: Home
+    - link "Inbox 87":
+      - /url: /inbox
+      - generic: Inbox
+      - generic: "87"
+    - generic: Workspace
+    - link "Goals & notes":
+      - /url: /planning
+      - generic: Goals & notes
+    - link "My Tasks":
+      - /url: /tasks
+      - generic: My Tasks
+    - link "Projects":
+      - /url: /projects
+      - generic: Projects
+    - link "Functions":
+      - /url: /functions
+      - generic: Functions
+    - link "Clients":
+      - /url: /clients
+      - generic: Clients
+    - generic: Sales
+    - link "Overview":
+      - /url: /sales
+      - generic: Overview
+    - link "Offer & economics":
+      - /url: /sales/offer-plan
+      - generic: Offer & economics
+    - link "Email tests":
+      - /url: /sales/experiments
+      - generic: Email tests
+    - link "Offers":
+      - /url: /sales/offers
+      - generic: Offers
+    - link "Outbound":
+      - /url: /sales/outbound
+      - generic: Outbound
+    - link "CRM":
+      - /url: /leads
+      - generic: CRM
+    - generic: Operations
+    - link "Finances":
+      - /url: /operations/finances
+      - generic: Finances
+    - link "Installs":
+      - /url: /operations/installs
+      - generic: Installs
+    - link "Retention":
+      - /url: /operations/cs
+      - generic: Retention
+    - link "Settings":
+      - /url: /settings
+      - generic: Settings
+  - button "Sign out"
+- main:
+  - heading "Outbound" [level=1]
+  - tablist "Outbound desk":
+    - tab "Waves"
+    - tab "Calendar"
+    - tab "Timeline" [active] [selected]
+  - button "Filter":
+  - button "Display options":
+  - button "Toggle details":
+  - button "Today"
+  - combobox "▾":
+    - option "Year" [selected]
+    - option "Quarter"
+    - option "Month"
+    - option "Week"
+  - generic: ▾
+  - button "New campaign": +
+  - button "+ Copy"
+  - link "Craft":
+    - /url: /sales/outbound/craft
+  - text: All campaigns
+  - generic: "7"
+  - generic: APR 2026
+  - generic: MAY
+  - generic: JUN
+  - generic: JUL
+  - generic: AUG
+  - generic: SEP
+  - generic: OCT
+  - generic: NOV
+  - generic: DEC
+  - generic: JAN 2027
+  - generic: FEB
+  - generic: MAR
+  - generic: APR
+  - generic: MAY
+  - generic: "17"
+  - generic: "18"
+  - generic: "19"
+  - generic: "20"
+  - generic: "21"
+  - generic: "22"
+  - generic: "23"
+  - generic: "24"
+  - generic: "25"
+  - generic: "26"
+  - generic: "27"
+  - generic: "28"
+  - generic: "29"
+  - generic: "30"
+  - generic: "31"
+  - generic: "32"
+  - generic: "33"
+  - generic: "34"
+  - generic: "35"
+  - generic: "36"
+  - generic: "37"
+  - generic: "38"
+  - generic: "39"
+  - generic: "40"
+  - generic: "41"
+  - generic: "42"
+  - generic: "43"
+  - generic: "44"
+  - generic: "45"
+  - generic: "46"
+  - generic: "47"
+  - generic: "48"
+  - generic: "49"
+  - generic: "50"
+  - generic: "51"
+  - generic: "52"
+  - generic: "53"
+  - generic: "1"
+  - generic: "2"
+  - generic: "3"
+  - generic: "4"
+  - generic: "5"
+  - generic: "6"
+  - generic: "7"
+  - generic: "8"
+  - generic: "9"
+  - generic: "10"
+  - generic: "11"
+  - generic: "12"
+  - generic: "13"
+  - generic: "14"
+  - generic: "15"
+  - generic: "16"
+  - generic: "17"
+  - generic: "18"
+  - generic: 8 Sept
+  - button "HVAC | AU | 50 | capture 24 aug":
+    - generic: HVAC | AU | 50 | capture 24 aug
+  - 'button "Status: Planned"':
+    - generic "Planned"
+  - 'button "Priority: High"':
+    - generic "High"
+  - 'button "Health: No updates"':
+    - generic "No updates"
+  - generic "Jules": J
+  - button "★"
+  - button "More actions": ···
+  - generic "24 Aug, 8:00 am":
+    - generic: HVAC | AU | 50 | capture 24 aug
+  - button "HVAC | Sydney | 300 | Sept26":
+    - generic: HVAC | Sydney | 300 | Sept26
+  - 'button "Status: Active"':
+    - generic "Active"
+  - 'button "Priority: No priority"':
+    - generic "No priority"
+  - 'button "Health: No updates"':
+    - generic "No updates"
+  - generic "No lead": "?"
+  - button "★"
+  - button "More actions": ···
+  - generic "2 Sept, 10:00 am":
+    - generic: HVAC | Sydney | 300 | Sept26
+  - button "Sydney Locksmith | 65 | Sep":
+    - generic: Sydney Locksmith | 65 | Sep
+  - 'button "Status: Planned"':
+    - generic "Planned"
+  - 'button "Priority: No priority"':
+    - generic "No priority"
+  - 'button "Health: No updates"':
+    - generic "No updates"
+  - generic "No lead": "?"
+  - button "★"
+  - button "More actions": ···
+  - generic "3 Sept, 9:00 am":
+    - generic: Sydney Locksmith | 65 | Sep
+  - button "Melbourne Locksmith":
+    - generic: Melbourne Locksmith
+  - 'button "Status: Planned"':
+    - generic "Planned"
+  - 'button "Priority: No priority"':
+    - generic "No priority"
+  - 'button "Health: No updates"':
+    - generic "No updates"
+  - generic "No lead": "?"
+  - button "★"
+  - button "More actions": ···
+  - generic "7 Sept, 9:00 am":
+    - generic: Melbourne Locksmith
+  - button "Melbourne Plumber":
+    - generic: Melbourne Plumber
+  - 'button "Status: Planned"':
+    - generic "Planned"
+  - 'button "Priority: No priority"':
+    - generic "No priority"
+  - 'button "Health: No updates"':
+    - generic "No updates"
+  - generic "No lead": "?"
+  - button "★"
+  - button "More actions": ···
+  - generic "7 Sept, 9:00 am":
+    - generic: Melbourne Plumber
+  - button "Sydney Plumber":
+    - generic: Sydney Plumber
+  - 'button "Status: Planned"':
+    - generic "Planned"
+  - 'button "Priority: No priority"':
+    - generic "No priority"
+  - 'button "Health: No updates"':
+    - generic "No updates"
+  - generic "No lead": "?"
+  - button "★"
+  - button "More actions": ···
+  - generic "7 Sept, 9:00 am":
+    - generic: Sydney Plumber
+  - button "Sydney Hvac":
+    - generic: Sydney Hvac
+  - 'button "Status: Planned"':
+    - generic "Planned"
+  - 'button "Priority: No priority"':
+    - generic "No priority"
+  - 'button "Health: No updates"':
+    - generic "No updates"
+  - generic "No lead": "?"
+  - button "★"
+  - button "More actions": ···
+  - generic "8 Sept, 9:00 am":
+    - generic: Sydney Hvac
+- alert

@@ -1,0 +1,13 @@
+
+> compass-web@0.1.0 verify
+> npm run deploy-guards && npm run typecheck
+
+
+> compass-web@0.1.0 deploy-guards
+> node scripts/check-deploy-guards.mjs
+
+Deploy guards OK (route exports + tracked @/ imports).
+
+> compass-web@0.1.0 typecheck
+> tsc --noEmit
+
