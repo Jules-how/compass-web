@@ -1,5 +1,7 @@
 # Compass audit and implementation results
 
+> Historical snapshot from 8 September 2026, preserved in Git on 9 September. Deployment and GitHub statements below describe that earlier run. Current consolidated release status is documented in [the 9 September release record](../../docs/RELEASE_2026-09-09_CONSOLIDATION.md).
+
 The audit covered all 17 primary navigation destinations and documented 40 findings. The planned source repairs were committed as `777aa2ddd836bca94ba8b4fa2caf667c82fe45fa` and deployed to production on 8 September 2026. The normal Compass URL now resolves to deployment `dpl_6fSGiMktMixqX7usf4aAvLiqskJo`. This was a direct Vercel deployment; GitHub was not pushed.
 
 ## Deliverables
