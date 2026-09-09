@@ -2316,3 +2316,13 @@ body:has(.folio-shell) .folio-inbox > .compass-panel {
   padding: 12px 0;
   overflow-wrap: anywhere;
 }
+
+/* Outbound uses the same notebook blocks and canonical notes as Planning. */
+.outbound-notebook{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;align-items:start}
+.outbound-notebook-index{display:flex;flex-direction:column;gap:8px;padding:12px 0}
+.outbound-notebook-index>button{padding:12px;text-align:left;border-radius:7px;font-size:14px}
+.outbound-notebook-index>button[aria-pressed=true]{background:#fffefa;border:1px solid #e8e6e3}
+.outbound-notebook-index small{display:block;color:#6b7280;font-size:11px;margin-top:3px}
+.outbound-notebook-index>a{font-size:12px;padding:6px 12px;color:#6b7280}
+.outbound-notebook-page{padding:28px 36px;background:#fffefa;border:1px solid #e8e6e3;border-radius:12px;min-width:0}
+@media(max-width:900px){.outbound-notebook{grid-template-columns:1fr}.outbound-notebook-index{display:flex;flex-direction:row;flex-wrap:wrap;gap:4px}.outbound-notebook-index>p{width:100%}.outbound-notebook-page{padding:20px 16px}}

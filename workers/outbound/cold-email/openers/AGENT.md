@@ -10,6 +10,8 @@ Load the relevance spec and opener waterfall from the offer Jules named (default
 
 Pull input from `../list-builds/out/{trade}/`. Do not copy lists into `in/`. The sendable sheet must already have `verified_email` plus a recorded `email_status` / Compass `email_verify_status` (promote after site extract + verify). This job refuses a sheet that still uses `Email`. Rows with no usable address go to the opener unsendable file.
 
+For a CSV, run `../outbound_worker.py --campaign <cell-id> --input-csv <researched.csv> --output-dir <job-output>`. The worker retains all rows, renders against the saved signals and sequence, reads the persisted result back, and writes a review CSV plus per-batch receipts. Evidence, verification and contact_basis columns contain structured JSON; loose source text is not treated as verification.
+
 For an installation-booking preparation, run `../outbound_worker.py --campaign <cell-id> --run <run-id>`. It calls this engine’s `render_preparation_ticket` with Compass’s frozen recipe and quoted facts, and submits the full rendered emails. Missing facts produce a hold; no legacy fallback applies.
 
 For historical campaigns, if Compass has a pathway for this trade/list, GET `/api/agent/outbound/pathway` and keep generating with this script (one engine). After commit, Jules edits templates and siblings on the Pathways desk. Do not rewrite this `.py` from a Compass overlay.

@@ -5,7 +5,7 @@ import type { Rendered } from './outbound-preparation'
 
 const id = z.string().min(1).max(180)
 const recipe = z
-  .object({ subject: z.string().max(200), opener: z.string().max(500) })
+  .object({ subject: z.string().min(1).max(200), opener: z.string().min(1).max(500), include_name: z.boolean().optional(), rules: z.array(z.object({id: z.string().regex(/^[a-z][a-z0-9_]{0,49}$/), label: z.string().min(1).max(100), field: z.string().regex(/^[a-z][a-z0-9_]{0,49}$/), contains: z.string().max(200).optional(), opener: z.string().min(1).max(500), subject: z.string().max(200).optional()}).strict()).max(12).optional() })
   .strict()
 const settings = z
   .object({
@@ -57,6 +57,7 @@ export const preparationCommand = z.discriminatedUnion('action', [
                 .strict()
             )
             .max(30),
+          geography_review: z.object({region:z.enum(['greater_sydney','unconfirmed']),rationale:z.string().max(1000),checked_at:z.string()}).strict().optional(),
           identity_reviewed: z.boolean(),
           hold_reason: z.string().max(1000),
           exclude_reason: z.string().max(1000),

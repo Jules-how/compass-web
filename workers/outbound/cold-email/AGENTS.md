@@ -1,6 +1,6 @@
 # Cold email
 
-Current offer: `installation-booking`, owned by `switchflow-offer/installation-booking.md`. Start with Sydney residential ducted-air-conditioning installations/replacements. Compass owns the ledger and campaign copy. Historical trades campaigns keep their identity and outcomes; do not use them as defaults for the new direction. Activate Instantly only when Jules says go.
+Current offer: `installation-booking`, owned by `switchflow-offer/installation-booking.md`. Ads plus booking: focused Google Search plus qualification and booked quote appointments for Sydney residential ducted installations/replacements. Compass owns the ledger and campaign copy. Historical trades campaigns keep their identity and outcomes; do not use them as defaults for the new direction. Activate Instantly only when Jules says go.
 
 ## Start here
 

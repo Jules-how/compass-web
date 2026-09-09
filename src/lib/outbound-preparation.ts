@@ -35,9 +35,11 @@ export type Candidate = {
     url: string
     checked_at: string
   }
+  geography_review?: { region: string; rationale: string; checked_at: string }
   verification?: { status: string; provider: string; checked_at: string }
 }
-export type Recipe = { subject: string; opener: string }
+export type SignalRule = { id: string; label: string; field: string; contains?: string; opener: string; subject?: string }
+export type Recipe = { subject: string; opener: string; rules?: SignalRule[]; include_name?: boolean }
 export type Settings = {
   timezone: string
   email_list: string[]
@@ -205,7 +207,9 @@ export function assessCandidate(
     reasons.push('email_not_published')
   if (!/ducted/i.test(evidenceValue(row, 'service')))
     reasons.push('ducted_service_unconfirmed')
-  if (!/sydney/i.test(evidenceValue(row, 'service_area')))
+  const areaReview = row.geography_review
+  const reviewedSydney = areaReview?.region === 'greater_sydney' && !!text(areaReview.rationale) && validTime(areaReview.checked_at)
+  if (!/\bsydney\b/i.test(evidenceValue(row, 'service_area')) && !reviewedSydney)
     reasons.push('sydney_service_area_unconfirmed')
   const basis = row.contact_basis
   if (
@@ -273,9 +277,10 @@ export function contextErrors(ctx: Context): string[] {
   if (steps.length !== 2) errors.push('email_plus_followup_required')
   if (
     !text(ctx.recipe?.subject) ||
-    !text(ctx.recipe?.opener).startsWith('Saw ')
+    !text(ctx.recipe?.opener)
   )
     errors.push('opener_recipe_required')
+  errors.push(...recipeErrors(ctx.recipe))
   const time = /^(?:[01]\d|2[0-3]):[0-5]\d$/
   if (
     ctx.settings?.timezone !== 'Australia/Sydney' ||
@@ -339,40 +344,48 @@ export function substitute(
     throw new Error('blank_greeting')
   return result
 }
-export function expectedValues(
-  candidate: Candidate,
-  recipe: Recipe
-): Record<string, string> {
-  const facts = {
-    company: candidate.company,
-    service: evidenceValue(candidate, 'service'),
-    service_area: evidenceValue(candidate, 'service_area')
+export function recipeErrors(recipe: Recipe): string[] {
+  const errors: string[] = []
+  const rules = recipe?.rules ?? []
+  if (!Array.isArray(rules) || rules.length > 12) return ['invalid_signal_rules']
+  if (new Set(rules.map(r => r.id)).size !== rules.length) errors.push('duplicate_signal_id')
+  for (const r of rules) {
+    if (!/^[a-z][a-z0-9_]{0,49}$/.test(r.id) || !/^[a-z][a-z0-9_]{0,49}$/.test(r.field) || !text(r.label) || !text(r.opener)) errors.push('invalid_signal_rule')
+    if (['company', 'email', 'person_name', 'signal', 'signal_id', 'signal_label'].includes(r.field)) errors.push('reserved_signal_field:' + r.field)
   }
-  const firstName =
-    evidenceValue(candidate, 'person_name').split(/\s+/)[0] || ''
-  let opener = substitute(recipe.opener, facts, false)
-  if (firstName)
-    opener =
-      'Hi ' +
-      firstName +
-      ', ' +
-      opener.charAt(0).toLowerCase() +
-      opener.slice(1)
-  return {
-    email: emailKey(candidate.email),
-    first_name: firstName,
-    firstName,
-    company_name: candidate.company,
-    companyName: candidate.company,
-    companyShort: candidate.company,
-    service: facts.service,
-    suburb: facts.service_area,
-    city: 'Sydney',
-    subject: substitute(recipe.subject, facts, false).toLowerCase(),
-    opener,
-    Opener: opener,
-    personalization: opener
+  for (const template of [recipe?.opener, recipe?.subject, ...rules.flatMap(r => [r.opener, r.subject ?? ''])]) {
+    if (typeof template !== 'string' || template.length > 500) errors.push('invalid_template')
+    else if (/[{}]/.test(template.replace(/\{[a-z][a-z0-9_]*\}/g, ''))) errors.push('unsupported_template_syntax')
   }
+  return [...new Set(errors)]
+}
+export function chooseSignal(candidate: Candidate, recipe: Recipe) {
+  return (recipe.rules ?? []).find(r => {
+    const value = evidenceValue(candidate, r.field)
+    return !!value && (!r.contains?.trim() || value.toLowerCase().includes(r.contains.trim().toLowerCase()))
+  })
+}
+export function expectedValues(candidate: Candidate, recipe: Recipe): Record<string, string> {
+  const errors = recipeErrors(recipe)
+  if (errors.length) throw new Error(errors.join('; '))
+  const facts: Record<string, string> = Object.create(null)
+  for (const e of candidate.evidence) if (/^[a-z][a-z0-9_]*$/.test(e.kind)) facts[e.kind] = evidenceValue(candidate, e.kind)
+  Object.assign(facts, {company: candidate.company, service: evidenceValue(candidate, 'service'), service_area: evidenceValue(candidate, 'service_area')})
+  const rule = chooseSignal(candidate, recipe)
+  facts.signal = rule ? evidenceValue(candidate, rule.field) : ''
+  const firstName = recipe.include_name === false ? '' : evidenceValue(candidate, 'person_name').split(/\s+/)[0] || ''
+  let opener = substitute(rule?.opener ?? recipe.opener, facts, false)
+  if (firstName) opener = 'Hi ' + firstName + ', ' + opener.charAt(0).toLowerCase() + opener.slice(1)
+  const values: Record<string, string> = {
+    email: emailKey(candidate.email), first_name: firstName, firstName,
+    company_name: candidate.company, companyName: candidate.company, companyShort: candidate.company,
+    service: facts.service, suburb: facts.service_area, city: 'Sydney',
+    subject: substitute(rule?.subject?.trim() || recipe.subject, facts, false).toLowerCase(),
+    opener, Opener: opener, personalization: opener
+  }
+  // Legacy batches keep their exact shape and hashes. Configured signal batches carry their selection.
+  if (recipe.rules) Object.assign(values, {signal_id: rule?.id ?? 'fallback', signal_label: rule?.label ?? 'Factual fallback', signal_value: facts.signal})
+  return values
 }
 export function validateWorkerRender(
   candidate: Candidate,
@@ -432,7 +445,10 @@ export function prepareBundle(
     )
       reasons.push('duplicate_company_or_inbox')
     if (!reasons.length) {
-      if (!output) reasons.push('render_missing')
+      if (!output) {
+        try { expectedValues(candidate, context.recipe); reasons.push('render_missing') }
+        catch (err) { reasons.push(err instanceof Error ? err.message : 'render_invalid') }
+      }
       else
         try {
           validateWorkerRender(candidate, context, output)

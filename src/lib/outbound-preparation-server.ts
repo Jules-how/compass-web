@@ -9,6 +9,7 @@ import {
   companyKey,
   domainKey,
   contextErrors,
+  recipeErrors,
   prepareBundle,
   transportCsv,
   reconcileRecipients,
@@ -94,6 +95,8 @@ export async function savePreparationConfig(
     throw new Error('invalid_configuration')
   if (recipe.opener.length > 500 || recipe.subject.length > 200)
     throw new Error('template_too_long')
+  const recipeIssues = recipeErrors(recipe)
+  if (recipeIssues.length) throw new Error(recipeIssues.join('; '))
   const existing = await db
     .from('compass_outbound_configs')
     .select('revision')
@@ -241,6 +244,7 @@ export async function createPreparationRun(
       website,
       email: emailKey(row.email || row.verified_email),
       evidence: evidence as Candidate['evidence'],
+      geography_review: row.geography_review as Candidate['geography_review'],
       identity_reviewed: row.identity_reviewed === true,
       hold_reason: text(row.hold_reason),
       exclude_reason: text(row.exclude_reason),

@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useId, useState } from 'react'
+import { parsePreparationCsv, reviewCsv } from '@/lib/outbound-csv'
+import { SignalRecipeEditor } from './SignalRecipeEditor'
 import type { CompassCampaign } from '@/lib/campaigns'
 import type {
   Bundle,
@@ -84,6 +86,8 @@ export function CampaignPreparationPanel({
   })
   const [senders, setSenders] = useState('')
   const [leadIds, setLeadIds] = useState('')
+  const [csvRows, setCsvRows] = useState<Record<string, unknown>[]>([])
+  const [csvName, setCsvName] = useState('')
   const [revision, setRevision] = useState(0)
   const uid = useId()
   const endpoint =
@@ -198,7 +202,7 @@ export function CampaignPreparationPanel({
         open={!state?.config}
       >
         <summary className="cursor-pointer text-sm font-medium">
-          Opener and send settings
+          Signals, openers and send settings
         </summary>
         <form
           className="mt-3 space-y-3"
@@ -218,33 +222,7 @@ export function CampaignPreparationPanel({
             })
           }}
         >
-          <p className="text-xs text-neutral-600">
-            Use {'{company}'}, {'{service}'} and {'{service_area}'} from the
-            quoted evidence. Start the opener with “Saw”. Edit the email bodies
-            in this campaign’s Copy section. Saving changes requires a fresh
-            preparation and review.
-          </p>
-          <label className="block text-xs">
-            Subject recipe
-            <input
-              required
-              className={input}
-              value={recipe.subject}
-              onChange={(e) =>
-                setRecipe({ ...recipe, subject: e.target.value })
-              }
-            />
-          </label>
-          <label className="block text-xs">
-            Opener recipe
-            <textarea
-              required
-              rows={3}
-              className={input}
-              value={recipe.opener}
-              onChange={(e) => setRecipe({ ...recipe, opener: e.target.value })}
-            />
-          </label>
+          <SignalRecipeEditor recipe={recipe} onChange={setRecipe} />
           <label className="block text-xs">
             Existing sender email addresses
             <textarea
@@ -303,15 +281,25 @@ export function CampaignPreparationPanel({
             header and link.
           </p>
           <button disabled={busy || !state} className={button}>
-            Save settings
+            Save writing rules and settings
           </button>
         </form>
       </details>
       <details className="rounded-xl border border-stone-200 p-3">
         <summary className="cursor-pointer text-sm font-medium">
-          Bring in existing candidates
+          Input list
         </summary>
         <div className="mt-3 space-y-2">
+          <label className="block text-xs">Upload CSV (up to 200 rows)
+            <input type="file" accept=".csv,text/csv" disabled={busy} className="mt-2 block max-w-full" onChange={async e => {
+              const file = e.target.files?.[0]; setCsvRows([]); setCsvName(''); if (!file) return
+              try { const rows = parsePreparationCsv(await file.text()); setCsvRows(rows); setCsvName(file.name); setError('') }
+              catch (err) { setError(err instanceof Error ? err.message : 'Could not read CSV') }
+            }} />
+          </label>
+          <p className="text-xs text-neutral-600">Company, website and email columns are mapped automatically. Keep evidence, verification and contact_basis as structured JSON columns. Raw scraped fields remain retained; missing research stays on hold.</p>
+          {!!csvRows.length && <div><p className="text-xs">{csvName} · {csvRows.length} source rows. No contacts have been added or sent.</p><button type="button" className={button} disabled={busy || !state?.config} onClick={() => void act({action: 'create', rows: csvRows.map(row => ({...row, source_file: csvName}))})}>Retain CSV for processing</button></div>}
+          <hr className="my-3" />
           <p className="text-xs text-neutral-600">
             Retain up to 200 ledger records, including those without email.
             Leave the selection empty to use this campaign’s attached inventory.
@@ -409,6 +397,7 @@ export function CampaignPreparationPanel({
         <EvidenceEditor
           key={chosen.id}
           candidate={chosen}
+          signalFields={(recipe.rules ?? []).map(r => ({field:r.field, label:r.label}))}
           busy={busy}
           onSave={(changes) =>
             act({
@@ -439,6 +428,7 @@ export function CampaignPreparationPanel({
             ready recipients have a recorded catch-all, uncertain, risky or
             error result. Review those results before approval.
           </p>
+          <button type="button" className={button} onClick={() => download(reviewCsv(prep.bundle.records), 'review-output-' + prep.bundle.hash.slice(0,12) + '.csv', 'text/csv;charset=utf-8')}>Download all output and hold reasons</button>
           {prep.bundle.records.map((record) => (
             <details
               key={record.candidate.id}
@@ -465,6 +455,8 @@ export function CampaignPreparationPanel({
                     ))}
                   </ul>
                 )}
+                {record.rendered?.values.signal_label && <p className="font-medium">Selected signal: {record.rendered.values.signal_label} {record.rendered.values.signal_value && `· ${record.rendered.values.signal_value}`}</p>}
+                <details><summary className="cursor-pointer">Source evidence ({record.candidate.evidence.length})</summary><ul className="mt-2 space-y-2">{record.candidate.evidence.map((fact,i) => <li key={i}><strong>{fact.kind}</strong>: {fact.quote} · <a className="underline" href={/^https?:\/\//.test(fact.url) ? fact.url : undefined} target="_blank" rel="noreferrer">Source</a> · {fact.observed_at}</li>)}</ul></details>
                 {record.rendered?.steps.map((step, i) => (
                   <div key={i}>
                     <p className="font-medium">
@@ -614,14 +606,17 @@ export function CampaignPreparationPanel({
 
 function EvidenceEditor({
   candidate,
+  signalFields,
   busy,
   onSave
 }: {
   candidate: Candidate
+  signalFields: Array<{field:string; label:string}>
   busy: boolean
   onSave: (changes: Record<string, unknown>) => Promise<boolean>
 }) {
   const [evidence, setEvidence] = useState<Evidence[]>(candidate.evidence)
+  const [geography, setGeography] = useState(candidate.geography_review ?? {region:'unconfirmed',rationale:'',checked_at:''})
   const [identity, setIdentity] = useState(candidate.identity_reviewed)
   const [hold, setHold] = useState(candidate.hold_reason ?? '')
   const [exclude, setExclude] = useState(candidate.exclude_reason ?? '')
@@ -662,6 +657,7 @@ function EvidenceEditor({
         e.preventDefault()
         void onSave({
           evidence: evidence.filter((e) => e.value || e.quote || e.url),
+          geography_review: geography,
           identity_reviewed: identity,
           hold_reason: hold,
           exclude_reason: exclude,
@@ -670,12 +666,13 @@ function EvidenceEditor({
         })
       }}
     >
+      <fieldset className="space-y-2"><legend className="text-xs font-medium">Service-area review</legend><label className="flex gap-2 text-xs"><input type="checkbox" checked={geography.region==='greater_sydney'} onChange={e=>setGeography({...geography,region:e.target.checked?'greater_sydney':'unconfirmed',checked_at:new Date().toISOString()})}/>Published service coverage includes Greater Sydney</label><label className="block text-xs">Geography evidence explanation<input className={input} value={geography.rationale} placeholder="Explain which published suburbs are within Greater Sydney" onChange={e=>setGeography({...geography,rationale:e.target.value,checked_at:new Date().toISOString()})}/></label></fieldset>
       <p className="text-xs text-neutral-600">
         Record exact published quotes and their source. Saving keeps the
         original record and queues a new preparation. Conflicting evidence must
         be resolved explicitly.
       </p>
-      {Object.entries(labels).map(([kind, label]) => {
+      {Object.entries({...labels, ...Object.fromEntries(signalFields.map(r => [r.field, r.label])), ...Object.fromEntries(candidate.evidence.filter(e => !labels[e.kind]).map(e => [e.kind, e.kind]))}).map(([kind, label]) => {
         const facts = evidence.filter((e) => e.kind === kind)
         const fact = facts[0]
         return (

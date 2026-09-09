@@ -48,7 +48,7 @@ export function OfferPlan() {
           kind: "note",
           id: `planning.note.${crypto.randomUUID()}`,
           data: {
-            title: "Installation booking — pricing scenario",
+            title: "Ads + booking — pricing scenario",
             status: "idea",
             body: `Working scenario, not approved pricing or validated client value.\nInputs: ${JSON.stringify(cost)}\nCalculated result: ${JSON.stringify(result)}\nExcludes acquisition costs, general overhead, tax and unexpected work.`,
             links: "/sales/offer-plan",
@@ -65,18 +65,6 @@ export function OfferPlan() {
     }
   }
   const addons = [
-    [
-      "Google Search acquisition",
-      "Eligible enquiries are insufficient",
-      "Campaign setup, management and paid media budget",
-      "Quote setup and management from scoped effort; media is a separate client cost.",
-    ],
-    [
-      "Landing page",
-      "The existing page cannot support the agreed enquiry journey",
-      "One defined page, tracking and handoff",
-      "Quote the build once; ongoing changes are separate unless agreed.",
-    ],
     [
       "Additional enquiry stream or integration",
       "A second source or system needs its own workflow",
@@ -110,7 +98,7 @@ export function OfferPlan() {
               Current offer · {offer?.gtm_status || "loading"}
             </p>
             <h2 className="mt-2 text-2xl font-semibold">
-              {offer?.name || "Installation booking"}
+              {offer?.name || "Ads + booking"}
             </h2>
             <p className="mt-3 text-base leading-relaxed">
               {offer?.one_sentence || "Loading the current offer from Compass…"}
@@ -119,11 +107,10 @@ export function OfferPlan() {
           <div className="rounded-xl bg-orange-50 p-5">
             <p className="text-2xl font-semibold">
               A${offer?.retainer_low_aud?.toLocaleString("en-AU") || "—"} /
-              month
+              proposed renewal
             </p>
             <p className="mt-2 max-w-xs text-sm text-neutral-600">
-              Retainer direction to test. Setup, start date and cancellation
-              need agreement. No GST while unregistered.
+              Commercial proposal only. Pilot scope, media, acceptance and renewal need agreement. No GST while unregistered.
             </p>
           </div>
         </div>
@@ -132,11 +119,11 @@ export function OfferPlan() {
         {[
           [
             "Who buys",
-            "Established Sydney residential ducted installation/replacement businesses with existing enquiries, a demonstrable response or booking gap, estimating capacity and access to outcomes.",
+            "Established Greater Sydney residential ducted installation/replacement businesses. Qualify demand opportunity, capacity, contribution, client-funded media budget and office cooperation. Existing enquiries or a booking leak are not required.",
           ],
           [
             "What the client gets",
-            "A managed route from an eligible enquiry to a suitable quote appointment. Response, qualification, scheduling, reminders, human handoff and reporting for one agreed enquiry stream.",
+            "Focused Google Search acquisition plus a managed enquiry-to-quote-appointment path: capture, qualification, booking, reminders, human handoff and reporting.",
           ],
           [
             "What Switchflow builds",
@@ -154,16 +141,16 @@ export function OfferPlan() {
         <div className="mt-4 grid gap-5 md:grid-cols-3">
           {[
             [
-              "1 · Existing enquiries",
-              "Best first test when a booking gap exists. Fewer delivery dependencies and a repeatable process.",
+              "1 · Acquire",
+              "Focused Google Search for the agreed residential installation offer and service area, with client-funded media.",
             ],
             [
-              "2 · Ads + booking",
-              "Use when demand is the constraint and acquisition delivery is ready. More scope, spend and attribution complexity; quote separately.",
+              "2 · Qualify and book",
+              "Capture homeowner details, qualify the enquiry and book the agreed next step around the installer’s process.",
             ],
             [
-              "3 · Bespoke AI build",
-              "Use for a specific funded requirement. It can be valuable, but each custom build increases scoping and maintenance effort.",
+              "3 · Reconcile",
+              "Track attended appointments and later quote/won outcomes. Separate acquisition results, delivery effort and client economics.",
             ],
           ].map(([h, p]) => (
             <div key={h} className="rounded-xl border border-stone-200 p-4">
@@ -176,8 +163,7 @@ export function OfferPlan() {
         </div>
         <p className="mt-5 text-sm text-neutral-600">
           Your benefit: a repeatable delivery process and recurring revenue
-          toward the 2–4 client goal. Client benefit: fewer eligible enquiries
-          left without a next step and clear appointment outcomes. Both remain
+          toward the agreed business goal. Client benefit: suitable new enquiries, a clear next step and visible appointment outcomes. Both remain
           hypotheses until measured.
         </p>
       </section>

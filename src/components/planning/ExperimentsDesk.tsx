@@ -1,4 +1,5 @@
 "use client";
+import { NotebookEditor } from "./NotebookEditor";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { listCampaigns, spawnChallenger } from "@/lib/campaigns-client";
@@ -107,28 +108,6 @@ export function ExperimentsDesk() {
           Preparation queue
         </Link>
       </div>
-      <div className="grid gap-3 md:grid-cols-4">
-        {[
-          ["1 · Plan", "Choose one factor and a measurable hypothesis."],
-          [
-            "2 · Prepare",
-            "Edit the draft. Check leads, evidence, merge fields and settings.",
-          ],
-          [
-            "3 · Review & launch",
-            "Show the exact campaign and checks to Jules. Activation needs his instruction.",
-          ],
-          [
-            "4 · Learn",
-            "Wait for both samples and reply windows; preserve inconclusive results.",
-          ],
-        ].map(([h, p]) => (
-          <div key={h} className="compass-panel p-4">
-            <h2 className="font-semibold">{h}</h2>
-            <p className="mt-2 text-sm text-neutral-600">{p}</p>
-          </div>
-        ))}
-      </div>
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-800">
           {error}
@@ -139,8 +118,8 @@ export function ExperimentsDesk() {
           {message}
         </p>
       )}
-      <section className="compass-panel p-5">
-        <h2 className="text-lg font-semibold">Create a test draft</h2>
+      <section className="outbound-notebook-page">
+        <h2 className="text-lg font-semibold">Plan an outbound test</h2>
         <form
           className="mt-5 space-y-4"
           onSubmit={(e) => {
@@ -214,17 +193,7 @@ export function ExperimentsDesk() {
               />
             </label>
           </div>
-          <label className="block text-sm">
-            Exact proposed change and why it should help
-            <textarea
-              required
-              disabled={!!created}
-              className="compass-input mt-1 min-h-28 w-full"
-              value={hypothesis}
-              onChange={(e) => setHypothesis(e.target.value)}
-              placeholder="Define the change, primary outcome, what stays constant and evidence that would contradict it."
-            />
-          </label>
+          <div><h3 className="text-sm font-medium">Test notebook</h3><NotebookEditor label="Test hypothesis and plan" value={hypothesis} onChange={setHypothesis} maxLength={3000} placeholder="What will change, why might it help, and what would count as useful evidence?" /></div>
           <p className="text-sm text-neutral-500">
             Creating a draft copies the control; it does not write the variation
             for you. Sample size is a planning choice, not a guarantee of
@@ -265,7 +234,7 @@ export function ExperimentsDesk() {
           )}
         </form>
       </section>
-      <section className="compass-panel p-5">
+      <section className="outbound-notebook-page">
         <h2 className="font-semibold">Preparation must produce evidence</h2>
         <p className="mt-3 text-sm leading-relaxed text-neutral-600">
           The agent checks source-backed lead criteria, prior-contact

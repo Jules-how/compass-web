@@ -8,6 +8,7 @@ import {
   useCadencePrefs,
 } from '@/components/outbound/CadenceControl'
 import { OutboundDeskSwitch } from '@/components/outbound/OutboundDeskSwitch'
+import { OutboundNotebook } from '@/components/outbound/OutboundNotebook'
 import { OfferWavesBoard } from '@/components/outbound/OfferWavesBoard'
 import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
 import { dateOnlyInZone, type CompassCampaign } from '@/lib/campaigns'
@@ -95,7 +96,8 @@ export function OutboundDesk() {
         </div>
       }
     >
-      <OfferWavesBoard />
+      {campaignsQuery.error && <p role="alert">Could not refresh campaigns. Try refreshing this page.</p>}
+      {desk === 'notebook' ? <OutboundNotebook campaigns={campaignsQuery.data?.campaigns ?? []} /> : <OfferWavesBoard />}
     </OperatorShell>
   )
 }
