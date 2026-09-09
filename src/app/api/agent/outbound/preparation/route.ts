@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     return portalJson({ error: 'campaign_id_required' }, { status: 400 })
   try {
     return portalJson(
-      await getPreparationState(getPortalAdminClient(), campaign)
+      await getPreparationState(getPortalAdminClient(), campaign, new URL(request.url).searchParams.get('run_id') || undefined)
     )
   } catch (err) {
     return portalJson(

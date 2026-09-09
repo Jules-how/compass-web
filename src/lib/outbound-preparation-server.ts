@@ -329,17 +329,20 @@ export async function revisePreparationRun(
 export async function getPreparationState(
   db: SupabaseClient,
   campaignId: string,
+  runId?: string,
 ) {
+  let runQuery = db
+    .from("compass_outbound_runs")
+    .select("id,status,candidates,attempts,error,created_at")
+    .eq("campaign_id", campaignId);
+  if (runId) runQuery = runQuery.eq("id", runId);
   const [config, runs] = await Promise.all([
     db
       .from("compass_outbound_configs")
       .select("*")
       .eq("campaign_id", campaignId)
       .maybeSingle(),
-    db
-      .from("compass_outbound_runs")
-      .select("id,status,candidates,attempts,error,created_at")
-      .eq("campaign_id", campaignId)
+    runQuery
       .order("created_at", { ascending: false })
       .limit(10),
   ]);
