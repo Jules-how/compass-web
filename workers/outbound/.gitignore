@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.env*
+cold-email/list-builds/in/
+cold-email/list-builds/out/
+cold-email/list-builds/jobs/
+cold-email/openers/out/

@@ -53,7 +53,7 @@ Existing ledger rows, historical campaign history and verification statuses are 
 
 If application rollback is needed, redeploy the previous app while retaining these additive records. Do not drop source, approval, reservation or receipt tables as a rollback shortcut. Reserved batches must remain held until their external state is reconciled.
 
-The companion workspace edits live outside this Git repository: the local worker; the existing Python engine and tests; filter retention; blank-merge validation; and the active cold-email/load instructions. `workspace-companion.tar.gz` in the local handoff directory contains those exact files for transport, not another runtime. The prior Instantly skill is retained in its `history/2026-09-09-before-preparation.md` file.
+The companion worker, engine, dependencies, regression tests and operating instructions are tracked in [`workers/outbound`](../workers/outbound/README.md). The active Mac working files retain their original workspace paths; the checked-in SHA-256 manifest identifies their exact captured versions. GitHub CI runs the Python tests and checks the actual Python output against the TypeScript fixtures from this tracked package. Local source exports and credentials remain outside Git. The prior Instantly skill remains preserved in its history file.
 
 ## Checks
 
