@@ -36,6 +36,7 @@ export type NavKey =
   | 'outbound'
   | 'finances'
   | 'installs'
+  | 'client-delivery'
   | 'retention'
   | 'settings'
   | 'leads'
@@ -115,6 +116,7 @@ const OPERATOR_SECTIONS: NavSection[] = [
     label: 'Operations',
     items: [
       { href: '/operations/finances', label: 'Finances', key: 'finances', icon: FinancesIcon },
+      { href: '/operations/delivery', label: 'Client delivery', key: 'client-delivery', icon: InboxIcon },
       {
         href: '/operations/installs',
         label: 'Installs',
@@ -150,6 +152,7 @@ export function navKeyFromPathname(pathname: string | null): NavKey {
     return 'sales-overview'
   }
   if (pathname.startsWith('/operations/finances')) return 'finances'
+  if (pathname.startsWith('/operations/delivery')) return 'client-delivery'
   if (pathname.startsWith('/operations/installs')) return 'installs'
   if (pathname.startsWith('/operations/cs')) return 'retention'
   if (pathname.startsWith('/projects')) return 'projects'
