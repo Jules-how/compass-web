@@ -20,6 +20,7 @@ Apply migrations:
 - `0041_lead_enrich_readiness.sql` — `enrich_status` on `lead_contacts`
 - `0043_lead_facts.sql` — `lead_facts` jsonb on `lead_contacts`
 - `0044_lead_facts_shape.sql` — engager-fact array comment (`kind` / `claim` / `url`)
+- `20260909022151_lead_lists.sql` and `20260909022207_compass_list_integration.sql` — named lists, atomic campaign attachments and paginated cohort queries
 - `0045_campaign_wave.sql` — `opener_reviewed_at`, `copy_confirmed_at` on pipeline campaigns
 - `0050_drop_wave_cap.sql` — drop unused campaign column
 - `0051_opener_track_kind.sql` — `opener_track` + `opener_kind` on `lead_contacts`
@@ -50,9 +51,11 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 | `GET` | `/api/agent/leads/inventory` | Deprecated alias of `GET /api/agent/leads?view=counts` (SQL aggregate, not a 50k load) |
 | `GET` | `/api/agent/leads/ledger` | Vertical required. Status, state, last_outbound buckets (`blank`/`0-14`/`15-30`/`31-60`/`61-90`/`90+`), top campaign names. Optional `campaign_ids` vs `later_campaign_ids` overlap. Uses stored `last_outbound_at` |
 | `GET` | `/api/agent/leads/export` | Vertical required. Email required. Cursor page, max 200. Agent writes a file; never dump the table in chat |
-| `GET` | `/api/agent/leads/cohort` | Deprecated alias of `GET /api/agent/leads?view=rows&columns=cohort`. Still requires `pipeline_campaign_id`. New search allows `none` (unattached) and does not require a campaign. |
+| `GET` | `/api/agent/leads/cohort` | Deprecated alias of `GET /api/agent/leads?view=rows&columns=cohort`. Accepts `list_id` or `pipeline_campaign_id`; attached lists define a campaign cohort, with campaign-stamp fallback. The canonical search also accepts `cohort_campaign_id`, retains existing filters, and allows `none` (unattached). |
 | `PATCH` | `/api/agent/leads/mark` | Deprecated alias. Prefer `POST /api/agent/leads` + `mark`. Still: bulk `ids[]`/`emails[]` (max 500) or `rows[]` (max 50) for facts/opener/website/Instantly land. Facts are `[{kind, claim, url}]`. Website is the company site. `opener_track`: `signal` \| `tension` \| `none`. `opener_kind`: `review` \| `hiring` \| `policy` \| `specialty` \| `location` \| `tension` \| `after_hours` \| `phone_pain` \| `none`. ICP: `none\|pass\|thin\|skip`. `email_verify_status`: `valid` \| `catch_all` \| `invalid` \| `unknown` \| `risky` \| `none`. |
 | `GET` | `/api/agent/campaigns` | Pipeline + Instantly glance. Compact `wave` per campaign (`cohort`, `openers`, `signal`, `tension`, `thin`, `skip`, `by_kind`, `blocked`, `readyToActivate`). Thin and skip rows are not missing openers. Skip never uploads. |
+| `GET` | `/api/agent/lists` | CRM lists with exact member counts |
+| `PATCH` | `/api/agent/lists/:id/members` | Add/remove lead IDs from a list, max 50 |
 | `GET` | `/api/agent/outbound/summary` | Library counts + offer keys (~1–2KB) |
 | `GET` | `/api/agent/outbound/:kind` | Compact list (`limit` default 40 max 100; `full=1` for bodies/sequences) |
 | `POST` | `/api/agent/outbound/:kind` | Create library row |

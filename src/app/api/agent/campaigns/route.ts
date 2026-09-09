@@ -7,6 +7,7 @@ import {
 } from '@/lib/campaign-wave'
 import { getPortalAdminClient } from '@/lib/portal-admin'
 import { portalJson } from '@/lib/portal-http'
+import { loadCohortLeadRowsForCampaigns } from '@/lib/lead-lists'
 import { loadSyncSnapshot } from '@/lib/sync-snapshots'
 import type { ColdEmailGlance } from '@/lib/home-demo-data'
 
@@ -40,15 +41,34 @@ export async function GET(request: Request) {
     const rows = pipeline.data ?? []
     const ids = rows.map((row) => row.id)
     let leadSummaries: ReturnType<typeof summarizeLeadsByCampaign> = {}
+    const listIdsByCampaign = new Map<string, string[]>()
     if (ids.length > 0) {
-      const leadsRes = await admin
-        .from('lead_contacts')
-        .select('pipeline_campaign_id,outbound_status,opener,enrich_status,email,company,opener_track,opener_kind,icp_status')
-        .in('pipeline_campaign_id', ids)
-        .limit(8000)
-      if (!leadsRes.error) {
-        leadSummaries = summarizeLeadsByCampaign(leadsRes.data ?? [])
+      const [byCampaign, attachments] = await Promise.all([
+        loadCohortLeadRowsForCampaigns<{
+          id?: string | null
+          outbound_status?: string | null
+          opener?: string | null
+          enrich_status?: string | null
+          email?: string | null
+          company?: string | null
+          pipeline_campaign_id?: string | null
+        }>(admin, ids, 'id,outbound_status,opener,enrich_status,email,company,pipeline_campaign_id,opener_track,opener_kind,icp_status'),
+        admin.from('compass_campaign_lists').select('campaign_id,list_id').in('campaign_id', ids)
+      ])
+      if (!attachments.error) {
+        for (const row of attachments.data ?? []) {
+          const campaignId = String(row.campaign_id || '')
+          const listId = String(row.list_id || '')
+          if (!campaignId || !listId) continue
+          const bucket = listIdsByCampaign.get(campaignId) ?? []
+          bucket.push(listId)
+          listIdsByCampaign.set(campaignId, bucket)
+        }
       }
+      const leadRows = Object.entries(byCampaign).flatMap(([campaignId, leads]) =>
+        leads.map((lead) => ({ ...lead, pipeline_campaign_id: campaignId }))
+      )
+      leadSummaries = summarizeLeadsByCampaign(leadRows)
     }
 
     return portalJson({
@@ -78,6 +98,7 @@ export async function GET(request: Request) {
           endDate: row.end_date,
           goLiveAt: row.go_live_at,
           updatedAt: row.updated_at,
+          listIds: listIdsByCampaign.get(row.id) ?? [],
           wave: compactWaveForAgent(snapshot)
         }
       }),

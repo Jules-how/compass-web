@@ -1,3 +1,4 @@
+import { resolveLeadScope, scopedLeadQuery } from './lead-scope'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LeadListFilters, LeadSummaryCounts } from '@/lib/types'
 import { LEAD_EXPORT_MAX, LEAD_LIST_COLUMNS, LEAD_PAGE_SIZE, LEAD_UI_PAGE_MAX } from '@/lib/list-columns'
@@ -83,6 +84,8 @@ export async function searchLeadContacts(
   filters: LeadListFilters,
   options: LeadSearchOptions = {}
 ): Promise<LeadSearchResult> {
+  const scope = await resolveLeadScope(admin, filters)
+  filters = scope.filters
   const mode = options.mode ?? 'agent'
   if (mode === 'ui' || mode === 'export') {
     const page = options.page && options.page > 0 ? Math.floor(options.page) : 1
@@ -93,7 +96,7 @@ export async function searchLeadContacts(
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
     const query = applyLeadFilters(
-      admin.from('lead_contacts').select(LEAD_LIST_COLUMNS, { count: 'exact' }) as unknown as LeadFilterQuery,
+      scopedLeadQuery(admin, LEAD_LIST_COLUMNS, scope, { count: 'exact' }) as unknown as LeadFilterQuery,
       filters
     ) as unknown as ReturnType<ReturnType<SupabaseClient['from']>['select']>
     const { data, error, count } = await query
@@ -118,9 +121,7 @@ export async function searchLeadContacts(
   const cursor = decodeLeadCursor(options.cursor)
   const offset = !cursor && options.offset && options.offset > 0 ? Math.floor(options.offset) : 0
   let query = applyLeadFilters(
-    admin
-      .from('lead_contacts')
-      .select(resolveLeadSelectColumns(columns), { count: 'exact' }) as unknown as LeadFilterQuery,
+    scopedLeadQuery(admin, resolveLeadSelectColumns(columns), scope, { count: 'exact' }) as unknown as LeadFilterQuery,
     filters
   )
   if (cursor) query = applyLeadKeyset(query, cursor)
@@ -156,9 +157,11 @@ export async function streamLeadContacts(
   filters: LeadListFilters,
   columns: AgentLeadColumnSet
 ): Promise<{ total: number; columns: AgentLeadColumnSet; iterator: AsyncGenerator<Record<string, unknown>> }> {
+  const scope = await resolveLeadScope(admin, filters)
+  filters = scope.filters
   const select = resolveLeadSelectColumns(columns)
   const countQuery = applyLeadFilters(
-    admin.from('lead_contacts').select('id', { count: 'exact', head: true }) as unknown as LeadFilterQuery,
+    scopedLeadQuery(admin, 'id', scope, { count: 'exact', head: true }) as unknown as LeadFilterQuery,
     filters
   ) as unknown as ReturnType<ReturnType<SupabaseClient['from']>['select']>
   const { count, error: countError } = await countQuery
@@ -169,7 +172,7 @@ export async function streamLeadContacts(
     let cursor: { email: string | null; id: string } | null = null
     while (true) {
       let query = applyLeadFilters(
-        admin.from('lead_contacts').select(select) as unknown as LeadFilterQuery,
+        scopedLeadQuery(admin, select, scope) as unknown as LeadFilterQuery,
         filters
       )
       if (cursor) query = applyLeadKeyset(query, cursor)

@@ -73,6 +73,7 @@ export async function GET(request: Request) {
     }
 
     if (view === 'counts') {
+      if (filters.list_id || filters.cohort_campaign_id) return portalJson({ error: 'Use view=rows for a scoped list total; inventory counts are global.' }, { status: 400 })
       const inventory = await loadLeadInventory(admin, filters.vertical)
       return portalJson({
         ok: true,

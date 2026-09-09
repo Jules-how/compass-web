@@ -1,3 +1,4 @@
+import { loadCohortLeadRowsForCampaigns } from './lead-lists'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import {
@@ -33,22 +34,12 @@ export function projectCampaignRow(row: CompassCampaign): CompassCampaign {
 }
 
 export async function listPipelineCampaigns(supabase: SupabaseClient): Promise<CompassCampaign[]> {
-  const [campaignsRes, leadsRes] = await Promise.all([
-    supabase
-      .from('compass_pipeline_campaigns')
-      .select(CAMPAIGN_BOARD_COLUMNS)
-      .order('go_live_at', { ascending: true, nullsFirst: false }),
-    supabase
-      .from('lead_contacts')
-      .select('pipeline_campaign_id,outbound_status,opener')
-      .not('pipeline_campaign_id', 'is', null)
-      .limit(8000)
-  ])
+  const campaignsRes = await supabase.from('compass_pipeline_campaigns').select(CAMPAIGN_BOARD_COLUMNS).order('go_live_at', { ascending: true, nullsFirst: false })
   if (campaignsRes.error) throw new Error(campaignsRes.error.message)
-  const campaigns = applyLeadTallies(
-    (campaignsRes.data ?? []).map((row) => projectCampaignRow(row as unknown as CompassCampaign)),
-    tallyLeadsByCampaign(leadsRes.data ?? [])
-  )
+  const rows = (campaignsRes.data ?? []).map(row => projectCampaignRow(row as unknown as CompassCampaign))
+  const cohorts = await loadCohortLeadRowsForCampaigns<{ id: string; outbound_status?: string; opener?: string }>(supabase, rows.map(row => row.id), 'id,pipeline_campaign_id,outbound_status,opener')
+  const leads = Object.entries(cohorts).flatMap(([id, leads]) => leads.map(lead => ({ ...lead, pipeline_campaign_id: id })))
+  const campaigns = applyLeadTallies(rows, tallyLeadsByCampaign(leads))
   return campaigns
 }
 

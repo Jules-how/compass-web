@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import type { LeadListFilters } from '@/lib/types'
-import { portalJson } from '@/lib/portal-http'
+import { requirePortalAccess } from '@/lib/portal-access'
+import { portalJson, portalAccessResponse } from '@/lib/portal-http'
 import { LEAD_EXPORT_MAX, LEAD_PAGE_SIZE, LEAD_UI_PAGE_MAX } from '@/lib/list-columns'
 import { parseLeadListFilters } from '@/lib/leads-query'
 import { searchLeadContacts } from '@/lib/lead-search'
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
     : null
 
   try {
+    await requirePortalAccess({ operator: true })
     const admin = getPortalAdminClient()
     const result = await searchLeadContacts(admin, filters, {
       mode: exportLimit ? 'export' : 'ui',
@@ -40,6 +42,8 @@ export async function GET(request: NextRequest) {
       filters
     })
   } catch (err) {
+    const access = portalAccessResponse(err)
+    if (access) return access
     const message = err instanceof Error ? err.message : 'fetch_failed'
     return portalJson({ error: 'fetch_failed', detail: message }, { status: 500 })
   }

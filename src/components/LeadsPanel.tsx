@@ -9,6 +9,7 @@ import { LEAD_PAGE_SIZE } from '@/lib/list-columns'
 import { leadFiltersToSearchParams, parseLeadListFilters } from '@/lib/leads-query'
 import { prefetchJson, useCachedJson } from '@/lib/use-cached-json'
 import { RefreshCw } from 'lucide-react'
+import type { CompassLeadList } from '@/lib/lead-lists'
 
 type ListPayload = {
   leads: LeadContact[]
@@ -52,6 +53,9 @@ export function LeadsPanel() {
   const facets = useCachedJson<FacetsPayload>('leads:facets', '/api/leads/facets', {
     staleMs: 30_000
   })
+  const crmLists = useCachedJson<{ lists: CompassLeadList[] }>('leads:crm-lists', '/api/lead-lists', {
+    staleMs: 30_000
+  })
 
   // Keep previous list data so the table is never unmounted during filter changes
   const [cachedData, setCachedData] = useState<ListPayload | null>(null)
@@ -86,11 +90,13 @@ export function LeadsPanel() {
   const reloadList = list.reload
   const reloadSummary = summary.reload
   const reloadFacets = facets.reload
+  const reloadLists = crmLists.reload
   const reload = useCallback(() => {
     void reloadList(true)
     void reloadSummary(true)
     void reloadFacets(true)
-  }, [reloadList, reloadSummary, reloadFacets])
+    void reloadLists(true)
+  }, [reloadList, reloadSummary, reloadFacets, reloadLists])
 
   const handleLocalSync = async () => {
     setSyncing(true)
@@ -171,6 +177,8 @@ export function LeadsPanel() {
         total={total}
         summary={summaryCounts}
         discoveredVerticals={discoveredVerticals}
+        crmLists={crmLists.data?.lists ?? []}
+        onListsChange={() => void reloadLists(true)}
         onNavigate={navigate}
         onReload={reload}
       />

@@ -14,6 +14,8 @@ Local and cloud agents connect to Compass over `/api/agent/*` (secret auth). Dai
 - Outbound craft UI persists campaigns + library to Supabase (same store as `/api/agent/outbound/*`). Unbound editor drafts stay browser-local until “save as campaign.”
 - Sequence body of record = Compass campaign copy (`sequence_draft`, `cold_expression`, …). Outbound doctrine = `cold-email/AGENTS.md`. Current offer terms = the named contract in `../switchflow-offer/`, checked against Compass when relevant.
 
+- CRM lists segment the existing lead ledger; campaigns may attach lists. Use the agent list endpoints for membership changes.
+
 ## UI aesthetic is locked
 
 The operator UI depth effect, rounded corners, card separation, and **sidebar (sidecar) animations/UI** are **approved and locked**.

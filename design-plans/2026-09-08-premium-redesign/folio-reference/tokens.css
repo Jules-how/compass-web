@@ -1,0 +1,35 @@
+:root {
+  --desk: #eeecf3;
+  --rail: #e8e4ee;
+  --paper: #fffefa;
+  --ink: #352f40;
+  --muted: #6c6279;
+  --accent: #654c7d;
+  --accent-hover: #503661;
+  --selected: #dcd3e7;
+  --wash: #eee7f3;
+  --note: #dfd6e9;
+  --line: #d9d2e0;
+  --control-line: #a69aac;
+  --positive: #365c4b;
+  --positive-wash: #edf3e9;
+  --warning: #705824;
+  --warning-wash: #f6efd9;
+  --error: #913e42;
+  --error-wash: #fcf0ed;
+  --focus: #704098;
+  --sans: 'DM Sans', Arial, sans-serif;
+  --editorial: 'Newsreader', Georgia, serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --control-radius: 7px;
+  --folder-radius: 12px;
+  --paper-shadow: 0 2px 3px #352f4003, 0 10px 24px -20px #352f4052;
+  --motion: 150ms;
+}

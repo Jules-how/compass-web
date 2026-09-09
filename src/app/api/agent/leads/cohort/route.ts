@@ -12,22 +12,24 @@ const DEPRECATED =
 
 /**
  * Alias: harvest/attach input. Same filters as GET /api/agent/leads (cohort columns).
- * pipeline_campaign_id still required here so existing skill calls keep working.
+ * Accepts list_id or a campaign; campaign attachments use the same canonical search.
  */
 export async function GET(request: Request) {
   const authError = requireAgentAuth(request)
   if (authError) return authError
 
   const url = new URL(request.url)
+  const listId = url.searchParams.get('list_id')?.trim() || ''
   const campaignId = url.searchParams.get('pipeline_campaign_id')?.trim() || ''
-  if (!campaignId) {
-    return portalJson({ error: 'pipeline_campaign_id_required' }, { status: 400 })
+  if (!listId && !campaignId) {
+    return portalJson({ error: 'list_id_or_pipeline_campaign_id_required' }, { status: 400 })
   }
 
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') || 50) || 50))
   const offset = Math.max(0, Number(url.searchParams.get('offset') || 0) || 0)
   const filters = parseLeadListFilters(url.searchParams)
-  filters.pipeline_campaign_id = campaignId
+  filters.pipeline_campaign_id = campaignId === 'none' ? campaignId : undefined
+  filters.cohort_campaign_id = !listId && campaignId !== 'none' ? campaignId : undefined
 
   try {
     const admin = getPortalAdminClient()
@@ -41,7 +43,8 @@ export async function GET(request: Request) {
     return portalJson({
       ok: true,
       deprecated: DEPRECATED,
-      pipeline_campaign_id: campaignId,
+      pipeline_campaign_id: campaignId || null,
+      list_id: listId || null,
       count: result.count,
       total: result.total,
       offset,

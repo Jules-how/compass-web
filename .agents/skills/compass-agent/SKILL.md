@@ -242,3 +242,5 @@ Wave memory lives in Compass (`compass_wave_briefs`, `compass_wave_actions`, cam
 Lean stdio server: `node mcp/server.mjs` from `compass-web/` (or `node compass-web/mcp/server.mjs` from switchflow-os). Loads `compass-web/.env.local` then `COMPASS_BASE_URL` / `COMPASS_AGENT_SECRET`. Hosted default `https://compass-web-eosin.vercel.app`.
 
 Tools: `brief`, `campaigns`, `leads.search`, `leads.commit`, legacy `leads` / `mark`, `copy`, `land`, `commit`, `ledger`, `export`. Not an Instantly clone. `land.push_leads` defaults to dry-run. Codex loads server `compass` from `.codex/config.toml`; the nested Compass configuration supports opening that repository directly.
+
+CRM lists segment the existing lead ledger. Use `/api/agent/lists` and `/api/agent/lists/:id/members`; list and campaign cohorts retain the shared search filters and paging. Research and openers use the existing agent lead API.

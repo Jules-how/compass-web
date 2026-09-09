@@ -19,7 +19,7 @@ function production(writer = {}) {
 function fakeLedger(count) {
   const rows = Array.from({ length: count }, (_, i) => ({
     id: 'lead-' + i,
-    email: 'lead' + i + '@example.test',
+    email: 'lead' + String(i).padStart(4, '0') + '@example.test',
     company: 'Example ' + i,
     name: '',
     opener: 'Saw Example ' + i + '.',
@@ -31,7 +31,10 @@ function fakeLedger(count) {
       if (table === 'compass_pipeline_activity')
         return { insert: async () => ({ error: null }) }
       let patch = null,
-        id = null
+        id = null,
+        selectedIds = null,
+        start = 0,
+        end = Infinity
       const query = {
         select() {
           return query
@@ -46,7 +49,13 @@ function fakeLedger(count) {
         limit() {
           return query
         },
-        in() {
+        in(column, ids) {
+          if (column === 'id') selectedIds = ids
+          return query
+        },
+        range(from, to) {
+          start = from
+          end = to
           return query
         },
         update(value) {
@@ -56,7 +65,9 @@ function fakeLedger(count) {
         then(resolve, reject) {
           if (patch) receipts.push({ id, patch })
           return Promise.resolve({
-            data: patch ? [{ id }] : rows,
+            data: patch ? [{ id }] : table === 'lead_contacts'
+              ? rows.filter(row => !selectedIds || selectedIds.includes(row.id)).slice(start, end + 1)
+              : [],
             error: null
           }).then(resolve, reject)
         }

@@ -133,7 +133,7 @@ test('campaign workspace wiring keeps one lead store', () => {
 
   const pane = read('src/components/outbound/CampaignLeadsPane.tsx')
   assert.match(pane, /variant="embed"/)
-  assert.match(pane, /pipeline_campaign_id/)
+  assert.match(pane, /cohort_campaign_id/)
   assert.match(pane, /instantly_campaign_id/)
 
   const sidecar = read('src/components/LeadSidecar.tsx')
@@ -141,14 +141,14 @@ test('campaign workspace wiring keeps one lead store', () => {
   assert.match(sidecar, /No opener yet/)
 })
 
-test('campaign list GET skips sequence bodies and loads lead tallies in parallel', () => {
+test('campaign list GET skips sequence bodies and tallies the resolved CRM cohort', () => {
   const campaigns = read('src/lib/campaigns.ts')
   assert.match(campaigns, /CAMPAIGN_BOARD_COLUMNS/)
   assert.match(campaigns, /CAMPAIGN_LIST_COLUMNS = `\$\{CAMPAIGN_CORE_COLUMNS\},cold_expression,sequence_draft`/)
 
   const store = read('src/lib/campaigns-server.ts')
   assert.match(store, /select\(CAMPAIGN_BOARD_COLUMNS\)/)
-  assert.match(store, /Promise\.all/)
+  assert.match(store, /loadCohortLeadRowsForCampaigns/)
   assert.match(store, /select\(CAMPAIGN_LIST_COLUMNS\)/)
 
   const list = read('src/app/api/campaigns/route.ts')

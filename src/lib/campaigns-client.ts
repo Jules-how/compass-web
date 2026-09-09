@@ -8,6 +8,7 @@ import {
 } from '@/lib/campaigns'
 import type { OutboundSequence } from '@/lib/outbound-copy'
 import type { WaveSnapshot } from '@/lib/campaign-wave'
+import type { CompassLeadList } from '@/lib/lead-lists'
 import { peekQueryCache, writeQueryCache } from '@/lib/query-cache'
 
 export const CAMPAIGNS_QUERY_KEY = '/api/campaigns'
@@ -60,6 +61,7 @@ export type CampaignDetail = {
   milestones: CompassCampaignMilestone[]
   activity: CompassCampaignActivity[]
   wave?: WaveSnapshot | null
+  lists?: CompassLeadList[]
 }
 
 function project(row: CompassCampaign): CompassCampaign {
@@ -135,7 +137,8 @@ export async function getCampaignDetail(id: string): Promise<CampaignDetail | nu
     campaign: project(body.campaign),
     milestones: body.milestones ?? [],
     activity: body.activity ?? [],
-    wave: body.wave ?? null
+    wave: body.wave ?? null,
+    lists: body.lists ?? []
   }
 }
 
@@ -203,6 +206,16 @@ export async function updateCampaign(id: string, patch: CampaignPatch): Promise<
   const campaign = project(body.campaign)
   upsertInCache(campaign)
   return campaign
+}
+
+export async function replaceCampaignCrmLists(id: string, listIds: string[]): Promise<string[]> {
+  const res = await fetch(`/api/campaigns/${encodeURIComponent(id)}/lists`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ list_ids: listIds })
+  })
+  const body = await readJson<{ list_ids: string[] }>(res)
+  return body.list_ids ?? []
 }
 
 export type InstantlyPushLeadsClientResult = {
