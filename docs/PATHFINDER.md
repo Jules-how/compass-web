@@ -14,7 +14,7 @@ Pathfinder is the default `/planning` view. `/planning?view=records` keeps the e
 
 ## Deployment
 
-Apply `supabase/migrations/0081_compass_pathfinder.sql` before deploying the application. It requires the existing `compass_settings`, `compass_tasks`, `portal_is_operator()` and `portal_operator_create_task_mutation(jsonb)` schema. The task creation and `portal_operator_apply_task_mutation(text,jsonb,bigint)` functions are inherited infrastructure whose definitions are not in this checkout; verify their deployed signatures. The migration creates only Pathfinder links, observations, findings, audit and the idempotent operator task-link/creation command and an optimistic task-edit wrapper. It does not change any goal, task, schedule or business data.
+Apply `supabase/migrations/0081_compass_pathfinder.sql`, then `0082_compass_pathfinder_grants.sql`, before deploying the application. The second migration explicitly removes Supabase inherited anonymous grants and direct client writes. It requires the existing `compass_settings`, `compass_tasks`, `portal_is_operator()` and `portal_operator_create_task_mutation(jsonb)` schema. The task creation and `portal_operator_apply_task_mutation(text,jsonb,bigint)` functions are inherited infrastructure whose definitions are not in this checkout; verify their deployed signatures. The migration creates only Pathfinder links, observations, findings, audit and the idempotent operator task-link/creation command and an optimistic task-edit wrapper. It does not change any goal, task, schedule or business data.
 
 Restart/reconnect the existing Compass MCP runner after deploy to expose `pathfinder` and `pathfinder.review`. Apply the updated `DAILY_OPERATOR_PROMPT.md` to the existing daily operator configuration; a repo prompt edit alone does not establish deployment.
 
@@ -45,7 +45,7 @@ Use test fixtures in an isolated environment, not production sample records:
 
 Production build, typecheck and deployment guards passed. Lint completed with existing warnings outside Pathfinder.
 
-- 41 focused tests passed: planning contracts, outcome assessment, graph semantics, MCP transport and the actual migration against isolated Postgres-compatible PGlite. Existing task RPCs are test boundaries, not a substitute for checking their deployed implementation.
+- 42 focused tests passed: planning contracts, outcome assessment, graph semantics, MCP transport and the actual migration against isolated Postgres-compatible PGlite. Existing task RPCs are test boundaries, not a substitute for checking their deployed implementation.
 - Actual Pathfinder and kanban React components were exercised together using labelled local fixtures: map task completion propagated to Done; moving the kanban task to Doing propagated back to the map; outcome remained unknown without observations. A target-level reported observation remained unverified.
 - Explicit detail selection and fit preserved visible execution nodes. Keyboard Enter opened the existing task panel, and Escape restored focus to its list trigger. The narrow-screen list had no horizontal page overflow.
 - No production data was read or changed for these fixtures. Cross-tab/server polling, migration application, real agent persistence and the daily automation configuration still require the release checks above in a deployed test environment.

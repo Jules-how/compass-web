@@ -7,7 +7,9 @@ import { PGlite } from "@electric-sql/pglite";
 // simple transactional implementations here; the Pathfinder migration is unmodified.
 async function database() {
   const db = new PGlite();
-  await db.exec(`CREATE ROLE authenticated; CREATE ROLE service_role;
+  await db.exec(`CREATE ROLE authenticated; CREATE ROLE service_role; CREATE ROLE anon;
+ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon,authenticated;
+ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO anon,authenticated;
  CREATE TABLE compass_settings(id text PRIMARY KEY);
  CREATE TABLE compass_tasks(id text PRIMARY KEY,title text,status text,notes text,updated_at timestamptz DEFAULT now());
  CREATE FUNCTION portal_is_operator() RETURNS boolean LANGUAGE sql AS $$SELECT coalesce(current_setting('test.operator',true),'false')='true'$$;
@@ -27,6 +29,7 @@ async function database() {
       "utf8",
     ),
   );
+  await db.exec(await readFile(new URL("../supabase/migrations/0082_compass_pathfinder_grants.sql", import.meta.url), "utf8"));
   return db;
 }
 test("migration: persistent finding -> exactly one shared task and audit trail; stale editor rejected", async () => {
@@ -165,4 +168,15 @@ test("a recommendation can reuse canonical work before any new task is created",
   } finally {
     await db.close();
   }
+});
+
+test("hosted default grants cannot expose table writes or anonymous RPC calls", async () => {
+ const db=await database();try {
+  for(const role of ["anon","authenticated"]){
+   const result=(await db.query(`SELECT has_table_privilege($1,'compass_pathfinder_observations','TRUNCATE') AS truncate,has_table_privilege($1,'compass_pathfinder_issues','INSERT') AS insert`,[role])).rows[0];
+   assert.deepEqual(result,{truncate:false,insert:false});
+  }
+  assert.equal((await db.query(`SELECT has_function_privilege('anon','pathfinder_create_issue_task(uuid,text)','EXECUTE') AS allowed`)).rows[0].allowed,false);
+  assert.equal((await db.query(`SELECT has_function_privilege('authenticated','pathfinder_create_issue_task(uuid,text)','EXECUTE') AS allowed`)).rows[0].allowed,true);
+ }finally{await db.close()}
 });
