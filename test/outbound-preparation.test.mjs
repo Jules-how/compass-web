@@ -175,6 +175,17 @@ test('a second ledger company or inbox holds outreach even when uncontacted', ()
   f.ledger.push({ ...f.ledger[0], id: 'other' })
   assert.equal(bundle(f).counts.hold, 1)
 })
+test('missing inboxes stay held without matching unrelated blank inboxes', () => {
+  const f = fixture()
+  f.candidate.email = ''
+  f.ledger[0].email = ''
+  f.ledger.push({ ...f.ledger[0], id: 'unrelated', company_domain: 'unrelated.test' })
+  const reasons = p.assessCandidate(f.candidate, f.context, f.ledger)
+  assert.ok(reasons.includes('missing_or_invalid_email'))
+  assert.ok(!reasons.some((reason) => reason.startsWith('company_or_inbox_overlap:')))
+  f.ledger[1].company_domain = f.ledger[0].company_domain
+  assert.ok(p.assessCandidate(f.candidate, f.context, f.ledger).includes('company_or_inbox_overlap:unrelated'))
+})
 test('render tampering and unknown output IDs fail closed', () => {
   const f = fixture()
   const outputs = render(f.context, [f.candidate])
