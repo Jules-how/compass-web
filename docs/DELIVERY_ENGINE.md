@@ -24,6 +24,8 @@ The office handoff is a persisted task in the Compass delivery workspace, with a
 
 ## Try the demo
 
+For a local interface review, run `node scripts/preview-delivery.mjs`. It prints a loopback URL and renders the real delivery route inside the existing Compass shell, with the same sidebar, page header, fonts and CSS. The fixture uses the real delivery engine and an ephemeral PGlite database; it substitutes browser routing/auth and inactive pages. Other Compass pages are not included. It does not exercise hosted authentication or Supabase connectivity, and its fictional records reset when stopped. No `next dev` server or production credentials are required.
+
 1. Apply migration `0080_compass_delivery_engine.sql` to a **review/staging** database with the existing Compass portal/client baseline. Point the review deployment at that database and keep `COMPASS_DELIVERY_LIVE` unset.
 2. Sign in as a Compass operator, open **Client delivery**, and create an enquiry that needs qualification.
 3. Send fictional replies: `Yes`, `Ryde`, `Yes`, `Next month`, `10 Example Street`. The demo then offers appointment options. Reply `1` or `2` to book; it must never book merely because availability exists.
@@ -110,6 +112,8 @@ For the first pilot, review every handoff and a sample of successful conversatio
 Productisation here is a shared engine, versioned `installation-v1` rules, one client configuration, an adapter contract, a repeatable demo, tests and the setup/runbook above. A second client should change configuration and the supported integration mapping; it should not require copying a separate workflow tree.
 
 ## Verification
+
+The delivery-only branch is `codex/compass-delivery-live`, based on production `main` at `8ba9b764a112bd14aaaa94ba022ba4789a9000ab`. Vercel's canonical alias was checked on 9 September 2026 and resolved to deployment `dpl_B1SpeMjsjm4a7i17iTP8RZR6Gcxm`. The earlier `codex/compass-delivery-loop` branch also contains unrelated planning and interface work; it is not the release base for this change. The production shell, sidebar implementation and global design tokens are unchanged on the delivery-only branch; navigation gains only the Client delivery entry. Recheck the production revision before a later release.
 
 ```sh
 node --test test/delivery-engine.test.mjs
