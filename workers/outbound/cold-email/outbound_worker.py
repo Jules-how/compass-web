@@ -48,8 +48,9 @@ def process_csv(campaign: str, path: Path, output: Path) -> dict:
     """Retain each source row, then render and read back every batch. Never approves or sends."""
     base, secret = load_config()
     endpoint = base + "/api/agent/outbound/preparation?" + urlencode({"campaign_id": campaign})
-    def request(body=None):
-        req = Request(endpoint, data=json.dumps(body).encode() if body is not None else None, headers={"Content-Type":"application/json", "x-compass-agent-secret":secret}, method="POST" if body is not None else "GET")
+    def request(body=None, run_id=None):
+        url = endpoint + ("&" + urlencode({"run_id": run_id}) if run_id else "")
+        req = Request(url, data=json.dumps(body).encode() if body is not None else None, headers={"Content-Type":"application/json", "x-compass-agent-secret":secret}, method="POST" if body is not None else "GET")
         try:
             with urlopen(req, timeout=60) as response: return json.load(response)
         except HTTPError as exc:
@@ -78,7 +79,7 @@ def process_csv(campaign: str, path: Path, output: Path) -> dict:
     for start in range(0,len(rows),200):
         run = request({"action":"create","rows":rows[start:start+200]})
         execute(campaign, run["id"], request)
-        state = request()
+        state = request(run_id=run["id"])
         prep = next((p for p in state["preparations"] if p["run_id"] == run["id"]), None)
         if prep is None: raise RuntimeError("Completed output was not returned by Compass")
         bundle = prep["bundle"]

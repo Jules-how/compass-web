@@ -386,10 +386,8 @@ def print_job(job: dict) -> None:
         print("Pull the cohort (page with &cursor=):")
         print(f"  GET {job['refill_pull_url']}")
         print(
-            "Write a local CSV preserving verification and outreach status. Verify pending inboxes, then promote with mark_verified_email.py, "
-            "then generate_openers.py --trade {t} --city {c} --input <csv>.".format(
-                t=job["trade"], c=job["city"].lower()
-            )
+            "Write a local CSV preserving source evidence, verification and outreach status. Research and verify pending rows, "
+            "then process with outbound_worker.py using this campaign's saved writing rules."
         )
     elif job["decision"] == "review_inventory":
         print(f"DECISION: REVIEW INVENTORY - {inv['reason']}")
@@ -407,16 +405,16 @@ def print_job(job: dict) -> None:
     print(f"  name: {preset['name']}")
     print(f"  timezone: {preset['timezone'] or 'CONFIRM (city not in baked map)'}")
     print(
-        "  gap: delay 2 on every email with a follower, 0 on the last; "
+        "  gap: at least two days; the saved campaign preparation and verified launch schedule govern the actual interval. "
         "text_only on; open/link tracking off; insert_unsubscribe_header on; "
         "stop_on_reply on; weekdays"
     )
     print()
     print(
-        "Then: filter_leads.py -> site_extract.py -> verify (account56/email-verifier) "
-        "-> mark_verified_email.py -> Compass commit -> generate_openers.py -> "
-        "check_campaign.py --leads-csv -> instantly-load draft -> reconcile uploaded emails -> PATCH sequence_draft + mark "
-        "in_instantly. Activate only when Jules says go."
+        "Then: research/filter against the current Compass offer -> source-backed evidence -> recorded email verification -> "
+        f"outbound_worker.py --campaign {job['campaign_id']} --input-csv <researched.csv> --output-dir <job-output> -> "
+        "review complete output and holds in Compass -> operator approval -> instantly-load paused CSV -> exact recipient reconciliation. "
+        "Activate only when Jules says go."
     )
     for warning in job["warnings"]:
         print(f"WARNING: {warning}")

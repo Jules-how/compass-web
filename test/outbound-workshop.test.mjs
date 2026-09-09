@@ -157,3 +157,25 @@ test("rules reject duplicate identities and reserved fields", () => {
     p.recipeErrors(f.context.recipe).includes("reserved_signal_field:company"),
   );
 });
+
+test("a CSV retry can read an older run without crossing campaign boundaries", async () => {
+  const server = loadTypescript("src/lib/outbound-preparation-server.ts", {
+    "./instantly": {}, "./instantly-write": {}
+  });
+  const runs = Array.from({length: 12}, (_, i) => ({id: `run-${i}`, campaign_id: "cell"}));
+  const db = {from(table) {
+    let rows = table === "compass_outbound_runs" ? [...runs] : table === "compass_outbound_preparations" ? [{id: "prep-oldest", run_id: "run-11"}] : [];
+    const q = {
+      select() {return q;},
+      eq(key, value) {rows = rows.filter(r => r[key] === value); return q;},
+      in(key, values) {rows = rows.filter(r => values.includes(r[key])); return q;},
+      order() {return q;},
+      limit(n) {rows = rows.slice(0,n); return q;},
+      maybeSingle() {return Promise.resolve({data: rows[0] ?? null, error:null});},
+      then(resolve) {resolve({data:rows, error:null});}
+    }; return q;
+  }};
+  const old = await server.getPreparationState(db, "cell", "run-11");
+  assert.equal(old.preparations[0].id, "prep-oldest");
+  assert.deepEqual((await server.getPreparationState(db, "different-cell", "run-11")).preparations, []);
+});

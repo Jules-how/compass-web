@@ -120,19 +120,28 @@ function CampaignPage({
     [saved, setSaved] = useState("");
   const createId = useRef("");
   const latestBody = useRef(body);
+  const dirtyRef = useRef(false);
   const draftKey = "compass.outbound.note-draft." + campaign.id;
   useEffect(() => {
+    const savedBody = String(note?.data.body ?? "");
     try {
       const draft = sessionStorage.getItem(draftKey);
-      if (draft !== null && draft !== String(note?.data.body ?? "")) {
+      if (draft !== null && draft !== savedBody) {
         latestBody.current = draft;
+        dirtyRef.current = true;
         setBody(draft);
         setDirty(true);
+        return;
       }
     } catch {}
+    if (!dirtyRef.current) {
+      latestBody.current = savedBody;
+      setBody(savedBody);
+    }
   }, [draftKey, note?.data.body]);
   const changeBody = (value: string) => {
     latestBody.current = value;
+    dirtyRef.current = true;
     setBody(value);
     setDirty(true);
     setSaved("");
@@ -141,12 +150,6 @@ function CampaignPage({
     } catch {}
   };
 
-  useEffect(() => {
-    if (!dirty) {
-      latestBody.current = String(note?.data.body ?? "");
-      setBody(latestBody.current);
-    }
-  }, [note, dirty]);
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => {
@@ -182,6 +185,7 @@ function CampaignPage({
       if (!r.ok) throw new Error(b.error);
       onSave(b.record);
       if (latestBody.current === submittedBody) {
+        dirtyRef.current = false;
         setDirty(false);
         setSaved("Saved to Compass");
         try {
