@@ -1,4 +1,4 @@
-/* Planning extends Folio's paper, typography and plum controls. */
+/* Planning uses Compass cream, paper and orange with editorial typography. */
 .folio-page:has(> .planning-workspace) {
   max-width: none;
   padding: 24px 28px 28px;
@@ -46,11 +46,11 @@
   border-radius: 12px;
   min-height: calc(100dvh - 243px);
   overflow: clip;
-  box-shadow: 0 4px 20px #352f4004;
+  box-shadow: 0 4px 20px #0f121704;
 }
 .notebook-index {
   padding: 22px 12px 18px;
-  background: #f8f6fa;
+  background: var(--folio-surface);
   border-right: 1px solid var(--folio-line);
   display: flex;
   flex-direction: column;
@@ -76,7 +76,7 @@
   display: flex;
   padding: 3px;
   gap: 4px;
-  background: #ede9f2;
+  background: var(--folio-accent-soft);
   border-radius: 7px;
 }
 .notebook-folders button {
@@ -93,7 +93,7 @@
 .notebook-folders button[aria-pressed="true"] {
   background: var(--folio-paper);
   color: var(--folio-plum);
-  box-shadow: 0 1px 4px #352f400d;
+  box-shadow: 0 1px 4px #0f12170d;
 }
 .notebook-folders span {
   font-size: 10px;
@@ -140,7 +140,7 @@
   color: var(--folio-muted);
 }
 .notebook-page-list button:hover {
-  background: #eee9f3;
+  background: var(--folio-accent-soft);
 }
 .notebook-page-list button[aria-current="page"] {
   background: var(--folio-selection);
@@ -202,7 +202,7 @@
   color: var(--folio-muted);
   font-size: 11px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #e9e4ed;
+  border-bottom: 1px solid var(--folio-line);
 }
 .notebook-paper-bar > span {
   display: inline-flex;
@@ -240,7 +240,7 @@
   overflow: hidden;
 }
 .notebook-title::placeholder {
-  color: #ada3b2;
+  color: #8c8580;
 }
 .notebook-context {
   display: flex;
@@ -276,7 +276,7 @@
   align-items: center;
   gap: 6px;
   padding: 9px 0;
-  border-block: 1px solid #e9e4ed;
+  border-block: 1px solid var(--folio-line);
   margin-bottom: 26px;
 }
 .notebook-tools button {
@@ -289,7 +289,7 @@
   color: var(--folio-muted);
 }
 .notebook-tools button:hover {
-  background: #f0ebf4;
+  background: var(--folio-accent-soft);
   color: var(--folio-plum);
 }
 .notebook-tools > span {
@@ -321,7 +321,7 @@
   min-height: 27px;
 }
 .notebook-block textarea::placeholder {
-  color: #93889d;
+  color: #8c8580;
   font-weight: 400;
 }
 .notebook-block.is-heading {
@@ -380,7 +380,7 @@
   padding: 6px;
   background: var(--folio-paper);
   border: 1px solid var(--folio-line);
-  box-shadow: 0 8px 24px #352f4020;
+  box-shadow: 0 8px 24px #0f121720;
   border-radius: 8px;
 }
 .notebook-block-menu button {
@@ -414,7 +414,7 @@
 .notebook-extra textarea {
   display: block;
   width: 100%;
-  background: #f8f6fa;
+  background: var(--folio-surface);
   padding: 10px;
   border: 1px solid var(--folio-line);
   border-radius: 5px;
@@ -448,7 +448,7 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-family: inherit;
-  background: #f8f6fa;
+  background: var(--folio-surface);
   padding: 14px;
 }
 .notebook-goal-properties {
@@ -459,8 +459,8 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
   padding: 16px;
-  background: #f6f2f8;
-  border: 1px solid #e7deed;
+  background: var(--folio-accent-soft);
+  border: 1px solid var(--folio-line);
   border-radius: 8px;
 }
 .notebook-property {
@@ -529,7 +529,7 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  border-bottom: 1px solid #e8e2ed;
+  border-bottom: 1px solid var(--folio-line);
   padding: 10px 14px;
 }
 .pathfinder-map-toolbar > div:last-child {
@@ -547,7 +547,7 @@
   border-radius: 5px;
 }
 .pathfinder-map-views button[aria-pressed="true"] {
-  background: #ede6f2;
+  background: var(--folio-accent-soft);
   color: var(--folio-plum);
   font-weight: 600;
 }
@@ -582,7 +582,7 @@
   background: var(--folio-paper);
   border: 1px solid var(--folio-line);
   border-radius: 8px;
-  box-shadow: 0 10px 25px #352f4020;
+  box-shadow: 0 10px 25px #0f121720;
   padding: 7px;
   z-index: 20;
   max-height: 280px;
@@ -621,7 +621,7 @@
   width: 210px;
   border: 1px solid var(--folio-line);
   background: var(--folio-paper);
-  box-shadow: 0 6px 20px #352f4018;
+  box-shadow: 0 6px 20px #0f121718;
   z-index: 20;
   padding: 15px;
   border-radius: 7px;
@@ -643,7 +643,7 @@
   flex: 1;
   min-height: 470px;
   height: clamp(470px, 53dvh, 650px);
-  background: #fcfafc;
+  background: var(--folio-surface);
 }
 .pathfinder-map-canvas .react-flow {
   position: absolute;
@@ -658,7 +658,7 @@
   background: var(--folio-paper);
   border: 1px solid var(--folio-line);
   border-radius: 7px;
-  box-shadow: 0 2px 10px #352f4008;
+  box-shadow: 0 2px 10px #0f121708;
   padding: 3px;
   color: var(--folio-muted);
 }
@@ -681,36 +681,36 @@
   padding: 10px 15px;
   font-size: 10px;
   color: var(--folio-muted);
-  border-top: 1px solid #e8e2ed;
+  border-top: 1px solid var(--folio-line);
 }
 .pathfinder-map .react-flow__edge-text {
   fill: var(--folio-muted);
   font-size: 10px;
 }
 .pathfinder-map .react-flow__edge-textbg {
-  fill: #fcfafc;
+  fill: var(--folio-surface);
 }
 .pathfinder-map .react-flow__node:focus-visible {
-  outline: 3px solid #704098;
+  outline: 3px solid var(--folio-plum);
   outline-offset: 5px;
 }
 .pathfinder-journey-node {
   width: 252px;
   background: var(--folio-paper);
-  border: 1px solid #cfc3db;
+  border: 1px solid var(--folio-line);
   border-radius: 9px;
   padding: 15px 17px 12px;
-  box-shadow: 0 4px 12px #352f4008;
+  box-shadow: 0 4px 12px #0f121708;
   text-align: left;
 }
 .pathfinder-journey-node.is-goal {
   border-top: 3px solid var(--folio-plum);
 }
 .pathfinder-journey-node.is-checkpoint {
-  border-top: 3px solid #aa95bd;
+  border-top: 3px solid var(--folio-accent);
 }
 .pathfinder-journey-node.is-selected {
-  outline: 3px solid #dcd0e7;
+  outline: 3px solid var(--folio-selection);
 }
 .pathfinder-journey-node .react-flow__handle {
   width: 5px;
@@ -773,7 +773,7 @@
   align-items: center;
   gap: 5px;
   width: 100%;
-  border-top: 1px solid #e8e2ed;
+  border-top: 1px solid var(--folio-line);
   padding: 10px 0 0;
   margin-top: 12px;
   font-size: 10px;
@@ -844,8 +844,8 @@
 }
 .pathfinder-goal-pad {
   min-width: 0;
-  background: #e5dced;
-  border: 1px solid #d4c8df;
+  background: var(--folio-note);
+  border: 1px solid var(--folio-accent-line);
   border-radius: 10px;
   padding: 17px 20px 0;
   align-self: stretch;
@@ -870,7 +870,7 @@
   width: 100%;
   margin-top: 12px;
   padding: 6px;
-  background: #f7f3fa;
+  background: var(--folio-accent-soft);
   border-radius: 5px;
   font-size: 11px;
 }
@@ -917,7 +917,7 @@
   gap: 18px;
   padding: 14px 0 4px;
   margin-top: 16px;
-  border-top: 1px solid #cdbedb;
+  border-top: 1px solid var(--folio-accent-line);
 }
 .goal-pad-measures span {
   font-size: 10px;
@@ -940,7 +940,7 @@
   font-size: 12px;
   line-height: 1.6;
   margin-top: 15px;
-  color: #665770;
+  color: #713419;
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
@@ -952,7 +952,7 @@
   justify-content: space-between;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid #cdbedb;
+  border-top: 1px solid var(--folio-accent-line);
 }
 .goal-pad-section-heading h3 {
   font-size: 11px;
@@ -1010,7 +1010,7 @@
   width: 100%;
   padding: 11px 0;
   text-align: left;
-  border-bottom: 1px solid #d7cbdf;
+  border-bottom: 1px solid var(--folio-line);
 }
 .goal-pad-actions button > span {
   flex: 1;
@@ -1054,7 +1054,7 @@
   gap: 10px;
   margin: 18px -20px 0;
   padding: 12px 14px;
-  border-top: 1px solid #cdbedb;
+  border-top: 1px solid var(--folio-accent-line);
   color: var(--folio-muted);
   font-size: 9px;
 }
@@ -1081,7 +1081,7 @@
   flex-wrap: wrap;
   gap: 10px;
   padding: 12px 18px;
-  border-bottom: 1px solid #e8e2ed;
+  border-bottom: 1px solid var(--folio-line);
 }
 .pathfinder-timeline header > div:first-child {
   display: flex;
@@ -1113,7 +1113,7 @@
   color: var(--folio-muted);
 }
 .timeline-controls > div > button[aria-pressed="true"] {
-  background: #ede6f2;
+  background: var(--folio-accent-soft);
   color: var(--folio-plum);
 }
 .timeline-chart {
@@ -1150,7 +1150,7 @@
   display: grid;
   grid-template-columns: 220px 1fr;
   min-height: 32px;
-  border-top: 1px solid #eee9f2;
+  border-top: 1px solid var(--folio-line);
 }
 .timeline-row-label {
   min-width: 0;
@@ -1181,11 +1181,11 @@
   position: absolute;
   height: 100%;
   width: 1px;
-  background: #eae4ef;
+  background: var(--folio-line);
 }
 .timeline-track > i.timeline-today {
-  background: #ae7492;
-  border-left: 1px dashed #ae7492;
+  background: var(--folio-plum);
+  border-left: 1px dashed var(--folio-plum);
   opacity: 0.7;
 }
 .timeline-marker {
@@ -1203,9 +1203,9 @@
 .timeline-marker.is-duration {
   top: 9px;
   bottom: 9px;
-  background: #e3d7ed;
+  background: var(--folio-accent-soft);
   border-radius: 3px;
-  border: 1px solid #c2adcf;
+  border: 1px solid var(--folio-accent-line);
   transform: none;
   min-width: 7px;
 }
@@ -1220,8 +1220,8 @@
   border-color: #9bb8a7;
 }
 .timeline-row.is-goal .timeline-marker.is-duration {
-  background: #c0a9d1;
-  border-color: #9d7db4;
+  background: #edb197;
+  border-color: var(--folio-accent-line);
 }
 .timeline-mobile-date {
   display: none;
@@ -1247,7 +1247,7 @@
 }
 .pathfinder-timeline footer i {
   height: 9px;
-  border-left: 1px solid #ae7492;
+  border-left: 1px solid var(--folio-plum);
 }
 .pathfinder-timeline footer button {
   color: var(--folio-plum);
@@ -1283,7 +1283,7 @@
   inset: 0;
   z-index: 70;
   overflow-y: auto;
-  background: #352f403d;
+  background: #0f12173d;
   padding: 7vh 24px;
 }
 .planning-quick-add {
@@ -1292,7 +1292,7 @@
   background: var(--folio-paper);
   border-radius: 12px;
   border: 1px solid var(--folio-line);
-  box-shadow: 0 24px 100px #352f4028;
+  box-shadow: 0 24px 100px #0f121728;
   padding: 26px;
   outline: none;
 }
@@ -1314,7 +1314,7 @@
   gap: 3px;
   margin: 24px 0 16px;
   padding: 3px;
-  background: #f0ebf5;
+  background: var(--folio-accent-soft);
   border-radius: 7px;
   flex-wrap: wrap;
 }
@@ -1333,7 +1333,7 @@
 .quick-add-types button[aria-pressed="true"] {
   background: var(--folio-paper);
   color: var(--folio-plum);
-  box-shadow: 0 1px 4px #352f4010;
+  box-shadow: 0 1px 4px #0f121710;
 }
 .quick-add-goal {
   display: flex;
@@ -1362,7 +1362,7 @@
   padding: 12px 0;
 }
 .quick-add-title::placeholder {
-  color: #9b8ca6;
+  color: #8c8580;
 }
 .quick-add-fields {
   display: grid;
@@ -1399,7 +1399,7 @@
   overflow: auto;
   display: flex;
   justify-content: flex-end;
-  background: #352f402d;
+  background: #0f12172d;
 }
 .planning-task-sheet {
   width: min(560px, 100%);
@@ -1407,7 +1407,7 @@
   padding: 30px;
   background: var(--folio-paper);
   border-left: 1px solid var(--folio-line);
-  box-shadow: -12px 0 60px #352f4015;
+  box-shadow: -12px 0 60px #0f121715;
   outline: none;
   align-self: flex-start;
 }
@@ -1726,7 +1726,7 @@
   }
   .goal-pad-measures {
     margin-top: 16px;
-    border-top: 1px solid #cdbedb;
+    border-top: 1px solid var(--folio-accent-line);
     padding-top: 12px;
   }
   .pathfinder-goal-pad footer {

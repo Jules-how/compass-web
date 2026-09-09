@@ -275,12 +275,12 @@ export function journeyForView(
       label,
       markerEnd: {
         type: "arrowclosed",
-        color: "#9c88af",
+        color: "#c94a1f",
         width: 16,
         height: 16,
       },
       style: {
-        stroke: route ? "#9c88af" : "#c9bfd3",
+        stroke: route ? "var(--folio-plum)" : "var(--folio-accent-line)",
         strokeWidth: route ? 2 : 1.2,
         strokeDasharray: proposed ? "5 5" : undefined,
       },

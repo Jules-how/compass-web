@@ -44,7 +44,7 @@ function ConsoleMain({ children }: { children: ReactNode }) {
     <div
       id="compass-main"
       tabIndex={-1}
-      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto scrollbar-gutter-stable"
+      className="folio-scroll-region flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto scrollbar-gutter-stable"
     >
       {/*
         min-h-full + flex-1 lets flush pages (Inbox, Campaign Planner) fill the

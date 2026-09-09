@@ -1,12 +1,12 @@
 # Compass / Folio
 
-Folio is the selected operations design direction: a lilac desk, warm paper documents, plum actions and a quiet editorial hierarchy. Business records determine counts, status, dates and next actions. Narrative headings orient the operator; they never imply invented performance.
+Compass uses a cream desk, warm paper documents and orange actions, with Folio’s editorial hierarchy. Jules restored the cream-and-orange palette on 9 September 2026; the earlier lilac-and-plum colours are superseded. Business records determine counts, status, dates and next actions. Narrative headings orient the operator; they never imply invented performance.
 
 ## Reusable system
 
 `src/app/folio.css` owns the namespaced production tokens. Folio Sans (DM Sans) is used for controls, records and body text. Folio Editorial (Newsreader) is reserved for page, document and account headings. Fonts are self-hosted in `public/fonts/folio`.
 
-The desk is #eeecf3, paper #fffefa, navigation #e8e4ee, ink #352f40, secondary text #6c6279, and primary action #654c7d. Surfaces use a fine #d9d2e0 rule, 12px document corners and 7px control corners. Folio uses an 8px base spacing unit, generally 24–36px page/document insets and compact, divided records. Compatibility aliases keep retained product components consistent without changing their public props.
+The desk is #f6f4f1, paper #fffefa, navigation #f1efec, ink #0f1217, secondary text #6b7280, and accent #e85d2a. Primary actions use a deeper #c94a1f orange so white text remains readable. Surfaces use a fine #e8e6e3 rule, 12px document corners and 7px control corners. Folio uses an 8px base spacing unit, generally 24–36px page/document insets and compact, divided records. Compatibility aliases keep retained product components consistent without changing their public props.
 
 `FolioChrome` provides the persistent rail, breadcrumb, mobile navigation, related workspace links and keyboard-safe navigation dialog. `FolioPrimitives` provides document folders, loading/error states, notices and dialogs. Folder controls are native buttons with pressed state; they remain reachable with normal Tab navigation. Modals reuse the existing Radix boundary for focus containment, Escape dismissal and return focus.
 
@@ -21,6 +21,8 @@ The desk is #eeecf3, paper #fffefa, navigation #e8e4ee, ink #352f40, secondary t
 - CRM: a paper records surface and compact table hierarchy. Clients use account folders with last contact and recorded next actions. Planning retains the outcome map and record views; Installs retains delivery configuration and its existing queue. Settings retains the connection and account controls.
 
 ## Responsive and interaction rules
+
+The shared `.folio-scroll-region` owns vertical page scrolling inside the fixed-height shell. Pathfinder passes ordinary wheel gestures through to this region; use pinch or the zoom controls to change map detail. Previews must include the same scroll region, so the bottom timeline is reachable.
 
 At desktop widths, use a 208px rail (186px below 1150px) and a 66px top bar. Below 900px use the compact header and bottom navigation. Below 650px stack Home's margin notes beneath the document, show the campaign agenda, collapse record grids and preserve readable input sizes. Verify at 390px, 768px and 1440px, including dialogs and the editor.
 

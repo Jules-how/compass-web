@@ -393,6 +393,9 @@ function MapContents({
             nodesConnectable={false}
             edgesReconnectable={false}
             deleteKeyCode={null}
+            zoomOnScroll={false}
+            panOnScroll={false}
+            preventScrolling={false}
             defaultViewport={memory.viewport ?? { x: 36, y: 28, zoom: 0.9 }}
             minZoom={0.25}
             maxZoom={2}
@@ -420,7 +423,7 @@ function MapContents({
               if (node.data.kind === "goal") onFocus(node.data.recordId);
             }}
           >
-            <Background color="#d9d2e0" gap={22} size={1} />
+            <Background color="var(--folio-line)" gap={22} size={1} />
           </ReactFlow>
         </div>
         {!list && (
@@ -489,8 +492,8 @@ function MapContents({
         )}
       </div>
       <footer>
-        <span>Left to right, by date · zoom in for the work underneath</span>
-        <span>Drag to arrange · click to open</span>
+        <span>Scroll for the timeline · pinch or use + / − to zoom</span>
+        <span>Left to right, by date · drag to arrange</span>
       </footer>
     </section>
   );
