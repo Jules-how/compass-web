@@ -29,7 +29,7 @@ async function database() {
       "utf8",
     ),
   );
-  await db.exec(await readFile(new URL("../supabase/migrations/0082_compass_pathfinder_grants.sql", import.meta.url), "utf8"));
+  await db.exec(await readFile(new URL("../supabase/migrations/20260909013942_compass_pathfinder_grants.sql", import.meta.url), "utf8"));
   return db;
 }
 test("migration: persistent finding -> exactly one shared task and audit trail; stale editor rejected", async () => {
