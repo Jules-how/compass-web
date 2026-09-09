@@ -100,6 +100,7 @@ function MapContents({
   const [proposals, setProposals] = useState(false);
   const [history, setHistory] = useState(true);
   const [list, setList] = useState(false);
+  useEffect(() => { if (window.matchMedia('(max-width: 650px)').matches) setList(true) }, []);
   const [query, setQuery] = useState("");
   const [memory, setMemory] = useState<MapMemory>({ positions: {} });
   const [loaded, setLoaded] = useState(false);
@@ -313,7 +314,7 @@ function MapContents({
           </label>
         </div>
       </div>
-      <div className="relative h-[min(68vh,760px)] min-h-[430px] bg-[#faf9f6]">
+      <div className="folio-pathfinder-canvas relative h-[min(68vh,760px)] min-h-[430px] bg-[#faf9f6]">
         <div
           onKeyDown={(event) => {
             if (event.key === "Enter") {

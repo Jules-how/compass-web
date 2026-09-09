@@ -163,21 +163,14 @@ function PageMain({
         { href: '/operations/finances', label: 'Finances' },
         { href: '/operations/cs', label: 'Retention' },
       ]
-    : path.startsWith('/planning')
+    : path.startsWith('/sales/outbound')
       ? [
-          { href: '/planning', label: 'Outcome map' },
-          { href: '/planning?view=records', label: 'Goals & notes' },
-          { href: '/projects', label: 'Projects' },
-          { href: '/functions', label: 'Functions' },
+          { href: '/calendar', label: 'Calendar' },
+          { href: '/sales/outbound/craft', label: 'Writing library' },
+          { href: '/sales/offers', label: 'Offers & tests' },
+          { href: '/sales', label: 'Sales overview' },
         ]
-      : path.startsWith('/sales/outbound')
-        ? [
-            { href: '/calendar', label: 'Calendar' },
-            { href: '/sales/outbound/craft', label: 'Writing library' },
-            { href: '/sales/offers', label: 'Offers & tests' },
-            { href: '/sales', label: 'Sales overview' },
-          ]
-        : []
+      : []
   if (flush) {
     return (
       <main className="folio-flush flex min-h-0 flex-1 flex-col">

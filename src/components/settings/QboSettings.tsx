@@ -37,12 +37,12 @@ export function QboSettings({ initialBanner }: { initialBanner?: string | null }
   }
 
   return (
-    <Card>
+    <Card id="settings-billing">
       <CardHeader>
         <div>
           <CardTitle>QuickBooks Online</CardTitle>
           <CardDescription>
-            AU company file is the only ledger. Compass stores QBO ids and cached status, never a second invoice book.
+            Invoices and payment status from your Australian QuickBooks company.
           </CardDescription>
         </div>
       </CardHeader>
@@ -61,7 +61,7 @@ export function QboSettings({ initialBanner }: { initialBanner?: string | null }
             </Badge>
           ) : (
             <Badge variant="secondary" appearance="light" size="sm">
-              Needs OAuth env
+              Setup needed
             </Badge>
           )}
         </div>
@@ -71,10 +71,10 @@ export function QboSettings({ initialBanner }: { initialBanner?: string | null }
           </div>
         ) : null}
         {configured === false ? (
-          <p className="text-sm text-neutral-500">
+          <details className="folio-connection-setup"><summary>Server setup required</summary><p className="text-sm text-neutral-500">
             Set QBO_CLIENT_ID, QBO_CLIENT_SECRET, QBO_REDIRECT_URI, QBO_ENV, and QBO_WEBHOOK_VERIFIER. Checklist:
             docs/QBO.md
-          </p>
+          </p></details>
         ) : null}
         <div className="flex flex-wrap gap-2">
           {configured ? (

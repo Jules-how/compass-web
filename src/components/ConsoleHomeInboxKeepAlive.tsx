@@ -237,7 +237,7 @@ export function ConsoleHomeInboxKeepAlive() {
       ) : null}
       {seenCrm ? (
         <KeepAlivePane active={showCrm}>
-          <OperatorShell active="leads" role="owner" title="Leads" compact width="full">
+          <OperatorShell active="leads" role="owner" title="CRM" compact width="full">
             <Suspense fallback={<DeskLoading label="Loading leads…" />}>
               <LeadsPanel />
             </Suspense>

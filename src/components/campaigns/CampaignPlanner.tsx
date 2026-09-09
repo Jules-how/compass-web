@@ -141,7 +141,7 @@ export function CampaignPlanner({
   const [displayOpen, setDisplayOpen] = useState(false)
   const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null)
   const [view, setView] = useState<ViewMode>(initialView)
-  const [calendarGrain, setCalendarGrain] = useState<CalendarGrain>('week')
+  const [calendarGrain, setCalendarGrain] = useState<CalendarGrain>('month')
   const [calendarCursor, setCalendarCursor] = useState(() => startOfDay(new Date()))
   const [slotDraft, setSlotDraft] = useState<string | null>(null)
   const [slotPlaced, setSlotPlaced] = useState(false)
@@ -478,6 +478,7 @@ export function CampaignPlanner({
                   </button>
                   <label className="relative">
                     <select
+                      aria-label="Calendar period"
                       value={calendarGrain}
                       onChange={(e) => setCalendarGrain(e.target.value as CalendarGrain)}
                       className={`${plannerCtrl} appearance-none pr-7`}
