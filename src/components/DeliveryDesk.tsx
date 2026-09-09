@@ -36,21 +36,25 @@ export function DeliveryDesk() {
   const [crmEvidence, setCrmEvidence] = useState('')
   const version = useRef(0)
 
-  const refresh = useCallback(async (id: string) => {
+  const refresh = useCallback(async (id: string, signal?: AbortSignal) => {
     const current = ++version.current
     setLoading(true)
     try {
-      const response = await fetch(`/api/delivery-engine${id ? `?account=${encodeURIComponent(id)}` : ''}`, { cache: 'no-store' })
+      const response = await fetch(`/api/delivery-engine${id ? `?account=${encodeURIComponent(id)}` : ''}`, { cache: 'no-store', signal })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Could not load delivery')
-      if (current !== version.current) return
+      if (current !== version.current || signal?.aborted) return
       setData(result); setError('')
       if (!id && result.accounts.length) setAccountId(result.accounts[0].id)
-    } catch (failure) { if (current === version.current) setError(failure instanceof Error ? failure.message : 'Could not load delivery') }
-    finally { if (current === version.current) setLoading(false) }
+    } catch (failure) { if (current === version.current && !signal?.aborted) setError(failure instanceof Error ? failure.message : 'Could not load delivery') }
+    finally { if (current === version.current && !signal?.aborted) setLoading(false) }
   }, [])
 
-  useEffect(() => { void refresh(accountId); return () => { version.current++ } }, [accountId, refresh])
+  useEffect(() => {
+    const controller = new AbortController()
+    void refresh(accountId, controller.signal)
+    return () => controller.abort()
+  }, [accountId, refresh])
   const account: DeliveryAccount | undefined = data?.accounts.find(a => a.id === accountId)
   const enquiries = data?.enquiries.filter(e => e.account_id === accountId) ?? []
   const selected: Enquiry | undefined = enquiries.find(e => e.id === selectedId) ?? enquiries[0]

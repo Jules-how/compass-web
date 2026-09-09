@@ -155,7 +155,7 @@ export function transition(context: DeliveryContext, input?: Record<string, unkn
     if (terminal.has(state.stage) || state.appointment?.status === 'confirmed' || state.followups >= account.config.followupHours.length) return result
     state.followups += 1
     say('Would you still like help arranging your ducted-replacement assessment? Reply here or ask for an office callback.')
-    event('followup.sent', { attempt: state.followups }); followup(); return result
+    event('followup.queued', { attempt: state.followups }); followup(); return result
   }
   if (job.kind === 'reminder') {
     if (state.appointment?.status !== 'confirmed' || state.appointment.id !== data.appointmentId || state.appointment.slot.start !== data.start || Date.parse(state.appointment.slot.start) <= Date.parse(now)) return result
