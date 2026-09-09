@@ -406,9 +406,9 @@ export function CampaignPlanner({
   const menuCampaign = rowMenu ? campaigns.find((c) => c.id === rowMenu.campaignId) : null
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-[var(--compass-wash)] text-neutral-900">
+    <div className="folio-calendar-planner flex h-full min-h-0 flex-1 flex-col bg-[var(--compass-wash)] text-neutral-900">
       <header className="relative z-40 flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-stone-200/80 bg-white px-4 py-2 shadow-soft">
-        <h1 className="truncate text-[15px] font-semibold tracking-tight text-neutral-900">Outbound</h1>
+        <h1 className="truncate text-[15px] font-semibold tracking-tight text-neutral-900">Calendar</h1>
 
         <div className="flex flex-wrap items-center gap-3">
           {deskSwitch}

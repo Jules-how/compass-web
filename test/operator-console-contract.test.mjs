@@ -144,7 +144,7 @@ test('operator nav covers the sectioned Compass surfaces', () => {
   assert.doesNotMatch(nav, /href: '\/leads\/upload'/)
 })
 
-test('operator console uses persistent layout with animated sidebar and sales overview', () => {
+test('operator console uses persistent Folio layout and sales overview', () => {
   const layout = read('src/app/(console)/layout.tsx')
   const shell = read('src/components/OperatorShell.tsx')
   const navLinks = read('src/components/NavLinks.tsx')
@@ -167,7 +167,7 @@ test('operator console uses persistent layout with animated sidebar and sales ov
   assert.match(shell, /ConsoleHomeInboxKeepAlive/)
   assert.match(shell, /ConsoleNavProvider/)
   // The mobile header and main content now share one viewport-height shell.
-  assert.match(shell, /compass-shell flex h-\[100dvh\]/)
+  assert.match(shell, /compass-shell folio-shell/)
   assert.match(shell, /overflow-y-auto scrollbar-gutter-stable/)
   assert.match(shell, /scrollbar-gutter-stable/)
   assert.match(shell, /mx-auto w-full/)

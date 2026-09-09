@@ -791,7 +791,7 @@ export function InboxPanel() {
   const empty = EMPTY_COPY[tab]
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4">
+    <div className="folio-inbox flex min-h-0 flex-1 flex-col p-3 sm:p-4">
       <div className="compass-panel flex min-h-0 flex-1 flex-col overflow-hidden text-neutral-900">
       <header className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-4 py-2.5">
         <div className="min-w-0">
@@ -804,7 +804,7 @@ export function InboxPanel() {
       </header>
 
       {needsYou.length > 0 ? (
-        <div className="shrink-0 border-b border-stone-100 bg-stone-50/60 px-3 py-2.5">
+        <div className="folio-inbox-priorities shrink-0 border-b border-stone-100 bg-stone-50/60 px-3 py-2.5">
           <div className="compass-section-label mb-1.5">Needs you</div>
           <div className="flex gap-2 overflow-x-auto pb-0.5">
             {needsYou.map((item) => (
@@ -889,7 +889,7 @@ export function InboxPanel() {
       <div role="tabpanel" id={`inbox-panel-${tab}`} aria-labelledby={`inbox-tab-${tab}`} className="flex min-h-0 flex-1">
         <section
           className={cn(
-            'flex min-h-0 w-full shrink-0 flex-col border-neutral-200/80 lg:w-[340px] lg:border-r xl:w-[380px]',
+            'folio-inbox-index flex min-h-0 w-full shrink-0 flex-col border-neutral-200/80 lg:w-[340px] lg:border-r xl:w-[380px]',
             mobileShowContext ? 'hidden lg:flex' : 'flex'
           )}
         >
@@ -917,7 +917,7 @@ export function InboxPanel() {
 
         <section
           className={cn(
-            'min-h-0 min-w-0 flex-1 bg-white',
+            'folio-inbox-case min-h-0 min-w-0 flex-1 bg-white',
             mobileShowContext ? 'flex' : 'hidden lg:flex'
           )}
         >

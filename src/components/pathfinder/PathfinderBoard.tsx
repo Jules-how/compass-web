@@ -48,7 +48,7 @@ export function PathfinderBoard({
       assessOutcome(g, data.observations, data.readAt).state === "achieved",
   ).length;
   return (
-    <div className="mx-auto w-full max-w-[1600px] space-y-5">
+    <div className="folio-planning mx-auto w-full max-w-[1600px] space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="compass-section-label">Planning / Pathfinder</p>

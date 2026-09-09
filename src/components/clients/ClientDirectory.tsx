@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CompassClientCard } from '@/lib/types'
-import { CLIENT_STATUSES, clientStatusLabel, formatRelativeTouch } from '@/lib/client-pm'
+import {
+  CLIENT_STATUSES,
+  clientStatusLabel,
+  formatRelativeTouch,
+} from '@/lib/client-pm'
 import { prefetchJson } from '@/lib/use-cached-json'
 import { ClientDetailModal } from '@/components/clients/ClientDetailModal'
 
@@ -21,7 +25,7 @@ const emptyForm = {
   engagement_type: '',
   retainer_status: '',
   status: 'onboarding',
-  tags: ''
+  tags: '',
 }
 
 function readClientIdFromUrl(): string | null {
@@ -48,7 +52,7 @@ function syncClientIdToUrl(clientId: string | null) {
 export function ClientDirectory({
   clients,
   onRefresh,
-  initialClientId = null
+  initialClientId = null,
 }: ClientDirectoryProps) {
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState(emptyForm)
@@ -56,7 +60,7 @@ export function ClientDirectory({
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [selectedClientId, setSelectedClientId] = useState<string | null>(
-    () => initialClientId ?? readClientIdFromUrl()
+    () => initialClientId ?? readClientIdFromUrl(),
   )
 
   useEffect(() => {
@@ -85,7 +89,7 @@ export function ClientDirectory({
 
   const selectedClient = useMemo(
     () => clients.find((client) => client.id === selectedClientId) ?? null,
-    [clients, selectedClientId]
+    [clients, selectedClientId],
   )
 
   const filtered = useMemo(() => {
@@ -97,7 +101,7 @@ export function ClientDirectory({
         client.industry,
         client.main_contact_name,
         client.engagement_type,
-        ...(client.tags ?? [])
+        ...(client.tags ?? []),
       ]
         .filter(Boolean)
         .join(' ')
@@ -129,14 +133,16 @@ export function ClientDirectory({
           engagement_type: form.engagement_type.trim() || null,
           retainer_status: form.retainer_status.trim() || null,
           status: form.status,
-          tags: form.tags
-        })
+          tags: form.tags,
+        }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
-      const created = (await res.json().catch(() => null)) as { id?: string } | null
+      const created = (await res.json().catch(() => null)) as {
+        id?: string
+      } | null
       setForm(emptyForm)
       setShowCreate(false)
       await onRefresh()
@@ -160,12 +166,16 @@ export function ClientDirectory({
             placeholder="Search clients…"
             className="compass-input max-w-sm"
           />
-          <span className="shrink-0 text-xs tabular-nums text-neutral-500">{filtered.length} {filtered.length === 1 ? 'client' : 'clients'}</span>
+          <span className="shrink-0 text-xs tabular-nums text-neutral-500">
+            {filtered.length} {filtered.length === 1 ? 'client' : 'clients'}
+          </span>
         </div>
         <button
           type="button"
           onClick={() => setShowCreate((open) => !open)}
-          className={showCreate ? 'compass-btn-secondary' : 'compass-btn-primary'}
+          className={
+            showCreate ? 'compass-btn-secondary' : 'compass-btn-primary'
+          }
         >
           {showCreate ? 'Cancel' : 'Add client'}
         </button>
@@ -176,83 +186,129 @@ export function ClientDirectory({
       {showCreate ? (
         <form onSubmit={createClient} className="compass-panel space-y-4 p-6">
           <div>
-            <h2 className="font-display text-lg font-semibold text-neutral-900">New client</h2>
+            <h2 className="font-display text-lg font-semibold text-neutral-900">
+              New client
+            </h2>
             <p className="mt-1 text-sm text-neutral-500">
               Short create flow — refine the profile in the account panel.
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <label className="block text-sm md:col-span-2">
-              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Company name</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+                Company name
+              </span>
               <input
                 required
                 value={form.name}
-                onChange={(e) => setForm((row) => ({ ...row, name: e.target.value }))}
+                onChange={(e) =>
+                  setForm((row) => ({ ...row, name: e.target.value }))
+                }
                 className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Industry</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+                Industry
+              </span>
               <input
                 value={form.industry}
-                onChange={(e) => setForm((row) => ({ ...row, industry: e.target.value }))}
+                onChange={(e) =>
+                  setForm((row) => ({ ...row, industry: e.target.value }))
+                }
                 className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Website</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+                Website
+              </span>
               <input
                 value={form.website}
-                onChange={(e) => setForm((row) => ({ ...row, website: e.target.value }))}
+                onChange={(e) =>
+                  setForm((row) => ({ ...row, website: e.target.value }))
+                }
                 placeholder="https://"
                 className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Main contact</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+                Main contact
+              </span>
               <input
                 value={form.main_contact_name}
-                onChange={(e) => setForm((row) => ({ ...row, main_contact_name: e.target.value }))}
+                onChange={(e) =>
+                  setForm((row) => ({
+                    ...row,
+                    main_contact_name: e.target.value,
+                  }))
+                }
                 className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Role</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+                Role
+              </span>
               <input
                 value={form.main_contact_role}
-                onChange={(e) => setForm((row) => ({ ...row, main_contact_role: e.target.value }))}
+                onChange={(e) =>
+                  setForm((row) => ({
+                    ...row,
+                    main_contact_role: e.target.value,
+                  }))
+                }
                 className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Engagement type</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+                Engagement type
+              </span>
               <input
                 value={form.engagement_type}
-                onChange={(e) => setForm((row) => ({ ...row, engagement_type: e.target.value }))}
+                onChange={(e) =>
+                  setForm((row) => ({
+                    ...row,
+                    engagement_type: e.target.value,
+                  }))
+                }
                 placeholder="Growth, AI build, mixed…"
                 className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Retainer status</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+                Retainer status
+              </span>
               <input
                 value={form.retainer_status}
-                onChange={(e) => setForm((row) => ({ ...row, retainer_status: e.target.value }))}
+                onChange={(e) =>
+                  setForm((row) => ({
+                    ...row,
+                    retainer_status: e.target.value,
+                  }))
+                }
                 className="compass-input"
                 disabled={saving}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Status</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+                Status
+              </span>
               <select
                 value={form.status}
-                onChange={(e) => setForm((row) => ({ ...row, status: e.target.value }))}
+                onChange={(e) =>
+                  setForm((row) => ({ ...row, status: e.target.value }))
+                }
                 className="compass-input"
                 disabled={saving}
               >
@@ -264,10 +320,14 @@ export function ClientDirectory({
               </select>
             </label>
             <label className="block text-sm md:col-span-2">
-              <span className="mb-1.5 block text-xs font-medium text-neutral-500">Tags</span>
+              <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+                Tags
+              </span>
               <input
                 value={form.tags}
-                onChange={(e) => setForm((row) => ({ ...row, tags: e.target.value }))}
+                onChange={(e) =>
+                  setForm((row) => ({ ...row, tags: e.target.value }))
+                }
                 placeholder="growth, ai-build, meta…"
                 className="compass-input"
                 disabled={saving}
@@ -291,7 +351,7 @@ export function ClientDirectory({
             : 'No clients match that search.'}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="folio-client-directory">
           {filtered.map((client) => (
             <button
               key={client.id}
@@ -299,13 +359,15 @@ export function ClientDirectory({
               onClick={() => openClient(client.id)}
               onMouseEnter={() => prefetchClient(client.id)}
               onFocus={() => prefetchClient(client.id)}
-              className="compass-panel block w-full p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lift"
+              className="folio-client-card"
             >
               <div className="flex items-start justify-between gap-3">
                 <h3 className="font-display text-base font-semibold text-neutral-900">
                   {client.name}
                   {client.tags?.includes('cs-demo') ? (
-                    <span className="ml-2 inline-flex rounded-md bg-amber-50 px-2 py-0.5 align-middle text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-200">Demo</span>
+                    <span className="ml-2 inline-flex rounded-md bg-amber-50 px-2 py-0.5 align-middle text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
+                      Demo
+                    </span>
                   ) : null}
                 </h3>
                 <span className="shrink-0 rounded-md bg-stone-50 px-2 py-0.5 text-[11px] font-medium text-neutral-600 ring-1 ring-inset ring-stone-200/80">
@@ -316,7 +378,7 @@ export function ClientDirectory({
                 Last touch · {formatRelativeTouch(client.last_touch_at)}
               </p>
               <p className="mt-1 text-sm text-neutral-700">
-                Next · {client.next_action || 'No open issues'}
+                Next · {client.next_action || 'No next action recorded'}
               </p>
             </button>
           ))}

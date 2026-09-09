@@ -60,8 +60,8 @@ export default async function SettingsPage({
   const qbo = typeof params.qbo === 'string' ? params.qbo : undefined
 
   return (
-    <OperatorShell title="Settings" subtitle="Instantly, ad accounts, and workspace preferences">
-      <div className="space-y-6">
+    <OperatorShell title="Settings" subtitle="Connections and receiving details, in one place.">
+      <div className="folio-settings space-y-6">
         <QboSettings initialBanner={bannerFromSearch(undefined, undefined, undefined, qbo)} />
         <AdAccountsSettings initialBanner={bannerFromSearch(ads, count, calendar, undefined)} />
       </div>

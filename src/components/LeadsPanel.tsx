@@ -141,7 +141,7 @@ export function LeadsPanel() {
   const discoveredVerticals = (facets.data?.verticals ?? []).map((v) => v.value)
 
   return (
-    <div className="space-y-3">
+    <div className="folio-record-surface space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div className="flex items-center gap-3">
           <p className="text-sm text-neutral-500">

@@ -171,6 +171,7 @@ export function SequenceEditor({
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false)
   const [variablesOpen, setVariablesOpen] = useState(false)
   const mobileComposeRef = useRef<HTMLButtonElement>(null)
+  const [expandedSlots, setExpandedSlots] = useState<Set<string>>(new Set())
   const [railTab, setRailTab] = useState<'library' | 'pillars' | 'levers'>('library')
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resizeDrag = useRef<{ startX: number; startWidth: number } | null>(null)
@@ -691,7 +692,7 @@ export function SequenceEditor({
               role="dialog"
               aria-modal="true"
               aria-label="Sequence editor"
-              className="relative flex h-[min(920px,calc(100dvh-2.5rem))] w-full max-w-[1480px] flex-col overflow-hidden rounded-2xl border border-stone-200/80 bg-[var(--compass-wash)] shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
+              className="folio-editor relative flex h-[min(920px,calc(100dvh-2.5rem))] w-full max-w-[1480px] flex-col overflow-hidden rounded-2xl border border-stone-200/80 bg-[var(--compass-wash)] shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
               initial={{ opacity: 0, y: 28, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
@@ -706,7 +707,7 @@ export function SequenceEditor({
       )
     }
     return (
-      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-none border-0 bg-[var(--compass-wash)] shadow-none">
+      <div className="folio-editor flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-none border-0 bg-[var(--compass-wash)] shadow-none">
         {children}
       </div>
     )
@@ -859,7 +860,7 @@ export function SequenceEditor({
       <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1">
         {/* Canvas */}
-        <div className={cn("relative flex min-h-0 min-w-0 flex-1 flex-col", tab === 'editor' && mobileToolsOpen && "max-lg:hidden")}>
+        <div className={cn("relative flex min-h-0 min-w-0 flex-1 flex-col", tab === 'editor' && mobileToolsOpen && "folio-compose-hidden")}>
           {tab === 'archive' && sequence ? (
             <div className="min-h-0 flex-1 overflow-hidden">
               <CopyArchivePanel
@@ -901,7 +902,7 @@ export function SequenceEditor({
           {tab === 'editor' && sequence ? (
             <div
               className={cn(
-                'mx-auto w-full px-4 pb-4 pt-4',
+                'folio-manuscript mx-auto w-full px-4 pb-4 pt-4',
                 previewDevice === 'mobile' ? 'max-w-md' : 'max-w-2xl'
               )}
               onDragOver={(e) => {
@@ -998,8 +999,9 @@ export function SequenceEditor({
               />
               </div>
               </div>
+              <nav className="folio-folders folio-step-tabs" aria-label="Sequence steps">{sequence.steps.map((step,index)=><button key={step.id} type="button" aria-pressed={step.id===(activeStepId??sequence.steps[0]?.id)} onClick={()=>setActiveStepId(step.id)}>{String(index+1).padStart(2,'0')} / {step.label}</button>)}</nav>
               {sequence.steps.map((step, index) => (
-                <div key={step.id}>
+                <div key={step.id} hidden={step.id!==(activeStepId??sequence.steps[0]?.id)}>
                   {index > 0 ? (
                     <div className="my-5 flex items-center justify-center gap-2 text-[12px] text-neutral-500">
                       <div className="h-px flex-1 bg-stone-200" />
@@ -1007,12 +1009,13 @@ export function SequenceEditor({
                         Wait
                         <input
                           type="number"
-                          min={1}
+                          min={index === 1 ? 2 : 1}
+                          aria-label={`Days before ${step.label}`}
                           value={step.delay_days ?? 3}
                           onChange={(e) => {
                             const next = forkSequence(sequence)
                             const s = next.steps.find((x) => x.id === step.id)
-                            if (s) s.delay_days = Number(e.target.value) || 3
+                            if (s) s.delay_days = Math.max(index === 1 ? 2 : 1, Number(e.target.value) || 3)
                             updateSequence(next)
                           }}
                           className="w-10 rounded-lg border border-stone-200 px-1.5 py-0.5 text-center text-[12px]"
@@ -1025,7 +1028,7 @@ export function SequenceEditor({
 
                   <div
                     className={cn(
-                      'rounded-2xl border bg-white p-4 shadow-soft transition',
+                      'folio-email-step rounded-2xl border bg-white p-4 shadow-soft transition',
                       activeStepId === step.id
                         ? 'border-[#e85d2a]/35 ring-2 ring-[#e85d2a]/10'
                         : 'border-stone-200/80'
@@ -1073,6 +1076,7 @@ export function SequenceEditor({
                         </div>
                       ) : (
                       <input
+                        aria-label={`Subject for ${step.label}`}
                         value={step.subject}
                         onFocus={() => {
                           setActiveStepId(step.id)
@@ -1110,7 +1114,7 @@ export function SequenceEditor({
                       </div>
                     ) : usesSlotEditor(step) ? (
                       <div className="mt-3 space-y-2.5">
-                        {editableContentSlots(step).map((slot) => (
+                        {editableContentSlots(step).filter(slot => !['risk_reversal','ps'].includes(slot.key) || slot.body.trim() || expandedSlots.has(`${step.id}:${slot.key}`)).map((slot) => (
                           <label key={slot.key} className="block">
                             <span className="mb-1 block text-[11px] font-semibold text-neutral-400">
                               {slot.label}
@@ -1140,15 +1144,16 @@ export function SequenceEditor({
                                 slot.key === 'opener'
                                   ? '{{personalization}}'
                                   : slot.key === 'risk_reversal'
-                                    ? 'You carry the risk. They pay on results.'
+                                    ? 'Add only supported risk-reversal copy.'
                                     : slot.key === 'ps'
-                                      ? 'P.S. half-done work, objection, or give-first.'
+                                      ? 'Add a relevant postscript.'
                                       : slot.label
                               }
                               className="w-full resize-none rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-[14px] leading-relaxed text-neutral-800 outline-none focus:border-[#e85d2a]/45"
                             />
                           </label>
                         ))}
+                        <div className="flex flex-wrap gap-2">{editableContentSlots(step).filter(slot => ['risk_reversal','ps'].includes(slot.key) && !slot.body.trim() && !expandedSlots.has(`${step.id}:${slot.key}`)).map(slot=><button key={slot.key} type="button" className="compass-btn-ghost" onClick={()=>setExpandedSlots(prev=>new Set([...prev,`${step.id}:${slot.key}`]))}>+ {slot.label}</button>)}</div>
                       </div>
                     ) : (
                     <textarea
@@ -1368,7 +1373,8 @@ export function SequenceEditor({
         {tab === 'editor' && sequence ? (
           <aside
             aria-label="Writing tools"
-            className={cn("relative min-h-0 w-full flex-col border-stone-200/80 bg-white lg:flex lg:w-[var(--components-width)] lg:max-w-[55%] lg:shrink-0 lg:border-l", mobileToolsOpen ? "flex" : "hidden")}
+            hidden={!mobileToolsOpen}
+            className={cn("folio-writing-tools relative min-h-0 w-full flex-col border-stone-200/80 bg-white", mobileToolsOpen ? "flex" : "hidden")}
             style={{ '--components-width': `${componentsWidth}px` } as CSSProperties}
           >
             <div
@@ -1451,7 +1457,7 @@ export function SequenceEditor({
 
       {tab === 'editor' && showLeadsPane ? (
         <div
-          className={cn("flex shrink-0 flex-col border-t border-stone-200/80 bg-white", mobileToolsOpen && "max-lg:hidden")}
+          className={cn("flex shrink-0 flex-col border-t border-stone-200/80 bg-white", mobileToolsOpen && "folio-compose-hidden")}
           style={{ height: leadsCollapsed ? 40 : `${leadsHeightVh}vh` }}
         >
           <div className="flex shrink-0 items-center gap-2 border-b border-stone-100 px-3 py-1.5">
