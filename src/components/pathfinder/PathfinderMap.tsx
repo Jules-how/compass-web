@@ -26,7 +26,7 @@ function CircleNode({ data, selected }: NodeProps<Node<NodeData>>) {
   const goal = data.kind === "goal";
   return (
     <div
-      className={`flex flex-col items-center justify-center rounded-full border-2 bg-white p-4 text-center shadow-soft ${goal ? "size-40" : "size-32"} ${selected ? "border-[#c2410c] ring-4 ring-orange-100" : "border-stone-200"}`}
+      className={`folio-map-note flex flex-col items-center justify-center rounded-full border-2 bg-white p-4 text-center shadow-soft ${goal ? "size-40" : "size-32"} ${selected ? "border-[#c2410c] ring-4 ring-orange-100" : "border-stone-200"}`}
     >
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
       <span className="text-[10px] font-medium uppercase tracking-wider text-stone-500">
@@ -100,6 +100,7 @@ function MapContents({
   const [proposals, setProposals] = useState(false);
   const [history, setHistory] = useState(true);
   const [list, setList] = useState(false);
+  useEffect(() => { if (window.matchMedia('(max-width: 650px)').matches) setList(true) }, []);
   const [query, setQuery] = useState("");
   const [memory, setMemory] = useState<MapMemory>({ positions: {} });
   const [loaded, setLoaded] = useState(false);
@@ -313,7 +314,7 @@ function MapContents({
           </label>
         </div>
       </div>
-      <div className="relative h-[min(68vh,760px)] min-h-[430px] bg-[#faf9f6]">
+      <div className="folio-pathfinder-canvas relative h-[min(68vh,760px)] min-h-[430px] bg-[#faf9f6]">
         <div
           onKeyDown={(event) => {
             if (event.key === "Enter") {

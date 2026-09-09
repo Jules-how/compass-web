@@ -74,7 +74,7 @@ test('sequence editor exposes Instantly base variables for copy transfer', () =>
 
   const editor = read('src/components/outbound/SequenceEditor.tsx')
   assert.match(editor, /INSTANTLY_BASE_VARIABLES/)
-  assert.match(editor, /Instantly variables/)
+  assert.match(editor, /aria-controls="editor-variable-tray"/)
   assert.doesNotMatch(editor, /ToolbarIcon/)
   assert.doesNotMatch(editor, /label="AI assist"/)
 })

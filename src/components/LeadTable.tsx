@@ -1,11 +1,18 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { LeadContact, LeadListFilters, LeadSummaryCounts } from '@/lib/types'
+import type {
+  LeadContact,
+  LeadListFilters,
+  LeadSummaryCounts,
+} from '@/lib/types'
 import type { CompassLeadList } from '@/lib/lead-lists'
 import { exportToCsv } from '@/lib/csv'
 import { LEAD_EXPORT_MAX } from '@/lib/list-columns'
-import { leadFiltersNeedExactCount, leadFiltersToSearchParams } from '@/lib/leads-query'
+import {
+  leadFiltersNeedExactCount,
+  leadFiltersToSearchParams,
+} from '@/lib/leads-query'
 import {
   COMPLETENESS_OPTIONS,
   LEAD_SEGMENTS_STORAGE_KEY,
@@ -19,7 +26,7 @@ import {
   humanizeVertical,
   mergeVerticalOptions,
   type CompletenessFilter,
-  type SavedLeadSegment
+  type SavedLeadSegment,
 } from '@/lib/leads-meta'
 import { computeRecontactEligibility } from '@/lib/recontact-eligibility'
 import { parseLeadBucket, type LeadBucket } from '@/lib/lead-buckets'
@@ -61,7 +68,10 @@ function loadSavedSegments(): SavedLeadSegment[] {
 }
 
 function persistSegments(segments: SavedLeadSegment[]) {
-  window.localStorage.setItem(LEAD_SEGMENTS_STORAGE_KEY, JSON.stringify(segments))
+  window.localStorage.setItem(
+    LEAD_SEGMENTS_STORAGE_KEY,
+    JSON.stringify(segments),
+  )
 }
 
 export default function LeadTable({
@@ -80,8 +90,9 @@ export default function LeadTable({
   onReload,
   variant = 'page',
   columnPreset = 'crm',
-  onLeadSelect
+  onLeadSelect,
 }: LeadTableProps) {
+  const [mobileGrid, setMobileGrid] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draftFilters, setDraftFilters] = useState<LeadListFilters>(filters)
   const [exporting, setExporting] = useState(false)
@@ -95,7 +106,9 @@ export default function LeadTable({
   const [newListName, setNewListName] = useState('')
   const [savedSegments, setSavedSegments] = useState<SavedLeadSegment[]>([])
   const [segmentName, setSegmentName] = useState('')
-  const [filtersOpen, setFiltersOpen] = useState(() => leadFiltersNeedExactCount(filters))
+  const [filtersOpen, setFiltersOpen] = useState(() =>
+    leadFiltersNeedExactCount(filters),
+  )
   const grid = useLeadGridColumns(columnPreset, leads)
   const undo = useUndo()
 
@@ -103,7 +116,7 @@ export default function LeadTable({
   const bucket: LeadBucket = parseLeadBucket(filters.bucket) ?? 'leads'
   const selectedLead = useMemo(
     () => leads.find((l) => l.id === selectedId) ?? null,
-    [leads, selectedId]
+    [leads, selectedId],
   )
 
   useEffect(() => {
@@ -128,7 +141,7 @@ export default function LeadTable({
 
   const verticalOptions = useMemo(
     () => mergeVerticalOptions(discoveredVerticals),
-    [discoveredVerticals]
+    [discoveredVerticals],
   )
 
   const allSelected = leads.length > 0 && leads.every((l) => selected.has(l.id))
@@ -183,7 +196,9 @@ export default function LeadTable({
       } else {
         const params = leadFiltersToSearchParams(filters)
         params.set('limit', String(LEAD_EXPORT_MAX))
-        const res = await fetch(`/api/leads/list?${params.toString()}`, { cache: 'no-store' })
+        const res = await fetch(`/api/leads/list?${params.toString()}`, {
+          cache: 'no-store',
+        })
         if (!res.ok) {
           const body = await res.json().catch(() => ({}))
           throw new Error(body.error ?? `export failed (${res.status})`)
@@ -213,7 +228,8 @@ export default function LeadTable({
           recontact_progress_pct: rc.progressPercent ?? '',
           recontact_days_remaining: rc.daysRemaining ?? '',
           recontact_ready: rc.recommendNewCampaign ? '1' : '0',
-          instantly_campaign: l.instantly_campaign_name || l.instantly_campaign || '',
+          instantly_campaign:
+            l.instantly_campaign_name || l.instantly_campaign || '',
           opener: l.opener ?? '',
           icp_status: l.icp_status ?? '',
           review_count: l.review_count ?? '',
@@ -228,13 +244,15 @@ export default function LeadTable({
                 ? l.lead_facts
                 : JSON.stringify(l.lead_facts),
           created_at: l.created_at ?? '',
-          mirrored_at: l.mirrored_at ?? ''
+          mirrored_at: l.mirrored_at ?? '',
         }
       })
       const stamp = new Date().toISOString().slice(0, 10)
       const prefix = selectedOnly ? 'leads-selected' : 'leads'
       exportToCsv(csvRows, `${prefix}-${stamp}.csv`)
-      setExportNote(`Exported ${csvRows.length} row${csvRows.length === 1 ? '' : 's'}.`)
+      setExportNote(
+        `Exported ${csvRows.length} row${csvRows.length === 1 ? '' : 's'}.`,
+      )
     } catch (err) {
       setExportNote(err instanceof Error ? err.message : String(err))
     } finally {
@@ -243,14 +261,24 @@ export default function LeadTable({
   }
 
   async function postBulk(
-    action: 'suppress' | 'unsuppress' | 'set_status' | 'add_tag' | 'clear_tag' | 'archive' | 'unarchive',
+    action:
+      | 'suppress'
+      | 'unsuppress'
+      | 'set_status'
+      | 'add_tag'
+      | 'clear_tag'
+      | 'archive'
+      | 'unarchive',
     ids: string[],
-    extra: Record<string, string> = {}
+    extra: Record<string, string> = {},
   ) {
     const res = await fetch('/api/leads/bulk', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ action, ids, ...extra })
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ action, ids, ...extra }),
     })
     const body = (await res.json().catch(() => ({}))) as {
       error?: string
@@ -261,7 +289,7 @@ export default function LeadTable({
   }
 
   async function restoreStatuses(
-    rows: Array<{ id: string; outbound_status: string | null }>
+    rows: Array<{ id: string; outbound_status: string | null }>,
   ) {
     const groups = new Map<string, string[]>()
     for (const row of rows) {
@@ -276,8 +304,15 @@ export default function LeadTable({
   }
 
   async function runBulk(
-    action: 'suppress' | 'unsuppress' | 'set_status' | 'add_tag' | 'clear_tag' | 'archive' | 'unarchive',
-    extra: Record<string, string> = {}
+    action:
+      | 'suppress'
+      | 'unsuppress'
+      | 'set_status'
+      | 'add_tag'
+      | 'clear_tag'
+      | 'archive'
+      | 'unarchive',
+    extra: Record<string, string> = {},
   ) {
     const ids = Array.from(selected)
     if (ids.length === 0) {
@@ -313,7 +348,7 @@ export default function LeadTable({
         redo: async () => {
           await postBulk(action, ids, extra)
           onReload()
-        }
+        },
       })
     } catch (err) {
       setBulkNote(err instanceof Error ? err.message : String(err))
@@ -336,17 +371,30 @@ export default function LeadTable({
     setBulkBusy(true)
     setBulkNote(null)
     try {
-      const res = await fetch(`/api/lead-lists/${encodeURIComponent(listId)}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(action === 'add' ? { add: ids } : { remove: ids })
-      })
-      const body = (await res.json().catch(() => ({}))) as { error?: string; added?: number; removed?: number }
-      if (!res.ok) throw new Error(body.error ?? `list update failed (${res.status})`)
+      const res = await fetch(
+        `/api/lead-lists/${encodeURIComponent(listId)}/members`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(
+            action === 'add' ? { add: ids } : { remove: ids },
+          ),
+        },
+      )
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string
+        added?: number
+        removed?: number
+      }
+      if (!res.ok)
+        throw new Error(body.error ?? `list update failed (${res.status})`)
       setBulkNote(
         action === 'add'
           ? `Added ${body.added ?? ids.length} to list.`
-          : `Removed ${body.removed ?? ids.length} from list.`
+          : `Removed ${body.removed ?? ids.length} from list.`,
       )
       setSelected(new Set())
       onListsChange?.()
@@ -369,11 +417,18 @@ export default function LeadTable({
     try {
       const res = await fetch('/api/lead-lists', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ name })
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ name }),
       })
-      const body = (await res.json().catch(() => ({}))) as { error?: string; list?: { id: string } }
-      if (!res.ok) throw new Error(body.error ?? `create failed (${res.status})`)
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string
+        list?: { id: string }
+      }
+      if (!res.ok)
+        throw new Error(body.error ?? `create failed (${res.status})`)
       setNewListName('')
       setBulkNote(`Created list “${name}”.`)
       onListsChange?.()
@@ -395,7 +450,7 @@ export default function LeadTable({
       id: `seg-${crypto.randomUUID()}`,
       name,
       filters: { ...draftFilters },
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     }
     const merged = [next, ...savedSegments].slice(0, 20)
     persistSegments(merged)
@@ -422,50 +477,50 @@ export default function LeadTable({
           key: 'uncontacted',
           label: 'Uncontacted',
           count: summary.uncontacted,
-          filters: { outbound_status: 'uncontacted' }
+          filters: { outbound_status: 'uncontacted' },
         },
         {
           key: 'in_instantly',
           label: 'Synced',
           count: summary.in_instantly,
-          filters: { sync_state: 'in_instantly' }
+          filters: { sync_state: 'in_instantly' },
         },
         {
           key: 'replied',
           label: 'Replied',
           count: summary.replied,
-          filters: { outbound_status: 'replied' }
+          filters: { outbound_status: 'replied' },
         },
         {
           key: 'interested',
           label: 'Interested',
           count: summary.interested,
-          filters: { outbound_status: 'interested' }
+          filters: { outbound_status: 'interested' },
         },
         {
           key: 'no_phone',
           label: 'Missing phone',
           count: summary.no_phone,
-          filters: { completeness: 'no_phone' }
+          filters: { completeness: 'no_phone' },
         },
         {
           key: 'suppressed',
           label: 'Suppressed',
           count: summary.suppressed,
-          filters: { suppressed: '1' }
+          filters: { suppressed: '1' },
         },
         {
           key: 'needs_review',
           label: 'Needs review',
           count: summary.needs_review,
-          filters: { sync_state: 'needs_review' }
+          filters: { sync_state: 'needs_review' },
         },
         {
           key: 'recontact_ready',
           label: 'Recontact ready',
           count: summary.recontact_ready ?? 0,
-          filters: { recontact_ready: '1' }
-        }
+          filters: { recontact_ready: '1' },
+        },
       ]
     : []
 
@@ -480,684 +535,815 @@ export default function LeadTable({
       'q',
       'recontact_ok',
       'suppressed',
-      'recontact_ready'
+      'recontact_ready',
     ]
     const chipSet = keys.filter((k) => chipFilters[k])
     if (chipSet.length === 0) {
       return keys.every((k) => !filters[k])
     }
-    return chipSet.every((k) => filters[k] === chipFilters[k]) &&
+    return (
+      chipSet.every((k) => filters[k] === chipFilters[k]) &&
       keys.every((k) => chipFilters[k] || !filters[k])
+    )
   }
 
   return (
     <div className={embed ? 'flex h-full min-h-0 gap-3' : 'flex gap-5'}>
-      <div className={embed ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-2' : 'min-w-0 flex-1 space-y-3'}>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex items-center rounded-xl bg-stone-100/90 p-0.5 shadow-soft">
-          <button
-            type="button"
-            onClick={() => switchBucket('leads')}
-            className={`rounded-[10px] px-3 py-1.5 text-sm font-medium transition ${
-              bucket === 'leads'
-                ? 'bg-white text-neutral-900 shadow-soft'
-                : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            Leads
-          </button>
-          <button
-            type="button"
-            onClick={() => switchBucket('prospects')}
-            className={`rounded-[10px] px-3 py-1.5 text-sm font-medium transition ${
-              bucket === 'prospects'
-                ? 'bg-white text-neutral-900 shadow-soft'
-                : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            Prospects
-          </button>
-          <button
-            type="button"
-            onClick={() => switchBucket('archived')}
-            className={`inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium transition ${
-              bucket === 'archived'
-                ? 'bg-white text-neutral-900 shadow-soft'
-                : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            Archived
-            {summary?.archived ? (
-              <span className="rounded-full bg-stone-200/90 px-1.5 py-0.5 text-[11px] font-semibold text-neutral-600">
-                {summary.archived.toLocaleString()}
-              </span>
-            ) : null}
-          </button>
-        </div>
-        <input
-          type="search"
-          placeholder="Name, email, company, or phone"
-          value={draftFilters.q ?? ''}
-          onChange={(e) =>
-            setDraftFilters((f) => ({ ...f, q: e.target.value || undefined }))
-          }
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') applyFilters()
-          }}
-          className="min-w-[12rem] flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
-        />
-        {embed ? (
-          <>
-            <FilterSelect
-              label="ICP"
-              hideLabel
-              value={draftFilters.icp_status ?? ''}
-              onChange={(v) => patchFilters({ icp_status: v || undefined })}
-              options={[
-                { value: 'none', label: 'ICP none' },
-                { value: 'pass', label: 'Pass' },
-                { value: 'thin', label: 'Thin' },
-                { value: 'skip', label: 'Skip' }
-              ]}
-              className="w-32"
-            />
-            <FilterSelect
-              label="After hours"
-              hideLabel
-              value={draftFilters.after_hours ?? ''}
-              onChange={(v) =>
-                patchFilters({ after_hours: (v || undefined) as '1' | '0' | undefined })
-              }
-              options={[
-                { value: '1', label: 'After hours' },
-                { value: '0', label: 'No after hours' }
-              ]}
-              className="w-36"
-            />
-            <FilterSelect
-              label="Min reviews"
-              hideLabel
-              value={draftFilters.min_reviews ?? ''}
-              onChange={(v) => patchFilters({ min_reviews: v || undefined })}
-              options={[{ value: '25', label: '25+ reviews' }]}
-              className="w-32"
-            />
-            <FilterSelect
-              label="Enrich"
-              hideLabel
-              value={draftFilters.enrich_status ?? ''}
-              onChange={(v) => patchFilters({ enrich_status: v || undefined })}
-              options={[
-                { value: 'none', label: 'None' },
-                { value: 'queued', label: 'Queued' },
-                { value: 'enriched', label: 'Enriched' },
-                { value: 'thin', label: 'Thin' },
-                { value: 'opener_ready', label: 'Opener ready' },
-                { value: 'uploaded', label: 'Uploaded' }
-              ]}
-              className="w-40"
-            />
+      <div
+        className={
+          embed
+            ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-2'
+            : 'min-w-0 flex-1 space-y-3'
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center rounded-xl bg-stone-100/90 p-0.5 shadow-soft">
             <button
               type="button"
-              onClick={() => applyFilters()}
-              className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 hover:bg-stone-50"
-            >
-              Search
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => setFiltersOpen((open) => !open)}
-              className={`rounded-xl border px-3 py-2 text-sm font-medium ${
-                filtersOpen || leadFiltersNeedExactCount(filters)
-                  ? 'border-sf-orange/40 bg-orange-50 text-neutral-900'
-                  : 'border-stone-200 bg-white text-neutral-700 hover:bg-stone-50'
+              onClick={() => switchBucket('leads')}
+              className={`rounded-[10px] px-3 py-1.5 text-sm font-medium transition ${
+                bucket === 'leads'
+                  ? 'bg-white text-neutral-900 shadow-soft'
+                  : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
-              Filters
+              Leads
             </button>
             <button
               type="button"
-              onClick={() => void handleExport(false)}
-              disabled={exporting || total === 0}
-              className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-stone-50 disabled:opacity-60"
+              onClick={() => switchBucket('prospects')}
+              className={`rounded-[10px] px-3 py-1.5 text-sm font-medium transition ${
+                bucket === 'prospects'
+                  ? 'bg-white text-neutral-900 shadow-soft'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
             >
-              {exporting ? 'Exporting…' : 'Export CSV'}
+              Prospects
             </button>
-          </>
-        )}
-      </div>
-
-      {summary && !embed ? (
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-          {summaryChips.map((chip) => {
-            const active = chipActive(chip.filters)
-            return (
-              <button
-                key={chip.key}
-                type="button"
-                onClick={() => onNavigate(withBucket(chip.filters), 1)}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[12px] transition ${
-                  active
-                    ? 'border-sf-orange/40 bg-orange-50 text-neutral-900 shadow-soft'
-                    : 'border-stone-200/70 bg-white text-neutral-600 shadow-soft hover:border-stone-300 hover:bg-stone-50'
-                }`}
-              >
-                <span className="font-semibold tabular-nums text-neutral-900">
-                  {chip.count.toLocaleString()}
+            <button
+              type="button"
+              onClick={() => switchBucket('archived')}
+              className={`inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium transition ${
+                bucket === 'archived'
+                  ? 'bg-white text-neutral-900 shadow-soft'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              Archived
+              {summary?.archived ? (
+                <span className="rounded-full bg-stone-200/90 px-1.5 py-0.5 text-[11px] font-semibold text-neutral-600">
+                  {summary.archived.toLocaleString()}
                 </span>
-                <span className="font-medium text-neutral-500">{chip.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      ) : null}
-
-      {/* CRM lists */}
-      {!embed ? (
-        <div className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-              Lists
-            </span>
-            <button
-              type="button"
-              onClick={() => onNavigate({ ...filters, list_id: undefined }, 1)}
-              className={`rounded-xl border px-2.5 py-1 text-xs transition ${
-                !filters.list_id
-                  ? 'border-sf-orange/40 bg-orange-50 text-neutral-900'
-                  : 'border-stone-200/80 text-neutral-600 hover:bg-stone-50'
-              }`}
-            >
-              All leads
+              ) : null}
             </button>
-            {crmLists.map((list) => (
+          </div>
+          <input
+            type="search"
+            placeholder="Name, email, company, or phone"
+            value={draftFilters.q ?? ''}
+            onChange={(e) =>
+              setDraftFilters((f) => ({ ...f, q: e.target.value || undefined }))
+            }
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') applyFilters()
+            }}
+            className="min-w-[12rem] flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+          />
+          {embed ? (
+            <>
+              <FilterSelect
+                label="ICP"
+                hideLabel
+                value={draftFilters.icp_status ?? ''}
+                onChange={(v) => patchFilters({ icp_status: v || undefined })}
+                options={[
+                  { value: 'none', label: 'ICP none' },
+                  { value: 'pass', label: 'Pass' },
+                  { value: 'thin', label: 'Thin' },
+                  { value: 'skip', label: 'Skip' },
+                ]}
+                className="w-32"
+              />
+              <FilterSelect
+                label="After hours"
+                hideLabel
+                value={draftFilters.after_hours ?? ''}
+                onChange={(v) =>
+                  patchFilters({
+                    after_hours: (v || undefined) as '1' | '0' | undefined,
+                  })
+                }
+                options={[
+                  { value: '1', label: 'After hours' },
+                  { value: '0', label: 'No after hours' },
+                ]}
+                className="w-36"
+              />
+              <FilterSelect
+                label="Min reviews"
+                hideLabel
+                value={draftFilters.min_reviews ?? ''}
+                onChange={(v) => patchFilters({ min_reviews: v || undefined })}
+                options={[{ value: '25', label: '25+ reviews' }]}
+                className="w-32"
+              />
+              <FilterSelect
+                label="Enrich"
+                hideLabel
+                value={draftFilters.enrich_status ?? ''}
+                onChange={(v) =>
+                  patchFilters({ enrich_status: v || undefined })
+                }
+                options={[
+                  { value: 'none', label: 'None' },
+                  { value: 'queued', label: 'Queued' },
+                  { value: 'enriched', label: 'Enriched' },
+                  { value: 'thin', label: 'Thin' },
+                  { value: 'opener_ready', label: 'Opener ready' },
+                  { value: 'uploaded', label: 'Uploaded' },
+                ]}
+                className="w-40"
+              />
               <button
-                key={list.id}
                 type="button"
-                onClick={() => onNavigate({ ...filters, list_id: list.id }, 1)}
-                className={`rounded-xl border px-2.5 py-1 text-xs transition ${
-                  filters.list_id === list.id
+                onClick={() => applyFilters()}
+                className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 hover:bg-stone-50"
+              >
+                Search
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((open) => !open)}
+                className={`rounded-xl border px-3 py-2 text-sm font-medium ${
+                  filtersOpen || leadFiltersNeedExactCount(filters)
                     ? 'border-sf-orange/40 bg-orange-50 text-neutral-900'
-                    : 'border-stone-200/80 text-neutral-600 hover:bg-stone-50'
+                    : 'border-stone-200 bg-white text-neutral-700 hover:bg-stone-50'
                 }`}
               >
-                {list.name}
-                <span className="ml-1 text-neutral-400">{list.member_count ?? 0}</span>
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="text"
-              aria-label="New list name"
-              placeholder="New list name"
-              value={newListName}
-              onChange={(e) => setNewListName(e.target.value)}
-              className="min-w-[200px] flex-1 rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
-            />
-            <button
-              type="button"
-              disabled={bulkBusy}
-              onClick={() => void createCrmList()}
-              className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 transition hover:bg-stone-50 disabled:opacity-60"
-            >
-              Create list
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {!embed && filtersOpen ? (
-      <div className="rounded-2xl border border-stone-200/70 bg-white p-4 shadow-soft">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-            Segments
-          </span>
-          {PRESET_SEGMENTS.map((preset) => (
-            <button
-              key={preset.name}
-              type="button"
-              onClick={() => onNavigate(withBucket(preset.filters), 1)}
-              className="rounded-xl border border-stone-200/80 px-2.5 py-1 text-xs text-neutral-600 transition hover:bg-stone-50"
-            >
-              {preset.name}
-            </button>
-          ))}
-          {savedSegments.map((seg) => (
-            <span
-              key={seg.id}
-              className="inline-flex items-center gap-1 rounded-xl border border-stone-200/80 bg-stone-50 px-2.5 py-1 text-xs text-neutral-700"
-            >
-              <button
-                type="button"
-                onClick={() => onNavigate(withBucket(seg.filters), 1)}
-                className="hover:underline"
-              >
-                {seg.name}
+                Filters
               </button>
               <button
                 type="button"
-                aria-label={`Delete ${seg.name}`}
-                onClick={() => deleteSegment(seg.id)}
-                className="text-neutral-400 hover:text-neutral-700"
+                onClick={() => void handleExport(false)}
+                disabled={exporting || total === 0}
+                className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-stone-50 disabled:opacity-60"
               >
-                ×
+                {exporting ? 'Exporting…' : 'Export CSV'}
               </button>
-            </span>
-          ))}
-          <input
-            type="text"
-            placeholder="Save current filters as…"
-            value={segmentName}
-            onChange={(e) => setSegmentName(e.target.value)}
-            className="min-w-[160px] flex-1 rounded-xl border border-stone-200 px-3 py-1.5 text-sm focus:border-sf-orange focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={saveCurrentSegment}
-            className="rounded-xl border border-stone-200 px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-stone-50"
-          >
-            Save segment
-          </button>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <FilterSelect
-            label="List"
-            value={draftFilters.list_id ?? ''}
-            onChange={(v) => patchFilters({ list_id: v || undefined })}
-            options={crmLists.map((list) => ({
-              value: list.id,
-              label: `${list.name} (${list.member_count ?? 0})`
-            }))}
-          />
-          <FilterSelect
-            label="Vertical"
-            value={draftFilters.vertical ?? ''}
-            onChange={(v) => patchFilters({ vertical: v || undefined })}
-            options={verticalOptions.map((v) => ({ value: v, label: humanizeVertical(v) }))}
-          />
-          <FilterSelect
-            label="Source"
-            value={draftFilters.source ?? ''}
-            onChange={(v) => patchFilters({ source: v || undefined })}
-            options={LEAD_SOURCES.map((s) => ({ value: s, label: s }))}
-          />
-          <FilterSelect
-            label="Pipeline stage"
-            value={draftFilters.outbound_status ?? ''}
-            onChange={(v) => patchFilters({ outbound_status: v || undefined })}
-            options={PIPELINE_STATUSES.map((s) => ({ value: s, label: humanizeStatus(s) }))}
-          />
-          <FilterSelect
-            label="Sync state"
-            value={draftFilters.sync_state ?? ''}
-            onChange={(v) => patchFilters({ sync_state: v || undefined })}
-            options={SYNC_STATES.map((s) => ({ value: s, label: humanizeSyncState(s) }))}
-          />
-          <FilterSelect
-            label="Completeness"
-            value={draftFilters.completeness ?? ''}
-            onChange={(v) =>
-              patchFilters({
-                completeness: (v || undefined) as CompletenessFilter | undefined
-              })
-            }
-            options={COMPLETENESS_OPTIONS.filter((c) => c !== 'any').map((c) => ({
-              value: c,
-              label: humanizeCompleteness(c)
-            }))}
-          />
-          <FilterSelect
-            label="Enrich status"
-            value={draftFilters.enrich_status ?? ''}
-            onChange={(v) => patchFilters({ enrich_status: v || undefined })}
-            options={[
-              { value: 'none', label: 'None' },
-              { value: 'queued', label: 'Queued' },
-              { value: 'enriched', label: 'Enriched' },
-              { value: 'thin', label: 'Thin' },
-              { value: 'opener_ready', label: 'Opener ready' },
-              { value: 'uploaded', label: 'Uploaded' }
-            ]}
-          />
-          <FilterSelect
-            label="ICP"
-            value={draftFilters.icp_status ?? ''}
-            onChange={(v) => patchFilters({ icp_status: v || undefined })}
-            options={[
-              { value: 'none', label: 'None' },
-              { value: 'pass', label: 'Pass' },
-              { value: 'thin', label: 'Thin' },
-              { value: 'skip', label: 'Skip' }
-            ]}
-          />
-          <FilterSelect
-            label="After hours"
-            value={draftFilters.after_hours ?? ''}
-            onChange={(v) =>
-              patchFilters({ after_hours: (v || undefined) as '1' | '0' | undefined })
-            }
-            options={[
-              { value: '1', label: 'Yes' },
-              { value: '0', label: 'No' }
-            ]}
-          />
-          <FilterSelect
-            label="Min reviews"
-            value={draftFilters.min_reviews ?? ''}
-            onChange={(v) => patchFilters({ min_reviews: v || undefined })}
-            options={[{ value: '25', label: '25+' }]}
-          />
-          <FilterSelect
-            label="Email origin"
-            value={draftFilters.email_origin ?? ''}
-            onChange={(v) => patchFilters({ email_origin: v || undefined })}
-            options={[
-              { value: 'published', label: 'Published' },
-              { value: 'guessed', label: 'Guessed' },
-              { value: 'unknown', label: 'Unknown' }
-            ]}
-          />
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-neutral-500">City</span>
-            <input
-              type="text"
-              placeholder="e.g. Sydney"
-              value={draftFilters.city ?? ''}
-              onChange={(e) =>
-                setDraftFilters((f) => ({ ...f, city: e.target.value || undefined }))
-              }
-              onBlur={() => applyFilters()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') applyFilters()
-              }}
-              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-neutral-500">Cohort tag</span>
-            <input
-              type="text"
-              placeholder="wave-1-nsw"
-              value={draftFilters.cohort_tag ?? ''}
-              onChange={(e) =>
-                setDraftFilters((f) => ({ ...f, cohort_tag: e.target.value || undefined }))
-              }
-              onBlur={() => applyFilters()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') applyFilters()
-              }}
-              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-neutral-500">
-              Pipeline campaign id
-            </span>
-            <input
-              type="text"
-              placeholder="campaign-…"
-              value={draftFilters.pipeline_campaign_id ?? ''}
-              onChange={(e) =>
-                setDraftFilters((f) => ({
-                  ...f,
-                  pipeline_campaign_id: e.target.value || undefined
-                }))
-              }
-              onBlur={() => applyFilters()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') applyFilters()
-              }}
-              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
-            />
-          </label>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <FilterSelect
-            label=""
-            hideLabel
-            value={draftFilters.suppressed ?? ''}
-            onChange={(v) =>
-              patchFilters({
-                suppressed: v === '1' || v === '0' ? v : undefined
-              })
-            }
-            options={[
-              { value: '1', label: 'Suppressed only' },
-              { value: '0', label: 'Exclude suppressed' }
-            ]}
-            className="w-auto min-w-[160px]"
-          />
-          <FilterSelect
-            label=""
-            hideLabel
-            value={draftFilters.recontact_ok ?? ''}
-            onChange={(v) =>
-              patchFilters({
-                recontact_ok: v === '1' || v === '0' ? v : undefined
-              })
-            }
-            options={[
-              { value: '1', label: 'Recontact OK' },
-              { value: '0', label: 'Do not recontact' }
-            ]}
-            className="w-auto min-w-[160px]"
-          />
-          <FilterSelect
-            label=""
-            hideLabel
-            value={draftFilters.recontact_ready ?? ''}
-            onChange={(v) =>
-              patchFilters({
-                recontact_ready: v === '1' || v === '0' ? v : undefined
-              })
-            }
-            options={[
-              { value: '1', label: 'Ready (90d+)' },
-              { value: '0', label: 'Not ready yet' }
-            ]}
-            className="w-auto min-w-[160px]"
-          />
-          <button
-            type="button"
-            onClick={() => applyFilters()}
-            className="compass-btn-primary"
-          >
-            Apply filters
-          </button>
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-600 transition hover:bg-stone-50"
-          >
-            Reset
-          </button>
-          {exportNote ? <span className="ml-auto text-xs text-neutral-500">{exportNote}</span> : null}
-        </div>
-      </div>
-      ) : null}
-
-      {/* Bulk actions */}
-      {selected.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm shadow-soft">
-          <span className="font-medium text-neutral-800">{selected.size} selected</span>
-          {bucket === 'archived' ? (
-            <button
-              type="button"
-              disabled={bulkBusy}
-              onClick={() => void runBulk('unarchive')}
-              className="rounded-xl border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-60"
-            >
-              Restore to Leads
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={bulkBusy}
-              onClick={() => void runBulk('archive')}
-              className="rounded-xl border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-60"
-            >
-              Archive
-            </button>
+            </>
           )}
-          <button
-            type="button"
-            disabled={bulkBusy}
-            onClick={() => void runBulk('suppress')}
-            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
-          >
-            Suppress
-          </button>
-          <button
-            type="button"
-            disabled={bulkBusy}
-            onClick={() => void runBulk('unsuppress')}
-            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
-          >
-            Unsuppress
-          </button>
-          <select
-            value={bulkStatus}
-            onChange={(e) => setBulkStatus(e.target.value)}
-            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs"
-          >
-            {PIPELINE_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {humanizeStatus(s)}
-              </option>
+        </div>
+
+        {summary && !embed ? (
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+            {summaryChips.map((chip) => {
+              const active = chipActive(chip.filters)
+              return (
+                <button
+                  key={chip.key}
+                  type="button"
+                  onClick={() => onNavigate(withBucket(chip.filters), 1)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[12px] transition ${
+                    active
+                      ? 'border-sf-orange/40 bg-orange-50 text-neutral-900 shadow-soft'
+                      : 'border-stone-200/70 bg-white text-neutral-600 shadow-soft hover:border-stone-300 hover:bg-stone-50'
+                  }`}
+                >
+                  <span className="font-semibold tabular-nums text-neutral-900">
+                    {chip.count.toLocaleString()}
+                  </span>
+                  <span className="font-medium text-neutral-500">
+                    {chip.label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
+
+        {/* CRM lists */}
+        {!embed ? (
+          <details className="folio-crm-lists">
+            <summary>Lists & segments</summary>
+            <div>
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                  Lists
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onNavigate({ ...filters, list_id: undefined }, 1)
+                  }
+                  className={`rounded-xl border px-2.5 py-1 text-xs transition ${
+                    !filters.list_id
+                      ? 'border-sf-orange/40 bg-orange-50 text-neutral-900'
+                      : 'border-stone-200/80 text-neutral-600 hover:bg-stone-50'
+                  }`}
+                >
+                  All leads
+                </button>
+                {crmLists.map((list) => (
+                  <button
+                    key={list.id}
+                    type="button"
+                    onClick={() =>
+                      onNavigate({ ...filters, list_id: list.id }, 1)
+                    }
+                    className={`rounded-xl border px-2.5 py-1 text-xs transition ${
+                      filters.list_id === list.id
+                        ? 'border-sf-orange/40 bg-orange-50 text-neutral-900'
+                        : 'border-stone-200/80 text-neutral-600 hover:bg-stone-50'
+                    }`}
+                  >
+                    {list.name}
+                    <span className="ml-1 text-neutral-400">
+                      {list.member_count ?? 0}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  aria-label="New list name"
+                  placeholder="New list name"
+                  value={newListName}
+                  onChange={(e) => setNewListName(e.target.value)}
+                  className="min-w-[200px] flex-1 rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+                />
+                <button
+                  type="button"
+                  disabled={bulkBusy}
+                  onClick={() => void createCrmList()}
+                  className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 transition hover:bg-stone-50 disabled:opacity-60"
+                >
+                  Create list
+                </button>
+              </div>
+            </div>
+          </details>
+        ) : null}
+
+        {!embed && filtersOpen ? (
+          <div className="rounded-2xl border border-stone-200/70 bg-white p-4 shadow-soft">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                Segments
+              </span>
+              {PRESET_SEGMENTS.map((preset) => (
+                <button
+                  key={preset.name}
+                  type="button"
+                  onClick={() => onNavigate(withBucket(preset.filters), 1)}
+                  className="rounded-xl border border-stone-200/80 px-2.5 py-1 text-xs text-neutral-600 transition hover:bg-stone-50"
+                >
+                  {preset.name}
+                </button>
+              ))}
+              {savedSegments.map((seg) => (
+                <span
+                  key={seg.id}
+                  className="inline-flex items-center gap-1 rounded-xl border border-stone-200/80 bg-stone-50 px-2.5 py-1 text-xs text-neutral-700"
+                >
+                  <button
+                    type="button"
+                    onClick={() => onNavigate(withBucket(seg.filters), 1)}
+                    className="hover:underline"
+                  >
+                    {seg.name}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Delete ${seg.name}`}
+                    onClick={() => deleteSegment(seg.id)}
+                    className="text-neutral-400 hover:text-neutral-700"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              <input
+                type="text"
+                placeholder="Save current filters as…"
+                value={segmentName}
+                onChange={(e) => setSegmentName(e.target.value)}
+                className="min-w-[160px] flex-1 rounded-xl border border-stone-200 px-3 py-1.5 text-sm focus:border-sf-orange focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={saveCurrentSegment}
+                className="rounded-xl border border-stone-200 px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-stone-50"
+              >
+                Save segment
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              <FilterSelect
+                label="List"
+                value={draftFilters.list_id ?? ''}
+                onChange={(v) => patchFilters({ list_id: v || undefined })}
+                options={crmLists.map((list) => ({
+                  value: list.id,
+                  label: `${list.name} (${list.member_count ?? 0})`,
+                }))}
+              />
+              <FilterSelect
+                label="Vertical"
+                value={draftFilters.vertical ?? ''}
+                onChange={(v) => patchFilters({ vertical: v || undefined })}
+                options={verticalOptions.map((v) => ({
+                  value: v,
+                  label: humanizeVertical(v),
+                }))}
+              />
+              <FilterSelect
+                label="Source"
+                value={draftFilters.source ?? ''}
+                onChange={(v) => patchFilters({ source: v || undefined })}
+                options={LEAD_SOURCES.map((s) => ({ value: s, label: s }))}
+              />
+              <FilterSelect
+                label="Pipeline stage"
+                value={draftFilters.outbound_status ?? ''}
+                onChange={(v) =>
+                  patchFilters({ outbound_status: v || undefined })
+                }
+                options={PIPELINE_STATUSES.map((s) => ({
+                  value: s,
+                  label: humanizeStatus(s),
+                }))}
+              />
+              <FilterSelect
+                label="Sync state"
+                value={draftFilters.sync_state ?? ''}
+                onChange={(v) => patchFilters({ sync_state: v || undefined })}
+                options={SYNC_STATES.map((s) => ({
+                  value: s,
+                  label: humanizeSyncState(s),
+                }))}
+              />
+              <FilterSelect
+                label="Completeness"
+                value={draftFilters.completeness ?? ''}
+                onChange={(v) =>
+                  patchFilters({
+                    completeness: (v || undefined) as
+                      CompletenessFilter | undefined,
+                  })
+                }
+                options={COMPLETENESS_OPTIONS.filter((c) => c !== 'any').map(
+                  (c) => ({
+                    value: c,
+                    label: humanizeCompleteness(c),
+                  }),
+                )}
+              />
+              <FilterSelect
+                label="Enrich status"
+                value={draftFilters.enrich_status ?? ''}
+                onChange={(v) =>
+                  patchFilters({ enrich_status: v || undefined })
+                }
+                options={[
+                  { value: 'none', label: 'None' },
+                  { value: 'queued', label: 'Queued' },
+                  { value: 'enriched', label: 'Enriched' },
+                  { value: 'thin', label: 'Thin' },
+                  { value: 'opener_ready', label: 'Opener ready' },
+                  { value: 'uploaded', label: 'Uploaded' },
+                ]}
+              />
+              <FilterSelect
+                label="ICP"
+                value={draftFilters.icp_status ?? ''}
+                onChange={(v) => patchFilters({ icp_status: v || undefined })}
+                options={[
+                  { value: 'none', label: 'None' },
+                  { value: 'pass', label: 'Pass' },
+                  { value: 'thin', label: 'Thin' },
+                  { value: 'skip', label: 'Skip' },
+                ]}
+              />
+              <FilterSelect
+                label="After hours"
+                value={draftFilters.after_hours ?? ''}
+                onChange={(v) =>
+                  patchFilters({
+                    after_hours: (v || undefined) as '1' | '0' | undefined,
+                  })
+                }
+                options={[
+                  { value: '1', label: 'Yes' },
+                  { value: '0', label: 'No' },
+                ]}
+              />
+              <FilterSelect
+                label="Min reviews"
+                value={draftFilters.min_reviews ?? ''}
+                onChange={(v) => patchFilters({ min_reviews: v || undefined })}
+                options={[{ value: '25', label: '25+' }]}
+              />
+              <FilterSelect
+                label="Email origin"
+                value={draftFilters.email_origin ?? ''}
+                onChange={(v) => patchFilters({ email_origin: v || undefined })}
+                options={[
+                  { value: 'published', label: 'Published' },
+                  { value: 'guessed', label: 'Guessed' },
+                  { value: 'unknown', label: 'Unknown' },
+                ]}
+              />
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+                  City
+                </span>
+                <input
+                  type="text"
+                  placeholder="e.g. Sydney"
+                  value={draftFilters.city ?? ''}
+                  onChange={(e) =>
+                    setDraftFilters((f) => ({
+                      ...f,
+                      city: e.target.value || undefined,
+                    }))
+                  }
+                  onBlur={() => applyFilters()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') applyFilters()
+                  }}
+                  className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+                  Cohort tag
+                </span>
+                <input
+                  type="text"
+                  placeholder="wave-1-nsw"
+                  value={draftFilters.cohort_tag ?? ''}
+                  onChange={(e) =>
+                    setDraftFilters((f) => ({
+                      ...f,
+                      cohort_tag: e.target.value || undefined,
+                    }))
+                  }
+                  onBlur={() => applyFilters()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') applyFilters()
+                  }}
+                  className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-neutral-500">
+                  Pipeline campaign id
+                </span>
+                <input
+                  type="text"
+                  placeholder="campaign-…"
+                  value={draftFilters.pipeline_campaign_id ?? ''}
+                  onChange={(e) =>
+                    setDraftFilters((f) => ({
+                      ...f,
+                      pipeline_campaign_id: e.target.value || undefined,
+                    }))
+                  }
+                  onBlur={() => applyFilters()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') applyFilters()
+                  }}
+                  className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
+                />
+              </label>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <FilterSelect
+                label=""
+                hideLabel
+                value={draftFilters.suppressed ?? ''}
+                onChange={(v) =>
+                  patchFilters({
+                    suppressed: v === '1' || v === '0' ? v : undefined,
+                  })
+                }
+                options={[
+                  { value: '1', label: 'Suppressed only' },
+                  { value: '0', label: 'Exclude suppressed' },
+                ]}
+                className="w-auto min-w-[160px]"
+              />
+              <FilterSelect
+                label=""
+                hideLabel
+                value={draftFilters.recontact_ok ?? ''}
+                onChange={(v) =>
+                  patchFilters({
+                    recontact_ok: v === '1' || v === '0' ? v : undefined,
+                  })
+                }
+                options={[
+                  { value: '1', label: 'Recontact OK' },
+                  { value: '0', label: 'Do not recontact' },
+                ]}
+                className="w-auto min-w-[160px]"
+              />
+              <FilterSelect
+                label=""
+                hideLabel
+                value={draftFilters.recontact_ready ?? ''}
+                onChange={(v) =>
+                  patchFilters({
+                    recontact_ready: v === '1' || v === '0' ? v : undefined,
+                  })
+                }
+                options={[
+                  { value: '1', label: 'Ready (90d+)' },
+                  { value: '0', label: 'Not ready yet' },
+                ]}
+                className="w-auto min-w-[160px]"
+              />
+              <button
+                type="button"
+                onClick={() => applyFilters()}
+                className="compass-btn-primary"
+              >
+                Apply filters
+              </button>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-600 transition hover:bg-stone-50"
+              >
+                Reset
+              </button>
+              {exportNote ? (
+                <span className="ml-auto text-xs text-neutral-500">
+                  {exportNote}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Bulk actions */}
+        {selected.size > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm shadow-soft">
+            <span className="font-medium text-neutral-800">
+              {selected.size} selected
+            </span>
+            {bucket === 'archived' ? (
+              <button
+                type="button"
+                disabled={bulkBusy}
+                onClick={() => void runBulk('unarchive')}
+                className="rounded-xl border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-60"
+              >
+                Restore to Leads
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={bulkBusy}
+                onClick={() => void runBulk('archive')}
+                className="rounded-xl border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-60"
+              >
+                Archive
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => void runBulk('suppress')}
+              className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
+            >
+              Suppress
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => void runBulk('unsuppress')}
+              className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
+            >
+              Unsuppress
+            </button>
+            <select
+              value={bulkStatus}
+              onChange={(e) => setBulkStatus(e.target.value)}
+              className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs"
+            >
+              {PIPELINE_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {humanizeStatus(s)}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => void runBulk('set_status', { status: bulkStatus })}
+              className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
+            >
+              Set stage
+            </button>
+            <input
+              type="text"
+              placeholder="Tag"
+              value={bulkTag}
+              onChange={(e) => setBulkTag(e.target.value)}
+              className="w-28 rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs"
+            />
+            <button
+              type="button"
+              disabled={bulkBusy || !bulkTag.trim()}
+              onClick={() => void runBulk('add_tag', { tag: bulkTag.trim() })}
+              className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
+            >
+              Add tag
+            </button>
+            <select
+              value={bulkListId || filters.list_id || ''}
+              onChange={(e) => setBulkListId(e.target.value)}
+              className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs"
+            >
+              <option value="">List…</option>
+              {crmLists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={bulkBusy || !(bulkListId || filters.list_id)}
+              onClick={() => void runListMembers('add')}
+              className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
+            >
+              Add to list
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy || !(bulkListId || filters.list_id)}
+              onClick={() => void runListMembers('remove')}
+              className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
+            >
+              Remove from list
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => void handleExport(true)}
+              className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
+            >
+              Export for Instantly
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="ml-auto text-xs text-neutral-500 hover:text-neutral-800"
+            >
+              Clear
+            </button>
+            {bulkNote && (
+              <span className="w-full text-xs text-neutral-600">
+                {bulkNote}
+              </span>
+            )}
+          </div>
+        )}
+        {bulkNote && selected.size === 0 && (
+          <p className="text-xs text-neutral-500">{bulkNote}</p>
+        )}
+
+        {!embed ? (
+          <div className="folio-mobile-record-toolbar">
+            <button
+              className="compass-btn-secondary"
+              aria-pressed={mobileGrid}
+              onClick={() => setMobileGrid(!mobileGrid)}
+            >
+              {mobileGrid ? 'Read as records' : 'Open full table'}
+            </button>
+          </div>
+        ) : null}
+        {!embed && !mobileGrid ? (
+          <ul className="folio-mobile-records">
+            {leads.map((lead) => (
+              <li key={lead.id}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(lead.id)}
+                    onChange={() => toggleSelect(lead.id)}
+                    aria-label={`Select ${lead.company || lead.name || lead.email || 'unnamed lead'}`}
+                  />
+                </label>
+                <button
+                  onClick={() => {
+                    onLeadSelect?.(lead)
+                    setSelectedId(selectedId === lead.id ? null : lead.id)
+                  }}
+                >
+                  <strong>
+                    {lead.company || lead.name || lead.email || 'Unnamed lead'}
+                  </strong>
+                  <span>
+                    {lead.name && lead.company
+                      ? lead.name
+                      : lead.email || lead.phone || 'No contact details'}
+                  </span>
+                  <small>
+                    {[
+                      lead.outbound_status
+                        ? humanizeStatus(lead.outbound_status)
+                        : null,
+                      lead.city,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || 'No outreach status recorded'}
+                  </small>
+                </button>
+              </li>
             ))}
-          </select>
-          <button
-            type="button"
-            disabled={bulkBusy}
-            onClick={() => void runBulk('set_status', { status: bulkStatus })}
-            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
-          >
-            Set stage
-          </button>
-          <input
-            type="text"
-            placeholder="Tag"
-            value={bulkTag}
-            onChange={(e) => setBulkTag(e.target.value)}
-            className="w-28 rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs"
+            {!leads.length ? <li>No records match these filters.</li> : null}
+          </ul>
+        ) : null}
+        {/* Table */}
+        <div
+          className={
+            embed
+              ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
+              : `folio-crm-table ${mobileGrid ? 'is-open' : ''}`
+          }
+        >
+          <RecordsTable
+            leads={leads}
+            columns={grid.visible}
+            widths={grid.widths}
+            onResizeColumn={grid.resizeColumn}
+            occupied={grid.occupied}
+            preset={columnPreset}
+            selected={selected}
+            onToggleRow={toggleSelect}
+            onToggleAll={toggleSelectAll}
+            onColumnsChange={grid.setVisible}
+            onRowActivate={(id) => {
+              const lead = leads.find((row) => row.id === id) ?? null
+              onLeadSelect?.(lead)
+              setSelectedId(selectedId === id ? null : id)
+            }}
+            activeId={selectedId}
+            rowStart={(page - 1) * pageSize + 1}
+            fill={embed}
+            emptyMessage={`No ${bucket === 'archived' ? 'archived leads' : bucket === 'prospects' ? 'prospects' : 'leads'} match these filters.`}
+            entityLabel={
+              bucket === 'archived'
+                ? 'archived leads'
+                : bucket === 'prospects'
+                  ? 'prospects'
+                  : 'leads'
+            }
           />
-          <button
-            type="button"
-            disabled={bulkBusy || !bulkTag.trim()}
-            onClick={() => void runBulk('add_tag', { tag: bulkTag.trim() })}
-            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
-          >
-            Add tag
-          </button>
-          <select
-            value={bulkListId || filters.list_id || ''}
-            onChange={(e) => setBulkListId(e.target.value)}
-            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs"
-          >
-            <option value="">List…</option>
-            {crmLists.map((list) => (
-              <option key={list.id} value={list.id}>
-                {list.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            disabled={bulkBusy || !(bulkListId || filters.list_id)}
-            onClick={() => void runListMembers('add')}
-            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
-          >
-            Add to list
-          </button>
-          <button
-            type="button"
-            disabled={bulkBusy || !(bulkListId || filters.list_id)}
-            onClick={() => void runListMembers('remove')}
-            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
-          >
-            Remove from list
-          </button>
-          <button
-            type="button"
-            disabled={bulkBusy}
-            onClick={() => void handleExport(true)}
-            className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs hover:bg-stone-50 disabled:opacity-60"
-          >
-            Export for Instantly
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelected(new Set())}
-            className="ml-auto text-xs text-neutral-500 hover:text-neutral-800"
-          >
-            Clear
-          </button>
-          {bulkNote && <span className="w-full text-xs text-neutral-600">{bulkNote}</span>}
         </div>
-      )}
-      {bulkNote && selected.size === 0 && (
-        <p className="text-xs text-neutral-500">{bulkNote}</p>
-      )}
 
-      {/* Table */}
-      <div className={embed ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : ''}>
-      <RecordsTable
-        leads={leads}
-        columns={grid.visible}
-        widths={grid.widths}
-        onResizeColumn={grid.resizeColumn}
-        occupied={grid.occupied}
-        preset={columnPreset}
-        selected={selected}
-        onToggleRow={toggleSelect}
-        onToggleAll={toggleSelectAll}
-        onColumnsChange={grid.setVisible}
-        onRowActivate={(id) => {
-          const lead = leads.find((row) => row.id === id) ?? null
-          onLeadSelect?.(lead)
-          setSelectedId(selectedId === id ? null : id)
-        }}
-        activeId={selectedId}
-        rowStart={(page - 1) * pageSize + 1}
-        fill={embed}
-        emptyMessage={`No ${bucket === 'archived' ? 'archived leads' : bucket === 'prospects' ? 'prospects' : 'leads'} match these filters.`}
-        entityLabel={bucket === 'archived' ? 'archived leads' : bucket === 'prospects' ? 'prospects' : 'leads'}
-      />
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between pt-0.5 text-xs text-neutral-500">
-        <span>
-          Showing {totalShown === 0 ? 0 : (page - 1) * pageSize + 1}–{totalShown} of{' '}
-          {total.toLocaleString()} {bucket === 'archived' ? 'archived leads' : bucket === 'prospects' ? 'prospects' : 'leads'}
-          {summary && summary.filtered !== summary.total
-            ? ` (${summary.filtered.toLocaleString()} match filters)`
-            : ''}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => goToPage(page - 1)}
-            disabled={page <= 1}
-            className="rounded-xl border border-stone-200 px-2.5 py-1 text-neutral-600 transition hover:bg-stone-50 disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <span className="px-1.5">Page {page}</span>
-          <button
-            type="button"
-            onClick={() => goToPage(page + 1)}
-            disabled={!hasMore}
-            className="rounded-xl border border-stone-200 px-2.5 py-1 text-neutral-600 transition hover:bg-stone-50 disabled:opacity-50"
-          >
-            Next
-          </button>
+        {/* Pagination */}
+        <div className="flex items-center justify-between pt-0.5 text-xs text-neutral-500">
+          <span>
+            Showing {totalShown === 0 ? 0 : (page - 1) * pageSize + 1}–
+            {totalShown} of {total.toLocaleString()}{' '}
+            {bucket === 'archived'
+              ? 'archived leads'
+              : bucket === 'prospects'
+                ? 'prospects'
+                : 'leads'}
+            {summary && summary.filtered !== summary.total
+              ? ` (${summary.filtered.toLocaleString()} match filters)`
+              : ''}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => goToPage(page - 1)}
+              disabled={page <= 1}
+              className="rounded-xl border border-stone-200 px-2.5 py-1 text-neutral-600 transition hover:bg-stone-50 disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="px-1.5">Page {page}</span>
+            <button
+              type="button"
+              onClick={() => goToPage(page + 1)}
+              disabled={!hasMore}
+              className="rounded-xl border border-stone-200 px-2.5 py-1 text-neutral-600 transition hover:bg-stone-50 disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
-      </div>
       </div>
 
       {selectedLead ? (
@@ -1180,14 +1366,13 @@ export default function LeadTable({
   )
 }
 
-
 function FilterSelect({
   label,
   value,
   onChange,
   options,
   hideLabel,
-  className
+  className,
 }: {
   label: string
   value: string
@@ -1199,7 +1384,9 @@ function FilterSelect({
   return (
     <label className={`block ${className ?? ''}`}>
       {!hideLabel && (
-        <span className="mb-1 block text-xs font-medium text-neutral-500">{label}</span>
+        <span className="mb-1 block text-xs font-medium text-neutral-500">
+          {label}
+        </span>
       )}
       {hideLabel && <span className="sr-only">{label || 'Filter'}</span>}
       <select
@@ -1217,4 +1404,3 @@ function FilterSelect({
     </label>
   )
 }
-

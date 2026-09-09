@@ -6,7 +6,7 @@ function bannerFromSearch(
   ads: string | undefined,
   count: string | undefined,
   calendar: string | undefined,
-  qbo: string | undefined
+  qbo: string | undefined,
 ): string | null {
   switch (ads) {
     case 'meta_connected':
@@ -49,21 +49,44 @@ function bannerFromSearch(
 }
 
 export default async function SettingsPage({
-  searchParams
+  searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
   const params = (await searchParams) ?? {}
   const ads = typeof params.ads === 'string' ? params.ads : undefined
   const count = typeof params.count === 'string' ? params.count : undefined
-  const calendar = typeof params.calendar === 'string' ? params.calendar : undefined
+  const calendar =
+    typeof params.calendar === 'string' ? params.calendar : undefined
   const qbo = typeof params.qbo === 'string' ? params.qbo : undefined
 
   return (
-    <OperatorShell title="Settings" subtitle="Instantly, ad accounts, and workspace preferences">
-      <div className="space-y-6">
-        <QboSettings initialBanner={bannerFromSearch(undefined, undefined, undefined, qbo)} />
-        <AdAccountsSettings initialBanner={bannerFromSearch(ads, count, calendar, undefined)} />
+    <OperatorShell
+      title="Settings"
+      subtitle="The services connected to your workspace."
+    >
+      <div className="folio-settings">
+        <nav className="folio-settings-index" aria-label="Settings sections">
+          <p className="folio-caption">Connections</p>
+          <a href="#settings-billing">QuickBooks</a>
+          <a href="#settings-outbound">Instantly</a>
+          <a href="#settings-calendar">Google Calendar</a>
+          <a href="#settings-ads">Ad accounts</a>
+          <a href="#settings-connected">Connected accounts</a>
+        </nav>
+        <div className="folio-settings-content space-y-6">
+          <QboSettings
+            initialBanner={bannerFromSearch(
+              undefined,
+              undefined,
+              undefined,
+              qbo,
+            )}
+          />
+          <AdAccountsSettings
+            initialBanner={bannerFromSearch(ads, count, calendar, undefined)}
+          />
+        </div>
       </div>
     </OperatorShell>
   )

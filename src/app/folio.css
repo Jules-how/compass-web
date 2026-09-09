@@ -1,0 +1,2306 @@
+/* Folio: the selected Compass operations language. Public pages retain their own layout. */
+@font-face {
+  font-family: Folio Sans;
+  src: url('/fonts/folio/dm-regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: Folio Sans;
+  src: url('/fonts/folio/dm-medium.ttf') format('truetype');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: Folio Sans;
+  src: url('/fonts/folio/dm-semibold.ttf') format('truetype');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: Folio Sans;
+  src: url('/fonts/folio/dm-bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: Folio Editorial;
+  src: url('/fonts/folio/newsreader.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+body:has(.folio-shell) {
+  --folio-desk: #eeecf3;
+  --folio-rail: #e8e4ee;
+  --folio-paper: #fffefa;
+  --folio-ink: #352f40;
+  --folio-muted: #6c6279;
+  --folio-line: #d9d2e0;
+  --folio-control: #a69aac;
+  --folio-plum: #654c7d;
+  --folio-note: #dfd6e9;
+  --folio-selection: #dcd3e7;
+  --folio-success: #365c4b;
+  --folio-error: #913e42;
+  --folio-radius: 12px;
+  --folio-control-radius: 7px;
+  --folio-space: 8px;
+  --folio-motion: 150ms;
+  --compass-ink: var(--folio-ink);
+  --compass-ink-soft: #584d64;
+  --compass-muted: var(--folio-muted);
+  --compass-faint: #817589;
+  --compass-panel: var(--folio-paper);
+  --compass-line: var(--folio-line);
+  --compass-line-strong: var(--folio-control);
+  --compass-wash: var(--folio-desk);
+  --compass-sidebar: var(--folio-rail);
+  --compass-accent: var(--folio-plum);
+  --compass-accent-hover: #503661;
+  --compass-accent-soft: #eee7f3;
+  --compass-shadow: 0 2px 3px #352f4003, 0 10px 24px -20px #352f4052;
+  --compass-shadow-sm: 0 2px 3px #352f4005;
+  font-family:
+    Folio Sans,
+    Arial,
+    sans-serif;
+  background: var(--folio-desk);
+  color: var(--folio-ink);
+}
+.folio-shell {
+  font-family:
+    Folio Sans,
+    Arial,
+    sans-serif;
+  color: var(--folio-ink);
+  display: grid;
+  grid-template-columns: 208px minmax(0, 1fr);
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--folio-desk);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+.folio-workspace {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.folio-sidebar {
+  padding: 30px 18px 18px;
+  background: var(--folio-rail);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+.folio-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 25px;
+  letter-spacing: -1.1px;
+  font-weight: 600;
+  color: var(--folio-ink);
+  min-height: 40px;
+}
+.folio-brand svg {
+  width: 28px;
+  height: 28px;
+}
+.folio-sidebar > .folio-brand {
+  padding: 0 10px;
+  margin-bottom: 31px;
+}
+.folio-caption {
+  font-size: 10px !important;
+  font-weight: 600;
+  letter-spacing: 1.35px;
+  text-transform: uppercase;
+  color: var(--folio-muted);
+  line-height: 1.6;
+}
+.folio-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  flex: 1;
+}
+.folio-navigation > div > .folio-caption {
+  padding: 6px 12px;
+  margin-bottom: 6px;
+}
+.folio-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 43px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  color: var(--folio-muted);
+  font-size: 12px;
+  margin: 2px 0;
+  transition:
+    background var(--folio-motion),
+    color var(--folio-motion);
+}
+.folio-nav-link:hover {
+  background: #e0d9e8;
+  color: var(--folio-ink);
+}
+.folio-nav-link[aria-current='page'] {
+  background: var(--folio-selection);
+  color: #4e375f;
+  font-weight: 600;
+}
+.folio-nav-link svg {
+  flex-shrink: 0;
+}
+.folio-nav-dot {
+  margin-left: auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--folio-plum);
+}
+.folio-more {
+  font-size: 11px;
+  color: var(--folio-muted);
+}
+.folio-more summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 12px;
+  cursor: pointer;
+  border-radius: 7px;
+  min-height: 40px;
+}
+.folio-more summary:hover {
+  background: var(--folio-selection);
+}
+.folio-more[open] summary svg {
+  transform: rotate(180deg);
+}
+.folio-more .folio-nav-link {
+  font-size: 11px;
+  padding-left: 15px;
+}
+.folio-nav-settings {
+  margin-top: auto;
+  padding-top: 12px;
+}
+.folio-signout {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--folio-line);
+  font-size: 11px;
+}
+.folio-topbar {
+  height: 66px;
+  min-height: 66px;
+  padding: 0 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #dfd9e6;
+  color: var(--folio-muted);
+  font-size: 11px;
+}
+.folio-breadcrumb {
+  display: flex;
+  gap: 12px;
+}
+.folio-breadcrumb span {
+  color: #8a7f95;
+}
+.folio-mobile-brand,
+.folio-mobile-nav {
+  display: none;
+}
+.folio-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 7px;
+  color: var(--folio-muted);
+  transition: background var(--folio-motion);
+}
+.folio-icon-button:hover {
+  background: var(--compass-accent-soft);
+}
+body:has(.folio-shell)
+  :is(button, a, input, textarea, select, summary):focus-visible {
+  outline: 3px solid #704098;
+  outline-offset: 3px;
+  box-shadow: none;
+}
+body:has(.folio-shell) :is(button, a, input, textarea, select) {
+  touch-action: manipulation;
+}
+.folio-page,
+.folio-home {
+  max-width: 1320px;
+  padding: 29px 36px 32px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  min-width: 0;
+}
+.folio-home {
+  max-width: 1236px;
+}
+.folio-page-compact {
+  padding-top: 24px;
+}
+.folio-page > header {
+  margin-bottom: 26px;
+}
+.folio-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 26px;
+}
+.folio-page-heading h1,
+body:has(.folio-shell) .compass-page-title,
+body:has(.folio-shell) .compass-page-title-compact {
+  font-family:
+    Folio Editorial,
+    Georgia,
+    serif;
+  font-size: 39px;
+  font-weight: 400;
+  letter-spacing: -0.7px;
+  line-height: 1.12;
+  color: var(--folio-ink);
+  text-wrap: pretty;
+}
+.folio-page-heading p {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--folio-muted);
+}
+body:has(.folio-shell) .compass-page-subtitle {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--folio-muted);
+}
+body:has(.folio-shell) .compass-panel,
+body:has(.folio-shell) .folio-card {
+  background: var(--folio-paper);
+  border-color: var(--folio-line);
+  border-radius: var(--folio-radius);
+  box-shadow: var(--compass-shadow);
+}
+body:has(.folio-shell) [data-slot='card-header'] {
+  border-color: var(--folio-line);
+}
+body:has(.folio-shell)
+  :is(
+    .compass-btn,
+    .compass-btn-primary,
+    .compass-btn-secondary,
+    .compass-btn-ghost
+  ) {
+  border-radius: var(--folio-control-radius);
+  font-family:
+    Folio Sans,
+    Arial,
+    sans-serif;
+  font-size: 12px;
+  min-height: 42px;
+  padding: 10px 16px;
+  gap: 10px;
+  font-weight: 600;
+  transition: background var(--folio-motion);
+}
+body:has(.folio-shell) .compass-btn-secondary {
+  background: var(--folio-paper);
+  border-color: var(--folio-control);
+  color: var(--folio-ink);
+}
+body:has(.folio-shell) .compass-btn-ghost {
+  color: var(--folio-plum);
+}
+body:has(.folio-shell) .compass-input {
+  background: var(--folio-paper);
+  border-color: var(--folio-control);
+  border-radius: 7px;
+  box-shadow: none;
+  color: var(--folio-ink);
+}
+body:has(.folio-shell) .compass-seg {
+  background: #e1dbe9;
+  border: 0;
+  box-shadow: none;
+  border-radius: 10px;
+  padding: 4px;
+  gap: 3px;
+}
+body:has(.folio-shell) .compass-seg-btn {
+  font-size: 12px;
+  min-height: 38px;
+  border-radius: 7px;
+}
+body:has(.folio-shell) .compass-seg-btn-active {
+  background: var(--folio-paper);
+  color: var(--folio-plum);
+  box-shadow: 0 1px 4px #352f4010;
+}
+/* Compatibility colours keep retained business components in the same visual language. */
+body:has(.folio-shell) [class*='text-[#e85d2a]'],
+body:has(.folio-shell) [class*='text-[#c2410c]'],
+body:has(.folio-shell) [class*='text-orange-'],
+body:has(.folio-shell) [class*='text-sf-orange'] {
+  color: var(--folio-plum);
+}
+body:has(.folio-shell) [class*='bg-[#e85d2a]'],
+body:has(.folio-shell) [class*='bg-sf-orange'] {
+  background-color: var(--folio-plum);
+}
+body:has(.folio-shell) [class*='bg-[#e85d2a]/'],
+body:has(.folio-shell) [class*='bg-orange-50'] {
+  background-color: var(--compass-accent-soft);
+}
+body:has(.folio-shell) [class*='border-[#e85d2a]'],
+body:has(.folio-shell) [class*='border-orange-'] {
+  border-color: #b49fc5;
+}
+body:has(.folio-shell) [class*='text-neutral-900'],
+body:has(.folio-shell) [class*='text-stone-900'] {
+  color: var(--folio-ink);
+}
+body:has(.folio-shell) [class*='text-neutral-500'],
+body:has(.folio-shell) [class*='text-stone-500'],
+body:has(.folio-shell) [class*='text-neutral-400'] {
+  color: var(--folio-muted);
+}
+.folio-shell .bg-white {
+  background-color: var(--folio-paper);
+}
+.folio-folders {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  max-width: 100%;
+  padding-top: 4px;
+  scrollbar-width: thin;
+}
+.folio-folders button {
+  position: relative;
+  flex-shrink: 0;
+  min-height: 45px;
+  padding: 12px 23px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: #e1dbe9;
+  color: #685b76;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.folio-folders button[aria-pressed='true'] {
+  background: var(--folio-paper);
+  border-color: #ddd6e3;
+  color: var(--folio-ink);
+}
+.folio-folders button span {
+  background: #cfc3db;
+  color: #513f62;
+  min-width: 17px;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 17px;
+}
+.folio-paper {
+  background: var(--folio-paper);
+  border: 1px solid #ddd6e3;
+  border-radius: 0 12px 12px 12px;
+  box-shadow: var(--compass-shadow);
+  padding: 27px 32px;
+  min-width: 0;
+}
+.folio-home-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 28px;
+  align-items: start;
+}
+.folio-home-document {
+  min-width: 0;
+}
+.folio-paper-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--folio-line);
+  margin-bottom: 24px;
+}
+.folio-status {
+  display: inline-flex;
+  background: #eee7f3;
+  color: var(--folio-plum);
+  padding: 5px 9px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.folio-status-pending {
+  background: #f6efd9;
+  color: #705824;
+}
+.folio-paper h2 {
+  font:
+    400 34px/1.14 Folio Editorial,
+    Georgia,
+    serif;
+  letter-spacing: -0.5px;
+  margin-bottom: 15px;
+}
+.folio-brief h2 {
+  font-size: 38px;
+  line-height: 1.12;
+  margin: 12px 0 16px;
+}
+.folio-brief > p:not(.folio-caption) {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--folio-muted);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.folio-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 21px;
+  align-items: center;
+}
+.folio-home-work {
+  margin-top: 29px;
+}
+.folio-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.folio-section-heading h3,
+.folio-section-heading h2 {
+  font:
+    600 12px Folio Sans,
+    Arial,
+    sans-serif;
+  letter-spacing: 0;
+  margin: 0;
+}
+.folio-section-heading > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--folio-muted);
+}
+.folio-section-heading > span {
+  font-size: 10px;
+  color: var(--folio-muted);
+}
+.folio-work-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.folio-work-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  padding: 18px 0;
+  border-top: 1px solid var(--folio-line);
+}
+.folio-work-row > svg {
+  color: #82708f;
+  align-self: start;
+  margin-top: 3px;
+}
+.folio-work-row h3 {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.folio-work-row p {
+  font-size: 11px;
+  color: var(--folio-muted);
+  margin-top: 5px;
+}
+.folio-work-row .compass-btn-secondary {
+  font-size: 11px;
+  min-height: 40px;
+  padding: 8px 11px;
+  border-color: var(--folio-line);
+}
+.folio-capture-strip {
+  border-top: 1px solid var(--folio-line);
+  padding-top: 22px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+.folio-capture-strip h3 {
+  font:
+    400 23px/1.2 Folio Editorial,
+    Georgia,
+    serif;
+}
+.folio-capture-strip p {
+  font-size: 11px;
+  color: var(--folio-muted);
+  margin-top: 5px;
+}
+.folio-goal-findings {
+  margin-top: 24px;
+}
+.folio-goal-findings:empty {
+  display: none;
+}
+.folio-margin {
+  padding-top: 4px;
+  min-width: 0;
+}
+.folio-pinned {
+  background: var(--folio-note);
+  border-radius: 4px 12px 12px;
+  padding: 23px 24px 19px;
+  position: relative;
+  margin-bottom: 26px;
+}
+.folio-pin {
+  width: 30px;
+  height: 4px;
+  border-radius: 5px;
+  background: #a995ba;
+  margin-bottom: 19px;
+}
+.folio-pinned h2 {
+  font:
+    400 28px/1.14 Folio Editorial,
+    Georgia,
+    serif;
+  letter-spacing: -0.4px;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.folio-pinned > p:not(.folio-caption) {
+  font-size: 12px;
+  line-height: 1.75;
+  color: #60536e;
+  overflow-wrap: anywhere;
+}
+.folio-wait-date {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  margin-top: 15px;
+  font-size: 10px;
+  color: #60536e;
+}
+.folio-pinned .compass-btn-ghost {
+  padding-left: 0;
+  margin-top: 12px;
+  font-size: 11px;
+}
+.folio-source {
+  margin: 24px 7px;
+  padding-top: 20px;
+  border-top: 1px solid #cfc6da;
+}
+.folio-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 18px 0 13px;
+}
+.folio-metrics > div {
+  display: flex;
+  flex-direction: column;
+}
+.folio-metrics dt {
+  font-size: 10px;
+  color: var(--folio-muted);
+  margin-top: 7px;
+  order: 2;
+}
+.folio-metrics dd {
+  font:
+    400 29px/1 Folio Editorial,
+    Georgia,
+    serif;
+  order: 1;
+}
+.folio-source > p {
+  font-size: 10px;
+  line-height: 1.75;
+  color: var(--folio-muted);
+}
+.folio-source > a {
+  font-size: 11px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 12px;
+  color: var(--folio-muted);
+  min-height: 32px;
+}
+.folio-inbox-counts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  margin-top: 16px;
+}
+.folio-inbox-counts a {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 44px;
+}
+.folio-inbox-counts span {
+  font-size: 10px;
+  color: var(--folio-muted);
+}
+.folio-inbox-counts strong {
+  font-size: 17px;
+  font-weight: 500;
+}
+.folio-intro {
+  font-size: 13px;
+  color: var(--folio-muted);
+  line-height: 1.8;
+  margin-bottom: 24px;
+}
+.folio-quiet {
+  padding: 24px 0;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  color: var(--folio-muted);
+  font-size: 13px;
+}
+.folio-note-copy {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 24px 0;
+  background: #eee7f3;
+  border-left: 2px solid #bba7ca;
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.folio-data-state {
+  min-height: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 18px;
+  font-size: 13px;
+  color: var(--folio-muted);
+}
+.folio-data-state h2 {
+  font:
+    400 34px/1.15 Folio Editorial,
+    Georgia,
+    serif;
+  color: var(--folio-ink);
+}
+.folio-state-icon {
+  background: #eee7f3;
+  color: var(--folio-plum);
+  padding: 13px;
+  border-radius: 9px;
+}
+.folio-skeleton-lines {
+  width: 100%;
+  display: grid;
+  gap: 16px;
+}
+.folio-skeleton-lines span {
+  height: 14px;
+  border-radius: 4px;
+  background: #e6dfeb;
+}
+.folio-skeleton-lines span:nth-child(2) {
+  width: 75%;
+}
+.folio-skeleton-lines span:nth-child(3) {
+  width: 90%;
+}
+.folio-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #33273f66;
+  backdrop-filter: blur(3px);
+}
+.folio-dialog {
+  font-family:
+    Folio Sans,
+    Arial,
+    sans-serif;
+  position: relative;
+  width: min(620px, 100%);
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  background: var(--folio-paper);
+  border: 1px solid var(--folio-line);
+  border-radius: 14px;
+  padding: 32px;
+  color: var(--folio-ink);
+  box-shadow: 0 24px 80px #2f193b33;
+  animation: folio-arrive 150ms ease-out;
+}
+.folio-dialog h2 {
+  font:
+    400 34px/1.13 Folio Editorial,
+    Georgia,
+    serif;
+  margin: 18px 0 20px;
+  padding-right: 24px;
+}
+.folio-dialog-close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+}
+.folio-dialog-copy {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--folio-muted);
+  margin: 20px 0;
+}
+.folio-dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--folio-line);
+  padding-top: 22px;
+  margin-top: 25px;
+}
+.folio-note {
+  background: #eee7f3;
+  padding: 20px;
+  border-radius: 7px;
+  margin: 20px 0;
+}
+.folio-note h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.folio-note li {
+  font-size: 13px;
+  padding: 8px 0;
+}
+.folio-note a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.folio-small {
+  font-size: 11px;
+  line-height: 1.75;
+  color: var(--folio-muted);
+  margin-top: 15px;
+}
+.folio-notice {
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 13px 16px;
+  border: 1px solid #becfbd;
+  background: #edf3e9;
+  color: #365c4b;
+  border-radius: 7px;
+  margin-bottom: 20px;
+}
+.folio-notice-error {
+  background: #fcf0ed;
+  border-color: #dbbbb0;
+  color: #913e42;
+}
+.folio-notice button {
+  font-weight: 600;
+  text-decoration: underline;
+  margin-left: 8px;
+  min-height: 32px;
+}
+.folio-capture-dialog {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  max-width: 620px;
+}
+.folio-capture-dialog h2 {
+  margin: 0;
+  font-size: 30px;
+}
+.folio-capture-dialog textarea {
+  flex: initial;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.folio-navigation-dialog {
+  max-width: 500px;
+}
+.folio-navigation-dialog .folio-navigation {
+  gap: 18px;
+}
+.folio-workspace-links {
+  display: flex;
+  gap: 8px 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  font-size: 11px;
+  color: var(--folio-muted);
+}
+.folio-workspace-links a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+}
+/* Correspondence: a folder index and a separate paper case, rather than one enclosing inbox card. */
+.folio-inbox {
+  padding: 28px 36px !important;
+  gap: 0;
+}
+.folio-inbox > .compass-panel {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+.folio-inbox > .compass-panel > header {
+  padding: 0 0 24px;
+  border: 0;
+  min-height: 76px;
+}
+.folio-inbox > .compass-panel > header h1 {
+  font-size: 39px;
+}
+.folio-inbox-priorities {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 0 18px !important;
+}
+.folio-inbox-priorities > div:first-child {
+  font-size: 10px;
+}
+.folio-inbox [aria-label='Inbox channels'] {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  gap: 5px;
+  border-radius: 0;
+}
+.folio-inbox [aria-label='Inbox channels'] > button {
+  background: #e1dbe9;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  min-height: 45px;
+  padding: 12px 23px;
+}
+.folio-inbox [aria-label='Inbox channels'] > button[aria-selected='true'] {
+  background: var(--folio-paper);
+  border-color: var(--folio-line);
+  color: var(--folio-plum);
+}
+.folio-inbox [role='tabpanel'] {
+  gap: 24px;
+  padding-top: 0;
+  min-height: 450px;
+}
+.folio-inbox-index {
+  background: transparent;
+  border-right: 0 !important;
+  width: 280px !important;
+  padding-top: 16px;
+}
+.folio-inbox-index [role='option'],
+.folio-inbox-index button {
+  text-align: left;
+}
+.folio-inbox-case {
+  background: var(--folio-paper) !important;
+  border: 1px solid var(--folio-line);
+  border-radius: 0 12px 12px 12px;
+  box-shadow: var(--compass-shadow);
+  overflow: hidden;
+}
+.folio-inbox-case h2 {
+  font-family:
+    Folio Editorial,
+    Georgia,
+    serif;
+  font-size: 29px !important;
+  line-height: 1.2;
+  font-weight: 400;
+}
+.folio-inbox-case > div {
+  padding: 10px;
+}
+.folio-inbox-case [class*='border-b'] {
+  border-color: var(--folio-line);
+}
+/* Campaign writing: the manuscript is primary; the full library is opened when needed. */
+.folio-editor {
+  background: var(--folio-desk) !important;
+  padding: 24px 30px !important;
+  gap: 0;
+}
+.folio-editor > header {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0 0 18px;
+}
+.folio-editor > header input {
+  font-family:
+    Folio Editorial,
+    Georgia,
+    serif;
+  font-size: 34px !important;
+  font-weight: 400;
+}
+.folio-editor [aria-label='Campaign views'] {
+  margin-top: 16px;
+  border-bottom: 1px solid var(--folio-line);
+  gap: 8px;
+}
+.folio-editor [aria-label='Campaign views'] button {
+  min-height: 43px;
+  border-radius: 8px 8px 0 0;
+  font-size: 12px;
+  padding: 10px 17px;
+}
+.folio-editor [aria-label='Campaign views'] button[aria-pressed='true'] {
+  background: var(--folio-paper);
+}
+.folio-editor [aria-label='Editor workspace'] {
+  display: flex !important;
+  flex-wrap: wrap;
+  background: transparent;
+  border: 0;
+  padding: 0 0 12px;
+  gap: 5px;
+}
+.folio-editor [aria-label='Editor workspace'] button {
+  font-size: 11px;
+  min-height: 40px;
+  padding: 9px 15px;
+  border-radius: 8px;
+  background: #e1dbe9;
+}
+.folio-editor [aria-label='Editor workspace'] button[aria-pressed='true'] {
+  background: var(--folio-plum);
+  color: white;
+}
+.folio-editor .folio-manuscript {
+  max-width: 840px !important;
+  padding: 20px 28px 28px !important;
+  margin: 0 auto;
+  background: var(--folio-paper);
+  border: 1px solid var(--folio-line);
+  border-radius: 0 12px 12px 12px;
+  box-shadow: var(--compass-shadow);
+}
+.folio-editor .folio-manuscript > div:first-child {
+  background: transparent;
+  border: 0;
+  padding: 0 0 15px;
+  box-shadow: none;
+}
+.folio-editor .folio-email-step {
+  border: 0 !important;
+  border-top: 1px solid var(--folio-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 24px 0 !important;
+}
+.folio-editor .folio-email-step textarea {
+  background: transparent;
+  border-color: transparent;
+  border-radius: 4px;
+  padding: 8px 0;
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--folio-ink);
+  box-shadow: none;
+}
+.folio-editor .folio-email-step textarea:focus {
+  border-color: var(--folio-control);
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.folio-editor .folio-email-step input {
+  background: transparent;
+}
+.folio-editor .folio-writing-tools {
+  background: var(--folio-paper);
+  border: 1px solid var(--folio-line);
+  border-radius: 12px;
+  overflow: auto;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+.folio-editor .folio-writing-tools[hidden] {
+  display: none !important;
+}
+.folio-editor .folio-writing-tools [role='separator'] {
+  display: none;
+}
+.folio-editor .folio-compose-hidden {
+  display: none !important;
+}
+.folio-editor [aria-label='Writing tools'] > div:nth-child(2) {
+  display: flex !important;
+}
+/* Dense records keep a shared reading rhythm without inheriting manuscript proportions. */
+.folio-record-surface {
+  background: var(--folio-paper);
+  border: 1px solid var(--folio-line);
+  border-radius: 0 12px 12px 12px;
+  padding: 24px;
+  box-shadow: var(--compass-shadow);
+}
+.folio-shell table {
+  font-size: 12px;
+}
+.folio-shell th {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.45px;
+  color: var(--folio-muted);
+  background: #f0ebf4;
+}
+.folio-shell td {
+  border-color: var(--folio-line);
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+.folio-shell tbody tr:hover {
+  background: #f5f0f8;
+}
+.folio-kanban {
+  gap: 18px !important;
+}
+.folio-kanban > section,
+.folio-kanban > [data-column-id] {
+  background: #e5deed;
+  border-radius: 12px;
+  border: 0;
+  min-width: 0;
+}
+.folio-kanban h3 {
+  font-family:
+    Folio Editorial,
+    Georgia,
+    serif;
+  font-size: 24px;
+  font-weight: 400;
+}
+.folio-outbound .folio-card:first-child h3 {
+  font:
+    400 28px/1.25 Folio Editorial,
+    Georgia,
+    serif;
+}
+.folio-outbound .folio-card:first-child {
+  border-radius: 0 12px 12px 12px;
+}
+.folio-settings > section,
+.folio-settings > div {
+  border-radius: 12px;
+}
+.folio-home .compass-panel h2 {
+  font-family:
+    Folio Sans,
+    Arial,
+    sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+.folio-home .compass-panel {
+  box-shadow: none;
+}
+@keyframes folio-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 1150px) {
+  .folio-shell {
+    grid-template-columns: 186px minmax(0, 1fr);
+  }
+  .folio-sidebar {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .folio-page,
+  .folio-home {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+  .folio-home-layout {
+    grid-template-columns: minmax(0, 1fr) 225px;
+    gap: 20px;
+  }
+  .folio-paper {
+    padding: 25px;
+  }
+  .folio-brief h2 {
+    font-size: 34px;
+  }
+  .folio-pinned {
+    padding: 20px;
+  }
+  .folio-work-row {
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 9px;
+  }
+  .folio-work-row > .compass-btn-secondary {
+    grid-column: 2;
+    justify-self: start;
+    border: 0;
+    padding: 5px 0;
+    background: transparent;
+  }
+  .folio-inbox {
+    padding: 26px !important;
+  }
+  .folio-inbox-index {
+    width: 250px !important;
+  }
+  .folio-inbox [role='tabpanel'] {
+    gap: 18px;
+  }
+}
+@media (max-width: 900px) {
+  .folio-shell {
+    display: flex;
+    flex-direction: column;
+  }
+  .folio-sidebar {
+    display: none;
+  }
+  .folio-workspace {
+    flex: 1;
+    margin-bottom: 65px;
+  }
+  .folio-topbar {
+    height: 62px;
+    min-height: 62px;
+    padding: 0 28px;
+  }
+  .folio-breadcrumb {
+    display: none;
+  }
+  .folio-mobile-brand {
+    display: block;
+  }
+  .folio-mobile-brand .folio-brand {
+    font-size: 21px;
+  }
+  .folio-mobile-brand svg {
+    width: 25px;
+    height: 25px;
+  }
+  .folio-mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    justify-content: space-around;
+    padding: 7px 18px calc(7px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--folio-line);
+    background: #fffefaf5;
+    backdrop-filter: blur(10px);
+  }
+  .folio-mobile-nav > a,
+  .folio-mobile-nav > button {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    min-height: 47px;
+    min-width: 66px;
+    border-radius: 7px;
+    color: var(--folio-muted);
+    font-size: 10px;
+  }
+  .folio-mobile-nav > [aria-current='page'] {
+    background: #eee7f3;
+    color: var(--folio-plum);
+    font-weight: 600;
+  }
+  .folio-page,
+  .folio-home {
+    padding: 29px 28px;
+  }
+  .folio-home-layout {
+    grid-template-columns: minmax(0, 1fr) 220px;
+  }
+  .folio-paper {
+    padding: 25px 24px;
+  }
+  .folio-brief h2 {
+    font-size: 33px;
+  }
+  .folio-capture-strip {
+    align-items: start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .folio-inbox [role='tabpanel'] {
+    min-height: 380px;
+  }
+  .folio-inbox-index {
+    width: 100% !important;
+  }
+  .folio-inbox-case {
+    width: 100%;
+  }
+  .folio-inbox [aria-label='Inbox channels'] > button {
+    padding: 12px 19px;
+  }
+  .folio-editor {
+    padding: 22px !important;
+  }
+  .folio-workspace-links {
+    gap: 6px 16px;
+  }
+}
+@media (max-width: 650px) {
+  .folio-topbar {
+    height: 58px;
+    min-height: 58px;
+    padding: 0 20px;
+  }
+  .folio-workspace {
+    margin-bottom: calc(65px + env(safe-area-inset-bottom));
+  }
+  .folio-page,
+  .folio-home {
+    padding: 27px 18px;
+  }
+  .folio-page-heading {
+    align-items: start;
+    gap: 15px;
+    margin-bottom: 25px;
+  }
+  .folio-page-heading h1,
+  body:has(.folio-shell) .compass-page-title,
+  body:has(.folio-shell) .compass-page-title-compact {
+    font-size: 33px;
+    line-height: 1.1;
+  }
+  .folio-page-heading h1 {
+    max-width: 255px;
+  }
+  .folio-page-heading p {
+    font-size: 11px;
+  }
+  .folio-capture {
+    width: 44px;
+    min-width: 44px;
+    padding: 10px !important;
+  }
+  .folio-capture span {
+    display: none;
+  }
+  .folio-home-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 23px;
+  }
+  .folio-folders {
+    gap: 4px;
+  }
+  .folio-folders button {
+    padding: 11px 17px;
+    font-size: 11px;
+    min-height: 45px;
+  }
+  .folio-paper {
+    padding: 22px;
+    border-radius: 0 10px 10px 10px;
+  }
+  .folio-paper-meta {
+    padding-bottom: 17px;
+    margin-bottom: 21px;
+    gap: 10px;
+  }
+  .folio-paper-meta .folio-caption {
+    font-size: 9px !important;
+    letter-spacing: 1px;
+  }
+  .folio-status {
+    font-size: 9px;
+    padding: 5px 7px;
+  }
+  .folio-brief h2 {
+    font-size: 34px;
+    line-height: 1.12;
+    margin: 12px 0 14px;
+  }
+  .folio-actions {
+    gap: 9px;
+  }
+  .folio-actions .compass-btn-primary,
+  .folio-actions .compass-btn-ghost {
+    font-size: 11px;
+    padding: 10px 13px;
+  }
+  .folio-work-row {
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    padding: 17px 0;
+    gap: 10px;
+  }
+  .folio-work-row > .compass-btn-secondary {
+    grid-column: 3;
+    grid-row: 1;
+    padding: 9px;
+    min-height: 44px;
+    min-width: 44px;
+    border: 1px solid var(--folio-line);
+  }
+  .folio-work-row > .compass-btn-secondary span {
+    display: none;
+  }
+  .folio-work-row h3 {
+    font-size: 12px;
+  }
+  .folio-capture-strip {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+  }
+  .folio-capture-strip h3 {
+    font-size: 22px;
+    max-width: 160px;
+  }
+  .folio-capture-strip p {
+    max-width: 170px;
+    font-size: 10px;
+  }
+  .folio-capture-strip button {
+    font-size: 11px !important;
+    padding: 10px 11px !important;
+    white-space: nowrap;
+  }
+  .folio-margin {
+    padding-top: 0;
+  }
+  .folio-pinned {
+    padding: 22px 24px;
+    margin-bottom: 0;
+  }
+  .folio-pinned h2 {
+    font-size: 30px;
+  }
+  .folio-source {
+    margin: 24px 5px 0;
+    padding-top: 21px;
+  }
+  .folio-metrics dd {
+    font-size: 32px;
+  }
+  .folio-inbox-counts span,
+  .folio-source > p {
+    font-size: 11px;
+  }
+  .folio-inbox-counts strong {
+    font-size: 19px;
+  }
+  .folio-overlay {
+    padding: 12px;
+  }
+  .folio-dialog {
+    max-height: calc(100dvh - 24px);
+    padding: 26px 23px;
+    border-radius: 12px;
+  }
+  .folio-dialog h2 {
+    font-size: 31px;
+  }
+  .folio-dialog-copy {
+    font-size: 13px;
+  }
+  .folio-dialog-actions {
+    gap: 10px;
+  }
+  .folio-dialog-actions button {
+    flex: 1;
+    white-space: nowrap;
+  }
+  .folio-navigation-dialog .folio-navigation {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .folio-navigation-dialog .folio-more {
+    grid-column: 1/-1;
+  }
+  .folio-navigation-dialog .folio-nav-settings {
+    grid-column: 1/-1;
+  }
+  .folio-capture-dialog {
+    padding: 8px;
+  }
+  .folio-capture-dialog textarea,
+  body:has(.folio-shell) input:not([type='checkbox']):not([type='radio']),
+  body:has(.folio-shell) textarea,
+  body:has(.folio-shell) select {
+    font-size: 16px;
+  }
+  .folio-inbox {
+    padding: 24px 18px !important;
+  }
+  .folio-inbox > .compass-panel > header {
+    padding-bottom: 20px;
+  }
+  .folio-inbox > .compass-panel > header h1 {
+    font-size: 33px;
+  }
+  .folio-inbox-case > div {
+    padding: 0;
+  }
+  .folio-inbox-case h2 {
+    font-size: 27px !important;
+  }
+  .folio-inbox-priorities .compass-section-label {
+    font-size: 10px;
+  }
+  .folio-editor {
+    padding: 22px 16px !important;
+  }
+  .folio-editor > header input {
+    font-size: 29px !important;
+  }
+  .folio-editor .folio-manuscript {
+    padding: 20px !important;
+  }
+  .folio-editor .folio-email-step textarea {
+    font-size: 16px;
+  }
+  .folio-editor [aria-label='Campaign views'] button {
+    padding: 10px 13px;
+    font-size: 11px;
+  }
+  .folio-record-surface {
+    padding: 16px;
+  }
+  .folio-workspace-links {
+    margin-bottom: 18px;
+    font-size: 11px;
+  }
+  .folio-kanban {
+    grid-template-columns: 1fr !important;
+    overflow: visible !important;
+  }
+  .folio-data-state {
+    min-height: 370px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body:has(.folio-shell) *,
+  body:has(.folio-shell) *:before,
+  body:has(.folio-shell) *:after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* Task folders and the small-screen campaign agenda share the document rhythm. */
+.folio-task-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: -24px;
+}
+.folio-task-toolbar + .folio-record-surface {
+  margin-top: 24px;
+}
+.folio-task-toolbar .compass-seg {
+  margin-bottom: 8px;
+}
+.folio-task-list {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+}
+.folio-task-list > li {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-top: 1px solid var(--folio-line);
+  padding: 15px 0;
+}
+.folio-task-open {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+  min-height: 44px;
+}
+.folio-task-open > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.folio-task-open strong {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.folio-task-open small {
+  display: block;
+  color: var(--folio-muted);
+  font-size: 11px;
+  margin-top: 5px;
+}
+.folio-task-open > svg {
+  color: var(--folio-muted);
+  flex-shrink: 0;
+}
+.folio-task-move select {
+  font-size: 11px;
+  max-width: 130px;
+  min-height: 42px;
+}
+.folio-calendar {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.folio-calendar-desktop {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.folio-calendar-agenda {
+  display: none;
+}
+.folio-calendar-planner > header {
+  background: transparent !important;
+  padding: 28px 36px !important;
+}
+.folio-calendar-planner > header h1 {
+  font:
+    400 39px/1.15 Folio Editorial,
+    Georgia,
+    serif !important;
+}
+.folio-folder-label {
+  padding: 12px 20px;
+  border-radius: 12px 12px 0 0;
+  background: var(--folio-paper);
+  border: 1px solid var(--folio-line);
+  border-bottom: 0;
+  font-size: 12px;
+}
+.folio-agenda-item {
+  display: flex;
+  align-items: start;
+  gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--folio-line);
+}
+.folio-agenda-item:last-child {
+  border-bottom: 0;
+}
+.folio-agenda-item time {
+  width: 58px;
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--folio-muted);
+}
+.folio-agenda-item a {
+  flex: 1;
+  min-width: 0;
+}
+.folio-agenda-item strong {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.folio-agenda-item span {
+  display: block;
+  color: var(--folio-muted);
+  font-size: 11px;
+  margin-top: 8px;
+}
+.folio-agenda-item svg {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+@media (max-width: 650px) {
+  .folio-task-toolbar {
+    align-items: start;
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+  .folio-task-toolbar .compass-seg {
+    align-self: flex-end;
+    margin-bottom: 0;
+  }
+  .folio-task-list > li {
+    align-items: start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .folio-task-open {
+    gap: 10px;
+    flex-basis: 100%;
+    align-items: start;
+  }
+  .folio-task-open > .folio-status {
+    margin-top: 4px;
+    font-size: 9px;
+    max-width: 70px;
+    white-space: normal;
+  }
+  .folio-task-open strong {
+    font-size: 13px;
+  }
+  .folio-task-move {
+    margin-left: 80px;
+  }
+  .folio-task-move select {
+    max-width: 170px;
+  }
+  .folio-calendar-desktop {
+    display: none;
+  }
+  .folio-calendar-agenda {
+    display: block;
+  }
+  .folio-calendar-agenda .folio-paper {
+    padding: 12px 20px;
+  }
+}
+.folio-campaign-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+.folio-campaign-hint {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--folio-muted);
+  margin: 8px 0 22px;
+}
+.folio-campaign-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.folio-campaign-list > li {
+  padding: 23px 0;
+  border-top: 1px solid var(--folio-line);
+}
+.folio-campaign-title {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.folio-campaign-title > div {
+  min-width: 0;
+}
+.folio-campaign-title a,
+.folio-campaign-title strong {
+  font:
+    400 26px/1.25 Folio Editorial,
+    Georgia,
+    serif;
+  overflow-wrap: anywhere;
+}
+.folio-campaign-title p {
+  font-size: 12px;
+  line-height: 1.8;
+  margin-top: 8px;
+  color: var(--folio-muted);
+  overflow-wrap: anywhere;
+}
+.folio-campaign-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 22px;
+  font-size: 11px;
+  color: var(--folio-muted);
+  margin-top: 18px;
+}
+.folio-campaign-detail b {
+  color: var(--folio-ink);
+  font-weight: 600;
+}
+.folio-campaign-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+.folio-campaign-actions select {
+  min-height: 42px;
+  font-size: 12px;
+  max-width: 160px;
+}
+.folio-campaign-actions label {
+  margin-left: auto;
+}
+.folio-outbound > div.xl\:grid {
+  grid-template-columns: minmax(0, 1fr) 260px !important;
+}
+.folio-outbound aside .grid-cols-3 {
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+.folio-outbound aside .grid-cols-3 > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 12px;
+}
+.folio-outbound aside .grid-cols-3 > div > p:nth-child(2) {
+  grid-column: 2;
+  grid-row: 1/3;
+  font:
+    400 30px Folio Editorial,
+    Georgia,
+    serif;
+}
+.folio-outbound aside .grid-cols-3 > div > a,
+.folio-outbound aside .grid-cols-3 > div > p:nth-child(3) {
+  grid-column: 1;
+}
+@media (max-width: 650px) {
+  .folio-campaign-folder {
+    padding: 22px;
+  }
+  .folio-campaign-title {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .folio-campaign-title a {
+    font-size: 27px;
+  }
+  .folio-campaign-actions label {
+    margin-left: 0;
+  }
+  .folio-outbound aside .grid-cols-3 {
+    grid-template-columns: 1fr;
+  }
+}
+.folio-brief-details summary {
+  font-size: 12px;
+  min-height: 40px;
+  padding: 10px 0;
+  color: var(--folio-plum);
+  cursor: pointer;
+}
+.folio-brief-details ul {
+  padding: 12px 0;
+}
+.folio-client-directory {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 20px;
+  padding-top: 12px;
+}
+.folio-client-card {
+  position: relative;
+  background: var(--folio-paper);
+  border: 1px solid var(--folio-line);
+  border-radius: 0 12px 12px 12px;
+  padding: 26px;
+  text-align: left;
+  min-width: 0;
+  box-shadow: var(--compass-shadow);
+  transition: background 150ms;
+}
+.folio-client-card:before {
+  content: '';
+  position: absolute;
+  height: 8px;
+  top: -8px;
+  left: -1px;
+  width: 100px;
+  border: 1px solid var(--folio-line);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: var(--folio-paper);
+}
+.folio-client-card:hover {
+  background: #f6f1fa;
+}
+.folio-client-card h3 {
+  font:
+    400 28px/1.2 Folio Editorial,
+    Georgia,
+    serif;
+}
+.folio-client-card p {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.folio-client-card p:last-child {
+  padding-top: 12px;
+  margin-top: 14px;
+  border-top: 1px solid var(--folio-line);
+}
+@media (max-width: 650px) {
+  .folio-client-directory {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .folio-client-card {
+    padding: 24px;
+  }
+}
+.folio-planning > .compass-panel,
+.folio-planning > section {
+  border-radius: 0 12px 12px 12px;
+}
+.folio-map-note {
+  border-radius: 4px 16px 16px 16px !important;
+  border-width: 1px !important;
+  background: var(--folio-paper) !important;
+  border-color: #bdb0c9 !important;
+  box-shadow: 0 6px 15px #352f4010 !important;
+}
+.folio-map-note strong {
+  font-family:
+    Folio Editorial,
+    Georgia,
+    serif;
+  font-size: 19px;
+  font-weight: 400;
+}
+.folio-install-queue > section {
+  background: #e4ddea;
+  border-radius: 12px;
+  padding: 18px;
+}
+.folio-install-queue > section > div:first-child .compass-section-label {
+  font:
+    400 22px/1.2 Folio Editorial,
+    Georgia,
+    serif;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.folio-installs > div.grid > div .text-2xl {
+  font:
+    400 34px Folio Editorial,
+    Georgia,
+    serif;
+}
+.folio-install-queue button {
+  border-radius: 0 10px 10px 10px;
+  background: var(--folio-paper);
+}
+@media (max-width: 650px) {
+  .folio-install-queue {
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr;
+  }
+  .folio-install-queue > section {
+    width: auto !important;
+  }
+  .folio-planning .compass-btn-primary,
+  .folio-planning .compass-btn-secondary {
+    font-size: 11px;
+  }
+  .folio-planning [aria-label='Map detail level'] {
+    flex-wrap: wrap;
+  }
+}
+body:has(.folio-shell) .folio-inbox > .compass-panel {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+.folio-inbox-index button {
+  border-radius: 8px;
+  margin-bottom: 4px;
+  padding-top: 17px;
+  padding-bottom: 17px;
+}
+.folio-inbox-index button[aria-current='true'] {
+  background: var(--folio-selection);
+}
+.folio-inbox-index .truncate {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.folio-inbox-case button {
+  border-radius: 7px;
+  min-height: 40px;
+}
+.folio-inbox-case > div > div:first-of-type {
+  padding-top: 20px;
+}
+.folio-inbox-case h2 {
+  font-size: 31px !important;
+}
+@media (max-width: 1023px) {
+  .folio-inbox[data-context-open='true'] .folio-inbox-priorities {
+    display: none;
+  }
+  .folio-correspondence-head {
+    flex-wrap: wrap;
+  }
+  .folio-correspondence-head > div:first-child {
+    flex-basis: 100%;
+  }
+  .folio-correspondence-head > div:last-child {
+    justify-content: start;
+  }
+  .folio-correspondence-head h2 {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .folio-inbox[data-context-open='true'] [role='tabpanel'] {
+    min-height: 0;
+  }
+}
+.folio-pace {
+  position: relative;
+  font-size: 12px;
+  color: var(--folio-muted);
+}
+.folio-pace summary {
+  padding: 12px;
+  cursor: pointer;
+  min-height: 42px;
+}
+.folio-pace > div {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+  background: var(--folio-paper);
+  border: 1px solid var(--folio-line);
+  padding: 20px;
+  width: 300px;
+  box-shadow: var(--compass-shadow);
+  border-radius: 12px;
+}
+.folio-outbound-brief {
+  border-top: 1px solid var(--folio-line);
+  border-bottom: 1px solid var(--folio-line);
+}
+.folio-outbound-brief > summary {
+  display: flex;
+  gap: 20px;
+  align-items: start;
+  cursor: pointer;
+  padding: 17px 0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.folio-outbound-brief > summary:after {
+  content: '+';
+  color: var(--folio-plum);
+  margin-left: auto;
+  font-size: 18px;
+}
+.folio-outbound-brief[open] > summary:after {
+  content: '−';
+}
+.folio-outbound-brief > summary strong {
+  font-weight: 500;
+  flex: 1;
+}
+.folio-outbound-brief .folio-card {
+  margin-bottom: 18px;
+}
+.folio-outbound-brief > summary > .folio-caption {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+@media (max-width: 650px) {
+  .folio-outbound-brief > summary {
+    gap: 12px;
+  }
+  .folio-outbound-brief > summary > .folio-caption {
+    width: 45px;
+    font-size: 9px !important;
+  }
+  .folio-outbound .folio-folders button {
+    padding: 11px 12px;
+  }
+  .folio-pace > div {
+    left: auto;
+    right: 0;
+    width: min(300px, 85vw);
+  }
+  .folio-page:has(.folio-outbound) .folio-workspace-links {
+    margin-top: -12px;
+    margin-bottom: 18px;
+    gap: 10px 16px;
+  }
+  .folio-page:has(.folio-outbound) > header {
+    margin-bottom: 24px;
+  }
+}
+.folio-campaign-context {
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--folio-line);
+  font-size: 12px;
+  color: var(--folio-muted);
+}
+.folio-campaign-context summary {
+  padding: 8px 0 16px;
+  cursor: pointer;
+  min-height: 40px;
+}
+.folio-campaign-context > div {
+  padding: 10px 0 18px;
+}
+.folio-editor .folio-manuscript > .folio-folders {
+  margin-bottom: 0;
+}
+.folio-editor .folio-email-step {
+  padding-top: 20px !important;
+}
+.folio-editor .folio-email-step textarea {
+  min-height: 54px;
+}
+.folio-editor .folio-email-step textarea {
+  field-sizing: content;
+  min-height: 54px;
+  max-height: 480px;
+  resize: vertical;
+}
+.folio-editor .folio-email-step > div > label {
+  margin-top: 12px;
+}
+.folio-task-toolbar {
+  margin-bottom: 0 !important;
+}
+.folio-task-toolbar + .folio-record-surface {
+  margin-top: 0 !important;
+}
+@media (max-width: 650px) {
+  .folio-pathfinder-canvas {
+    height: 380px;
+    min-height: 320px;
+  }
+}
+.folio-mobile-records,
+.folio-mobile-record-toolbar {
+  display: none;
+}
+.folio-crm-lists {
+  font-size: 12px;
+  border-top: 1px solid var(--folio-line);
+  border-bottom: 1px solid var(--folio-line);
+}
+.folio-crm-lists summary {
+  padding: 13px 0;
+  cursor: pointer;
+  color: var(--folio-plum);
+  min-height: 44px;
+}
+.folio-crm-lists > div {
+  padding: 10px 0 20px;
+}
+@media (max-width: 650px) {
+  .folio-mobile-record-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin: 12px 0;
+  }
+  .folio-mobile-records {
+    display: block;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .folio-mobile-records > li {
+    display: flex;
+    align-items: start;
+    gap: 12px;
+    padding: 19px 0;
+    border-top: 1px solid var(--folio-line);
+  }
+  .folio-mobile-records label {
+    display: flex;
+    align-items: start;
+    justify-content: center;
+    padding-top: 5px;
+    min-width: 24px;
+    min-height: 44px;
+  }
+  .folio-mobile-records input {
+    accent-color: var(--folio-plum);
+    width: 17px;
+    height: 17px;
+  }
+  .folio-mobile-records button {
+    text-align: left;
+    min-width: 0;
+    flex: 1;
+  }
+  .folio-mobile-records strong {
+    display: block;
+    font:
+      400 22px/1.25 Folio Editorial,
+      Georgia,
+      serif;
+    overflow-wrap: anywhere;
+  }
+  .folio-mobile-records span,
+  .folio-mobile-records small {
+    display: block;
+    margin-top: 7px;
+    font-size: 12px;
+    color: var(--folio-muted);
+    overflow-wrap: anywhere;
+  }
+  .folio-mobile-records small {
+    font-size: 11px;
+  }
+  .folio-crm-table:not(.is-open) {
+    display: none;
+  }
+}
+.folio-settings {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+.folio-settings-index {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: sticky;
+  top: 24px;
+}
+.folio-settings-index p {
+  padding: 8px 12px;
+}
+.folio-settings-index a {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--folio-muted);
+  border-radius: 7px;
+  min-height: 42px;
+}
+.folio-settings-index a:hover {
+  background: var(--folio-selection);
+  color: var(--folio-plum);
+}
+.folio-settings-content .folio-card {
+  scroll-margin-top: 24px;
+  border-radius: 0 12px 12px 12px;
+}
+.folio-settings-content .folio-card h3 {
+  font:
+    400 26px/1.2 Folio Editorial,
+    Georgia,
+    serif;
+}
+.folio-settings-content .folio-card:target {
+  border-color: var(--folio-plum);
+}
+.folio-settings-content input {
+  max-width: 100%;
+}
+.folio-settings-content code {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .folio-settings {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .folio-settings-index {
+    position: static;
+    flex-direction: row;
+    overflow: auto;
+    border-bottom: 1px solid var(--folio-line);
+  }
+  .folio-settings-index p {
+    display: none;
+  }
+  .folio-settings-index a {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 12px 14px;
+    background: #e1dbe9;
+    border-radius: 10px 10px 0 0;
+  }
+}
+.folio-connection-setup {
+  font-size: 12px;
+  color: var(--folio-muted);
+}
+.folio-connection-setup summary {
+  cursor: pointer;
+  padding: 8px 0;
+  min-height: 40px;
+}
+.folio-connection-setup p {
+  padding: 12px 0;
+  overflow-wrap: anywhere;
+}

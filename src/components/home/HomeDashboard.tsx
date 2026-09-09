@@ -2,54 +2,18 @@
 
 import { workFetch } from '@/lib/workspace-change'
 
-import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { ModalFrame } from '@/components/ui/ModalFrame'
-import { Card, CardContent } from '@/components/ui/card'
-import { LoadingBlock } from '@/components/LoadingBlock'
 import type { BrainDumpReorganizeResult, BrainDumpSuggestion } from '@/lib/brain-dump'
 import type { HomePayload } from '@/lib/home-data'
 import type { CompassTask } from '@/lib/types'
 import type { MorningWavePayload } from '@/lib/wave-morning'
-import { PathfinderHome } from '@/components/pathfinder/PathfinderHome'
-import { MorningWavePanel } from '@/components/home/MorningWavePanel'
+import { FolioHome } from '@/components/home/FolioHome'
 import { useCachedJson } from '@/lib/use-cached-json'
-import { cn } from '@/lib/utils'
 
 const BRAIN_DUMP_KEY = 'compass.home.brainDump'
 
 type TasksPayload = { topTasks: CompassTask[] }
-
-function formatDayHeading(date: Date) {
-  return date.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })
-}
-
-function SectionHeader({
-  title,
-  href,
-  actionLabel,
-  hint
-}: {
-  title: string
-  href?: string
-  actionLabel?: string
-  hint?: string
-}) {
-  return (
-    <div className="mb-2 flex items-center justify-between gap-2">
-      <div className="flex min-w-0 items-center gap-2">
-        <span className="h-5 w-1 shrink-0 rounded-full bg-[#e85d2a]" aria-hidden />
-        <h2 className="text-sm font-semibold tracking-tight text-neutral-900">{title}</h2>
-        {hint ? <span className="text-xs text-neutral-400">{hint}</span> : null}
-      </div>
-      {href ? (
-        <Link href={href} className="text-xs font-medium text-[#c2410c] hover:underline">
-          {actionLabel ?? 'Open'}
-        </Link>
-      ) : null}
-    </div>
-  )
-}
 
 export function HomeDashboard() {
   const home = useCachedJson<HomePayload>('/api/home', '/api/home', { staleMs: 60_000 })
@@ -70,7 +34,6 @@ export function HomeDashboard() {
   const [applyNote, setApplyNote] = useState<string | null>(null)
 
   const data = home.data
-  const cold = data?.coldEmail
   const wave = waveLive.data ?? data?.wave
 
   useEffect(() => {
@@ -92,7 +55,6 @@ export function HomeDashboard() {
     }
   }, [dump, dumpHydrated])
 
-  const dumpPending = dump.trim().length > 0
 
   const runReorganize = useCallback(async () => {
     if (!dump.trim() || reorganizing) return
@@ -163,130 +125,21 @@ export function HomeDashboard() {
     }
   }
 
-  if (home.error && !data) {
-    return (
-      <div className="px-4 py-6 sm:px-6 lg:px-8">
-        <div className="compass-panel p-5 text-sm text-red-700">
-          {home.error}{' '}
-          <button type="button" className="font-medium text-[#c2410c] hover:underline" onClick={() => void home.reload(true)}>
-            Retry home
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (home.loading && !data) {
-    return (
-      <div className="px-4 py-3 sm:px-6 lg:px-8">
-        <LoadingBlock label="Loading home…" />
-      </div>
-    )
-  }
-
   return (
     <>
-      <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="compass-section-label">Operator home</p>
-            <h1 className="compass-page-title mt-1 text-[1.45rem] sm:text-[1.65rem]">
-              {formatDayHeading(new Date())}
-            </h1>
-          </div>
-          <button
-            type="button"
-            onClick={() => setDumpOpen(true)}
-            aria-haspopup="dialog"
-            aria-label={dumpPending ? 'Brain dump, notes waiting' : 'Brain dump'}
-            className={cn('compass-btn-secondary relative', dumpPending && 'ring-1 ring-[#e85d2a]/35')}
-          >
-            Brain dump
-            {dumpPending ? (
-              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#e85d2a] ring-2 ring-white" aria-hidden />
-            ) : null}
-          </button>
-        </div>
-
-        <div className="grid min-h-0 flex-1 content-start items-start gap-3 overflow-y-auto overscroll-contain lg:grid-cols-2">
-          <div className="lg:col-span-2"><PathfinderHome /></div>
-          <div className="lg:col-span-2">
-            {wave ? (
-              <MorningWavePanel
-                wave={wave}
-                glance={{
-                  emailsSentToday: cold?.emailsSentToday ?? null,
-                  replyRate: cold?.replyRate ?? null,
-                  repliesWaiting: cold?.repliesWaiting ?? null
-                }}
-                onReload={async () => {
-                  await Promise.all([home.reload(true), waveLive.reload(true)])
-                }}
-              />
-            ) : (
-              <Card>
-                <CardContent className="p-4 sm:p-5">
-                  <p className="text-sm text-neutral-500">
-                    Morning wave did not load.{' '}
-                    <button type="button" className="font-medium text-[#c2410c] hover:underline" onClick={() => void home.reload(true)}>
-                      Retry
-                    </button>
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          <Card>
-            <CardContent className="p-4 sm:p-5">
-              <SectionHeader title="Emails going out" href="/sales/outbound" actionLabel="Open outbound" />
-              <div className="flex flex-wrap gap-4">
-                <div>
-                  <div className="compass-section-label">Sent today</div>
-                  <div className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
-                    {cold?.emailsSentToday?.toLocaleString() ?? '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="compass-section-label">Reply rate</div>
-                  <div className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
-                    {cold ? `${cold.replyRate}%` : '—'}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 sm:p-5">
-              <SectionHeader title="Replies coming in" href="/inbox?tab=instantly" actionLabel="Open inbox" />
-              <div className="flex items-baseline justify-between gap-3 rounded-xl bg-amber-50/60 px-3 py-2.5">
-                <span className="text-sm text-neutral-600">Waiting in Instantly</span>
-                <span
-                  className={cn(
-                    'text-2xl font-semibold tabular-nums',
-                    (cold?.repliesWaiting ?? 0) > 0 ? 'text-amber-900' : 'text-neutral-900'
-                  )}
-                >
-                  {cold?.repliesWaiting ?? '—'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <FolioHome data={data} wave={wave} tasks={tasks.data?.topTasks??[]} loading={home.loading} error={home.error} taskError={tasks.error} waveError={waveLive.error} note={dump} onCapture={()=>setDumpOpen(true)} onReload={async()=>{await Promise.all([home.reload(true),waveLive.reload(true),tasks.reload(true)])}}/>
 
       <ModalFrame
         open={dumpOpen}
         onClose={() => setDumpOpen(false)}
         labelledBy="brain-dump-title"
-        overlayClassName="fixed inset-0 z-50 flex justify-end bg-neutral-950/35"
-        contentClassName="relative z-10 flex h-full w-full max-w-md flex-col border-l border-stone-200/80 bg-white shadow-soft"
+        overlayClassName="folio-overlay"
+        contentClassName="folio-dialog folio-capture-dialog"
       >
         <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-5 py-4">
           <div>
             <h2 id="brain-dump-title" className="text-base font-semibold text-neutral-900">
-              Brain dump
+              Capture a thought
             </h2>
             <p className="mt-0.5 text-xs text-neutral-500">Turn your notes into suggested tasks, then review what to add.</p>
           </div>
@@ -305,7 +158,7 @@ export function HomeDashboard() {
             aria-label="Brain dump notes"
           />
           <button type="button" onClick={() => void runReorganize()} disabled={!dump.trim() || reorganizing} className="compass-btn-primary">
-            {reorganizing ? 'Thinking…' : 'Reorganize with AI'}
+            {reorganizing ? 'Organising…' : 'Review as tasks'}
           </button>
           {applyNote ? <p role="status" className="text-sm text-emerald-700">{applyNote}</p> : null}
           {reorganizeError ? <p role="alert" className="text-sm text-red-600">{reorganizeError}</p> : null}

@@ -98,10 +98,11 @@ export function KanbanBoard({
   }
 
   return (
-    <div ref={boardRef} className={cn('grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4', className)}>
+    <div ref={boardRef} className={cn('folio-kanban grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4', className)}>
       {columns.map((column) => (
         <div
           key={column.id}
+          data-column-id={column.id}
           className={cn(
             'rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft',
             dropTarget === column.id && 'ring-2 ring-[#e85d2a]/40'

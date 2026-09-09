@@ -158,9 +158,9 @@ export function ConsoleHomeInboxKeepAlive() {
     <>
       {seenHome ? (
         <KeepAlivePane active={showHome}>
-          <main className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col">
             <HomeDashboard />
-          </main>
+          </div>
         </KeepAlivePane>
       ) : null}
       {seenInbox ? (
@@ -180,7 +180,7 @@ export function ConsoleHomeInboxKeepAlive() {
       ) : null}
       {seenTasks ? (
         <KeepAlivePane active={showTasks}>
-          <OperatorShell title="My Tasks" subtitle="Todo · doing · blocked · done" width="full">
+          <OperatorShell title="Tasks" subtitle="Choose the work you can move. Keep external waits in their own place." width="full">
             <TasksPanel />
           </OperatorShell>
         </KeepAlivePane>
@@ -237,7 +237,7 @@ export function ConsoleHomeInboxKeepAlive() {
       ) : null}
       {seenCrm ? (
         <KeepAlivePane active={showCrm}>
-          <OperatorShell active="leads" role="owner" title="Leads" compact width="full">
+          <OperatorShell active="leads" role="owner" title="CRM" compact width="full">
             <Suspense fallback={<DeskLoading label="Loading leads…" />}>
               <LeadsPanel />
             </Suspense>

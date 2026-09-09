@@ -36,6 +36,7 @@ export type PullNextCard = {
 export type HomePayload = {
   digest: DailyDecisionDigest | null
   coldEmail: ColdEmailGlance | null
+  coldEmailSyncedAt?: string | null
   coldEmailSource: 'instantly' | 'demo' | 'error'
   spine: {
     leads: SpineStageCount[]
@@ -162,6 +163,7 @@ export async function loadHomePayload(supabase: SupabaseClient): Promise<HomePay
     digest,
     coldEmail: cold,
     coldEmailSource: coldSnap ? 'instantly' : 'demo',
+    coldEmailSyncedAt: coldSnap?.syncedAt ?? null,
     spine: { leads: leadSpine, clients: clientSpine },
     pullNext,
     inFlight,

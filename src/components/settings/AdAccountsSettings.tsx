@@ -348,12 +348,12 @@ export function AdAccountsSettings({
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card id="settings-outbound">
         <CardHeader>
           <div>
             <CardTitle>Instantly (cold email)</CardTitle>
             <CardDescription>
-              Home cold-email metrics pull live from Instantly when an API key is set
+              Connect campaign sending, replies and saved performance snapshots.
             </CardDescription>
           </div>
         </CardHeader>
@@ -419,7 +419,7 @@ export function AdAccountsSettings({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="settings-calendar">
         <CardHeader>
           <div>
             <CardTitle>Google Calendar (campaign go-lives)</CardTitle>
@@ -443,7 +443,7 @@ export function AdAccountsSettings({
               </Badge>
             ) : (
               <Badge variant="secondary" appearance="light" size="sm">
-                Needs OAuth env
+                Setup needed
               </Badge>
             )}
           </div>
@@ -453,11 +453,11 @@ export function AdAccountsSettings({
             </div>
           ) : null}
           {calendarConfigured === false ? (
-            <p className="text-sm text-neutral-500">
+            <details className="folio-connection-setup"><summary>Server setup required</summary><p className="text-sm text-neutral-500">
               Set <code className="text-xs">GOOGLE_CALENDAR_CLIENT_ID</code> and{' '}
               <code className="text-xs">GOOGLE_CALENDAR_CLIENT_SECRET</code>, then add redirect{' '}
               <code className="text-xs">/api/calendar/oauth/callback</code> on the Google Cloud OAuth client.
-            </p>
+            </p></details>
           ) : null}
           <div className="flex flex-wrap gap-2">
             {calendarConfigured ? (
@@ -492,12 +492,12 @@ export function AdAccountsSettings({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="settings-ads">
         <CardHeader>
           <div>
             <CardTitle>Ad accounts</CardTitle>
             <CardDescription>
-              Connect Meta, Google, and LinkedIn so Home shows live spend health — not demo numbers
+              Manage access to your Meta, Google and LinkedIn advertising accounts.
             </CardDescription>
           </div>
         </CardHeader>
@@ -673,11 +673,11 @@ export function AdAccountsSettings({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="settings-connected">
         <CardHeader>
           <div>
             <CardTitle>Connected</CardTitle>
-            <CardDescription>Sync pulls the last 30 days of creatives into Home</CardDescription>
+            <CardDescription>Review account access and refresh the saved advertising data.</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-2">

@@ -1,11 +1,6 @@
 'use client'
 
-/**
- * Compass card primitive — LOCKED visual language.
- * Keep rounded-2xl, soft borders, shadow-soft, and airy padding (p-5).
- * Do not flatten elevation or tighten radii/spacing unless explicitly asked.
- * See .cursor/rules/compass-ui-lock.mdc
- */
+/** Shared document surface for the Folio operator workspace. */
 import * as React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
@@ -20,7 +15,7 @@ const CardContext = React.createContext<CardContextType>({
 
 const useCardContext = () => React.useContext(CardContext)
 
-const cardVariants = cva('flex flex-col items-stretch rounded-2xl text-neutral-900', {
+const cardVariants = cva('folio-card flex flex-col items-stretch rounded-2xl text-neutral-900', {
   variants: {
     variant: {
       default: 'border border-stone-200/70 bg-white shadow-soft',

@@ -1,24 +1,25 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { CompassMark } from '@/components/nav-icons'
+import { createContext, useContext, useEffect } from 'react'
 import { ConsoleHomeInboxKeepAlive } from '@/components/ConsoleHomeInboxKeepAlive'
 import {
   ConsoleNavProvider,
   isKeepAlivePath,
   useConsoleNav,
-  useConsoleViewPath
+  useConsoleViewPath,
 } from '@/components/ConsoleNav'
-import { NavLinks, navKeyFromPathname, type NavKey } from '@/components/NavLinks'
-import SignOutButton from '@/components/SignOutButton'
+import type { NavKey } from '@/components/NavLinks'
 import { UndoProvider } from '@/components/UndoProvider'
-import { Sidebar, SidebarBody, useSidebar } from '@/components/ui/sidebar'
+import {
+  FolioSidebar,
+  FolioTopbar,
+  FolioWorkspaceLinks,
+} from '@/components/folio/FolioChrome'
 import { INBOX_CACHE_KEY, type InboxPayload } from '@/lib/inbox-ui'
 import { isOperatorRole, type PortalRole } from '@/lib/portal-redirect'
-import { loadQueryCache, peekQueryCache, subscribeQueryCache } from '@/lib/query-cache'
+import { loadQueryCache } from '@/lib/query-cache'
 import { prefetchJson } from '@/lib/use-cached-json'
 
 const WIDTH = {
@@ -26,62 +27,10 @@ const WIDTH = {
   '4xl': 'max-w-4xl',
   '6xl': 'max-w-6xl',
   '7xl': 'max-w-7xl',
-  full: 'max-w-none'
+  full: 'max-w-none',
 } as const
 
 const ConsoleChromeContext = createContext(false)
-
-function Brand({ href = '/home' }: { href?: string }) {
-  const consoleNav = useConsoleNav()
-  const { setOpen } = useSidebar()
-  return (
-    <Link
-      href={href}
-      onClick={(event) => {
-        if (!consoleNav) return
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-        if (event.button !== 0) return
-        event.preventDefault()
-        setOpen(false)
-        consoleNav.navigate(href)
-      }}
-      className="group flex items-center gap-2.5 rounded-xl px-1.5 py-1 transition hover:bg-white/60"
-    >
-      <CompassMark />
-      <div className="min-w-0 overflow-hidden whitespace-nowrap leading-tight">
-        <span className="text-[15px] font-semibold tracking-tight text-neutral-900">switchflow</span>{' '}
-        <span className="text-[15px] font-medium tracking-tight text-neutral-500 transition group-hover:text-neutral-700">
-          compass
-        </span>
-      </div>
-    </Link>
-  )
-}
-
-function ConsoleSidebarFrame({
-  role,
-  active,
-  inboxCount
-}: {
-  role: PortalRole
-  active: NavKey
-  inboxCount: number | null
-}) {
-  const homeHref = isOperatorRole(role) ? '/home' : '/leads'
-  return (
-    <SidebarBody className="justify-between gap-6">
-      <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
-        <div className="mb-5 px-1">
-          <Brand href={homeHref} />
-        </div>
-        <NavLinks active={active} role={role} orientation="vertical" inboxCount={inboxCount} />
-      </div>
-      <div className="border-t border-stone-200/70 px-0 pb-3 pt-3">
-        <SignOutButton variant="sidebar" />
-      </div>
-    </SidebarBody>
-  )
-}
 
 function ConsoleMain({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -117,23 +66,13 @@ function ConsoleMain({ children }: { children: ReactNode }) {
 
 function OperatorConsoleLayoutInner({
   role,
-  children
+  children,
 }: {
   role: PortalRole
   children: ReactNode
 }) {
   const router = useRouter()
-  const viewPath = useConsoleViewPath()
   const operator = isOperatorRole(role)
-  const active = useMemo(() => navKeyFromPathname(viewPath), [viewPath])
-  const inboxData = useSyncExternalStore(
-    (listener) => subscribeQueryCache(INBOX_CACHE_KEY, listener),
-    () => peekQueryCache<InboxPayload>(INBOX_CACHE_KEY)?.data ?? null,
-    () => null
-  )
-  const inboxCount = inboxData?.badgeTotal ?? inboxData?.total ?? inboxData?.leads?.length ?? null
-  // Mobile drawer open state only — desktop sidebar stays permanently expanded.
-  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     if (!operator) return
@@ -152,28 +91,30 @@ function OperatorConsoleLayoutInner({
     void loadQueryCache<InboxPayload>(
       INBOX_CACHE_KEY,
       async () => {
-        const res = await fetch(INBOX_CACHE_KEY, { headers: { Accept: 'application/json' } })
+        const res = await fetch(INBOX_CACHE_KEY, {
+          headers: { Accept: 'application/json' },
+        })
         if (!res.ok) throw new Error(`Failed to load (${res.status})`)
         return (await res.json()) as InboxPayload
       },
-      { force: false }
-    )
-      .catch(() => {})
+      { force: false },
+    ).catch(() => {})
   }, [operator, router])
 
   return (
     <ConsoleChromeContext.Provider value={true}>
-      <div className="compass-shell flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden md:flex-row">
+      <div className="compass-shell folio-shell">
         <a
           href="#compass-main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[110] focus:rounded-xl focus:bg-white focus:px-3.5 focus:py-2 focus:text-sm focus:font-medium focus:text-neutral-900 focus:shadow-soft"
         >
           Skip to main content
         </a>
-        <Sidebar open={open} setOpen={setOpen} animate={false}>
-          <ConsoleSidebarFrame role={role} active={active} inboxCount={inboxCount} />
-        </Sidebar>
-        <ConsoleMain>{children}</ConsoleMain>
+        <FolioSidebar role={role} />
+        <div className="folio-workspace">
+          <FolioTopbar role={role} />
+          <ConsoleMain>{children}</ConsoleMain>
+        </div>
       </div>
     </ConsoleChromeContext.Provider>
   )
@@ -182,7 +123,7 @@ function OperatorConsoleLayoutInner({
 /** Persistent console chrome — sidebar stays mounted across operator routes. */
 export function OperatorConsoleLayout({
   role,
-  children
+  children,
 }: {
   role: PortalRole
   children: ReactNode
@@ -190,7 +131,9 @@ export function OperatorConsoleLayout({
   return (
     <ConsoleNavProvider>
       <UndoProvider>
-        <OperatorConsoleLayoutInner role={role}>{children}</OperatorConsoleLayoutInner>
+        <OperatorConsoleLayoutInner role={role}>
+          {children}
+        </OperatorConsoleLayoutInner>
       </UndoProvider>
     </ConsoleNavProvider>
   )
@@ -203,7 +146,7 @@ function PageMain({
   flush = false,
   compact = false,
   actions,
-  children
+  children,
 }: {
   title?: ReactNode
   subtitle?: string
@@ -213,15 +156,32 @@ function PageMain({
   actions?: ReactNode
   children: ReactNode
 }) {
+  const path = useConsoleViewPath()
+  const links = path.startsWith('/clients')
+    ? [
+        { href: '/operations/delivery', label: 'Client delivery' },
+        { href: '/operations/finances', label: 'Finances' },
+        { href: '/operations/cs', label: 'Retention' },
+      ]
+    : path.startsWith('/sales/outbound')
+      ? [
+          { href: '/calendar', label: 'Calendar' },
+          { href: '/sales/outbound/craft', label: 'Writing library' },
+          { href: '/sales/offers', label: 'Offers & tests' },
+          { href: '/sales', label: 'Sales overview' },
+        ]
+      : []
   if (flush) {
     return (
-      <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+      <main className="folio-flush flex min-h-0 flex-1 flex-col">
+        {children}
+      </main>
     )
   }
 
   return (
     <main
-      className={`mx-auto w-full ${WIDTH[width]} px-4 sm:px-6 lg:px-8 ${compact ? 'py-3' : 'py-7'}`}
+      className={`folio-page mx-auto w-full ${WIDTH[width]} ${compact ? 'folio-page-compact' : ''}`}
     >
       {(title || actions) && (
         <header
@@ -229,15 +189,24 @@ function PageMain({
         >
           <div className="min-w-0">
             {title ? (
-              <h1 className={compact ? 'compass-page-title-compact' : 'compass-page-title'}>
+              <h1
+                className={
+                  compact ? 'compass-page-title-compact' : 'compass-page-title'
+                }
+              >
                 {title}
               </h1>
             ) : null}
-            {subtitle && !compact ? <p className="compass-page-subtitle">{subtitle}</p> : null}
+            {subtitle && !compact ? (
+              <p className="compass-page-subtitle">{subtitle}</p>
+            ) : null}
           </div>
-          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+          {actions ? (
+            <div className="flex flex-wrap items-center gap-2">{actions}</div>
+          ) : null}
         </header>
       )}
+      {links.length ? <FolioWorkspaceLinks links={links} /> : null}
       {children}
     </main>
   )
@@ -253,7 +222,7 @@ export function OperatorShell({
   flush = false,
   compact = false,
   actions,
-  children
+  children,
 }: {
   active?: NavKey
   role?: PortalRole

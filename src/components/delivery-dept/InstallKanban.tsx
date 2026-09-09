@@ -171,7 +171,7 @@ export function InstallKanban() {
   const cap = board.capacity
 
   return (
-    <div className="space-y-5">
+    <div className="folio-installs space-y-5">
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <InstallSopGraph
@@ -239,7 +239,7 @@ export function InstallKanban() {
       </div>
 
       <div className="overflow-x-auto pb-2">
-        <div className="flex min-w-max gap-4">
+        <div className="folio-install-queue flex min-w-max gap-4">
           {board.columns.map((col) => (
             <section key={col.id} className="w-[260px] shrink-0">
               <div className="mb-3 flex items-center justify-between gap-2">

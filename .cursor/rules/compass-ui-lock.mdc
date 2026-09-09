@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Compass UI guidance
 
-For incidental code changes, preserve the existing visual identity: warm surfaces, soft depth, rounded controls and panels, Geist typography, restrained orange accents, and the current sidebar interaction. Reuse the project's components and tokens.
+The selected production identity is Folio: a lilac desk, warm paper documents, plum actions, DM Sans controls and Newsreader narrative headings. For incidental changes, reuse `src/app/folio.css` and `src/components/folio/`. The design contract is `docs/design/FOLIO.md`. The earlier Geist/orange reference is historical context, not the baseline for new product UI.
 
 A request to improve UI or UX authorises relevant changes to hierarchy, spacing, layout, feedback, and interaction within the requested surface. Make the result meaningfully better and explain the evidence. It does not require preserving a demonstrated usability problem. Change the broader brand, theme, or navigation model only when that is within the requested scope.
 

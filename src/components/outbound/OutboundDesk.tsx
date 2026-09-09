@@ -1,10 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { CampaignPlanner } from '@/components/campaigns/CampaignPlanner'
 import { OperatorShell } from '@/components/OperatorShell'
-import { CadenceControl, useCadencePrefs } from '@/components/outbound/CadenceControl'
+import {
+  CadenceControl,
+  useCadencePrefs,
+} from '@/components/outbound/CadenceControl'
 import { OutboundDeskSwitch } from '@/components/outbound/OutboundDeskSwitch'
 import { OfferWavesBoard } from '@/components/outbound/OfferWavesBoard'
 import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
@@ -14,7 +16,7 @@ import {
   DEFAULT_OUTBOUND_DESK,
   readOutboundDesk,
   writeOutboundDesk,
-  type OutboundDeskId
+  type OutboundDeskId,
 } from '@/lib/outbound-desk'
 import { useCachedJson } from '@/lib/use-cached-json'
 
@@ -30,9 +32,13 @@ export function OutboundDesk() {
   const [desk, setDeskState] = useState<OutboundDeskId>(DEFAULT_OUTBOUND_DESK)
   const [ready, setReady] = useState(false)
   const [prefs, setPrefs] = useCadencePrefs()
-  const campaignsQuery = useCachedJson<CampaignsPayload>(CAMPAIGNS_QUERY_KEY, '/api/campaigns', {
-    staleMs: 30_000
-  })
+  const campaignsQuery = useCachedJson<CampaignsPayload>(
+    CAMPAIGNS_QUERY_KEY,
+    '/api/campaigns',
+    {
+      staleMs: 30_000,
+    },
+  )
 
   useEffect(() => {
     setDeskState(readOutboundDesk())
@@ -49,14 +55,20 @@ export function OutboundDesk() {
     const nextMonday = mondayWeeksAhead(today, 1)
     return (campaignsQuery.data?.campaigns ?? []).filter((campaign) => {
       const dateOnly = campaignDateOnly(campaign)
-      return Boolean(dateOnly && dateOnly >= thisMonday && dateOnly < nextMonday)
+      return Boolean(
+        dateOnly && dateOnly >= thisMonday && dateOnly < nextMonday,
+      )
     }).length
   }, [campaignsQuery.data])
 
   const switcher = <OutboundDeskSwitch value={desk} onChange={setDesk} />
 
   if (!ready) {
-    return <OperatorShell title="Outbound" width="full">{null}</OperatorShell>
+    return (
+      <OperatorShell title="Outbound" width="full">
+        {null}
+      </OperatorShell>
+    )
   }
 
   if (desk === 'calendar' || desk === 'timeline') {
@@ -74,13 +86,12 @@ export function OutboundDesk() {
       actions={
         <div className="flex flex-wrap items-end gap-3">
           {switcher}
-          <CadenceControl slots={slots} prefs={prefs} onChange={setPrefs} />
-          <Link
-            href="/sales/outbound/craft"
-            className="compass-btn-secondary !px-3 !py-1.5 text-[12px]"
-          >
-            Craft
-          </Link>
+          <details className="folio-pace">
+            <summary>Weekly pace</summary>
+            <div>
+              <CadenceControl slots={slots} prefs={prefs} onChange={setPrefs} />
+            </div>
+          </details>
         </div>
       }
     >

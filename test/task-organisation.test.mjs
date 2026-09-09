@@ -155,7 +155,7 @@ test('manual sort prefers set priority then due date', () => {
   assert.ok(compareTasksByManual(urgent, soon, now) < 0)
 })
 
-test('My Tasks UI is a kanban with create and detail', () => {
+test('Tasks UI retains board, creation and detail', () => {
   assert.match(read('src/components/TasksPanel.tsx'), /KanbanBoard/)
   assert.match(read('src/components/TasksPanel.tsx'), /TaskCreate/)
   assert.match(read('src/components/TasksPanel.tsx'), /TaskDetailPanel/)
@@ -163,7 +163,7 @@ test('My Tasks UI is a kanban with create and detail', () => {
   assert.match(read('src/components/TaskDetailPanel.tsx'), /Edit task/)
   assert.match(read('src/components/TaskDetailPanel.tsx'), /NotesEditor/)
   assert.match(read('src/app/(console)/tasks/page.tsx'), /width="full"/)
-  assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /My Tasks/)
+  assert.match(read('src/components/ConsoleHomeInboxKeepAlive.tsx'), /title="Tasks"/)
   assert.match(read('src/lib/list-columns.ts'), /created_at/)
   assert.match(read('src/app/api/tasks/route.ts'), /clientsById/)
 })
@@ -207,7 +207,7 @@ test('Home Priorities is Focus subset aligned with My Tasks', () => {
   assert.equal(matchesFocusWindow(urgentNoDue, 'today', now), false)
 
   const home = read('src/components/home/HomeDashboard.tsx')
-  assert.match(home, /MorningWavePanel/)
+  assert.match(home, /FolioHome/)
   assert.match(home, /\/api\/home/)
   assert.doesNotMatch(home, /selectHomePriorities/)
   assert.doesNotMatch(home, /compareTasksByFocus/)
