@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { CampaignPreparationPanel } from './CampaignPreparationPanel'
 import type { CompassCampaign } from '@/lib/campaigns'
 import {
   duplicateInstantlyTemplate,
@@ -60,6 +61,8 @@ export function CampaignInstantlyPanel({
       setBusy(null)
     }
   }
+
+  if (campaign?.offer_key === 'installation-booking') return <CampaignPreparationPanel campaign={campaign} />
 
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
