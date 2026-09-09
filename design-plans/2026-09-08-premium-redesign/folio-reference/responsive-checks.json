@@ -1,0 +1,149 @@
+[
+  {
+    "state": "ready",
+    "width": 1440,
+    "fonts": "loaded",
+    "scroll": 1440,
+    "viewport": 1440
+  },
+  {
+    "state": "empty",
+    "width": 1440,
+    "fonts": "loaded",
+    "scroll": 1440,
+    "viewport": 1440
+  },
+  {
+    "state": "loading",
+    "width": 1440,
+    "fonts": "loaded",
+    "scroll": 1440,
+    "viewport": 1440
+  },
+  {
+    "state": "error",
+    "width": 1440,
+    "fonts": "loaded",
+    "scroll": 1440,
+    "viewport": 1440
+  },
+  {
+    "state": "refresh-error",
+    "width": 1440,
+    "fonts": "loaded",
+    "scroll": 1440,
+    "viewport": 1440
+  },
+  {
+    "state": "accepted",
+    "width": 1440,
+    "fonts": "loaded",
+    "scroll": 1440,
+    "viewport": 1440
+  },
+  {
+    "state": "dismissed",
+    "width": 1440,
+    "fonts": "loaded",
+    "scroll": 1440,
+    "viewport": 1440
+  },
+  {
+    "state": "ready",
+    "width": 768,
+    "fonts": "loaded",
+    "scroll": 768,
+    "viewport": 768
+  },
+  {
+    "state": "empty",
+    "width": 768,
+    "fonts": "loaded",
+    "scroll": 768,
+    "viewport": 768
+  },
+  {
+    "state": "loading",
+    "width": 768,
+    "fonts": "loaded",
+    "scroll": 768,
+    "viewport": 768
+  },
+  {
+    "state": "error",
+    "width": 768,
+    "fonts": "loaded",
+    "scroll": 768,
+    "viewport": 768
+  },
+  {
+    "state": "refresh-error",
+    "width": 768,
+    "fonts": "loaded",
+    "scroll": 768,
+    "viewport": 768
+  },
+  {
+    "state": "accepted",
+    "width": 768,
+    "fonts": "loaded",
+    "scroll": 768,
+    "viewport": 768
+  },
+  {
+    "state": "dismissed",
+    "width": 768,
+    "fonts": "loaded",
+    "scroll": 768,
+    "viewport": 768
+  },
+  {
+    "state": "ready",
+    "width": 390,
+    "fonts": "loaded",
+    "scroll": 390,
+    "viewport": 390
+  },
+  {
+    "state": "empty",
+    "width": 390,
+    "fonts": "loaded",
+    "scroll": 390,
+    "viewport": 390
+  },
+  {
+    "state": "loading",
+    "width": 390,
+    "fonts": "loaded",
+    "scroll": 390,
+    "viewport": 390
+  },
+  {
+    "state": "error",
+    "width": 390,
+    "fonts": "loaded",
+    "scroll": 390,
+    "viewport": 390
+  },
+  {
+    "state": "refresh-error",
+    "width": 390,
+    "fonts": "loaded",
+    "scroll": 390,
+    "viewport": 390
+  },
+  {
+    "state": "accepted",
+    "width": 390,
+    "fonts": "loaded",
+    "scroll": 390,
+    "viewport": 390
+  },
+  {
+    "state": "dismissed",
+    "width": 390,
+    "fonts": "loaded",
+    "scroll": 390,
+    "viewport": 390
+  }
+]
