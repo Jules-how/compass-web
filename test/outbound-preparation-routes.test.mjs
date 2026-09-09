@@ -165,3 +165,56 @@ test('agent route authenticates before creating the service client and never sup
   assert.equal((await route.POST(request())).status, 200)
   assert.equal(args.length, 3)
 })
+
+test('CSV export rechecks the remote pause state after an earlier reservation', async () => {
+  const { fixture } = await import('./helpers/outbound-fixture.mjs')
+  const f = fixture()
+  const bundle = { context: f.context, hash: 'a'.repeat(64) }
+  let reserved = false
+  const records = {
+    compass_pipeline_campaigns: {
+      id: 'test-cell',
+      offer_key: 'installation-booking',
+      status: 'planned',
+      vertical_tags: ['hvac'],
+      location_tags: ['sydney'],
+      sequence_draft: f.context.sequence,
+      instantly_campaign_id: 'instant'
+    },
+    compass_outbound_offers: f.context.offer,
+    compass_outbound_configs: {
+      recipe: f.context.recipe,
+      settings: f.context.settings
+    },
+    compass_outbound_approvals: { hash: bundle.hash },
+    compass_outbound_loads: { preparation_id: 'prep' }
+  }
+  const db = {
+    rpc: async (name) => {
+      if (name === 'outbound_reserve_load') reserved = true
+      return { data: bundle, error: null }
+    },
+    from(table) {
+      const q = {
+        select() {
+          return q
+        },
+        eq() {
+          return q
+        },
+        single: async () => ({ data: records[table], error: null }),
+        maybeSingle: async () => ({ data: records[table], error: null })
+      }
+      return q
+    }
+  }
+  const server = loadTypescript('src/lib/outbound-preparation-server.ts', {
+    './instantly': { resolveInstantlyApiKey: async () => 'test' },
+    './instantly-write': { instantlyGetCampaign: async () => ({ status: 1 }) }
+  })
+  await assert.rejects(
+    server.preparationExport(db, 'prep'),
+    /campaign_must_be_paused/
+  )
+  assert.equal(reserved, false)
+})

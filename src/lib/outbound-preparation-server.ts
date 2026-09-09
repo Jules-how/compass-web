@@ -453,6 +453,8 @@ export async function preparationExport(db: SupabaseClient, id: string) {
     .eq('preparation_id', id)
     .single()
   requireData(load)
+  // A reservation can outlive changes made directly in Instantly.
+  await reserveBrowserLoad(db, id)
   return {
     csv: transportCsv(bundle),
     expected: instantlyExpected(bundle),
