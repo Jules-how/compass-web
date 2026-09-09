@@ -7,6 +7,7 @@ import {
   validatePlanning,
   checkGoalParent,
   assertPlanningAuthority,
+  planningHistory,
 } from "@/lib/planning-core.mjs";
 export type PlanningRow = {
   id: string;
@@ -103,16 +104,7 @@ export async function savePlanning(body: {
     createdAt: existing?.createdAt || at,
     updatedAt: at,
     data,
-    history: existing
-      ? [
-          ...existing.history,
-          {
-            revision: existing.revision,
-            at: existing.updatedAt,
-            data: existing.data,
-          },
-        ]
-      : [],
+    history: planningHistory(existing, body.kind, at),
   };
   if (row.history.length > 200)
     throw new Error(

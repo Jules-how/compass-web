@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useCachedJson } from "@/lib/use-cached-json";
 import type { PathfinderData } from "@/lib/pathfinder/types";
@@ -9,7 +9,11 @@ import { GoalForm } from "./GoalForm";
 import { OutcomePanel, IssuePanel } from "./OutcomePanel";
 import TaskDetailPanel from "@/components/TaskDetailPanel";
 import { ProjectDetailPanel } from "@/components/ProjectDetailPanel";
-import { ModalFrame } from "@/components/ui/ModalFrame";
+import { GoalPad } from "./GoalPad";
+import { PathfinderTimeline } from "./PathfinderTimeline";
+import { QuickAdd, type AddKind } from "./QuickAdd";
+import { Plus } from "lucide-react";
+import { MilestonePanel } from "./MilestonePanel";
 
 export function PathfinderBoard({
   initialGoalId = "",
@@ -25,7 +29,16 @@ export function PathfinderBoard({
   } | null>(initialGoalId ? { kind: "goal", id: initialGoalId } : null);
   const [editing, setEditing] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const open = (kind: string, id: string) => setSelection({ kind, id });
+  const [adding, setAdding] = useState<{
+    kind: AddKind;
+    goalId: string;
+    projectId?: string;
+  } | null>(null);
+  const [padGoalId, setPadGoalId] = useState(initialGoalId);
+  const open = (kind: string, id: string) => {
+    if (kind === "goal") setPadGoalId(id);
+    setSelection({ kind, id });
+  };
   const refresh = async () => {
     await reload(true);
   };
@@ -42,20 +55,34 @@ export function PathfinderBoard({
     (c) => selection?.kind === "checkpoint" && c.id === selection.id,
   );
   const activeGoals = data?.goals.filter((g) => !g.data.archived) ?? [];
+  const padGoal =
+    activeGoals.find((g) => g.id === padGoalId) ??
+    activeGoals.find((g) => g.data.status === "committed") ??
+    activeGoals[0];
+  const add = useCallback(
+    (kind: AddKind, goalId?: string, projectId?: string) => {
+      const target = goalId || padGoal?.id || "";
+      if (!target) {
+        setCreating(true);
+        return;
+      }
+      setAdding({ kind, goalId: target, projectId });
+    },
+    [padGoal?.id],
+  );
   const verified = activeGoals.filter(
     (g) =>
       data &&
       assessOutcome(g, data.observations, data.readAt).state === "achieved",
   ).length;
   return (
-    <div className="folio-planning mx-auto w-full max-w-[1600px] space-y-5">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+    <div className="folio-planning planning-workspace pathfinder-workspace">
+      <header className="planning-heading">
         <div>
-          <p className="compass-section-label">Planning / Pathfinder</p>
-          <h1 className="compass-page-title mt-2">Find the path forward.</h1>
+          <p className="compass-section-label">Your next chapter</p>
+          <h1 className="compass-page-title mt-2">Pathfinder</h1>
           <p className="compass-page-subtitle">
-            Your outcomes, the work behind them, and the evidence that changes
-            the plan.
+            A clear direction. Small steps. Real progress.
           </p>
         </div>
         <div className="flex gap-2">
@@ -66,7 +93,7 @@ export function PathfinderBoard({
             className="compass-btn-primary"
             onClick={() => setCreating(true)}
           >
-            Define outcome
+            <Plus size={15} aria-hidden="true" /> New goal
           </button>
         </div>
       </header>
@@ -118,75 +145,48 @@ export function PathfinderBoard({
               </button>
             </span>
           </div>
-          {activeGoals.length === 0 && (
-            <div className="compass-panel p-6">
-              <h2 className="text-lg font-semibold">
-                One meaningful outcome is enough to start.
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm text-stone-500">
-                Define success, connect an existing project or task, then record
-                the current position. Pathfinder will reveal more detail as your
-                plan grows.
-              </p>
-              <button
-                className="compass-btn-primary mt-4"
-                onClick={() => setCreating(true)}
-              >
-                Define your first outcome
-              </button>
-            </div>
-          )}
-          <PathfinderMap
+          <div className="pathfinder-workbench">
+            <PathfinderMap
+              data={data}
+              goalId={focus}
+              onFocus={setFocus}
+              onOpen={open}
+              onAdd={add}
+              onCreateGoal={() => setCreating(true)}
+            />
+            <GoalPad
+              data={data}
+              goal={padGoal}
+              onSelect={(id) => {
+                setPadGoalId(id);
+                setFocus(id);
+              }}
+              onOpen={open}
+              onEdit={() => setEditing(padGoal?.id ?? null)}
+              onAdd={add}
+              onCreateGoal={() => setCreating(true)}
+            />
+          </div>
+          <PathfinderTimeline
             data={data}
             goalId={focus}
-            onFocus={setFocus}
             onOpen={open}
+            onAdd={() => add("checkpoint")}
           />
-          <section className="compass-panel p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold">From the daily review</h2>
-                <p className="mt-1 text-xs text-stone-500">
-                  The same goal-linked findings are available to your daily
-                  agent and Home.
-                </p>
-              </div>
-              <Link className="compass-btn-ghost" href="/home">
-                Open Home
-              </Link>
-            </div>
-            <ul className="mt-4 grid gap-3 md:grid-cols-2">
-              {data.issues
-                .filter((i) => ["open", "watching"].includes(i.status))
-                .slice(0, 6)
-                .map((i) => (
-                  <li key={i.id}>
-                    <button
-                      className="w-full rounded-xl bg-stone-50 p-4 text-left"
-                      onClick={() => open("issue", i.id)}
-                    >
-                      <span className="text-xs text-stone-500">
-                        {data.goals.find((g) => g.id === i.goal_id)?.data
-                          .title ?? "Outcome"}{" "}
-                        · {i.status}
-                      </span>
-                      <strong className="mt-1 block text-sm">{i.title}</strong>
-                      <p className="mt-2 line-clamp-2 text-sm text-stone-600">
-                        {i.next_action}
-                      </p>
-                    </button>
-                  </li>
-                ))}
-            </ul>
-            {!data.issues.some((i) =>
-              ["open", "watching"].includes(i.status),
-            ) && (
-              <p className="mt-4 text-sm text-stone-500">
-                No open findings yet. The daily agent can attach its next
-                diagnosis or information gap to an outcome.
-              </p>
-            )}
-          </section>
+          {adding && (
+            <QuickAdd
+              key={`${adding.kind}:${adding.goalId}`}
+              data={data}
+              goalId={adding.goalId}
+              initialKind={adding.kind}
+              initialProjectId={adding.projectId}
+              onClose={() => setAdding(null)}
+              onSaved={async () => {
+                setAdding(null);
+                await refresh();
+              }}
+            />
+          )}
           {selectedGoal && (
             <OutcomePanel
               key={selectedGoal.id}
@@ -208,6 +208,7 @@ export function PathfinderBoard({
           {selectedTask && (
             <TaskDetailPanel
               key={selectedTask.id}
+              presentation="sheet"
               task={selectedTask}
               projectsById={Object.fromEntries(
                 data.projects.map((p) => [p.id, p]),
@@ -239,43 +240,15 @@ export function PathfinderBoard({
             />
           )}
           {selectedCheckpoint && (
-            <ModalFrame
-              open
+            <MilestonePanel
+              key={selectedCheckpoint.id}
+              milestone={selectedCheckpoint}
               onClose={() => setSelection(null)}
-              label={selectedCheckpoint.title}
-              overlayClassName="fixed inset-0 z-50 overflow-y-auto bg-stone-950/40 p-6 sm:p-12"
-              contentClassName="compass-panel mx-auto max-w-xl p-6 outline-none"
-            >
-              <p className="compass-section-label">Project checkpoint</p>
-              <h2 className="mt-2 text-xl font-semibold">
-                {selectedCheckpoint.title}
-              </h2>
-              <p className="mt-4 text-sm">
-                {selectedCheckpoint.description || "No checkpoint description."}
-              </p>
-              <p className="mt-3 text-sm text-stone-500">
-                {selectedCheckpoint.completed ? "Completed" : "Incomplete"} ·
-                target {selectedCheckpoint.target_date ?? "not set"}
-              </p>
-              <p className="mt-4 text-xs text-stone-500">
-                Completing this checkpoint does not establish a business
-                outcome.
-              </p>
-              <div className="mt-5 flex gap-2">
-                <button
-                  className="compass-btn-primary"
-                  onClick={() => open("project", selectedCheckpoint.project_id)}
-                >
-                  Open project
-                </button>
-                <button
-                  className="compass-btn-secondary"
-                  onClick={() => setSelection(null)}
-                >
-                  Close
-                </button>
-              </div>
-            </ModalFrame>
+              onOpenProject={() =>
+                open("project", selectedCheckpoint.project_id)
+              }
+              onChanged={refresh}
+            />
           )}
         </>
       )}

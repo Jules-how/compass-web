@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Compass UI guidance
 
-The selected production identity is Folio: a lilac desk, warm paper documents, plum actions, DM Sans controls and Newsreader narrative headings. For incidental changes, reuse `src/app/folio.css` and `src/components/folio/`. The design contract is `docs/design/FOLIO.md`. The earlier Geist/orange reference is historical context, not the baseline for new product UI.
+The selected identity uses Compass cream-and-orange colours with Folio layouts: a cream desk, warm paper documents, orange actions, DM Sans controls and Newsreader narrative headings. Jules restored this palette on 9 September 2026. For incidental changes, reuse `src/app/folio.css` and `src/components/folio/`. The design contract is `docs/design/FOLIO.md`. Keep the restored colours and existing editorial typography; the earlier lilac-and-plum palette is superseded.
 
 A request to improve UI or UX authorises relevant changes to hierarchy, spacing, layout, feedback, and interaction within the requested surface. Make the result meaningfully better and explain the evidence. It does not require preserving a demonstrated usability problem. Change the broader brand, theme, or navigation model only when that is within the requested scope.
 

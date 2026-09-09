@@ -1,561 +1,881 @@
 "use client";
 
-import { workFetch } from '@/lib/workspace-change'
-import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { GOAL_PERIODS, goalProgress } from "@/lib/planning-core.mjs";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import { useRouter } from "next/navigation";
+import {
+  ArrowUpRight,
+  BookOpen,
+  CalendarDays,
+  Check,
+  ChevronDown,
+  FileText,
+  Plus,
+  Search,
+  Target,
+} from "lucide-react";
 import type { PlanningRow } from "@/lib/planning-server";
-const today = () =>
+import { GOAL_PERIODS } from "@/lib/planning-core.mjs";
+import { workFetch } from "@/lib/workspace-change";
+import { NotebookEditor } from "./NotebookEditor";
+
+type Kind = "note" | "goal";
+type DocumentHandle = { flush: () => Promise<boolean> };
+export const sydneyToday = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }).format(
     new Date(),
   );
-const displayNumber = (value: unknown) =>
-  value == null || value === "" ? "Unknown" : Number.isFinite(Number(value))
-    ? new Intl.NumberFormat("en-AU").format(Number(value)) : String(value);
-const displayDate = (value: string) => {
-  if (!value) return "No due date";
-  const date = new Date(`${value}T12:00:00`);
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric" }).format(date);
-};
-const empty = (kind: string): Record<string, any> =>
-  kind === "goal"
-    ? {
-        title: "",
-        period: "monthly",
-        start: today(),
-        due: "",
-        regular: "",
-        stretch: "",
-        actual: "",
-        baseline: "",
-        forecast: "",
-        unit: "AUD / month",
-        source: "",
-        parentId: "",
-        status: "draft",
-        notes: "",
-        links: "",
-      }
-    : kind === "time"
-      ? {
-          title: "",
-          date: today(),
-          plannedMinutes: "",
-          actualMinutes: "",
-          workType: "Campaign preparation",
-          result: "partial",
-          output: "",
-          links: "",
-          goalId: "",
-        }
-      : { title: "", body: "", links: "", goalId: "", status: "idea" };
+export const notebookDate = (day: string) =>
+  new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${day.slice(0, 10)}T12:00:00`));
+function newPage(kind: Kind): PlanningRow {
+  const date = sydneyToday();
+  return {
+    id: `planning.${kind}.${crypto.randomUUID()}`,
+    kind,
+    revision: 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    history: [],
+    data:
+      kind === "note"
+        ? { title: "", body: "", date, goalId: "", status: "idea", links: "" }
+        : {
+            title: "",
+            notes: "",
+            start: date,
+            due: "",
+            period: "quarterly",
+            status: "draft",
+            measurementType: "quantitative",
+            direction: "increase",
+            regular: "",
+            stretch: "",
+            unit: "",
+            metricDefinition: "",
+            criteria: "",
+            owner: "Jules",
+            freshnessDays: 30,
+          },
+  };
+}
+
 export function PlanningBoard() {
-  const [kind, setKind] = useState("goal"),
-    [rows, setRows] = useState<PlanningRow[]>([]),
-    [goals, setGoals] = useState<PlanningRow[]>([]),
-    [edit, setEdit] = useState<PlanningRow | null>(null),
-    [form, setForm] = useState(empty("goal")),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [message, setMessage] = useState(""),
-    [query, setQuery] = useState(""),
-    [page, setPage] = useState(0),
-    [total, setTotal] = useState(0);
-  const loadVersion = useRef(0),
-    createId = useRef("");
-  const load = useCallback(async (k = kind, p = page) => {
-    const version = ++loadVersion.current;
-    const r = await workFetch(`/api/planning?kind=${k}&page=${p}`, {
-      cache: "no-store",
-    });
-    const b = await r.json();
-    if (!r.ok) throw new Error(b.error);
-    if (version === loadVersion.current) {
-      setRows(b.records);
-      setTotal(b.total);
-    }
-  }, [kind,page]);
-  useEffect(() => {
-    let live = true;
+  const router = useRouter();
+  const [rows, setRows] = useState<PlanningRow[]>([]);
+  const [kind, setKind] = useState<Kind>("note");
+  const [selected, setSelected] = useState<PlanningRow | null>(null);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [switching, setSwitching] = useState(false);
+  const editor = useRef<DocumentHandle>(null);
+  const opened = useRef(false);
+  const load = useCallback(async () => {
     setError("");
-    void load(kind, page).catch((e) => {
-      if (live) setError(e.message);
-    });
-    return () => {
-      live = false;
-      // Invalidate in-flight requests before a different view loads.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      loadVersion.current++;
-    };
-  }, [kind, page, load]);
-  useEffect(() => {
-    void (async () => {
-      let all: PlanningRow[] = [];
-      let p = 0;
-      for (;;) {
-        const r = await workFetch(`/api/planning?kind=goal&page=${p++}`);
-        const b = await r.json();
-        if (!r.ok) throw new Error(b.error);
-        all = all.concat(b.records);
-        if (all.length >= b.total) break;
-      }
-      setGoals(all);
-    })().catch((e) => setError(e.message));
-  }, [message]);
-  function change(k: string, v: unknown) {
-    setForm((f) => ({ ...f, [k]: v }));
-    setMessage("");
-  }
-  function reset(k = kind) {
-    createId.current = "";
-    setRows([]);
-    setEdit(null);
-    setForm(empty(k));
-    setMessage("");
-  }
-  async function save(archived = false) {
-    setBusy(true);
-    setError("");
+    setLoading(true);
     try {
-      const id =
-        edit?.id ||
-        (createId.current ||= `planning.${kind}.${crypto.randomUUID()}`);
-      const r = await workFetch("/api/planning", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kind,
-          id,
-          revision: edit?.revision,
-          data: { ...form, archived },
+      const lists = await Promise.all(
+        (["note", "goal"] as const).map(async (k) => {
+          const all: PlanningRow[] = [];
+          for (let page = 0; page < 100; page++) {
+            const r = await workFetch(`/api/planning?kind=${k}&page=${page}`, {
+              cache: "no-store",
+            });
+            const body = await r.json();
+            if (!r.ok)
+              throw new Error(body.error || "Unable to open your notebook.");
+            all.push(...body.records);
+            if (all.length >= body.total) return all;
+          }
+          throw new Error("There are too many pages to load at once.");
         }),
-      });
-      const b = await r.json();
-      if (!r.ok) throw new Error(b.error);
-      setEdit(b.record);
-      setForm(b.record.data);
-      await load();
-      setMessage(`Saved revision ${b.record.revision}.`);
+      );
+      const all = lists.flat().filter((row) => !row.data.archived);
+      setRows(all);
+      if (!opened.current) {
+        let restored: PlanningRow | undefined;
+        try {
+          const last = JSON.parse(
+            localStorage.getItem("compass.notebook.active") || "null",
+          );
+          if (last?.id) {
+            restored = all.find((r) => r.id === last.id);
+            if (!restored) {
+              const draft = JSON.parse(
+                localStorage.getItem(`compass.notebook.draft.${last.id}`) ||
+                  "null",
+              );
+              if (
+                draft?.data &&
+                draft.revision === 0 &&
+                ["note", "goal"].includes(last.kind)
+              )
+                restored = {
+                  ...newPage(last.kind),
+                  id: last.id,
+                  createdAt: last.createdAt,
+                  data: draft.data,
+                };
+            }
+          }
+        } catch {
+          /* start from the server when browser storage is unavailable */
+        }
+        const next =
+          restored ?? all.find((row) => row.kind === "note") ?? newPage("note");
+        setSelected(next);
+        setKind(next.kind as Kind);
+        opened.current = true;
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to save.");
+      setError(
+        e instanceof Error ? e.message : "Unable to open your notebook.",
+      );
     } finally {
-      setBusy(false);
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  useEffect(() => {
+    if (selected)
+      try {
+        localStorage.setItem(
+          "compass.notebook.active",
+          JSON.stringify({
+            id: selected.id,
+            kind: selected.kind,
+            createdAt: selected.createdAt,
+          }),
+        );
+      } catch {
+        /* optional navigation memory */
+      }
+  }, [selected]);
+  const saved = useCallback((row: PlanningRow) => {
+    setRows((current) =>
+      [row, ...current.filter((r) => r.id !== row.id)].filter(
+        (r) => !r.data.archived,
+      ),
+    );
+  }, []);
+  async function move(action: () => void) {
+    if (switching) return;
+    setSwitching(true);
+    try {
+      if (!editor.current || (await editor.current.flush())) action();
+    } finally {
+      setSwitching(false);
     }
   }
-  const fields =
-    kind === "goal"
-      ? [
-          ["title", "Goal", "text"],
-          ["start", "Start", "date"],
-          ["due", "Deadline", "date"],
-          ["unit", "Unit", "text"],
-          ["baseline", "Baseline (unknown can stay blank)", "number"],
-          ["regular", "Regular target", "number"],
-          ["stretch", "Stretch target", "number"],
-          ["forecast", "Forecast (separate from target)", "number"],
-          ["actual", "Actual (blank means unknown)", "number"],
-          ["source", "Evidence for actual result", "text"],
-        ]
-      : kind === "time"
-        ? [
-            ["title", "Work completed or attempted", "text"],
-            ["date", "Date", "date"],
-            ["plannedMinutes", "Planned minutes", "number"],
-            [
-              "actualMinutes",
-              "Actual human minutes (blank if unknown)",
-              "number",
-            ],
-            ["workType", "Type of work", "text"],
-          ]
-        : [["title", "Note title", "text"]];
   const shown = rows.filter(
-    (r) =>
-      !r.data.archived &&
-      JSON.stringify(r.data).toLowerCase().includes(query.toLowerCase()),
+    (row) =>
+      row.kind === kind &&
+      `${row.data.title} ${row.data.body ?? row.data.notes ?? ""}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
   );
+  const goals = rows.filter((row) => row.kind === "goal");
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="planning-workspace notebook-workspace">
+      <header className="planning-heading">
         <div>
+          <p className="compass-section-label">Your thinking space</p>
           <h1 className="compass-page-title">Goals & notes</h1>
           <p className="compass-page-subtitle">
-            Connect priorities to work. Keep targets, evidence and actual effort
-            distinct.
+            A little clarity. A place to begin.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Link className="compass-btn-secondary" href="/planning">Pathfinder</Link>
-          <Link className="compass-btn-secondary" href="/sales/offer-plan">
-            Offer & economics
-          </Link>
-          <Link className="compass-btn-secondary" href="/sales/experiments">
-            Email tests
-          </Link>
-        </div>
-      </div>
-      <div
-        className="flex flex-wrap gap-2"
-        role="group"
-        aria-label="Planning views"
-      >
-        {[
-          ["goal", "Goals"],
-          ["note", "Notes"],
-          ["time", "Time & output"],
-          ["run", "Agent runs"],
-          ["preparation", "Preparation queue"],
-        ].map(([k, label]) => (
+        <div className="planning-heading-actions">
           <button
-            key={k}
-            aria-pressed={kind === k}
-            className={
-              kind === k ? "compass-btn-primary" : "compass-btn-secondary"
+            className="compass-btn-ghost"
+            onClick={() =>
+              void move(() => router.push("/planning?view=activity"))
             }
-            onClick={() => {
-              setKind(k);
-              setPage(0);
-              reset(k);
-              setQuery("");
-            }}
           >
-            {label}
+            Time & activity
           </button>
-        ))}
-      </div>
+          <button
+            className="compass-btn-secondary"
+            onClick={() => void move(() => router.push("/planning"))}
+          >
+            Pathfinder <ArrowUpRight size={15} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
       {error && (
-        <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-800">
-          {error}
+        <p role="alert" className="planning-error">
+          {error} <button onClick={() => void load()}>Try again</button>
         </p>
       )}
-      {message && (
-        <p role="status" className="text-sm text-green-800">
-          {message}
-        </p>
-      )}
-      <div className="grid gap-5 lg:grid-cols-[1.05fr_1fr]">
-        <section className="compass-panel space-y-4 p-5">
-          <div className="flex items-center gap-3">
-            <label className="flex-1">
-              <span className="sr-only">Search loaded records</span>
-              <input
-                className="compass-input w-full"
-                placeholder="Search this page…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </label>
-            {kind !== "run" && kind !== "preparation" && (
+      <div className="notebook-layout" aria-busy={loading || switching}>
+        <aside className="notebook-index" aria-label="Notebook pages">
+          <div className="notebook-index-heading">
+            <BookOpen size={17} aria-hidden="true" />
+            <span>Your notebook</span>
+            <button
+              aria-label={`New ${kind === "note" ? "page" : "goal"}`}
+              onClick={() => void move(() => setSelected(newPage(kind)))}
+              disabled={switching || loading}
+            >
+              <Plus size={18} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="notebook-folders" role="group" aria-label="Page type">
+            {(["note", "goal"] as const).map((k) => (
               <button
-                className="compass-btn-secondary"
-                onClick={() => {
-                  reset();
-                  void load();
-                }}
+                key={k}
+                aria-pressed={kind === k}
+                disabled={switching}
+                onClick={() =>
+                  void move(() => {
+                    setKind(k);
+                    setQuery("");
+                    setSelected(rows.find((r) => r.kind === k) ?? newPage(k));
+                  })
+                }
               >
-                New
+                {k === "note" ? "Notes" : "Goals"}
+                <span>{rows.filter((r) => r.kind === k).length}</span>
               </button>
-            )}
+            ))}
           </div>
-          {kind === "time" && (
-            <p className="text-sm text-neutral-500">
-              Planned time is not actual time. Record human effort and accepted
-              output; unattended sends and agent runtime are separate.
-            </p>
-          )}
-          {shown.length === 0 && (
-            <p className="py-8 text-sm text-neutral-500">
-              No matching records on this page.
-            </p>
-          )}
-          {shown.map((r) => (
-            <button
-              key={r.id}
-              aria-label={`Open ${r.data.title}`}
-              className={`block w-full rounded-xl border p-4 text-left ${edit?.id === r.id ? "border-orange-300 bg-orange-50/30" : "border-stone-200 bg-white"}`}
-              onClick={() => {
-                setEdit(r);
-                setForm(r.data);
-                setMessage("");
-              }}
-            >
-              <div className="flex justify-between gap-3">
-                <span className="font-semibold">{r.data.title}</span>
-                <span className="text-xs text-neutral-500">
-                  {r.data.status || r.data.result || ""}
-                </span>
-              </div>
-              {kind === "goal" ? (
-                <>
-                  <p className="mt-2 text-sm text-neutral-600">
-                    {r.data.period} · {r.data.due ? `due ${displayDate(r.data.due)}` : "No due date"} ·{" "}
-                    {displayNumber(r.data.actual)} / {displayNumber(r.data.regular)}{" "}
-                    {r.data.unit}
-                    {r.data.stretch != null
-                      ? ` · stretch ${displayNumber(r.data.stretch)}`
-                      : ""}
-                  </p>
-                  {r.data.parentId && (
-                    <p className="mt-2 text-xs text-neutral-500">
-                      Supports:{" "}
-                      {goals.find((g) => g.id === r.data.parentId)?.data
-                        .title || "Parent goal"}
-                    </p>
+          <label className="notebook-search">
+            <Search size={14} aria-hidden="true" />
+            <input
+              aria-label="Search notebook"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Find a page…"
+            />
+          </label>
+          <p className="notebook-index-caption">
+            {kind === "note"
+              ? "Pages & thoughts"
+              : "What you’re working towards"}
+          </p>
+          <ul className="notebook-page-list">
+            {shown.map((row) => (
+              <li key={row.id}>
+                <button
+                  aria-current={selected?.id === row.id ? "page" : undefined}
+                  disabled={switching}
+                  onClick={() => void move(() => setSelected(row))}
+                >
+                  {kind === "note" ? (
+                    <FileText size={16} aria-hidden="true" />
+                  ) : (
+                    <Target size={16} aria-hidden="true" />
                   )}
-                  {goalProgress(r.data) != null && (
-                    <div className="mt-3 h-1.5 rounded-full bg-stone-100">
-                      <div
-                        className="h-full rounded-full bg-orange-500"
-                        style={{ width: `${goalProgress(r.data)}%` }}
-                      />
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="mt-2 line-clamp-3 whitespace-pre-line text-sm text-neutral-500">
-                  {kind === "time"
-                    ? `${r.data.date} · ${r.data.actualMinutes ?? "Unknown"} actual minutes · ${r.data.output || "Output not recorded"}`
-                    : r.data.body}
-                </p>
-              )}
-            </button>
-          ))}
-          <div className="flex items-center justify-between text-xs text-neutral-500">
-            <button
-              disabled={page === 0}
-              onClick={() => setPage((p) => p - 1)}
-              className="compass-btn-ghost"
-            >
-              Previous
-            </button>
-            <span>
-              {total} {total === 1 ? 'record' : 'records'} · page {page + 1}
-            </span>
-            <button
-              disabled={(page + 1) * 100 >= total}
-              onClick={() => setPage((p) => p + 1)}
-              className="compass-btn-ghost"
-            >
-              Next
-            </button>
-          </div>
-        </section>
-        <section className="compass-panel p-5">
-          <h2 className="mb-5 text-lg font-semibold">
-            {edit ? "Edit record" : "New record"}
-          </h2>
-          {kind === "run" || kind === "preparation" ? (
-            <>
-              <p className="text-sm text-neutral-500">
-                Agents record execution evidence here. A queued request is not
-                completed work.
-              </p>
-              {edit && (
-                <>
-                  <h3 className="mt-5 font-semibold">{edit.data.title}</h3>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">
-                    {edit.data.body}
-                  </p>
-                  <p className="mt-4 text-xs text-neutral-500">
-                    {edit.updatedAt} · {edit.data.source}
-                  </p>
-                </>
-              )}
-            </>
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void save();
-              }}
-              className="space-y-4"
-            >
-              <div className="grid gap-4 sm:grid-cols-2">
-                {fields.map(([k, label, type]) => (
-                  <label
-                    key={k}
-                    className={`text-sm ${k === "title" || k === "source" ? "sm:col-span-2" : ""}`}
-                  >
-                    {label}
-                    <input
-                      className="compass-input mt-1 w-full"
-                      type={type}
-                      step={type === "number" ? "any" : undefined}
-                      min={type === "number" ? 0 : undefined}
-                      required={
-                        k === "title" ||
-                        k === "due" ||
-                        k === "date" ||
-                        k === "regular"
-                      }
-                      value={form[k] ?? ""}
-                      onChange={(e) => change(k, e.target.value)}
-                    />
-                  </label>
-                ))}
-                {kind === "goal" && (
-                  <>
-                    <label className="text-sm">
-                      Period
-                      <select
-                        className="compass-input mt-1 w-full"
-                        value={form.period}
-                        onChange={(e) => change("period", e.target.value)}
-                      >
-                        {GOAL_PERIODS.map((p: string) => (
-                          <option key={p}>{p}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="text-sm">
-                      Decision status
-                      <select
-                        className="compass-input mt-1 w-full"
-                        value={form.status}
-                        onChange={(e) => change("status", e.target.value)}
-                      >
-                        <option value="draft">Proposed target</option>
-                        <option value="committed">Committed target</option>
-                      </select>
-                    </label>
-                  </>
-                )}
-                <label className="text-sm sm:col-span-2">
-                  {kind === "goal" ? "Parent goal" : "Supports goal"}
-                  <select
-                    className="compass-input mt-1 w-full"
-                    value={form[kind === "goal" ? "parentId" : "goalId"] || ""}
-                    onChange={(e) =>
-                      change(
-                        kind === "goal" ? "parentId" : "goalId",
-                        e.target.value,
-                      )
-                    }
-                  >
-                    <option value="">None</option>
-                    {goals
-                      .filter(
-                        (g) =>
-                          !g.data.archived &&
-                          g.id !== edit?.id &&
-                          (kind !== "goal" ||
-                            GOAL_PERIODS.indexOf(g.data.period) >
-                              GOAL_PERIODS.indexOf(form.period)),
-                      )
-                      .map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.data.title}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-              </div>
-              {kind === "note" && (
-                <label className="block text-sm">
-                  Type
-                  <select
-                    className="compass-input ml-3"
-                    value={form.status}
-                    onChange={(e) => change("status", e.target.value)}
-                  >
-                    <option value="idea">Idea / working note</option>
-                    <option value="decision">Decision</option>
-                  </select>
-                </label>
-              )}
-              {kind === "time" && (
-                <label className="block text-sm">
-                  Outcome
-                  <select
-                    className="compass-input ml-3"
-                    value={form.result}
-                    onChange={(e) => change("result", e.target.value)}
-                  >
-                    {["completed", "partial", "blocked"].map((x) => (
-                      <option key={x}>{x}</option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <label className="block text-sm">
-                {kind === "note"
-                  ? "Note"
-                  : kind === "goal"
-                    ? "Rationale / changes"
-                    : "Accepted output, rework or blocker"}
-                <textarea
-                  className="compass-input mt-1 min-h-32 w-full"
-                  value={
-                    form[
-                      kind === "note"
-                        ? "body"
-                        : kind === "goal"
-                          ? "notes"
-                          : "output"
-                    ] || ""
-                  }
-                  onChange={(e) =>
-                    change(
-                      kind === "note"
-                        ? "body"
-                        : kind === "goal"
-                          ? "notes"
-                          : "output",
-                      e.target.value,
-                    )
-                  }
-                />
-              </label>
-              <label className="block text-sm">
-                Related task, project, campaign or source links
-                <textarea
-                  className="compass-input mt-1 w-full"
-                  value={form.links || ""}
-                  onChange={(e) => change("links", e.target.value)}
-                />
-              </label>
-              <div className="flex flex-wrap gap-3">
-                <button disabled={busy} className="compass-btn-primary">
-                  {busy ? "Saving…" : "Save"}
+                  <span>
+                    <strong>{row.data.title}</strong>
+                    <small>
+                      {kind === "note"
+                        ? notebookDate(row.data.date || row.createdAt)
+                        : row.data.due
+                          ? `By ${notebookDate(row.data.due)}`
+                          : "Date to be decided"}
+                    </small>
+                  </span>
                 </button>
-                {edit && (
-                  <button
-                    disabled={busy}
-                    type="button"
-                    className="compass-btn-ghost"
-                    onClick={() => void save(true)}
-                  >
-                    Archive
-                  </button>
-                )}
-              </div>
-            </form>
+              </li>
+            ))}
+          </ul>
+          {!shown.length && (
+            <p className="notebook-index-empty">
+              {loading
+                ? "Opening your pages…"
+                : query
+                  ? "No pages match that search."
+                  : "Your next idea starts here."}
+            </p>
           )}
-          {edit && (
-            <details className="mt-6 border-t pt-4">
-              <summary className="cursor-pointer text-sm font-medium">
-                Revision history ({edit.history.length})
-              </summary>
-              {edit.history
-                .slice()
-                .reverse()
-                .map((h) => (
-                  <div
-                    key={h.revision}
-                    className="mt-3 rounded-xl bg-stone-50 p-3 text-xs"
-                  >
-                    <p>
-                      Revision {h.revision} · {h.at}
-                    </p>
-                    <pre className="mt-2 whitespace-pre-wrap break-words font-sans">
-                      {JSON.stringify(h.data, null, 2)}
-                    </pre>
-                  </div>
-                ))}
-            </details>
-          )}
-        </section>
+          <button
+            className="notebook-new-page"
+            disabled={switching || loading}
+            onClick={() => void move(() => setSelected(newPage(kind)))}
+          >
+            <Plus size={15} aria-hidden="true" />
+            {kind === "note" ? "New page" : "New goal"}
+          </button>
+          <p className="notebook-index-foot">
+            Think on the page.
+            <br />
+            Connect it in Pathfinder.
+          </p>
+        </aside>
+        {selected ? (
+          <NotebookDocument
+            key={selected.id}
+            ref={editor}
+            row={selected}
+            goals={goals}
+            onSaved={saved}
+            onArchived={() => setSelected(newPage(kind))}
+            onPathfinder={(id) =>
+              void move(() =>
+                router.push(`/planning?goal=${encodeURIComponent(id)}`),
+              )
+            }
+          />
+        ) : (
+          <div className="notebook-paper" role="status">
+            {loading
+              ? "Opening your notebook…"
+              : "Your notebook could not be loaded. Try again above."}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+const NotebookDocument = forwardRef<
+  DocumentHandle,
+  {
+    row: PlanningRow;
+    goals: PlanningRow[];
+    onSaved: (row: PlanningRow) => void;
+    onArchived: () => void;
+    onPathfinder: (id: string) => void;
+  }
+>(function NotebookDocument(
+  { row, goals, onSaved, onArchived, onPathfinder },
+  ref,
+) {
+  const [form, setForm] = useState(row.data);
+  const [status, setStatus] = useState(
+    row.revision ? "All changes saved" : "New page",
+  );
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [record, setRecord] = useState(row);
+  const current = useRef(row.data),
+    revision = useRef(row.revision),
+    version = useRef(0),
+    savedVersion = useRef(0);
+  const inflight = useRef<Promise<boolean> | null>(null);
+  const conflict = useRef(false);
+  const note = row.kind === "note";
+  const draftKey = `compass.notebook.draft.${row.id}`;
+  const localAvailable = useRef(true);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  const date =
+    form.date ||
+    form.start ||
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }).format(
+      new Date(row.createdAt),
+    );
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft?.data && typeof draft.data === "object") {
+          current.current = draft.data;
+          setForm(draft.data);
+          version.current++;
+          setDirty(true);
+          if (draft.revision !== row.revision) {
+            conflict.current = true;
+            setError(
+              "This page changed elsewhere. Your recovered draft is kept here. Copy your text before loading the newer version.",
+            );
+          } else setStatus("Draft recovered");
+        }
+      }
+    } catch {
+      localAvailable.current = false;
+    }
+    setReady(true);
+  }, [draftKey, row.revision]);
+  useEffect(() => {
+    if (titleRef.current) {
+      titleRef.current.style.height = "0px";
+      titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
+    }
+  }, [form.title]);
+  useEffect(() => {
+    let width = 0;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width !== width && titleRef.current) {
+        width = entry.contentRect.width;
+        titleRef.current.style.height = "0px";
+        titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
+      }
+    });
+    if (titleRef.current) observer.observe(titleRef.current);
+    return () => observer.disconnect();
+  }, []);
+  function change(key: string, value: unknown) {
+    const next = { ...current.current, [key]: value };
+    if (!conflict.current) setError("");
+    current.current = next;
+    version.current++;
+    setForm(next);
+    setDirty(true);
+    setStatus(note ? "Saving soon…" : "Unsaved changes");
+    try {
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({ revision: revision.current, data: next }),
+      );
+    } catch {
+      localAvailable.current = false;
+    }
+  }
+  const flush = useCallback(async (): Promise<boolean> => {
+    if (conflict.current) return false;
+    if (inflight.current) return inflight.current;
+    if (version.current === savedVersion.current) return true;
+    const run = async () => {
+      setBusy(true);
+      setError("");
+      try {
+        while (savedVersion.current < version.current) {
+          const captured = version.current;
+          const data = { ...current.current };
+          if (note && !String(data.title || "").trim())
+            data.title = `Notes · ${notebookDate(data.date || date)}`;
+          setStatus("Saving…");
+          const r = await workFetch("/api/planning", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              kind: row.kind,
+              id: row.id,
+              revision: revision.current || undefined,
+              data,
+            }),
+          });
+          const b = await r.json();
+          if (!r.ok) {
+            if (String(b.error).includes("changed")) conflict.current = true;
+            throw new Error(b.error || "Your page could not be saved.");
+          }
+          revision.current = b.record.revision;
+          savedVersion.current = captured;
+          setRecord(b.record);
+          onSaved(b.record);
+          if (captured === version.current) {
+            current.current = b.record.data;
+            setForm(b.record.data);
+            setDirty(false);
+            try {
+              localStorage.removeItem(draftKey);
+            } catch {
+              /* still saved remotely */
+            }
+          } else {
+            try {
+              localStorage.setItem(
+                draftKey,
+                JSON.stringify({
+                  revision: revision.current,
+                  data: current.current,
+                }),
+              );
+            } catch {
+              localAvailable.current = false;
+            }
+          }
+        }
+        setStatus("All changes saved");
+        return true;
+      } catch (e) {
+        setError(
+          `${e instanceof Error ? e.message : "Unable to save."} ${localAvailable.current ? "Your draft is kept on this browser." : "Keep this page open and copy your text before leaving."}`,
+        );
+        setStatus("Not saved");
+        return false;
+      } finally {
+        setBusy(false);
+        inflight.current = null;
+      }
+    };
+    inflight.current = run();
+    return inflight.current;
+  }, [date, draftKey, note, onSaved, row.id, row.kind]);
+  useImperativeHandle(ref, () => ({ flush }), [flush]);
+  useEffect(() => {
+    if (!note || !dirty || !ready || error) return;
+    const timer = setTimeout(() => void flush(), 1800);
+    return () => clearTimeout(timer);
+  }, [form, dirty, ready, note, flush, error]);
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (version.current !== savedVersion.current) {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, []);
+  // Restore drafts after navigation through the global shell too.
+  const flushOnExit = useRef(flush);
+  flushOnExit.current = flush;
+  useEffect(
+    () => () => {
+      void flushOnExit.current();
+    },
+    [],
+  );
+  async function archive() {
+    if (!(await flush())) return;
+    change("archived", true);
+    if (await flush()) onArchived();
+  }
+  const field = (
+    key: string,
+    label: string,
+    type = "text",
+    required = false,
+  ) => (
+    <label key={key} className="notebook-property">
+      <span>{label}</span>
+      <input
+        type={type}
+        required={required}
+        min={type === "number" ? 0 : undefined}
+        step={type === "number" ? "any" : undefined}
+        value={form[key] ?? ""}
+        placeholder={required ? "Add…" : "Empty"}
+        onChange={(e) => change(key, e.target.value)}
+      />
+    </label>
+  );
+  return (
+    <article className="notebook-paper">
+      <div className="notebook-paper-bar">
+        <span>
+          <CalendarDays size={14} aria-hidden="true" />
+          <time dateTime={date}>{notebookDate(date)}</time>
+        </span>
+        <span className="notebook-save-status" role="status">
+          {!dirty && record.revision > 0 && (
+            <Check size={13} aria-hidden="true" />
+          )}
+          {status}
+        </span>
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void flush();
+        }}
+      >
+        <div className="notebook-document-top">
+          <span className="notebook-document-icon">
+            {note ? (
+              <FileText size={24} aria-hidden="true" />
+            ) : (
+              <Target size={24} aria-hidden="true" />
+            )}
+          </span>
+          <span className="compass-section-label">
+            {note ? "Room to think" : "An intention, made clear"}
+          </span>
+        </div>
+        <textarea
+          ref={titleRef}
+          className="notebook-title"
+          rows={1}
+          aria-label={note ? "Page title" : "Goal title"}
+          placeholder={note ? "Untitled" : "What do you want to achieve?"}
+          value={form.title ?? ""}
+          maxLength={200}
+          onChange={(e) =>
+            change("title", e.target.value.replaceAll("\n", " "))
+          }
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.form
+                ?.querySelector<HTMLTextAreaElement>(".notebook-block textarea")
+                ?.focus();
+            }
+          }}
+        />
+        <div className="notebook-context">
+          <label>
+            {note ? "Connected to" : "Part of"}
+            <select
+              aria-label={note ? "Connected goal" : "Parent goal"}
+              value={form[note ? "goalId" : "parentId"] || ""}
+              onChange={(e) =>
+                change(note ? "goalId" : "parentId", e.target.value)
+              }
+            >
+              <option value="">
+                {note ? "Choose a goal (optional)" : "An independent goal"}
+              </option>
+              {goals
+                .filter(
+                  (g) =>
+                    g.id !== row.id &&
+                    (note ||
+                      GOAL_PERIODS.indexOf(g.data.period) >
+                        GOAL_PERIODS.indexOf(form.period)),
+                )
+                .map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.data.title}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="sr-only" htmlFor={`status-${row.id}`}>
+            Page status
+          </label>
+          <select
+            id={`status-${row.id}`}
+            aria-label="Page status"
+            value={form.status}
+            onChange={(e) => change("status", e.target.value)}
+          >
+            {note ? (
+              <>
+                <option value="idea">Working note</option>
+                <option value="decision">Decision</option>
+              </>
+            ) : (
+              <>
+                <option value="draft">Proposed goal</option>
+                <option value="committed">Committed goal</option>
+              </>
+            )}
+          </select>
+        </div>
+        {!note && (
+          <div className="notebook-goal-properties">
+            <div className="notebook-key-properties">
+              {form.measurementType !== "qualitative" && (
+                <>
+                  {field(
+                    "regular",
+                    "Target",
+                    "number",
+                    form.status === "committed",
+                  )}
+                  {field("stretch", "Stretch", "number")}
+                  {field("unit", "Measured in")}
+                </>
+              )}
+              {field("due", "By", "date", form.status === "committed")}
+            </div>
+            <details>
+              <summary>
+                <ChevronDown size={14} aria-hidden="true" /> Success definition
+                & details
+              </summary>
+              <div className="notebook-property-grid">
+                <label className="notebook-property">
+                  <span>Measure</span>
+                  <select
+                    value={form.measurementType ?? "quantitative"}
+                    onChange={(e) => change("measurementType", e.target.value)}
+                  >
+                    <option value="quantitative">Numeric target</option>
+                    <option value="qualitative">Observable outcome</option>
+                  </select>
+                </label>
+                <label className="notebook-property">
+                  <span>Horizon</span>
+                  <select
+                    value={form.period}
+                    onChange={(e) => change("period", e.target.value)}
+                  >
+                    {GOAL_PERIODS.map((p: string) => (
+                      <option key={p}>{p}</option>
+                    ))}
+                  </select>
+                </label>
+                {field("start", "Starts", "date")}
+                {field("owner", "Owner")}
+                {field("baseline", "Baseline", "number")}
+                <label className="notebook-property">
+                  <span>Direction</span>
+                  <select
+                    value={form.direction || "increase"}
+                    onChange={(e) => change("direction", e.target.value)}
+                  >
+                    <option value="increase">Increase to target</option>
+                    <option value="decrease">Decrease to target</option>
+                  </select>
+                </label>
+                <label className="notebook-property notebook-property-wide">
+                  <span>
+                    {form.measurementType === "qualitative"
+                      ? "What will demonstrate success?"
+                      : "What counts towards this target?"}
+                  </span>
+                  <textarea
+                    rows={2}
+                    value={
+                      form[
+                        form.measurementType === "qualitative"
+                          ? "criteria"
+                          : "metricDefinition"
+                      ] || ""
+                    }
+                    onChange={(e) =>
+                      change(
+                        form.measurementType === "qualitative"
+                          ? "criteria"
+                          : "metricDefinition",
+                        e.target.value,
+                      )
+                    }
+                    placeholder="Describe what you’ll measure or observe."
+                  />
+                </label>
+                {field("freshnessDays", "Evidence freshness (days)", "number")}
+                {field(
+                  "expectedSprints",
+                  "Expected sprints (estimate)",
+                  "number",
+                )}
+              </div>
+            </details>
+          </div>
+        )}
+        {error && (
+          <div className="planning-error" role="alert">
+            {error}
+            <button type="button" disabled={busy} onClick={() => void flush()}>
+              Retry save
+            </button>
+            {conflict.current && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Load the saved page? Copy any draft text you want to keep first.",
+                    )
+                  ) {
+                    localStorage.removeItem(draftKey);
+                    window.location.reload();
+                  }
+                }}
+              >
+                Load saved page
+              </button>
+            )}
+          </div>
+        )}
+        {ready && (
+          <NotebookEditor
+            value={String(form[note ? "body" : "notes"] || "")}
+            onChange={(value) => change(note ? "body" : "notes", value)}
+            maxLength={note ? 20000 : 4000}
+            placeholder={
+              note
+                ? "What’s on your mind? Start anywhere. Use / for ideas."
+                : "Why does this matter? What will move you closer?"
+            }
+          />
+        )}
+        <details className="notebook-extra">
+          <summary>Links & sources</summary>
+          <label className="sr-only" htmlFor={`links-${row.id}`}>
+            Links and sources
+          </label>
+          <textarea
+            id={`links-${row.id}`}
+            rows={2}
+            value={form.links || ""}
+            onChange={(e) => change("links", e.target.value)}
+            placeholder="Paste a project, task, or source link…"
+          />
+        </details>
+        <footer className="notebook-document-footer">
+          <span>
+            {note
+              ? "Notes save automatically"
+              : form.status === "draft"
+                ? "Start with an idea. Add targets and dates when you’re ready."
+                : "Save to update your goal in Pathfinder"}
+          </span>
+          <div>
+            {dirty && !busy && (
+              <button
+                type="button"
+                className="compass-btn-ghost"
+                onClick={() => {
+                  current.current = record.data;
+                  setForm(record.data);
+                  savedVersion.current = ++version.current;
+                  setDirty(false);
+                  setError("");
+                  conflict.current = false;
+                  setStatus(record.revision ? "All changes saved" : "New page");
+                  try {
+                    localStorage.removeItem(draftKey);
+                  } catch {}
+                }}
+              >
+                Discard changes
+              </button>
+            )}
+            {record.revision > 0 && (
+              <button
+                type="button"
+                className="compass-btn-ghost"
+                disabled={busy}
+                onClick={() => void archive()}
+              >
+                Archive
+              </button>
+            )}
+            <button
+              className={note ? "compass-btn-secondary" : "compass-btn-primary"}
+              disabled={busy || !dirty}
+            >
+              {busy ? "Saving…" : note ? "Save now" : "Save goal"}
+            </button>
+            {!note && record.revision > 0 && (
+              <button
+                type="button"
+                className="compass-btn-secondary"
+                onClick={() => onPathfinder(row.id)}
+              >
+                View path <ArrowUpRight size={14} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </footer>
+      </form>
+      {!!record.history.length && (
+        <details className="notebook-history">
+          <summary>Earlier versions · {record.history.length}</summary>
+          {record.history
+            .slice()
+            .reverse()
+            .map((h) => (
+              <details key={h.revision}>
+                <summary>
+                  {new Date(h.at).toLocaleString("en-AU")} · version{" "}
+                  {h.revision}
+                </summary>
+                <pre>{JSON.stringify(h.data, null, 2)}</pre>
+              </details>
+            ))}
+        </details>
+      )}
+    </article>
+  );
+});

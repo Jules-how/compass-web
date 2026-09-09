@@ -28,6 +28,7 @@ import {
 } from '@/lib/project-pm'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import TaskCreate from '@/components/TaskCreate'
+import { ModalFrame } from '@/components/ui/ModalFrame'
 
 type TabKey = 'overview' | 'activity' | 'issues'
 
@@ -173,20 +174,7 @@ export function ProjectDetailPanel({
     if (projectsProp) setAllProjects(projectsProp)
   }, [projectsProp])
 
-  useEffect(() => {
-    if (!isModal || !onClose) return
-    const close = onClose
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') close()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previousOverflow
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [isModal, onClose])
+
 
   async function notifyChanged() {
     await onChanged?.()
@@ -301,22 +289,9 @@ export function ProjectDetailPanel({
   function wrap(content: React.ReactNode) {
     if (!isModal) return content
     return (
-      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-950/40 px-3 py-6 sm:px-4 sm:py-10">
-        <button
-          type="button"
-          className="absolute inset-0 cursor-default"
-          aria-label="Close project"
-          onClick={onClose}
-        />
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="project-detail-title"
-          className="relative z-10 mb-10 w-full max-w-5xl rounded-2xl border border-stone-200/80 bg-white shadow-soft"
-        >
-          {content}
-        </div>
-      </div>
+      <ModalFrame open onClose={() => onClose?.()} label="Project details" motion="dialog" overlayClassName="planning-dialog-overlay" contentClassName="relative mx-auto w-full max-w-5xl rounded-xl border border-stone-200 bg-white shadow-soft outline-none">
+        {content}
+      </ModalFrame>
     )
   }
 

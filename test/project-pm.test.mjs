@@ -129,7 +129,7 @@ test('project management migration and API cover Linear board fields', () => {
   assert.match(timeline, /buildHeaderModel/)
   assert.match(timeline, /Today/)
   assert.match(timeline, /ZOOM_OPTIONS/)
-  assert.match(timeline, /5e6ad2/)
+  assert.match(timeline, /DEFAULT_PROJECT_ICON_COLOR/)
   assert.match(detail, /activity/)
   assert.match(detail, /Milestones/)
   assert.match(taskCreate, /TASK_TYPES/)

@@ -80,6 +80,7 @@ export default function NotesEditor({ task }: NotesEditorProps) {
       </div>
 
       <textarea
+        aria-label="New context note"
         value={body}
         onChange={(event) => setBody(event.target.value)}
         placeholder="Add a new context note…"

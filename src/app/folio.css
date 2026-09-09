@@ -1,4 +1,4 @@
-/* Folio: the selected Compass operations language. Public pages retain their own layout. */
+/* Compass: cream and orange, with Folio typography and document layouts. */
 @font-face {
   font-family: Folio Sans;
   src: url('/fonts/folio/dm-regular.ttf') format('truetype');
@@ -30,16 +30,21 @@
   font-display: swap;
 }
 body:has(.folio-shell) {
-  --folio-desk: #eeecf3;
-  --folio-rail: #e8e4ee;
+  --folio-desk: #f6f4f1;
+  --folio-rail: #f1efec;
   --folio-paper: #fffefa;
-  --folio-ink: #352f40;
-  --folio-muted: #6c6279;
-  --folio-line: #d9d2e0;
-  --folio-control: #a69aac;
-  --folio-plum: #654c7d;
-  --folio-note: #dfd6e9;
-  --folio-selection: #dcd3e7;
+  --folio-ink: #0f1217;
+  --folio-muted: #6b7280;
+  --folio-line: #e8e6e3;
+  --folio-control: #d6d3d1;
+  /* Retain the compatibility name; deeper orange keeps white button text readable. */
+  --folio-plum: #c94a1f;
+  --folio-accent: #e85d2a;
+  --folio-accent-soft: #fff0e6;
+  --folio-accent-line: #ecc4b2;
+  --folio-surface: #faf8f5;
+  --folio-note: #fff1e4;
+  --folio-selection: #f9e2d5;
   --folio-success: #365c4b;
   --folio-error: #913e42;
   --folio-radius: 12px;
@@ -47,19 +52,19 @@ body:has(.folio-shell) {
   --folio-space: 8px;
   --folio-motion: 150ms;
   --compass-ink: var(--folio-ink);
-  --compass-ink-soft: #584d64;
+  --compass-ink-soft: #3f4550;
   --compass-muted: var(--folio-muted);
-  --compass-faint: #817589;
+  --compass-faint: #8c8580;
   --compass-panel: var(--folio-paper);
   --compass-line: var(--folio-line);
   --compass-line-strong: var(--folio-control);
   --compass-wash: var(--folio-desk);
   --compass-sidebar: var(--folio-rail);
   --compass-accent: var(--folio-plum);
-  --compass-accent-hover: #503661;
-  --compass-accent-soft: #eee7f3;
-  --compass-shadow: 0 2px 3px #352f4003, 0 10px 24px -20px #352f4052;
-  --compass-shadow-sm: 0 2px 3px #352f4005;
+  --compass-accent-hover: #ac3e19;
+  --compass-accent-soft: var(--folio-accent-soft);
+  --compass-shadow: 0 2px 3px #0f121703, 0 10px 24px -20px #0f121752;
+  --compass-shadow-sm: 0 2px 3px #0f121705;
   font-family:
     Folio Sans,
     Arial,
@@ -87,6 +92,13 @@ body:has(.folio-shell) {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+}
+.folio-scroll-region {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 .folio-sidebar {
   padding: 30px 18px 18px;
@@ -147,12 +159,12 @@ body:has(.folio-shell) {
     color var(--folio-motion);
 }
 .folio-nav-link:hover {
-  background: #e0d9e8;
+  background: var(--folio-selection);
   color: var(--folio-ink);
 }
 .folio-nav-link[aria-current='page'] {
   background: var(--folio-selection);
-  color: #4e375f;
+  color: #713419;
   font-weight: 600;
 }
 .folio-nav-link svg {
@@ -205,7 +217,7 @@ body:has(.folio-shell) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #dfd9e6;
+  border-bottom: 1px solid var(--folio-line);
   color: var(--folio-muted);
   font-size: 11px;
 }
@@ -214,7 +226,7 @@ body:has(.folio-shell) {
   gap: 12px;
 }
 .folio-breadcrumb span {
-  color: #8a7f95;
+  color: #8c8580;
 }
 .folio-mobile-brand,
 .folio-mobile-nav {
@@ -236,7 +248,7 @@ body:has(.folio-shell) {
 }
 body:has(.folio-shell)
   :is(button, a, input, textarea, select, summary):focus-visible {
-  outline: 3px solid #704098;
+  outline: 3px solid var(--folio-plum);
   outline-offset: 3px;
   box-shadow: none;
 }
@@ -337,7 +349,7 @@ body:has(.folio-shell) .compass-input {
   color: var(--folio-ink);
 }
 body:has(.folio-shell) .compass-seg {
-  background: #e1dbe9;
+  background: var(--folio-accent-soft);
   border: 0;
   box-shadow: none;
   border-radius: 10px;
@@ -352,7 +364,7 @@ body:has(.folio-shell) .compass-seg-btn {
 body:has(.folio-shell) .compass-seg-btn-active {
   background: var(--folio-paper);
   color: var(--folio-plum);
-  box-shadow: 0 1px 4px #352f4010;
+  box-shadow: 0 1px 4px #0f121710;
 }
 /* Compatibility colours keep retained business components in the same visual language. */
 body:has(.folio-shell) [class*='text-[#e85d2a]'],
@@ -371,7 +383,7 @@ body:has(.folio-shell) [class*='bg-orange-50'] {
 }
 body:has(.folio-shell) [class*='border-[#e85d2a]'],
 body:has(.folio-shell) [class*='border-orange-'] {
-  border-color: #b49fc5;
+  border-color: var(--folio-accent-line);
 }
 body:has(.folio-shell) [class*='text-neutral-900'],
 body:has(.folio-shell) [class*='text-stone-900'] {
@@ -401,8 +413,8 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   border: 1px solid transparent;
   border-bottom: 0;
   border-radius: 12px 12px 0 0;
-  background: #e1dbe9;
-  color: #685b76;
+  background: var(--folio-accent-soft);
+  color: #713419;
   font-size: 12px;
   display: flex;
   align-items: center;
@@ -410,12 +422,12 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
 }
 .folio-folders button[aria-pressed='true'] {
   background: var(--folio-paper);
-  border-color: #ddd6e3;
+  border-color: var(--folio-line);
   color: var(--folio-ink);
 }
 .folio-folders button span {
-  background: #cfc3db;
-  color: #513f62;
+  background: var(--folio-line);
+  color: #713419;
   min-width: 17px;
   border-radius: 4px;
   padding: 0 4px;
@@ -424,7 +436,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
 }
 .folio-paper {
   background: var(--folio-paper);
-  border: 1px solid #ddd6e3;
+  border: 1px solid var(--folio-line);
   border-radius: 0 12px 12px 12px;
   box-shadow: var(--compass-shadow);
   padding: 27px 32px;
@@ -450,7 +462,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
 }
 .folio-status {
   display: inline-flex;
-  background: #eee7f3;
+  background: var(--folio-accent-soft);
   color: var(--folio-plum);
   padding: 5px 9px;
   font-size: 10px;
@@ -533,7 +545,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   border-top: 1px solid var(--folio-line);
 }
 .folio-work-row > svg {
-  color: #82708f;
+  color: #8c8580;
   align-self: start;
   margin-top: 3px;
 }
@@ -595,7 +607,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   width: 30px;
   height: 4px;
   border-radius: 5px;
-  background: #a995ba;
+  background: #e8a285;
   margin-bottom: 19px;
 }
 .folio-pinned h2 {
@@ -610,7 +622,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
 .folio-pinned > p:not(.folio-caption) {
   font-size: 12px;
   line-height: 1.75;
-  color: #60536e;
+  color: #713419;
   overflow-wrap: anywhere;
 }
 .folio-wait-date {
@@ -619,7 +631,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   align-items: center;
   margin-top: 15px;
   font-size: 10px;
-  color: #60536e;
+  color: #713419;
 }
 .folio-pinned .compass-btn-ghost {
   padding-left: 0;
@@ -629,7 +641,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
 .folio-source {
   margin: 24px 7px;
   padding-top: 20px;
-  border-top: 1px solid #cfc6da;
+  border-top: 1px solid var(--folio-accent-line);
 }
 .folio-metrics {
   display: grid;
@@ -707,8 +719,8 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   margin: 24px 0;
-  background: #eee7f3;
-  border-left: 2px solid #bba7ca;
+  background: var(--folio-accent-soft);
+  border-left: 2px solid var(--folio-accent-line);
   padding: 20px;
   font-size: 14px;
   line-height: 1.8;
@@ -731,7 +743,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   color: var(--folio-ink);
 }
 .folio-state-icon {
-  background: #eee7f3;
+  background: var(--folio-accent-soft);
   color: var(--folio-plum);
   padding: 13px;
   border-radius: 9px;
@@ -744,7 +756,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
 .folio-skeleton-lines span {
   height: 14px;
   border-radius: 4px;
-  background: #e6dfeb;
+  background: var(--folio-accent-soft);
 }
 .folio-skeleton-lines span:nth-child(2) {
   width: 75%;
@@ -760,7 +772,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: #33273f66;
+  background: #0f121766;
   backdrop-filter: blur(3px);
 }
 .folio-dialog {
@@ -777,7 +789,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   border-radius: 14px;
   padding: 32px;
   color: var(--folio-ink);
-  box-shadow: 0 24px 80px #2f193b33;
+  box-shadow: 0 24px 80px #0f121733;
   animation: folio-arrive 150ms ease-out;
 }
 .folio-dialog h2 {
@@ -811,7 +823,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   margin-top: 25px;
 }
 .folio-note {
-  background: #eee7f3;
+  background: var(--folio-accent-soft);
   padding: 20px;
   border-radius: 7px;
   margin: 20px 0;
@@ -931,7 +943,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   border-radius: 0;
 }
 .folio-inbox [aria-label='Inbox channels'] > button {
-  background: #e1dbe9;
+  background: var(--folio-accent-soft);
   border: 1px solid transparent;
   border-bottom: 0;
   border-radius: 12px 12px 0 0;
@@ -1027,7 +1039,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   min-height: 40px;
   padding: 9px 15px;
   border-radius: 8px;
-  background: #e1dbe9;
+  background: var(--folio-accent-soft);
 }
 .folio-editor [aria-label='Editor workspace'] button[aria-pressed='true'] {
   background: var(--folio-plum);
@@ -1110,7 +1122,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   font-weight: 600;
   letter-spacing: 0.45px;
   color: var(--folio-muted);
-  background: #f0ebf4;
+  background: var(--folio-accent-soft);
 }
 .folio-shell td {
   border-color: var(--folio-line);
@@ -1118,14 +1130,14 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   padding-bottom: 14px;
 }
 .folio-shell tbody tr:hover {
-  background: #f5f0f8;
+  background: var(--folio-surface);
 }
 .folio-kanban {
   gap: 18px !important;
 }
 .folio-kanban > section,
 .folio-kanban > [data-column-id] {
-  background: #e5deed;
+  background: var(--folio-accent-line);
   border-radius: 12px;
   border: 0;
   min-width: 0;
@@ -1276,7 +1288,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
     font-size: 10px;
   }
   .folio-mobile-nav > [aria-current='page'] {
-    background: #eee7f3;
+    background: var(--folio-accent-soft);
     color: var(--folio-plum);
     font-weight: 600;
   }
@@ -1885,7 +1897,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   background: var(--folio-paper);
 }
 .folio-client-card:hover {
-  background: #f6f1fa;
+  background: var(--folio-surface);
 }
 .folio-client-card h3 {
   font:
@@ -1918,8 +1930,8 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   border-radius: 4px 16px 16px 16px !important;
   border-width: 1px !important;
   background: var(--folio-paper) !important;
-  border-color: #bdb0c9 !important;
-  box-shadow: 0 6px 15px #352f4010 !important;
+  border-color: var(--folio-accent-line) !important;
+  box-shadow: 0 6px 15px #0f121710 !important;
 }
 .folio-map-note strong {
   font-family:
@@ -1930,7 +1942,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   font-weight: 400;
 }
 .folio-install-queue > section {
-  background: #e4ddea;
+  background: var(--folio-selection);
   border-radius: 12px;
   padding: 18px;
 }
@@ -2287,7 +2299,7 @@ body:has(.folio-shell) .folio-inbox > .compass-panel {
     white-space: nowrap;
     flex-shrink: 0;
     padding: 12px 14px;
-    background: #e1dbe9;
+    background: var(--folio-accent-soft);
     border-radius: 10px 10px 0 0;
   }
 }

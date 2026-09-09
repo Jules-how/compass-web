@@ -115,7 +115,8 @@ export function OutcomePanel({
       open
       onClose={onClose}
       label={goal.data.title}
-      overlayClassName="fixed inset-0 z-50 overflow-y-auto bg-stone-950/40 p-4 sm:p-10"
+      motion="dialog"
+      overlayClassName="planning-dialog-overlay"
       contentClassName="compass-panel mx-auto max-w-3xl p-5 outline-none sm:p-7"
     >
       <div className="flex items-start justify-between gap-4">

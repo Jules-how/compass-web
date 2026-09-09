@@ -10,6 +10,7 @@ type ModalFrameProps = {
   children: ReactNode
   overlayClassName?: string
   contentClassName?: string
+  motion?: 'dialog' | 'sheet'
 } & ({ label: string; labelledBy?: string } | { label?: string; labelledBy: string })
 
 /** Shared modal boundary; callers retain the layout and appearance of their panel. */
@@ -20,9 +21,11 @@ export function ModalFrame({
   labelledBy,
   children,
   overlayClassName,
-  contentClassName
+  contentClassName,
+  motion
 }: ModalFrameProps) {
   const opener = useRef<HTMLElement | null>(null)
+  const content = useRef<HTMLDivElement | null>(null)
   const viewPath = useConsoleViewPath()
   const previousPath = useRef(viewPath)
   useEffect(() => {
@@ -34,13 +37,16 @@ export function ModalFrame({
   return (
     <Dialog.Root open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose() }}>
       <Dialog.Portal>
-        <Dialog.Overlay className={overlayClassName}>
+        <Dialog.Overlay className={`${overlayClassName ?? ''} ${motion ? 'planning-motion-overlay' : ''}`}>
           <Dialog.Content
-            className={contentClassName}
+            ref={content}
+            className={`${contentClassName ?? ''} ${motion ? `planning-motion-${motion}` : ''}`}
             {...(labelledBy ? { 'aria-labelledby': labelledBy } : {})}
             aria-describedby={undefined}
-            onOpenAutoFocus={() => {
+            onOpenAutoFocus={(event) => {
               opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+              const input = content.current?.querySelector<HTMLElement>('[data-autofocus]')
+              if (input) { event.preventDefault(); input.focus({ preventScroll: true }) }
             }}
             onCloseAutoFocus={(event) => {
               // These controlled panels do not use Dialog.Trigger.
