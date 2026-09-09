@@ -110,7 +110,8 @@ export function OfferPlan() {
               proposed renewal
             </p>
             <p className="mt-2 max-w-xs text-sm text-neutral-600">
-              Commercial proposal only. Pilot scope, media, acceptance and renewal need agreement. No GST while unregistered.
+              Commercial proposal only. Pilot scope, media, acceptance and
+              renewal need agreement. No GST while unregistered.
             </p>
           </div>
         </div>
@@ -163,8 +164,9 @@ export function OfferPlan() {
         </div>
         <p className="mt-5 text-sm text-neutral-600">
           Your benefit: a repeatable delivery process and recurring revenue
-          toward the agreed business goal. Client benefit: suitable new enquiries, a clear next step and visible appointment outcomes. Both remain
-          hypotheses until measured.
+          toward the agreed business goal. Client benefit: suitable new
+          enquiries, a clear next step and visible appointment outcomes. Both
+          remain hypotheses until measured.
         </p>
       </section>
       <section className="compass-panel p-6">

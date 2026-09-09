@@ -17,13 +17,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
           cache: npm
       - run: npm ci
       - run: npm run verify
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - name: Outbound companion regressions
         run: |
           python3 -m unittest discover -s workers/outbound/cold-email -p 'test_*.py'
@@ -39,5 +39,5 @@ jobs:
           # Build-time placeholders so Next can compile without real secrets.
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: public-anon-key
-          COMPASS_OPEN_OPERATOR: '1'
+          COMPASS_OPEN_OPERATOR: "1"
         run: npm run build

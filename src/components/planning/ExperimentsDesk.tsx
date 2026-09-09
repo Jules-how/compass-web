@@ -43,6 +43,10 @@ export function ExperimentsDesk() {
     );
   async function create() {
     if (!current) return;
+    if (!hypothesis.trim()) {
+      setError("Write the test hypothesis before creating a draft.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -193,7 +197,16 @@ export function ExperimentsDesk() {
               />
             </label>
           </div>
-          <div><h3 className="text-sm font-medium">Test notebook</h3><NotebookEditor label="Test hypothesis and plan" value={hypothesis} onChange={setHypothesis} maxLength={3000} placeholder="What will change, why might it help, and what would count as useful evidence?" /></div>
+          <div>
+            <h3 className="text-sm font-medium">Test notebook</h3>
+            <NotebookEditor
+              label="Test hypothesis and plan"
+              value={hypothesis}
+              onChange={setHypothesis}
+              maxLength={3000}
+              placeholder="What will change, why might it help, and what would count as useful evidence?"
+            />
+          </div>
           <p className="text-sm text-neutral-500">
             Creating a draft copies the control; it does not write the variation
             for you. Sample size is a planning choice, not a guarantee of
@@ -244,7 +257,9 @@ export function ExperimentsDesk() {
           old review. Queueing does not start paid scraping automatically.
         </p>
       </section>
-      <OutboundExperimentCompare offerKey={legacy ? undefined : 'installation-booking'} />
+      <OutboundExperimentCompare
+        offerKey={legacy ? undefined : "installation-booking"}
+      />
     </div>
   );
 }
