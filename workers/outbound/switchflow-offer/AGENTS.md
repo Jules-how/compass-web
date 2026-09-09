@@ -1,6 +1,6 @@
 # Offers
 
-Current direction: [Installation booking](installation-booking.md), Compass key `installation-booking`, testing. Start with Sydney residential ducted installations/replacements: Google Search acquisition plus enquiry qualification and booked quote appointments. Existing enquiries are not required. The contract owns scope and targeting. Compass owns operational status, copy, campaigns and results.
+Current direction: [Ads + booking](installation-booking.md), Compass key `installation-booking`, testing. Start with Sydney residential ducted installations/replacements: Google Search acquisition plus enquiry qualification and booked quote appointments. Existing enquiries are not required. The contract owns scope and targeting. Compass owns operational status, copy, campaigns and results.
 
 Use `.agents/skills/offer-create/SKILL.md` for offer changes. Jules has approved this direction and retiring conflicting defaults. Prices, tax and individual agreement terms must be explicit; do not inherit the previous guarantee or billing rules.
 
