@@ -47,7 +47,7 @@ This path needs Instantly read API access even when browser upload is required. 
 
 ## Migration and release
 
-Apply `supabase/migrations/0082_outbound_preparation.sql` before deploying the new routes. It is additive: eight new tables, a private artifact bucket, narrowly scoped RPCs and invalidation triggers. Authenticated clients have SELECT only on the new tables; the approval RPC is the only human write path. The invalidation trigger runs as its owner so normal operator copy edits can invalidate protected runs without gaining broad write access.
+Apply `supabase/migrations/0082_outbound_preparation.sql` and `0083_outbound_function_privileges.sql` before deploying the new routes. They add eight new tables, a private artifact bucket, narrowly scoped RPCs and invalidation triggers. The follow-up migration explicitly removes Supabase's default service-role execution grant from human approval and removes API execution grants from trigger functions. Authenticated clients have SELECT only on the new tables; the approval RPC is the only human write path. The invalidation trigger runs as its owner so normal operator copy edits can invalidate protected runs without gaining broad write access.
 
 Existing ledger rows, historical campaign history and verification statuses are not bulk rewritten. Legacy import enrichment now preserves every established non-uncontacted outreach state. The legacy Instantly API mapper's delay/subject and chunk-receipt bugs are fixed, and installation-booking cannot bypass preparation through old push/template endpoints.
 
@@ -65,7 +65,7 @@ npm run build
 node --test test/outbound-preparation*.test.mjs
 ```
 
-The preparation suite executes production TypeScript, the actual migration in PGlite/PostgreSQL, operator/worker route boundaries, and legacy chunk handling. Recorded rendering fixtures were produced by the actual Python engine. On the Switchflow workspace, verify the engine against those fixtures with:
+The preparation suite executes production TypeScript, the actual migrations in PGlite/PostgreSQL with Supabase-style default function grants, database JSON round trips, operator/worker route boundaries, and legacy chunk handling. Optional fields omitted by JSON storage do not alter the input fingerprint. Recorded rendering fixtures were produced by the actual Python engine. On the Switchflow workspace, verify the engine against those fixtures with:
 
 ```sh
 SWITCHFLOW_WORKSPACE=/Users/Jules/switchflow-os node --test test/outbound-preparation.test.mjs
