@@ -68,7 +68,7 @@ test('campaign planner files and migration are wired', () => {
   assert.match(planner, /sales\/pipeline\/\$\{/)
   assert.match(planner, /type ViewMode = 'list' \| 'board' \| 'timeline' \| 'calendar'/)
   assert.match(planner, /useState<ViewMode>\(initialView\)/)
-  assert.match(planner, /useState<CalendarGrain>\('week'\)/)
+  assert.match(planner, /useState<CalendarGrain>\('month'\)/)
   assert.match(planner, /setView\(mode\)/)
   assert.match(planner, /view === 'list'/)
   assert.match(planner, /view === 'board'/)
