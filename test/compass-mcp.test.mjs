@@ -55,6 +55,8 @@ test('search, commit, ledger, and export tools', () => {
   assert.deepEqual(
     TOOLS.map((t) => t.name),
     [
+      'pathfinder',
+      'pathfinder.review',
       'brief',
       'campaigns',
       'leads',
@@ -180,7 +182,7 @@ test('copy patch sends Prefer minimal', async () => {
 
 test('rpc tools/list', async () => {
   const res = await handleRpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, { cfg, fetchImpl: mockFetch({}) })
-  assert.equal(res.result.tools.length, 11)
+  assert.equal(res.result.tools.length, 13)
 })
 
 test('leads.search hits unified GET', async () => {

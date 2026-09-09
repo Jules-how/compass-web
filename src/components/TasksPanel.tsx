@@ -1,5 +1,7 @@
 'use client'
 
+import { workFetch } from '@/lib/workspace-change'
+
 import { useMemo, useState } from 'react'
 import type {
   CompassBusinessFunction,
@@ -113,7 +115,7 @@ export function TasksPanel() {
     setMoveError(null)
     setNote('Moving task…')
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
+      const res = await workFetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: toColumnId })

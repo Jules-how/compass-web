@@ -1,5 +1,7 @@
 'use client'
 
+import { workFetch } from '@/lib/workspace-change'
+
 import { useState } from 'react'
 import type {
   CompassBusinessFunction,
@@ -64,7 +66,7 @@ export default function TaskCreate({
     setSaving(true)
     setError(null)
     try {
-      const res = await fetch('/api/tasks', {
+      const res = await workFetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

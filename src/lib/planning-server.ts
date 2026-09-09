@@ -6,6 +6,7 @@ import {
   PLANNING_KINDS,
   validatePlanning,
   checkGoalParent,
+  assertPlanningAuthority,
 } from "@/lib/planning-core.mjs";
 export type PlanningRow = {
   id: string;
@@ -38,7 +39,7 @@ export async function savePlanning(body: {
   id?: string;
   revision?: number;
   data: unknown;
-}) {
+}, actor: "operator" | "agent" = "operator") {
   const data: Record<string, any> = validatePlanning(body.kind, body.data);
   const id = body.id || `planning.${body.kind}.${randomUUID()}`;
   if (!new RegExp(`^planning\\.${body.kind}\\.[a-f0-9-]{36}$`).test(id))
@@ -51,6 +52,7 @@ export async function savePlanning(body: {
     .maybeSingle();
   if (readError) throw new Error("Unable to read the current record.");
   const existing = old ? openCommercial<PlanningRow>(String(old.value)) : null;
+  assertPlanningAuthority(body.kind, existing, data, actor);
   if (existing && JSON.stringify(existing.data) === JSON.stringify(data))
     return existing;
   if (existing && existing.revision !== body.revision)

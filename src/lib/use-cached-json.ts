@@ -1,5 +1,6 @@
 'use client'
 
+import { onWorkChanged } from '@/lib/workspace-change'
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import {
   loadQueryCache,
@@ -61,6 +62,19 @@ export function useCachedJson<T>(
       cancelled = true
     }
   }, [key, url, options?.staleMs])
+
+  useEffect(() => {
+    if (!key || !/^\/api\/(tasks|projects|home|pathfinder)(\/|\?|$)/.test(key)) return
+    // Local/cross-tab mutations refresh immediately. Server/agent writes are observed
+    // on focus and within 30 seconds for lightweight workspace reads. Home reads
+    // may refresh integrations, so they are event/focus driven, never polled.
+    const refresh = () => { if (document.visibilityState === 'visible') void reload(true) }
+    const unsubscribe = onWorkChanged(refresh)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    const timer = /^\/api\/home(\/|\?|$)/.test(key) ? null : window.setInterval(refresh, 30_000)
+    return () => { unsubscribe(); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); if (timer !== null) window.clearInterval(timer) }
+  }, [key, reload])
 
   return {
     data: snapshot?.data,

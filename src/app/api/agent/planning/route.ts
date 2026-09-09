@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   try {
     const body = await readBoundedJson(request, 50000);
     return portalJson({
-      record: await savePlanning(body as Parameters<typeof savePlanning>[0]),
+      record: await savePlanning(body as Parameters<typeof savePlanning>[0], "agent"),
     });
   } catch (e) {
     return portalJson(

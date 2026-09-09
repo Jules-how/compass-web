@@ -1,4 +1,6 @@
 "use client";
+
+import { workFetch } from '@/lib/workspace-change'
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { GOAL_PERIODS, goalProgress } from "@/lib/planning-core.mjs";
@@ -63,7 +65,7 @@ export function PlanningBoard() {
     createId = useRef("");
   const load = useCallback(async (k = kind, p = page) => {
     const version = ++loadVersion.current;
-    const r = await fetch(`/api/planning?kind=${k}&page=${p}`, {
+    const r = await workFetch(`/api/planning?kind=${k}&page=${p}`, {
       cache: "no-store",
     });
     const b = await r.json();
@@ -91,7 +93,7 @@ export function PlanningBoard() {
       let all: PlanningRow[] = [];
       let p = 0;
       for (;;) {
-        const r = await fetch(`/api/planning?kind=goal&page=${p++}`);
+        const r = await workFetch(`/api/planning?kind=goal&page=${p++}`);
         const b = await r.json();
         if (!r.ok) throw new Error(b.error);
         all = all.concat(b.records);
@@ -118,7 +120,7 @@ export function PlanningBoard() {
       const id =
         edit?.id ||
         (createId.current ||= `planning.${kind}.${crypto.randomUUID()}`);
-      const r = await fetch("/api/planning", {
+      const r = await workFetch("/api/planning", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -183,6 +185,7 @@ export function PlanningBoard() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Link className="compass-btn-secondary" href="/planning">Pathfinder</Link>
           <Link className="compass-btn-secondary" href="/sales/offer-plan">
             Offer & economics
           </Link>

@@ -1,5 +1,7 @@
 'use client'
 
+import { workFetch } from '@/lib/workspace-change'
+
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -225,7 +227,7 @@ export function useHomePriorityActions(
     if (completingId || task.status === 'completed' || task.status === 'cancelled') return
     setCompletingId(task.id)
     try {
-      const res = await fetch(`/api/tasks/${task.id}`, {
+      const res = await workFetch(`/api/tasks/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ status: 'completed' })
