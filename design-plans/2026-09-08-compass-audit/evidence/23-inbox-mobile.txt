@@ -1,0 +1,355 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- link "switchflow compass":
+  - /url: /home
+  - generic: switchflow compass
+- button "Open navigation":
+- main:
+  - heading "Inbox" [level=1]
+  - paragraph: Instantly replies — positive, negative, and OOO — ranked by intent
+  - generic: 87 need you · 50 shown
+  - generic: Needs you
+  - button "Await Roof Safety’s internal decision Agents · 46m":
+    - generic: A
+    - generic: Await Roof Safety’s internal decision
+    - generic: Agents · 46m
+  - button "Client outcome reporting Agents · 8h":
+    - generic: A
+    - generic: Client outcome reporting
+    - generic: Agents · 8h
+  - button "Enquiry-to-booking delivery workflow Agents · 8h":
+    - generic: A
+    - generic: Enquiry-to-booking delivery workflow
+    - generic: Agents · 8h
+  - button "Onboarding and baseline capture Agents · 8h":
+    - generic: A
+    - generic: Onboarding and baseline capture
+    - generic: Agents · 8h
+  - button "Chris Davies Instantly · 1h":
+    - generic: I
+    - generic: Chris Davies
+    - generic: Instantly · 1h
+  - button "StudioHawk team Instantly · 1h":
+    - generic: I
+    - generic: StudioHawk team
+    - generic: Instantly · 1h
+  - button "Flavio Sordoni Instantly · 1h":
+    - generic: I
+    - generic: Flavio Sordoni
+    - generic: Instantly · 1h
+  - button "Darren Venter Instantly · 1h":
+    - generic: I
+    - generic: Darren Venter
+    - generic: Instantly · 1h
+  - tablist "Inbox channels":
+    - tab "Agents 4":
+      - text: Agents
+      - generic: "4"
+    - tab "Instantly 50" [selected]:
+      - text: Instantly
+      - generic: "50"
+    - tab "Leads 33":
+      - text: Leads
+      - generic: "33"
+  - button "Chris Davies Interested 1h Unread":
+    - generic: I
+    - generic: Chris Davies
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "StudioHawk team Interested 1h Unread":
+    - generic: I
+    - generic: StudioHawk team
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Flavio Sordoni Interested 1h Unread":
+    - generic: I
+    - generic: Flavio Sordoni
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Darren Venter Interested 1h Unread":
+    - generic: I
+    - generic: Darren Venter
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "info@starcosmeticmedicine.com.au Interested 1h Unread":
+    - generic: I
+    - generic: info@starcosmeticmedicine.com.au
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "LSB Electrical team Interested 1h Unread":
+    - generic: I
+    - generic: LSB Electrical team
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Yogaruka Russell team Interested 1h Unread":
+    - generic: I
+    - generic: Yogaruka Russell team
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "victoria@roofsafety.net Interested 1h Unread":
+    - generic: I
+    - generic: victoria@roofsafety.net
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "team Interested 1h Unread":
+    - generic: I
+    - generic: team
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Andrew Churchward Interested 1h Unread":
+    - generic: I
+    - generic: Andrew Churchward
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Kylie Wyatt Interested 1h Unread":
+    - generic: I
+    - generic: Kylie Wyatt
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Gary Weis Interested 1h Unread":
+    - generic: I
+    - generic: Gary Weis
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Jayhar Hariharan Interested 1h Unread":
+    - generic: I
+    - generic: Jayhar Hariharan
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "AH Cosmetic Clinic Interested 1h Unread":
+    - generic: I
+    - generic: AH Cosmetic Clinic
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "info@bondiskinclinic.com.au Interested 1h Unread":
+    - generic: I
+    - generic: info@bondiskinclinic.com.au
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Allan Culbertson Interested 1h Unread":
+    - generic: I
+    - generic: Allan Culbertson
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Evonne Gerges Interested 1h Unread":
+    - generic: I
+    - generic: Evonne Gerges
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "info@cosmex.com.au Interested 1h Unread":
+    - generic: I
+    - generic: info@cosmex.com.au
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Hannah Interested 1h Unread":
+    - generic: I
+    - generic: Hannah
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Smart handy Interested 1h Unread":
+    - generic: I
+    - generic: Smart handy
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Elite Strata Interested 1h Unread":
+    - generic: I
+    - generic: Elite Strata
+    - generic: Interested
+    - generic: 1h
+    - generic: Unread
+  - button "Plumbtech NSW Pty Ltd Not interested 1h Unread":
+    - generic: I
+    - generic: Plumbtech NSW Pty Ltd
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Hermione Gardiner Not interested 1h Unread":
+    - generic: I
+    - generic: Hermione Gardiner
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Andrew Bova Not interested 1h Unread":
+    - generic: I
+    - generic: Andrew Bova
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Strataopt Not interested 1h Unread":
+    - generic: I
+    - generic: Strataopt
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Western Suburbs team Not interested 1h Unread":
+    - generic: I
+    - generic: Western Suburbs team
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Tony Not interested 1h Unread":
+    - generic: I
+    - generic: Tony
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "louisairconservice@gmail.com Not interested 1h Unread":
+    - generic: I
+    - generic: louisairconservice@gmail.com
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "office@archerroofing.com.au Not interested 1h Unread":
+    - generic: I
+    - generic: office@archerroofing.com.au
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Simon Thomas Not interested 1h Unread":
+    - generic: I
+    - generic: Simon Thomas
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Patrick Mears Not interested 1h Unread":
+    - generic: I
+    - generic: Patrick Mears
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Jay Coakley 柯小树 Not interested 1h Unread":
+    - generic: I
+    - generic: Jay Coakley 柯小树
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Irene Lai Not interested 1h Unread":
+    - generic: I
+    - generic: Irene Lai
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Paul Bantoft Not interested 1h Unread":
+    - generic: I
+    - generic: Paul Bantoft
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Glen Murray Plumbing Picton Not interested 1h Unread":
+    - generic: I
+    - generic: Glen Murray Plumbing Picton
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Adapt team Not interested 1h Unread":
+    - generic: I
+    - generic: Adapt team
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Jess Rawstorne Not interested 1h Unread":
+    - generic: I
+    - generic: Jess Rawstorne
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Kimberly Williams Not interested 1h Unread":
+    - generic: I
+    - generic: Kimberly Williams
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Javiera Not interested 1h Unread":
+    - generic: I
+    - generic: Javiera
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Fedi El-Daher Not interested 1h Unread":
+    - generic: I
+    - generic: Fedi El-Daher
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Joel Surtees Not interested 1h Unread":
+    - generic: I
+    - generic: Joel Surtees
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Hewitt Trade Services (Brisbane South) | Air Conditioning, Plumbing & Electrical Not interested 1h Unread":
+    - generic: I
+    - generic: Hewitt Trade Services (Brisbane South) | Air Conditioning, Plumbing & Electrical
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Geezair team Not interested 1h Unread":
+    - generic: I
+    - generic: Geezair team
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Dave Shumak Not interested 1h Unread":
+    - generic: I
+    - generic: Dave Shumak
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Charlie Not interested 1h Unread":
+    - generic: I
+    - generic: Charlie
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Mark Not interested 1h Unread":
+    - generic: I
+    - generic: Mark
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Lewis Not interested 1h Unread":
+    - generic: I
+    - generic: Lewis
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Urban Shores team Not interested 1h Unread":
+    - generic: I
+    - generic: Urban Shores team
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "Coastal Aesthetics and Wellbeing Not interested 1h Unread":
+    - generic: I
+    - generic: Coastal Aesthetics and Wellbeing
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+  - button "REQ team Not interested 1h Unread":
+    - generic: I
+    - generic: REQ team
+    - generic: Not interested
+    - generic: 1h
+    - generic: Unread
+- alert
+- generic: "0"

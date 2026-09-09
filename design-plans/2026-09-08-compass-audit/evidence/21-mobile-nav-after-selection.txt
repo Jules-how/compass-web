@@ -1,0 +1,107 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- link "switchflow compass":
+  - /url: /home
+  - generic: switchflow compass
+- button "Close navigation" [expanded]:
+- button "Close navigation":
+- link "switchflow compass":
+  - /url: /home
+  - generic: switchflow compass
+- navigation "Operator":
+  - link "Home" [active]:
+    - /url: /home
+    - generic: Home
+  - link "Inbox 87":
+    - /url: /inbox
+    - generic: Inbox
+    - generic: "87"
+  - generic: Workspace
+  - link "Goals & notes":
+    - /url: /planning
+    - generic: Goals & notes
+  - link "My Tasks":
+    - /url: /tasks
+    - generic: My Tasks
+  - link "Projects":
+    - /url: /projects
+    - generic: Projects
+  - link "Functions":
+    - /url: /functions
+    - generic: Functions
+  - link "Clients":
+    - /url: /clients
+    - generic: Clients
+  - generic: Sales
+  - link "Overview":
+    - /url: /sales
+    - generic: Overview
+  - link "Offer & economics":
+    - /url: /sales/offer-plan
+    - generic: Offer & economics
+  - link "Email tests":
+    - /url: /sales/experiments
+    - generic: Email tests
+  - link "Offers":
+    - /url: /sales/offers
+    - generic: Offers
+  - link "Outbound":
+    - /url: /sales/outbound
+    - generic: Outbound
+  - link "CRM":
+    - /url: /leads
+    - generic: CRM
+  - generic: Operations
+  - link "Finances":
+    - /url: /operations/finances
+    - generic: Finances
+  - link "Installs":
+    - /url: /operations/installs
+    - generic: Installs
+  - link "Retention":
+    - /url: /operations/cs
+    - generic: Retention
+  - link "Settings":
+    - /url: /settings
+    - generic: Settings
+- button "Sign out"
+- main:
+  - paragraph: Operator home
+  - heading "Tuesday 8 Sept" [level=1]
+  - button "Brain dump"
+  - heading "Morning wave" [level=2]
+  - paragraph: Accept or dismiss today’s next before any live land.
+  - link "Waves":
+    - /url: /sales/outbound
+  - button "Review existing Sydney installation candidates; Smart Handy is followed up and Roof Safety is waiting on an internal decision."
+  - button "Accept brief"
+  - button "Dismiss"
+  - paragraph: "Proposed next: Sydney Hvac"
+  - heading "Sending" [level=3]
+  - generic: Perth Electrical | fill | 397 | Sep
+  - paragraph: 100 remaining · land locked
+  - link "Instantly (opens in a new tab)":
+    - /url: https://app.instantly.ai/app/campaign/1c293a17-6596-49fc-ab66-1971731112bb
+    - text: Instantly
+    - generic: (opens in a new tab)
+  - generic: Copy unbound
+  - button "Open chunk"
+  - heading "Highest leverage" [level=3]
+  - 'button "Await Roof Safety’s internal decision 8 September, Jules confirmed: the conversation happened. Roof Safety asked for website and advertising ideas for two companies and will speak with his boss before making decisions. Waiting on their internal decision; no unanswered call request and no agreed follow-up date. This is a websites/ads opportunity, not validation of the installation-booking offer. Do not forecast as committed revenue or send another message automatically. Previous source: 7 September request for a call in Instantly."':
+    - generic: Await Roof Safety’s internal decision
+    - paragraph: "8 September, Jules confirmed: the conversation happened. Roof Safety asked for website and advertising ideas for two companies and will speak with his boss before making decisions. Waiting on their internal decision; no unanswered call request and no agreed follow-up date. This is a websites/ads opportunity, not validation of the installation-booking offer. Do not forecast as committed revenue or send another message automatically. Previous source: 7 September request for a call in Instantly."
+  - paragraph: Land is Cursor after remaining is under 50. Activate stays Instantly. Type replies in Instantly or Gmail.
+  - heading "Emails going out" [level=2]
+  - link "Open outbound":
+    - /url: /sales/outbound
+  - generic: Sent today
+  - generic: "162"
+  - generic: Reply rate
+  - generic: 1.3%
+  - heading "Replies coming in" [level=2]
+  - link "Open inbox":
+    - /url: /inbox?tab=instantly
+  - generic: Waiting in Instantly
+  - generic: "0"
+- alert
+- generic: "0"

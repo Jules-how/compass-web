@@ -1,0 +1,43 @@
+
+> compass-web@0.1.0 lint
+> next lint
+
+`next lint` is deprecated and will be removed in Next.js 16.
+For new projects, use create-next-app to choose your preferred linter.
+For existing projects, migrate to the ESLint CLI:
+npx @next/codemod@canary next-lint-to-eslint-cli .
+
+
+./src/components/LeadTable.tsx
+107:6  Warning: React Hook useEffect has a missing dependency: 'onLeadSelect'. Either include it or remove the dependency array. If 'onLeadSelect' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./src/components/campaigns/CampaignPlanner.tsx
+129:9  Warning: The 'campaigns' logical expression could make the dependencies of useMemo Hook (at line 184) change on every render. To fix this, wrap the initialization of 'campaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+164:6  Warning: React Hook useCallback has a missing dependency: 'campaignsQuery'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/campaigns/CampaignReviewModal.tsx
+107:6  Warning: React Hook useEffect has a missing dependency: 'initialCampaign'. Either include it or remove the dependency array. If 'setCampaign' needs the current value of 'initialCampaign', you can also switch to useReducer instead of useState and read 'initialCampaign' in the reducer.  react-hooks/exhaustive-deps
+
+./src/components/offers/TestCellsBoard.tsx
+72:9  Warning: The 'cells' logical expression could make the dependencies of useMemo Hook (at line 95) change on every render. To fix this, wrap the initialization of 'cells' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+72:9  Warning: The 'cells' logical expression could make the dependencies of useMemo Hook (at line 100) change on every render. To fix this, wrap the initialization of 'cells' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+72:9  Warning: The 'cells' logical expression could make the dependencies of useMemo Hook (at line 109) change on every render. To fix this, wrap the initialization of 'cells' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./src/components/outbound/EditorComponentsAccordion.tsx
+399:9  Warning: The 'ctx' logical expression could make the dependencies of useMemo Hook (at line 538) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./src/components/outbound/OutboundHistorySection.tsx
+69:9  Warning: The 'instantlyHistory' logical expression could make the dependencies of useMemo Hook (at line 170) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'instantlyHistory' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./src/components/outbound/mock/ClocksPreview.tsx
+155:6  Warning: React Hook useCallback has missing dependencies: 'campaignsQuery' and 'queueQuery'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/outbound/mock/FactoryPreview.tsx
+124:9  Warning: The 'allCampaigns' logical expression could make the dependencies of useMemo Hook (at line 127) change on every render. To fix this, wrap the initialization of 'allCampaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+124:9  Warning: The 'allCampaigns' logical expression could make the dependencies of useMemo Hook (at line 135) change on every render. To fix this, wrap the initialization of 'allCampaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./src/components/outbound/mock/RunwayPreview.tsx
+199:9  Warning: The 'campaigns' logical expression could make the dependencies of useMemo Hook (at line 214) change on every render. To fix this, wrap the initialization of 'campaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+199:9  Warning: The 'campaigns' logical expression could make the dependencies of useMemo Hook (at line 222) change on every render. To fix this, wrap the initialization of 'campaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules

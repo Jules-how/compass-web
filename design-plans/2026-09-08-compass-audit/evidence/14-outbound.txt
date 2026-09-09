@@ -1,0 +1,234 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- complementary:
+  - link "switchflow compass":
+    - /url: /home
+    - generic: switchflow compass
+  - navigation "Operator":
+    - link "Home":
+      - /url: /home
+      - generic: Home
+    - link "Inbox 87":
+      - /url: /inbox
+      - generic: Inbox
+      - generic: "87"
+    - generic: Workspace
+    - link "Goals & notes":
+      - /url: /planning
+      - generic: Goals & notes
+    - link "My Tasks":
+      - /url: /tasks
+      - generic: My Tasks
+    - link "Projects":
+      - /url: /projects
+      - generic: Projects
+    - link "Functions":
+      - /url: /functions
+      - generic: Functions
+    - link "Clients":
+      - /url: /clients
+      - generic: Clients
+    - generic: Sales
+    - link "Overview":
+      - /url: /sales
+      - generic: Overview
+    - link "Offer & economics":
+      - /url: /sales/offer-plan
+      - generic: Offer & economics
+    - link "Email tests":
+      - /url: /sales/experiments
+      - generic: Email tests
+    - link "Offers":
+      - /url: /sales/offers
+      - generic: Offers
+    - link "Outbound" [active]:
+      - /url: /sales/outbound
+      - generic: Outbound
+    - link "CRM":
+      - /url: /leads
+      - generic: CRM
+    - generic: Operations
+    - link "Finances":
+      - /url: /operations/finances
+      - generic: Finances
+    - link "Installs":
+      - /url: /operations/installs
+      - generic: Installs
+    - link "Retention":
+      - /url: /operations/cs
+      - generic: Retention
+    - link "Settings":
+      - /url: /settings
+      - generic: Settings
+  - button "Sign out"
+- main:
+  - heading "Outbound" [level=1]
+  - tablist "Outbound desk":
+    - tab "Waves" [selected]
+    - tab "Calendar"
+    - tab "Timeline"
+  - paragraph: 4 launched this week
+  - generic: Target
+  - textbox "This week launch target":
+    - /placeholder: none
+  - generic: Cap
+  - textbox "This week launch cap":
+    - /placeholder: none
+  - link "Craft":
+    - /url: /sales/outbound/craft
+  - paragraph: Instantly glance 1m ago
+  - button "Add campaign"
+  - paragraph: This morning · 2026-09-08
+  - heading "Review existing installation candidates and finish one precise draft." [level=3]
+  - list:
+    - generic: Smart Handy is followed up; Roof Safety awaits an internal decision.
+    - generic: Signing awaits payment connection.
+  - heading "Recommended next list" [level=3]
+  - generic: "1"
+  - paragraph: Agent-only until you move it to next.
+  - heading "Sydney Locksmith | 65 | Sep" [level=4]:
+    - link "Sydney Locksmith | 65 | Sep":
+      - /url: /sales/outbound/editor/campaign-098be736-0dcc-4a13-bc33-9fae26f959ec
+  - paragraph: Locksmith Sydney opener list loaded to Instantly as draft. 65 sendable.
+  - generic: locksmith · sydney
+  - generic: 3 Sept
+  - generic: "3"
+  - generic: "0"
+  - link "Instantly":
+    - /url: https://app.instantly.ai/app/campaign/8c247341-a64f-462c-bfc0-b916ebf2b78a
+    - text: Instantly
+  - heading "Next campaigns" [level=3]
+  - generic: "3"
+  - button "Add to Next campaigns":
+  - heading "HVAC | AU | 50 | capture 24 aug" [level=4]:
+    - link "HVAC | AU | 50 | capture 24 aug":
+      - /url: /sales/outbound/editor/campaign-au-hvac-receptionist-2026-08
+  - paragraph: 50 HVAC openers. Instantly live window Mon 24 Aug 8am Sydney. Activate stays scheduled in Instantly.
+  - generic: hvac · au
+  - generic: 24 Aug
+  - generic: "0"
+  - link "Instantly":
+    - /url: https://app.instantly.ai/app/campaign/b3f7d35d-22cd-4be1-bf2a-a48b021ec83d
+    - text: Instantly
+  - heading "Melbourne Plumber" [level=4]:
+    - link "Melbourne Plumber":
+      - /url: /sales/outbound/editor/campaign-0f3b8e54-6f52-4af3-8403-37982fa7a978
+  - generic: plumber · melbourne
+  - generic: 7 Sept
+  - generic: "0"
+  - generic: "500"
+  - link "Instantly":
+    - /url: https://app.instantly.ai/app/campaign/8ef202a4-1eff-44fa-b6f3-55dc02b944fe
+    - text: Instantly
+  - heading "Sydney Hvac" [level=4]:
+    - link "Sydney Hvac":
+      - /url: /sales/outbound/editor/campaign-5fd67add-23d4-403b-b09b-78cf9d37cd53
+  - generic: hvac · sydney
+  - generic: 8 Sept
+  - generic: "0"
+  - heading "Live campaigns" [level=3]
+  - generic: "1"
+  - paragraph: Sending now. Activate stays in Instantly.
+  - heading "Perth Electrical | fill | 397 | Sep" [level=4]
+  - paragraph: Instantly only. Bind it in Compass to move lanes.
+  - generic: Sending
+  - generic: Instantly
+  - generic: "3"
+  - generic: "100"
+  - link "Instantly":
+    - /url: https://app.instantly.ai/app/campaign/1c293a17-6596-49fc-ab66-1971731112bb
+    - text: Instantly
+  - heading "Parked" [level=3]
+  - generic: "1"
+  - paragraph: Paused in Instantly. Pause stays in Instantly.
+  - heading "HVAC | Sydney | 300 | Sept26" [level=4]:
+    - link "HVAC | Sydney | 300 | Sept26":
+      - /url: /sales/outbound/editor/campaign-a7b69b4c-9097-4f79-9201-a44ee339ba64
+  - paragraph: Jules launched this morning with the HVAC Sydney opener file. Compass Live was still empty of that campaign.
+  - generic: hvac · sydney
+  - generic: 2 Sept
+  - generic: "1"
+  - generic: "0"
+  - link "Instantly":
+    - /url: https://app.instantly.ai/app/campaign/2e13bd2b-574c-4e23-bc8e-d1d2e029ce5d
+    - text: Instantly
+  - complementary:
+    - heading "Outlook" [level=3]
+    - paragraph: What can be retargeted, what is still queued, and the next moves.
+    - paragraph: 90-day retarget
+    - paragraph: "0"
+    - link "Open ready leads":
+      - /url: /leads?recontact_ready=1
+    - paragraph: Still to send
+    - paragraph: "1036"
+    - paragraph: Live and paused
+    - paragraph: Live now
+    - paragraph: "1"
+    - paragraph: Sending in Instantly
+    - paragraph: Pipeline actions
+    - list:
+      - paragraph: Watch Sydney HVAC live
+      - paragraph: 160 on Instantly. 14 CSV rows did not land because Instantly risky is off.
+      - generic: volume
+      - generic: agent
+      - button "Mark Watch Sydney HVAC live done": Mark done
+      - paragraph: Inspect roofing Sydney deliverability
+      - paragraph: Roofing | Sydney | 150 | 09/26. 0 replies. Do not load more.
+      - generic: inboxes
+      - generic: agent
+      - button "Mark Inspect roofing Sydney deliverability done": Mark done
+      - paragraph: Do not land; home brief locked
+      - generic: other
+      - generic: agent
+      - button "Mark Do not land; home brief locked done": Mark done
+      - paragraph: "WAIT: do not activate Instantly or top up live Perth Electrical"
+      - generic: other
+      - generic: agent
+      - 'button "Mark WAIT: do not activate Instantly or top up live Perth Electrical done"': Mark done
+      - paragraph: Phone Unibox non-no replies after Asuria (incl. flagged roofing positive)
+      - generic: other
+      - generic: agent
+      - button "Mark Phone Unibox non-no replies after Asuria (incl. flagged roofing positive) done": Mark done
+      - paragraph: Propose kill/overhaul Property Managers after inbox check
+      - generic: inboxes
+      - generic: agent
+      - button "Mark Propose kill/overhaul Property Managers after inbox check done": Mark done
+      - paragraph: Prepare Melbourne Plumber draft only — no scrape, no activate
+      - generic: volume
+      - generic: agent
+      - button "Mark Prepare Melbourne Plumber draft only — no scrape, no activate done": Mark done
+      - paragraph: Finish Melbourne Plumber verification and draft upload
+      - paragraph: 753 uncontacted candidates; 750 need verification. Reconnect Apify and check remaining budget, then run the existing verifier queue. Reconcile duplicates, invalids and upload skips. Upload in Chrome, check every merge, then mark only uploaded Compass IDs. Keep draft until Jules activates.
+      - generic: volume
+      - generic: agent
+      - button "Mark Finish Melbourne Plumber verification and draft upload done": Mark done
+      - paragraph: Review cold-email results and maintain the next two cells
+      - paragraph: "Weekly operator cycle: sync replies/outcomes and check unsent volume. Review the current control versus saved expression challenger only after an approved comparable send; positive replies per delivered, then screens/installs. Record inconclusive when evidence is insufficient. Refill existing eligible cohorts before any new paid scrape; maintain two non-cancelled cells and reserve verification budget. No automatic activation."
+      - generic: copy
+      - generic: agent
+      - button "Mark Review cold-email results and maintain the next two cells done": Mark done
+      - paragraph: Do not land; home brief locked
+      - generic: other
+      - generic: agent
+      - button "Mark Do not land; home brief locked done": Mark done
+      - paragraph: Phone Unibox non-no replies after MTC
+      - generic: other
+      - generic: agent
+      - button "Mark Phone Unibox non-no replies after MTC done": Mark done
+      - paragraph: Propose kill/overhaul Property Managers after inbox check
+      - generic: inboxes
+      - generic: agent
+      - button "Mark Propose kill/overhaul Property Managers after inbox check done": Mark done
+      - paragraph: Do not land; brief locked
+      - generic: other
+      - generic: agent
+      - button "Mark Do not land; brief locked done": Mark done
+      - paragraph: Phone Unibox non-no replies after MTC
+      - generic: other
+      - generic: agent
+      - button "Mark Phone Unibox non-no replies after MTC done": Mark done
+  - heading "2 leftover campaigns" [level=3]:
+    - button "2 leftover campaigns":
+      - text: 2 leftover campaigns
+- alert
+- generic: "0"

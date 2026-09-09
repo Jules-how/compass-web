@@ -1,0 +1,2325 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- complementary:
+  - link "switchflow compass":
+    - /url: /home
+    - generic: switchflow compass
+  - navigation "Operator":
+    - link "Home":
+      - /url: /home
+      - generic: Home
+    - link "Inbox 87":
+      - /url: /inbox
+      - generic: Inbox
+      - generic: "87"
+    - generic: Workspace
+    - link "Goals & notes":
+      - /url: /planning
+      - generic: Goals & notes
+    - link "My Tasks":
+      - /url: /tasks
+      - generic: My Tasks
+    - link "Projects":
+      - /url: /projects
+      - generic: Projects
+    - link "Functions":
+      - /url: /functions
+      - generic: Functions
+    - link "Clients":
+      - /url: /clients
+      - generic: Clients
+    - generic: Sales
+    - link "Overview":
+      - /url: /sales
+      - generic: Overview
+    - link "Offer & economics":
+      - /url: /sales/offer-plan
+      - generic: Offer & economics
+    - link "Email tests":
+      - /url: /sales/experiments
+      - generic: Email tests
+    - link "Offers":
+      - /url: /sales/offers
+      - generic: Offers
+    - link "Outbound":
+      - /url: /sales/outbound
+      - generic: Outbound
+    - link "CRM" [active]:
+      - /url: /leads
+      - generic: CRM
+    - generic: Operations
+    - link "Finances":
+      - /url: /operations/finances
+      - generic: Finances
+    - link "Installs":
+      - /url: /operations/installs
+      - generic: Installs
+    - link "Retention":
+      - /url: /operations/cs
+      - generic: Retention
+    - link "Settings":
+      - /url: /settings
+      - generic: Settings
+  - button "Sign out"
+- main:
+  - heading "Leads" [level=1]
+  - paragraph: 7,444 leads matching filters · 7,451 active total
+  - button "Sync local files":
+    - text: Sync local files
+  - button "Leads"
+  - button "Prospects"
+  - button "Archived 9,072":
+    - text: Archived
+    - generic: 9,072
+  - searchbox "Name, email, company, or phone"
+  - button "Filters"
+  - button "Export CSV"
+  - button "7,451 All":
+    - generic: 7,451
+    - generic: All
+  - button "3,887 Uncontacted":
+    - generic: 3,887
+    - generic: Uncontacted
+  - button "3,565 Synced":
+    - generic: 3,565
+    - generic: Synced
+  - button "11 Replied":
+    - generic: "11"
+    - generic: Replied
+  - button "7 Interested":
+    - generic: "7"
+    - generic: Interested
+  - button "4,339 Missing phone":
+    - generic: 4,339
+    - generic: Missing phone
+  - button "3,744 Suppressed":
+    - generic: 3,744
+    - generic: Suppressed
+  - button "0 Needs review":
+    - generic: "0"
+    - generic: Needs review
+  - button "0 Recontact ready":
+    - generic: "0"
+    - generic: Recontact ready
+  - generic "leads table. Scroll horizontally and vertically to view all columns and records.":
+    - table:
+      - rowgroup:
+        - 'row "Select all leads # First name Resize column Last name Resize column Company Resize column Categories Resize column Email Resize column Opener Resize column Campaign Resize column Facts Resize column Vertical Resize column Last interaction Resize column Connection strength Resize column Phone Resize column Status Resize column Source Resize column Location Resize column Website Resize column ICP Resize column Reviews Resize column Hours Resize column Email origin + Resize column"':
+          - 'columnheader "Select all leads #"':
+            - generic "Select all leads":
+              - checkbox "Select all leads"
+            - generic: "#"
+          - columnheader "First name Resize column":
+            - button "First name":
+              - generic: First name
+            - button "Resize column"
+          - columnheader "Last name Resize column":
+            - button "Last name":
+              - generic: Last name
+            - button "Resize column"
+          - columnheader "Company Resize column":
+            - button "Company":
+              - generic: Company
+            - button "Resize column"
+          - columnheader "Categories Resize column":
+            - button "Categories":
+              - generic: Categories
+            - button "Resize column"
+          - columnheader "Email Resize column":
+            - button "Email":
+              - generic: Email
+            - button "Resize column"
+          - columnheader "Opener Resize column":
+            - button "Opener":
+              - generic: Opener
+            - button "Resize column"
+          - columnheader "Campaign Resize column":
+            - button "Campaign":
+              - generic: Campaign
+            - button "Resize column"
+          - columnheader "Facts Resize column":
+            - button "Facts":
+              - generic: Facts
+            - button "Resize column"
+          - columnheader "Vertical Resize column":
+            - button "Vertical":
+              - generic: Vertical
+            - button "Resize column"
+          - columnheader "Last interaction Resize column":
+            - button "Last interaction":
+              - generic: Last interaction
+            - button "Resize column"
+          - columnheader "Connection strength Resize column":
+            - button "Connection strength":
+              - generic: Connection strength
+            - button "Resize column"
+          - columnheader "Phone Resize column":
+            - button "Phone":
+              - generic: Phone
+            - button "Resize column"
+          - columnheader "Status Resize column":
+            - button "Status":
+              - generic: Status
+            - button "Resize column"
+          - columnheader "Source Resize column":
+            - button "Source":
+              - generic: Source
+            - button "Resize column"
+          - columnheader "Location Resize column":
+            - button "Location":
+              - generic: Location
+            - button "Resize column"
+          - columnheader "Website Resize column":
+            - button "Website":
+              - generic: Website
+            - button "Resize column"
+          - columnheader "ICP Resize column":
+            - button "ICP":
+              - generic: ICP
+            - button "Resize column"
+          - columnheader "Reviews Resize column":
+            - button "Reviews":
+              - generic: Reviews
+            - button "Resize column"
+          - columnheader "Hours Resize column":
+            - button "Hours":
+              - generic: Hours
+            - button "Resize column"
+          - columnheader "Email origin + Resize column":
+            - button "Email origin":
+              - generic: Email origin
+            - button "+"
+            - button "Resize column"
+      - rowgroup:
+        - row "Select louisairconservice@gmail.com 1 — — Louis Air con service HVAC hvac sydney hvac-sydney-2026-09-02 instantly louisairconservice@gmail.com Saw Louis Air con service handles air conditioning work across North Kellyville. HVAC | Sydney | 300 | Sept26 — HVAC 4 days ago Very weak +61415162135 Not interested instantly North Kellyville, NSW louisairconservice.com.au Pass 42 — Published":
+          - cell "Select louisairconservice@gmail.com 1":
+            - generic "Select louisairconservice@gmail.com":
+              - checkbox "Select louisairconservice@gmail.com"
+            - generic: "1"
+          - cell "—"
+          - cell "—"
+          - cell "Louis Air con service":
+            - generic: Louis Air con service
+          - cell "HVAC hvac sydney hvac-sydney-2026-09-02 instantly":
+            - generic: HVAC
+            - generic: hvac
+            - generic: sydney
+            - generic: hvac-sydney-2026-09-02
+            - generic: instantly
+          - cell "louisairconservice@gmail.com":
+            - generic: louisairconservice@gmail.com
+          - cell "Saw Louis Air con service handles air conditioning work across North Kellyville.":
+            - generic: Saw Louis Air con service handles air conditioning work across North Kellyville.
+          - cell "HVAC | Sydney | 300 | Sept26":
+            - generic: HVAC | Sydney | 300 | Sept26
+          - cell "—"
+          - cell "HVAC":
+            - generic: HVAC
+          - cell "4 days ago":
+            - generic: 4 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61415162135":
+            - generic: "+61415162135"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "North Kellyville, NSW":
+            - generic: North Kellyville, NSW
+          - cell "louisairconservice.com.au":
+            - link "louisairconservice.com.au":
+              - /url: https://louisairconservice.com.au
+              - text: louisairconservice.com.au
+          - cell "Pass":
+            - generic: Pass
+          - cell "42":
+            - generic: "42"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Adapt team 2 Adapt team Adapt Plumbing Plumber plumber-brisbane-2026-08-24-out instantly david@adaptplumbing.com.au Saw Adapt Plumbing handles leak detection work across Ormiston. Plumber | Brisbane | 194 | 08/26 — Plumber 13 days ago Very weak +61411388452 Not interested instantly Ormiston adaptplumbing.com.au/ Pass 98 — Published":
+          - cell "Select Adapt team 2":
+            - generic "Select Adapt team":
+              - checkbox "Select Adapt team"
+            - generic: "2"
+          - cell "Adapt":
+            - generic: Adapt
+          - cell "team":
+            - generic: team
+          - cell "Adapt Plumbing":
+            - generic: Adapt Plumbing
+          - cell "Plumber plumber-brisbane-2026-08-24-out instantly":
+            - generic: Plumber
+            - generic: plumber-brisbane-2026-08-24-out
+            - generic: instantly
+          - cell "david@adaptplumbing.com.au":
+            - generic: david@adaptplumbing.com.au
+          - cell "Saw Adapt Plumbing handles leak detection work across Ormiston.":
+            - generic: Saw Adapt Plumbing handles leak detection work across Ormiston.
+          - cell "Plumber | Brisbane | 194 | 08/26":
+            - generic: Plumber | Brisbane | 194 | 08/26
+          - cell "—"
+          - cell "Plumber":
+            - generic: Plumber
+          - cell "13 days ago":
+            - generic: 13 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61411388452":
+            - generic: "+61411388452"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "Ormiston":
+            - generic: Ormiston
+          - cell "adaptplumbing.com.au/":
+            - link "adaptplumbing.com.au/":
+              - /url: https://adaptplumbing.com.au/
+              - text: adaptplumbing.com.au/
+          - cell "Pass":
+            - generic: Pass
+          - cell "98":
+            - generic: "98"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select AEP team 3 AEP team AEP Other hvac-adelaide-2026-08-24-out instantly admin@aeper.com.au Saw AEP closes at 4:30pm, calls after then usually just ring the next aircon business. HVAC | Adelaide | 95 | 08/26 — Other 8 days ago Very strong +61428698258 Out of office instantly Mount Barker aeprefrigeration.com.au/ — 44 — —":
+          - cell "Select AEP team 3":
+            - generic "Select AEP team":
+              - checkbox "Select AEP team"
+            - generic: "3"
+          - cell "AEP":
+            - generic: AEP
+          - cell "team":
+            - generic: team
+          - cell "AEP":
+            - generic: AEP
+          - cell "Other hvac-adelaide-2026-08-24-out instantly":
+            - generic: Other
+            - generic: hvac-adelaide-2026-08-24-out
+            - generic: instantly
+          - cell "admin@aeper.com.au":
+            - generic: admin@aeper.com.au
+          - cell "Saw AEP closes at 4:30pm, calls after then usually just ring the next aircon business.":
+            - generic: Saw AEP closes at 4:30pm, calls after then usually just ring the next aircon business.
+          - cell "HVAC | Adelaide | 95 | 08/26":
+            - generic: HVAC | Adelaide | 95 | 08/26
+          - cell "—"
+          - cell "Other":
+            - generic: Other
+          - cell "8 days ago":
+            - generic: 8 days ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61428698258":
+            - generic: "+61428698258"
+          - cell "Out of office":
+            - generic: Out of office
+          - cell "instantly":
+            - generic: instantly
+          - cell "Mount Barker":
+            - generic: Mount Barker
+          - cell "aeprefrigeration.com.au/":
+            - link "aeprefrigeration.com.au/":
+              - /url: https://aeprefrigeration.com.au/
+              - text: aeprefrigeration.com.au/
+          - cell "—"
+          - cell "44":
+            - generic: "44"
+          - cell "—"
+          - cell "—"
+        - row "Select Ali G Electrical 4 Ali G Electrical Ali G Electrical Electrician instantly info@aligelectrical.com.au — Perth Electrical | fill | 397 | Sep — Electrician about 4 hours ago Very strong +61431096783 Synced instantly Perth, WA aligelectrical.com.au — 120 — Published":
+          - cell "Select Ali G Electrical 4":
+            - generic "Select Ali G Electrical":
+              - checkbox "Select Ali G Electrical"
+            - generic: "4"
+          - cell "Ali":
+            - generic: Ali
+          - cell "G Electrical":
+            - generic: G Electrical
+          - cell "Ali G Electrical":
+            - generic: Ali G Electrical
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "info@aligelectrical.com.au":
+            - generic: info@aligelectrical.com.au
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 4 hours ago":
+            - generic: about 4 hours ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61431096783":
+            - generic: "+61431096783"
+          - cell "Synced":
+            - generic: Synced
+          - cell "instantly":
+            - generic: instantly
+          - cell "Perth, WA":
+            - generic: Perth, WA
+          - cell "aligelectrical.com.au":
+            - link "aligelectrical.com.au":
+              - /url: http://aligelectrical.com.au
+              - text: aligelectrical.com.au
+          - cell "—"
+          - cell "120":
+            - generic: "120"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Amplect Pty Ltd 5 Amplect Pty Ltd Amplect Electrician instantly amplect@bigpond.com — Perth Electrical | fill | 397 | Sep — Electrician about 4 hours ago Very strong +61417918210 Synced instantly Tapping, Western Australia amplect.com.au — 1 — Published":
+          - cell "Select Amplect Pty Ltd 5":
+            - generic "Select Amplect Pty Ltd":
+              - checkbox "Select Amplect Pty Ltd"
+            - generic: "5"
+          - cell "Amplect":
+            - generic: Amplect
+          - cell "Pty Ltd":
+            - generic: Pty Ltd
+          - cell "Amplect":
+            - generic: Amplect
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "amplect@bigpond.com":
+            - generic: amplect@bigpond.com
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 4 hours ago":
+            - generic: about 4 hours ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61417918210":
+            - generic: "+61417918210"
+          - cell "Synced":
+            - generic: Synced
+          - cell "instantly":
+            - generic: instantly
+          - cell "Tapping, Western Australia":
+            - generic: Tapping, Western Australia
+          - cell "amplect.com.au":
+            - link "amplect.com.au":
+              - /url: http://amplect.com.au
+              - text: amplect.com.au
+          - cell "—"
+          - cell "1":
+            - generic: "1"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Anchorage Fencing 6 Anchorage Fencing Anchorage Fencing Electrician instantly anchoragefencing@iinet.net.au — Perth Electrical | fill | 397 | Sep — Electrician about 4 hours ago Very strong +61419042953 Synced instantly Perth, WA anchoragefencing.com.au — 9 — Published":
+          - cell "Select Anchorage Fencing 6":
+            - generic "Select Anchorage Fencing":
+              - checkbox "Select Anchorage Fencing"
+            - generic: "6"
+          - cell "Anchorage":
+            - generic: Anchorage
+          - cell "Fencing":
+            - generic: Fencing
+          - cell "Anchorage Fencing":
+            - generic: Anchorage Fencing
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "anchoragefencing@iinet.net.au":
+            - generic: anchoragefencing@iinet.net.au
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 4 hours ago":
+            - generic: about 4 hours ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61419042953":
+            - generic: "+61419042953"
+          - cell "Synced":
+            - generic: Synced
+          - cell "instantly":
+            - generic: instantly
+          - cell "Perth, WA":
+            - generic: Perth, WA
+          - cell "anchoragefencing.com.au":
+            - link "anchoragefencing.com.au":
+              - /url: https://anchoragefencing.com.au
+              - text: anchoragefencing.com.au
+          - cell "—"
+          - cell "9":
+            - generic: "9"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Boya Refrigeration and Electrical 7 Boya Refrigeration and Electrical Boya Electrician instantly service@boyarefrigeration.com — Perth Electrical | fill | 397 | Sep — Electrician about 4 hours ago Very strong +61402577911 Synced instantly Perth, WA boyarefrigeration.com — — — Published":
+          - cell "Select Boya Refrigeration and Electrical 7":
+            - generic "Select Boya Refrigeration and Electrical":
+              - checkbox "Select Boya Refrigeration and Electrical"
+            - generic: "7"
+          - cell "Boya":
+            - generic: Boya
+          - cell "Refrigeration and Electrical":
+            - generic: Refrigeration and Electrical
+          - cell "Boya":
+            - generic: Boya
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "service@boyarefrigeration.com":
+            - generic: service@boyarefrigeration.com
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 4 hours ago":
+            - generic: about 4 hours ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61402577911":
+            - generic: "+61402577911"
+          - cell "Synced":
+            - generic: Synced
+          - cell "instantly":
+            - generic: instantly
+          - cell "Perth, WA":
+            - generic: Perth, WA
+          - cell "boyarefrigeration.com":
+            - link "boyarefrigeration.com":
+              - /url: https://boyarefrigeration.com
+              - text: boyarefrigeration.com
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Cabletec Services Pty Ltd 8 Cabletec Services Pty Ltd Cabletec Electrician instantly info@cabletecservices.com.au — Perth Electrical | fill | 397 | Sep — Electrician about 4 hours ago Very strong +61426078249 Synced instantly Mindarie, Western Australia cabletecservices.com.au — 39 — Published":
+          - cell "Select Cabletec Services Pty Ltd 8":
+            - generic "Select Cabletec Services Pty Ltd":
+              - checkbox "Select Cabletec Services Pty Ltd"
+            - generic: "8"
+          - cell "Cabletec":
+            - generic: Cabletec
+          - cell "Services Pty Ltd":
+            - generic: Services Pty Ltd
+          - cell "Cabletec":
+            - generic: Cabletec
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "info@cabletecservices.com.au":
+            - generic: info@cabletecservices.com.au
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 4 hours ago":
+            - generic: about 4 hours ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61426078249":
+            - generic: "+61426078249"
+          - cell "Synced":
+            - generic: Synced
+          - cell "instantly":
+            - generic: instantly
+          - cell "Mindarie, Western Australia":
+            - generic: Mindarie, Western Australia
+          - cell "cabletecservices.com.au":
+            - link "cabletecservices.com.au":
+              - /url: https://cabletecservices.com.au
+              - text: cabletecservices.com.au
+          - cell "—"
+          - cell "39":
+            - generic: "39"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Charlie 9 Charlie — Mr. Nice instantly charlie@mrniceplumbing.com — Plumber | Sydney | 259 | 08/26 — — 11 days ago Very weak — Not interested instantly — — — — — —":
+          - cell "Select Charlie 9":
+            - generic "Select Charlie":
+              - checkbox "Select Charlie"
+            - generic: "9"
+          - cell "Charlie":
+            - generic: Charlie
+          - cell "—"
+          - cell "Mr. Nice":
+            - generic: Mr. Nice
+          - cell "instantly":
+            - generic: instantly
+          - cell "charlie@mrniceplumbing.com":
+            - generic: charlie@mrniceplumbing.com
+          - cell "—"
+          - cell "Plumber | Sydney | 259 | 08/26":
+            - generic: Plumber | Sydney | 259 | 08/26
+          - cell "—"
+          - cell "—"
+          - cell "11 days ago":
+            - generic: 11 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "—"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select Dave Shumak 10 Dave Shumak Dave Shumak instantly service@daveshumakplumbing.com.au — Plumber | Sydney | 259 | 08/26 — — 8 days ago Very weak — Not interested instantly — — — — — —":
+          - cell "Select Dave Shumak 10":
+            - generic "Select Dave Shumak":
+              - checkbox "Select Dave Shumak"
+            - generic: "10"
+          - cell "Dave":
+            - generic: Dave
+          - cell "Shumak":
+            - generic: Shumak
+          - cell "Dave Shumak":
+            - generic: Dave Shumak
+          - cell "instantly":
+            - generic: instantly
+          - cell "service@daveshumakplumbing.com.au":
+            - generic: service@daveshumakplumbing.com.au
+          - cell "—"
+          - cell "Plumber | Sydney | 259 | 08/26":
+            - generic: Plumber | Sydney | 259 | 08/26
+          - cell "—"
+          - cell "—"
+          - cell "8 days ago":
+            - generic: 8 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "—"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select Dec Services Pty Ltd 11 Dec Services Pty Ltd Dec Electrician instantly service@decservices.com.au — Perth Electrical | fill | 397 | Sep — Electrician about 4 hours ago Very strong +61414662438 Synced instantly Ridgewood, Western Australia decservices.com.au — — — Published":
+          - cell "Select Dec Services Pty Ltd 11":
+            - generic "Select Dec Services Pty Ltd":
+              - checkbox "Select Dec Services Pty Ltd"
+            - generic: "11"
+          - cell "Dec":
+            - generic: Dec
+          - cell "Services Pty Ltd":
+            - generic: Services Pty Ltd
+          - cell "Dec":
+            - generic: Dec
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "service@decservices.com.au":
+            - generic: service@decservices.com.au
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 4 hours ago":
+            - generic: about 4 hours ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61414662438":
+            - generic: "+61414662438"
+          - cell "Synced":
+            - generic: Synced
+          - cell "instantly":
+            - generic: instantly
+          - cell "Ridgewood, Western Australia":
+            - generic: Ridgewood, Western Australia
+          - cell "decservices.com.au":
+            - link "decservices.com.au":
+              - /url: https://decservices.com.au
+              - text: decservices.com.au
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Electrician Alkimos - ASTEC Electricians 12 Electrician Alkimos - ASTEC Electricians Electrician Alkimos Electrician instantly info@astecelectricians.com.au — Perth Electrical | fill | 397 | Sep — Electrician about 4 hours ago Very strong +61410548994 Synced instantly Perth, WA astecelectricians.com.au — 66 — Published":
+          - cell "Select Electrician Alkimos - ASTEC Electricians 12":
+            - generic "Select Electrician Alkimos - ASTEC Electricians":
+              - checkbox "Select Electrician Alkimos - ASTEC Electricians"
+            - generic: "12"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "Alkimos - ASTEC Electricians":
+            - generic: Alkimos - ASTEC Electricians
+          - cell "Electrician Alkimos":
+            - generic: Electrician Alkimos
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "info@astecelectricians.com.au":
+            - generic: info@astecelectricians.com.au
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 4 hours ago":
+            - generic: about 4 hours ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61410548994":
+            - generic: "+61410548994"
+          - cell "Synced":
+            - generic: Synced
+          - cell "instantly":
+            - generic: instantly
+          - cell "Perth, WA":
+            - generic: Perth, WA
+          - cell "astecelectricians.com.au":
+            - link "astecelectricians.com.au":
+              - /url: https://astecelectricians.com.au
+              - text: astecelectricians.com.au
+          - cell "—"
+          - cell "66":
+            - generic: "66"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Ethan 13 Ethan — Easy Run Plumbing And Gas instantly ethan@easyrunplumbingandgas.com.au — Plumber | Perth | 211 | 08/26 — — 10 days ago Very strong — Replied instantly — — — — — —":
+          - cell "Select Ethan 13":
+            - generic "Select Ethan":
+              - checkbox "Select Ethan"
+            - generic: "13"
+          - cell "Ethan":
+            - generic: Ethan
+          - cell "—"
+          - cell "Easy Run Plumbing And Gas":
+            - generic: Easy Run Plumbing And Gas
+          - cell "instantly":
+            - generic: instantly
+          - cell "ethan@easyrunplumbingandgas.com.au":
+            - generic: ethan@easyrunplumbingandgas.com.au
+          - cell "—"
+          - cell "Plumber | Perth | 211 | 08/26":
+            - generic: Plumber | Perth | 211 | 08/26
+          - cell "—"
+          - cell "—"
+          - cell "10 days ago":
+            - generic: 10 days ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "—"
+          - cell "Replied":
+            - generic: Replied
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select Full Flow team 14 Full Flow team Full Flow Plumber plumber-brisbane-2026-08-24-out instantly admin@fullflowplumbing.com.au Saw Full Flow Plumbing and Drainage handles leak detection work across Logan Village. Probe | julianhoward@myswitchflow | 7 | 09/26 — Plumber 7 days ago Very strong +61734779978 Replied instantly Logan Village fullflowplumbing.com.au/ Pass 148 — Published":
+          - cell "Select Full Flow team 14":
+            - generic "Select Full Flow team":
+              - checkbox "Select Full Flow team"
+            - generic: "14"
+          - cell "Full":
+            - generic: Full
+          - cell "Flow team":
+            - generic: Flow team
+          - cell "Full Flow":
+            - generic: Full Flow
+          - cell "Plumber plumber-brisbane-2026-08-24-out instantly":
+            - generic: Plumber
+            - generic: plumber-brisbane-2026-08-24-out
+            - generic: instantly
+          - cell "admin@fullflowplumbing.com.au":
+            - generic: admin@fullflowplumbing.com.au
+          - cell "Saw Full Flow Plumbing and Drainage handles leak detection work across Logan Village.":
+            - generic: Saw Full Flow Plumbing and Drainage handles leak detection work across Logan Village.
+          - cell "Probe | julianhoward@myswitchflow | 7 | 09/26":
+            - generic: Probe | julianhoward@myswitchflow | 7 | 09/26
+          - cell "—"
+          - cell "Plumber":
+            - generic: Plumber
+          - cell "7 days ago":
+            - generic: 7 days ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61734779978":
+            - generic: "+61734779978"
+          - cell "Replied":
+            - generic: Replied
+          - cell "instantly":
+            - generic: instantly
+          - cell "Logan Village":
+            - generic: Logan Village
+          - cell "fullflowplumbing.com.au/":
+            - link "fullflowplumbing.com.au/":
+              - /url: https://fullflowplumbing.com.au/
+              - text: fullflowplumbing.com.au/
+          - cell "Pass":
+            - generic: Pass
+          - cell "148":
+            - generic: "148"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select GDR Mobile Auto Electrical Services Pty Ltd 15 GDR Mobile Auto Electrical Services Pty Ltd GDR Mobile Auto Electrician instantly garryreyes@gdrauto.com — Perth Electrical | fill | 397 | Sep — Electrician about 4 hours ago Very strong +61420262434 Synced instantly Alkimos, Western Australia gdrauto.com — 46 — Published":
+          - cell "Select GDR Mobile Auto Electrical Services Pty Ltd 15":
+            - generic "Select GDR Mobile Auto Electrical Services Pty Ltd":
+              - checkbox "Select GDR Mobile Auto Electrical Services Pty Ltd"
+            - generic: "15"
+          - cell "GDR":
+            - generic: GDR
+          - cell "Mobile Auto Electrical Services Pty Ltd":
+            - generic: Mobile Auto Electrical Services Pty Ltd
+          - cell "GDR Mobile Auto":
+            - generic: GDR Mobile Auto
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "garryreyes@gdrauto.com":
+            - generic: garryreyes@gdrauto.com
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 4 hours ago":
+            - generic: about 4 hours ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61420262434":
+            - generic: "+61420262434"
+          - cell "Synced":
+            - generic: Synced
+          - cell "instantly":
+            - generic: instantly
+          - cell "Alkimos, Western Australia":
+            - generic: Alkimos, Western Australia
+          - cell "gdrauto.com":
+            - link "gdrauto.com":
+              - /url: http://gdrauto.com
+              - text: gdrauto.com
+          - cell "—"
+          - cell "46":
+            - generic: "46"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Geezair team 16 Geezair team Geezair HVAC hvac-melbourne-2026-08-24-out instantly dale@geezair.com Saw Geezair handles aircon work in Caulfield North. HVAC | Melbourne | 116 | 08/26 — HVAC 11 days ago Very weak +61404002069 Not interested instantly Caulfield North geezair.com/ Pass 6 — Published":
+          - cell "Select Geezair team 16":
+            - generic "Select Geezair team":
+              - checkbox "Select Geezair team"
+            - generic: "16"
+          - cell "Geezair":
+            - generic: Geezair
+          - cell "team":
+            - generic: team
+          - cell "Geezair":
+            - generic: Geezair
+          - cell "HVAC hvac-melbourne-2026-08-24-out instantly":
+            - generic: HVAC
+            - generic: hvac-melbourne-2026-08-24-out
+            - generic: instantly
+          - cell "dale@geezair.com":
+            - generic: dale@geezair.com
+          - cell "Saw Geezair handles aircon work in Caulfield North.":
+            - generic: Saw Geezair handles aircon work in Caulfield North.
+          - cell "HVAC | Melbourne | 116 | 08/26":
+            - generic: HVAC | Melbourne | 116 | 08/26
+          - cell "—"
+          - cell "HVAC":
+            - generic: HVAC
+          - cell "11 days ago":
+            - generic: 11 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61404002069":
+            - generic: "+61404002069"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "Caulfield North":
+            - generic: Caulfield North
+          - cell "geezair.com/":
+            - link "geezair.com/":
+              - /url: https://geezair.com/
+              - text: geezair.com/
+          - cell "Pass":
+            - generic: Pass
+          - cell "6":
+            - generic: "6"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Glen Murray Plumbing Picton 17 Glen Murray Plumbing Picton Glen Murray Plumbing Picton Plumber sydney instantly glenmurplum@gmail.com Glen Murray Plumbing Picton still take jobs while the vans are already out. Plumber | Greater Sydney | 58 | 08/26 — Plumber 14 days ago Very weak +61 419 294 030 Not interested instantly Thirlmere, NSW www.glenmurrayplumbing.com.au Pass 46 Open 24 hours Published":
+          - cell "Select Glen Murray Plumbing Picton 17":
+            - generic "Select Glen Murray Plumbing Picton":
+              - checkbox "Select Glen Murray Plumbing Picton"
+            - generic: "17"
+          - cell "Glen":
+            - generic: Glen
+          - cell "Murray Plumbing Picton":
+            - generic: Murray Plumbing Picton
+          - cell "Glen Murray Plumbing Picton":
+            - generic: Glen Murray Plumbing Picton
+          - cell "Plumber sydney instantly":
+            - generic: Plumber
+            - generic: sydney
+            - generic: instantly
+          - cell "glenmurplum@gmail.com":
+            - generic: glenmurplum@gmail.com
+          - cell "Glen Murray Plumbing Picton still take jobs while the vans are already out.":
+            - generic: Glen Murray Plumbing Picton still take jobs while the vans are already out.
+          - cell "Plumber | Greater Sydney | 58 | 08/26":
+            - generic: Plumber | Greater Sydney | 58 | 08/26
+          - cell "—"
+          - cell "Plumber":
+            - generic: Plumber
+          - cell "14 days ago":
+            - generic: 14 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61 419 294 030":
+            - generic: +61 419 294 030
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "Thirlmere, NSW":
+            - generic: Thirlmere, NSW
+          - cell "www.glenmurrayplumbing.com.au":
+            - link "www.glenmurrayplumbing.com.au":
+              - /url: https://www.glenmurrayplumbing.com.au
+              - text: www.glenmurrayplumbing.com.au
+          - cell "Pass":
+            - generic: Pass
+          - cell "46":
+            - generic: "46"
+          - cell "Open 24 hours":
+            - generic: Open 24 hours
+          - cell "Published":
+            - generic: Published
+        - row "Select Hewitt Trade Services (Brisbane South) | Air Conditioning, Plumbing & Electrical 18 Hewitt Trade Services (Brisbane South) | Air Conditioning, Plumbing & Electrical Hewitt Trade Services Trades instantly-uncontacted-trades-2026-08-17 instantly enquiries@hewitttradeservices.com.au Saw Hewitt Trade Services handles plumbing work in Boondall. Plumber | Brisbane | 194 | 08/26 Hewitt Trade Services | Air Conditioning, Electrical & Plumbing &#xe090; 07 3634 0200 BOOK NOW HOME PRICING Split System Air Conditioning Daikin Mitsubishi Heavy Industries Mitsubishi Electric Gree Panasonic Fujitsu *sea Trades 11 days ago Very weak +61736340200 Not interested instantly Boondall hewitttradeservices.com.au — 377 — —":
+          - cell "Select Hewitt Trade Services (Brisbane South) | Air Conditioning, Plumbing & Electrical 18":
+            - generic "Select Hewitt Trade Services (Brisbane South) | Air Conditioning, Plumbing & Electrical":
+              - checkbox "Select Hewitt Trade Services (Brisbane South) | Air Conditioning, Plumbing & Electrical"
+            - generic: "18"
+          - cell "Hewitt":
+            - generic: Hewitt
+          - cell "Trade Services (Brisbane South) | Air Conditioning, Plumbing & Electrical":
+            - generic: Trade Services (Brisbane South) | Air Conditioning, Plumbing & Electrical
+          - cell "Hewitt Trade Services":
+            - generic: Hewitt Trade Services
+          - cell "Trades instantly-uncontacted-trades-2026-08-17 instantly":
+            - generic: Trades
+            - generic: instantly-uncontacted-trades-2026-08-17
+            - generic: instantly
+          - cell "enquiries@hewitttradeservices.com.au":
+            - generic: enquiries@hewitttradeservices.com.au
+          - cell "Saw Hewitt Trade Services handles plumbing work in Boondall.":
+            - generic: Saw Hewitt Trade Services handles plumbing work in Boondall.
+          - cell "Plumber | Brisbane | 194 | 08/26":
+            - generic: Plumber | Brisbane | 194 | 08/26
+          - cell "Hewitt Trade Services | Air Conditioning, Electrical & Plumbing &#xe090; 07 3634 0200 BOOK NOW HOME PRICING Split System Air Conditioning Daikin Mitsubishi Heavy Industries Mitsubishi Electric Gree Panasonic Fujitsu *sea":
+            - generic: Hewitt Trade Services | Air Conditioning, Electrical & Plumbing &#xe090; 07 3634 0200 BOOK NOW HOME PRICING Split System Air Conditioning Daikin Mitsubishi Heavy Industries Mitsubishi Electric Gree Panasonic Fujitsu *sea
+          - cell "Trades":
+            - generic: Trades
+          - cell "11 days ago":
+            - generic: 11 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61736340200":
+            - generic: "+61736340200"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "Boondall":
+            - generic: Boondall
+          - cell "hewitttradeservices.com.au":
+            - link "hewitttradeservices.com.au":
+              - /url: https://hewitttradeservices.com.au
+              - text: hewitttradeservices.com.au
+          - cell "—"
+          - cell "377":
+            - generic: "377"
+          - cell "—"
+          - cell "—"
+        - row "Select Honest team 19 Honest team Honest Plumbing Solutions Plumber plumber-brisbane-2026-08-24-out instantly office@honestplumbingsolutions.com.au Saw Honest Plumbing Solutions handles hot water work across Narangba. Plumber | Brisbane | 194 | 08/26 — Plumber 14 days ago Very strong +61467811528 Replied instantly Narangba honestplumbingsolutions.com.au/ Pass 120 — Published":
+          - cell "Select Honest team 19":
+            - generic "Select Honest team":
+              - checkbox "Select Honest team"
+            - generic: "19"
+          - cell "Honest":
+            - generic: Honest
+          - cell "team":
+            - generic: team
+          - cell "Honest Plumbing Solutions":
+            - generic: Honest Plumbing Solutions
+          - cell "Plumber plumber-brisbane-2026-08-24-out instantly":
+            - generic: Plumber
+            - generic: plumber-brisbane-2026-08-24-out
+            - generic: instantly
+          - cell "office@honestplumbingsolutions.com.au":
+            - generic: office@honestplumbingsolutions.com.au
+          - cell "Saw Honest Plumbing Solutions handles hot water work across Narangba.":
+            - generic: Saw Honest Plumbing Solutions handles hot water work across Narangba.
+          - cell "Plumber | Brisbane | 194 | 08/26":
+            - generic: Plumber | Brisbane | 194 | 08/26
+          - cell "—"
+          - cell "Plumber":
+            - generic: Plumber
+          - cell "14 days ago":
+            - generic: 14 days ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61467811528":
+            - generic: "+61467811528"
+          - cell "Replied":
+            - generic: Replied
+          - cell "instantly":
+            - generic: instantly
+          - cell "Narangba":
+            - generic: Narangba
+          - cell "honestplumbingsolutions.com.au/":
+            - link "honestplumbingsolutions.com.au/":
+              - /url: https://honestplumbingsolutions.com.au/
+              - text: honestplumbingsolutions.com.au/
+          - cell "Pass":
+            - generic: Pass
+          - cell "120":
+            - generic: "120"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select info@campbellcs.com.au 20 info@campbellcs.com.au — Campbell CS instantly info@campbellcs.com.au — Probe | julianhoward@myswitchflow | 7 | 09/26 — — 7 days ago Very strong — Replied instantly — — — — — —":
+          - cell "Select info@campbellcs.com.au 20":
+            - generic "Select info@campbellcs.com.au":
+              - checkbox "Select info@campbellcs.com.au"
+            - generic: "20"
+          - cell "info@campbellcs.com.au":
+            - generic: info@campbellcs.com.au
+          - cell "—"
+          - cell "Campbell CS":
+            - generic: Campbell CS
+          - cell "instantly":
+            - generic: instantly
+          - cell "info@campbellcs.com.au":
+            - generic: info@campbellcs.com.au
+          - cell "—"
+          - cell "Probe | julianhoward@myswitchflow | 7 | 09/26":
+            - generic: Probe | julianhoward@myswitchflow | 7 | 09/26
+          - cell "—"
+          - cell "—"
+          - cell "7 days ago":
+            - generic: 7 days ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "—"
+          - cell "Replied":
+            - generic: Replied
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select info@solsticeskin.com.au 21 info@solsticeskin.com.au — — Mortgage brokers src:ledger instantly:existing instantly info@solsticeskin.com.au — Med Spa | AU Comp | 73 | 06/26 — Mortgage brokers about 2 months ago Very weak +61466416927 Out of office instantly — — — — — —":
+          - cell "Select info@solsticeskin.com.au 21":
+            - generic "Select info@solsticeskin.com.au":
+              - checkbox "Select info@solsticeskin.com.au"
+            - generic: "21"
+          - cell "info@solsticeskin.com.au":
+            - generic: info@solsticeskin.com.au
+          - cell "—"
+          - cell "—"
+          - cell "Mortgage brokers src:ledger instantly:existing instantly":
+            - generic: Mortgage brokers
+            - generic: src:ledger
+            - generic: instantly:existing
+            - generic: instantly
+          - cell "info@solsticeskin.com.au":
+            - generic: info@solsticeskin.com.au
+          - cell "—"
+          - cell "Med Spa | AU Comp | 73 | 06/26":
+            - generic: Med Spa | AU Comp | 73 | 06/26
+          - cell "—"
+          - cell "Mortgage brokers":
+            - generic: Mortgage brokers
+          - cell "about 2 months ago":
+            - generic: about 2 months ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61466416927":
+            - generic: "+61466416927"
+          - cell "Out of office":
+            - generic: Out of office
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select Javiera 22 Javiera — Thermochill Plumber melbourne-maps-20260907 instantly enquiries@thermochillheating.com Saw Thermochill Plumbing handles aircon work in Carrum Downs. HVAC | Melbourne | 116 | 08/26 — Plumber 8 days ago Very weak +61434834384 Not interested instantly — thermochillplumbingelectrical.com.au Pass 176 — Published":
+          - cell "Select Javiera 22":
+            - generic "Select Javiera":
+              - checkbox "Select Javiera"
+            - generic: "22"
+          - cell "Javiera":
+            - generic: Javiera
+          - cell "—"
+          - cell "Thermochill":
+            - generic: Thermochill
+          - cell "Plumber melbourne-maps-20260907 instantly":
+            - generic: Plumber
+            - generic: melbourne-maps-20260907
+            - generic: instantly
+          - cell "enquiries@thermochillheating.com":
+            - generic: enquiries@thermochillheating.com
+          - cell "Saw Thermochill Plumbing handles aircon work in Carrum Downs.":
+            - generic: Saw Thermochill Plumbing handles aircon work in Carrum Downs.
+          - cell "HVAC | Melbourne | 116 | 08/26":
+            - generic: HVAC | Melbourne | 116 | 08/26
+          - cell "—"
+          - cell "Plumber":
+            - generic: Plumber
+          - cell "8 days ago":
+            - generic: 8 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61434834384":
+            - generic: "+61434834384"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "thermochillplumbingelectrical.com.au":
+            - link "thermochillplumbingelectrical.com.au":
+              - /url: https://thermochillplumbingelectrical.com.au
+              - text: thermochillplumbingelectrical.com.au
+          - cell "Pass":
+            - generic: Pass
+          - cell "176":
+            - generic: "176"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Joel Surtees 23 Joel Surtees Squirtz instantly service@squirtzplumbing.com.au — Plumber | Sydney | 259 | 08/26 — — 8 days ago Very weak — Not interested instantly — — — — — —":
+          - cell "Select Joel Surtees 23":
+            - generic "Select Joel Surtees":
+              - checkbox "Select Joel Surtees"
+            - generic: "23"
+          - cell "Joel":
+            - generic: Joel
+          - cell "Surtees":
+            - generic: Surtees
+          - cell "Squirtz":
+            - generic: Squirtz
+          - cell "instantly":
+            - generic: instantly
+          - cell "service@squirtzplumbing.com.au":
+            - generic: service@squirtzplumbing.com.au
+          - cell "—"
+          - cell "Plumber | Sydney | 259 | 08/26":
+            - generic: Plumber | Sydney | 259 | 08/26
+          - cell "—"
+          - cell "—"
+          - cell "8 days ago":
+            - generic: 8 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "—"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select Johnny Cool team 24 Johnny Cool team Johnny Cool Darwin Pty Ltd Other hvac-darwin-2026-08-24-out instantly admin@johnnycool.com.au Saw Johnny Cool handles aircon work in Berrimah. HVAC | Darwin | 25 | 08/26 — Other 13 days ago Very strong +61889473925 Replied instantly Berrimah johnnycool.com.au/ — 47 — —":
+          - cell "Select Johnny Cool team 24":
+            - generic "Select Johnny Cool team":
+              - checkbox "Select Johnny Cool team"
+            - generic: "24"
+          - cell "Johnny":
+            - generic: Johnny
+          - cell "Cool team":
+            - generic: Cool team
+          - cell "Johnny Cool Darwin Pty Ltd":
+            - generic: Johnny Cool Darwin Pty Ltd
+          - cell "Other hvac-darwin-2026-08-24-out instantly":
+            - generic: Other
+            - generic: hvac-darwin-2026-08-24-out
+            - generic: instantly
+          - cell "admin@johnnycool.com.au":
+            - generic: admin@johnnycool.com.au
+          - cell "Saw Johnny Cool handles aircon work in Berrimah.":
+            - generic: Saw Johnny Cool handles aircon work in Berrimah.
+          - cell "HVAC | Darwin | 25 | 08/26":
+            - generic: HVAC | Darwin | 25 | 08/26
+          - cell "—"
+          - cell "Other":
+            - generic: Other
+          - cell "13 days ago":
+            - generic: 13 days ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61889473925":
+            - generic: "+61889473925"
+          - cell "Replied":
+            - generic: Replied
+          - cell "instantly":
+            - generic: instantly
+          - cell "Berrimah":
+            - generic: Berrimah
+          - cell "johnnycool.com.au/":
+            - link "johnnycool.com.au/":
+              - /url: http://johnnycool.com.au/
+              - text: johnnycool.com.au/
+          - cell "—"
+          - cell "47":
+            - generic: "47"
+          - cell "—"
+          - cell "—"
+        - row "Select JS 25 JS — JS Locksmiths Locksmith instantly info@jslocksmithservices.com.au Saw JS Locksmiths handles emergency lockouts across Burwood. Sydney Locksmith | 65 | Sep — Locksmith 1 day ago Very weak +61466091188 Unsubscribed instantly Burwood jslocksmithservices.com.au Pass — — Published":
+          - cell "Select JS 25":
+            - generic "Select JS":
+              - checkbox "Select JS"
+            - generic: "25"
+          - cell "JS":
+            - generic: JS
+          - cell "—"
+          - cell "JS Locksmiths":
+            - generic: JS Locksmiths
+          - cell "Locksmith instantly":
+            - generic: Locksmith
+            - generic: instantly
+          - cell "info@jslocksmithservices.com.au":
+            - generic: info@jslocksmithservices.com.au
+          - cell "Saw JS Locksmiths handles emergency lockouts across Burwood.":
+            - generic: Saw JS Locksmiths handles emergency lockouts across Burwood.
+          - cell "Sydney Locksmith | 65 | Sep":
+            - generic: Sydney Locksmith | 65 | Sep
+          - cell "—"
+          - cell "Locksmith":
+            - generic: Locksmith
+          - cell "1 day ago":
+            - generic: 1 day ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61466091188":
+            - generic: "+61466091188"
+          - cell "Unsubscribed":
+            - generic: Unsubscribed
+          - cell "instantly":
+            - generic: instantly
+          - cell "Burwood":
+            - generic: Burwood
+          - cell "jslocksmithservices.com.au":
+            - link "jslocksmithservices.com.au":
+              - /url: http://jslocksmithservices.com.au
+              - text: jslocksmithservices.com.au
+          - cell "Pass":
+            - generic: Pass
+          - cell "—"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Larissa 26 Larissa — — Mortgage brokers src:ledger instantly:existing instantly info@vistaclinic.com.au — Med Spa | AU Engine | 148 | 06/26 — Mortgage brokers about 2 months ago Very strong — Replied instantly — — — — — —":
+          - cell "Select Larissa 26":
+            - generic "Select Larissa":
+              - checkbox "Select Larissa"
+            - generic: "26"
+          - cell "Larissa":
+            - generic: Larissa
+          - cell "—"
+          - cell "—"
+          - cell "Mortgage brokers src:ledger instantly:existing instantly":
+            - generic: Mortgage brokers
+            - generic: src:ledger
+            - generic: instantly:existing
+            - generic: instantly
+          - cell "info@vistaclinic.com.au":
+            - generic: info@vistaclinic.com.au
+          - cell "—"
+          - cell "Med Spa | AU Engine | 148 | 06/26":
+            - generic: Med Spa | AU Engine | 148 | 06/26
+          - cell "—"
+          - cell "Mortgage brokers":
+            - generic: Mortgage brokers
+          - cell "about 2 months ago":
+            - generic: about 2 months ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "—"
+          - cell "Replied":
+            - generic: Replied
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select Lewis 27 Lewis — — instantly hello@staticsolar.com.au — Electrician | Gold Coast | 254 | 08/26 — — 8 days ago Very weak — Not interested instantly — — — — — —":
+          - cell "Select Lewis 27":
+            - generic "Select Lewis":
+              - checkbox "Select Lewis"
+            - generic: "27"
+          - cell "Lewis":
+            - generic: Lewis
+          - cell "—"
+          - cell "—"
+          - cell "instantly":
+            - generic: instantly
+          - cell "hello@staticsolar.com.au":
+            - generic: hello@staticsolar.com.au
+          - cell "—"
+          - cell "Electrician | Gold Coast | 254 | 08/26":
+            - generic: Electrician | Gold Coast | 254 | 08/26
+          - cell "—"
+          - cell "—"
+          - cell "8 days ago":
+            - generic: 8 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "—"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select Locked Out Locksmiths & Security 28 Locked Out Locksmiths & Security Locked Out Locksmiths & Security Locksmith instantly info@lockedoutlocksmiths.sydney Saw Locked Out Locksmiths & Security handles emergency lockouts across Sydney. Sydney Locksmith | 65 | Sep — Locksmith 3 days ago Very weak +61402220269 Suppressed instantly Sydney lockedoutlocksmiths.sydney Pass — — Published":
+          - cell "Select Locked Out Locksmiths & Security 28":
+            - generic "Select Locked Out Locksmiths & Security":
+              - checkbox "Select Locked Out Locksmiths & Security"
+            - generic: "28"
+          - cell "Locked":
+            - generic: Locked
+          - cell "Out Locksmiths & Security":
+            - generic: Out Locksmiths & Security
+          - cell "Locked Out Locksmiths & Security":
+            - generic: Locked Out Locksmiths & Security
+          - cell "Locksmith instantly":
+            - generic: Locksmith
+            - generic: instantly
+          - cell "info@lockedoutlocksmiths.sydney":
+            - generic: info@lockedoutlocksmiths.sydney
+          - cell "Saw Locked Out Locksmiths & Security handles emergency lockouts across Sydney.":
+            - generic: Saw Locked Out Locksmiths & Security handles emergency lockouts across Sydney.
+          - cell "Sydney Locksmith | 65 | Sep":
+            - generic: Sydney Locksmith | 65 | Sep
+          - cell "—"
+          - cell "Locksmith":
+            - generic: Locksmith
+          - cell "3 days ago":
+            - generic: 3 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61402220269":
+            - generic: "+61402220269"
+          - cell "Suppressed":
+            - generic: Suppressed
+          - cell "instantly":
+            - generic: instantly
+          - cell "Sydney":
+            - generic: Sydney
+          - cell "lockedoutlocksmiths.sydney":
+            - link "lockedoutlocksmiths.sydney":
+              - /url: https://lockedoutlocksmiths.sydney
+              - text: lockedoutlocksmiths.sydney
+          - cell "Pass":
+            - generic: Pass
+          - cell "—"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Mane team 29 Mane team Mane Service HVAC hvac-adelaide-2026-08-24-out instantly admin@manesg.com.au Saw Mane handles aircon work in Salisbury South. HVAC | Adelaide | 95 | 08/26 — HVAC 14 days ago Very strong +61899391021 Replied instantly Salisbury South maneservicegroup.com.au/ Pass 16 — Published":
+          - cell "Select Mane team 29":
+            - generic "Select Mane team":
+              - checkbox "Select Mane team"
+            - generic: "29"
+          - cell "Mane":
+            - generic: Mane
+          - cell "team":
+            - generic: team
+          - cell "Mane Service":
+            - generic: Mane Service
+          - cell "HVAC hvac-adelaide-2026-08-24-out instantly":
+            - generic: HVAC
+            - generic: hvac-adelaide-2026-08-24-out
+            - generic: instantly
+          - cell "admin@manesg.com.au":
+            - generic: admin@manesg.com.au
+          - cell "Saw Mane handles aircon work in Salisbury South.":
+            - generic: Saw Mane handles aircon work in Salisbury South.
+          - cell "HVAC | Adelaide | 95 | 08/26":
+            - generic: HVAC | Adelaide | 95 | 08/26
+          - cell "—"
+          - cell "HVAC":
+            - generic: HVAC
+          - cell "14 days ago":
+            - generic: 14 days ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61899391021":
+            - generic: "+61899391021"
+          - cell "Replied":
+            - generic: Replied
+          - cell "instantly":
+            - generic: instantly
+          - cell "Salisbury South":
+            - generic: Salisbury South
+          - cell "maneservicegroup.com.au/":
+            - link "maneservicegroup.com.au/":
+              - /url: https://maneservicegroup.com.au/
+              - text: maneservicegroup.com.au/
+          - cell "Pass":
+            - generic: Pass
+          - cell "16":
+            - generic: "16"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Mark 30 Mark — AGC ROOF instantly service@agcroof.com.au — Roofing | Sydney | 150 | 09/26 — — 7 days ago Very strong — Replied instantly — — — — — —":
+          - cell "Select Mark 30":
+            - generic "Select Mark":
+              - checkbox "Select Mark"
+            - generic: "30"
+          - cell "Mark":
+            - generic: Mark
+          - cell "—"
+          - cell "AGC ROOF":
+            - generic: AGC ROOF
+          - cell "instantly":
+            - generic: instantly
+          - cell "service@agcroof.com.au":
+            - generic: service@agcroof.com.au
+          - cell "—"
+          - cell "Roofing | Sydney | 150 | 09/26":
+            - generic: Roofing | Sydney | 150 | 09/26
+          - cell "—"
+          - cell "—"
+          - cell "7 days ago":
+            - generic: 7 days ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "—"
+          - cell "Replied":
+            - generic: Replied
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select Mark 31 Mark — Caesars Plumbing & Gas instantly mark@caesarsplumbing.com.au — Plumber | Perth | 211 | 08/26 — — 10 days ago Very weak — Not interested instantly — — — — — —":
+          - cell "Select Mark 31":
+            - generic "Select Mark":
+              - checkbox "Select Mark"
+            - generic: "31"
+          - cell "Mark":
+            - generic: Mark
+          - cell "—"
+          - cell "Caesars Plumbing & Gas":
+            - generic: Caesars Plumbing & Gas
+          - cell "instantly":
+            - generic: instantly
+          - cell "mark@caesarsplumbing.com.au":
+            - generic: mark@caesarsplumbing.com.au
+          - cell "—"
+          - cell "Plumber | Perth | 211 | 08/26":
+            - generic: Plumber | Perth | 211 | 08/26
+          - cell "—"
+          - cell "—"
+          - cell "10 days ago":
+            - generic: 10 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "—"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select Mason Electrical Engineering Contractors 32 Mason Electrical Engineering Contractors Mason Electrical Engineering Electrician instantly admin@meec.com.au — Perth Electrical | fill | 397 | Sep — Electrician about 5 hours ago Very weak +61894075328 Unsubscribed instantly Neerabup, Western Australia masonelectrical.com.au — 1 — Published":
+          - cell "Select Mason Electrical Engineering Contractors 32":
+            - generic "Select Mason Electrical Engineering Contractors":
+              - checkbox "Select Mason Electrical Engineering Contractors"
+            - generic: "32"
+          - cell "Mason":
+            - generic: Mason
+          - cell "Electrical Engineering Contractors":
+            - generic: Electrical Engineering Contractors
+          - cell "Mason Electrical Engineering":
+            - generic: Mason Electrical Engineering
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "admin@meec.com.au":
+            - generic: admin@meec.com.au
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 5 hours ago":
+            - generic: about 5 hours ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61894075328":
+            - generic: "+61894075328"
+          - cell "Unsubscribed":
+            - generic: Unsubscribed
+          - cell "instantly":
+            - generic: instantly
+          - cell "Neerabup, Western Australia":
+            - generic: Neerabup, Western Australia
+          - cell "masonelectrical.com.au":
+            - link "masonelectrical.com.au":
+              - /url: http://masonelectrical.com.au
+              - text: masonelectrical.com.au
+          - cell "—"
+          - cell "1":
+            - generic: "1"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select MechElec Contracting Services 33 MechElec Contracting Services MechElec Contracting Electrician instantly jacob@mecheleccontracting.com.au — Perth Electrical | fill | 397 | Sep — Electrician about 22 hours ago Very weak +61432904893 Unsubscribed instantly Meadow Springs, Western Australia mecheleccontracting.com.au — 9 — Published":
+          - cell "Select MechElec Contracting Services 33":
+            - generic "Select MechElec Contracting Services":
+              - checkbox "Select MechElec Contracting Services"
+            - generic: "33"
+          - cell "MechElec":
+            - generic: MechElec
+          - cell "Contracting Services":
+            - generic: Contracting Services
+          - cell "MechElec Contracting":
+            - generic: MechElec Contracting
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "jacob@mecheleccontracting.com.au":
+            - generic: jacob@mecheleccontracting.com.au
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 22 hours ago":
+            - generic: about 22 hours ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61432904893":
+            - generic: "+61432904893"
+          - cell "Unsubscribed":
+            - generic: Unsubscribed
+          - cell "instantly":
+            - generic: instantly
+          - cell "Meadow Springs, Western Australia":
+            - generic: Meadow Springs, Western Australia
+          - cell "mecheleccontracting.com.au":
+            - link "mecheleccontracting.com.au":
+              - /url: https://mecheleccontracting.com.au
+              - text: mecheleccontracting.com.au
+          - cell "—"
+          - cell "9":
+            - generic: "9"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select office@archerroofing.com.au 34 office@archerroofing.com.au — — instantly office@archerroofing.com.au — Roofing | Regional NSW | 49 | 09/26 — — 6 days ago Very weak — Not interested instantly — — — — — —":
+          - cell "Select office@archerroofing.com.au 34":
+            - generic "Select office@archerroofing.com.au":
+              - checkbox "Select office@archerroofing.com.au"
+            - generic: "34"
+          - cell "office@archerroofing.com.au":
+            - generic: office@archerroofing.com.au
+          - cell "—"
+          - cell "—"
+          - cell "instantly":
+            - generic: instantly
+          - cell "office@archerroofing.com.au":
+            - generic: office@archerroofing.com.au
+          - cell "—"
+          - cell "Roofing | Regional NSW | 49 | 09/26":
+            - generic: Roofing | Regional NSW | 49 | 09/26
+          - cell "—"
+          - cell "—"
+          - cell "6 days ago":
+            - generic: 6 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "—"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select Plumbtech NSW Pty Ltd 35 Plumbtech NSW Pty Ltd Plumbtech NSW Pty Ltd Plumber sydney instantly info@plumbtechnsw.com.au Plumbtech NSW still take jobs while the vans are already out. Plumber | Greater Sydney | 58 | 08/26 — Plumber 14 days ago Very weak +61 468 608 248 Not interested instantly Barden Ridge, NSW plumbtechnsw.com.au Pass 23 Open 24 hours Published":
+          - cell "Select Plumbtech NSW Pty Ltd 35":
+            - generic "Select Plumbtech NSW Pty Ltd":
+              - checkbox "Select Plumbtech NSW Pty Ltd"
+            - generic: "35"
+          - cell "Plumbtech":
+            - generic: Plumbtech
+          - cell "NSW Pty Ltd":
+            - generic: NSW Pty Ltd
+          - cell "Plumbtech NSW Pty Ltd":
+            - generic: Plumbtech NSW Pty Ltd
+          - cell "Plumber sydney instantly":
+            - generic: Plumber
+            - generic: sydney
+            - generic: instantly
+          - cell "info@plumbtechnsw.com.au":
+            - generic: info@plumbtechnsw.com.au
+          - cell "Plumbtech NSW still take jobs while the vans are already out.":
+            - generic: Plumbtech NSW still take jobs while the vans are already out.
+          - cell "Plumber | Greater Sydney | 58 | 08/26":
+            - generic: Plumber | Greater Sydney | 58 | 08/26
+          - cell "—"
+          - cell "Plumber":
+            - generic: Plumber
+          - cell "14 days ago":
+            - generic: 14 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61 468 608 248":
+            - generic: +61 468 608 248
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "Barden Ridge, NSW":
+            - generic: Barden Ridge, NSW
+          - cell "plumbtechnsw.com.au":
+            - link "plumbtechnsw.com.au":
+              - /url: https://plumbtechnsw.com.au
+              - text: plumbtechnsw.com.au
+          - cell "Pass":
+            - generic: Pass
+          - cell "23":
+            - generic: "23"
+          - cell "Open 24 hours":
+            - generic: Open 24 hours
+          - cell "Published":
+            - generic: Published
+        - row "Select Power Link Electrics Pty Ltd 36 Power Link Electrics Pty Ltd Power Link Electrics Electrician instantly info@powerlinkelectrics.com.au — Perth Electrical | fill | 397 | Sep — Electrician about 4 hours ago Very strong +61400756664 Synced instantly Perth, WA powerlinkelectrics.com.au — 174 — Published":
+          - cell "Select Power Link Electrics Pty Ltd 36":
+            - generic "Select Power Link Electrics Pty Ltd":
+              - checkbox "Select Power Link Electrics Pty Ltd"
+            - generic: "36"
+          - cell "Power":
+            - generic: Power
+          - cell "Link Electrics Pty Ltd":
+            - generic: Link Electrics Pty Ltd
+          - cell "Power Link Electrics":
+            - generic: Power Link Electrics
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "info@powerlinkelectrics.com.au":
+            - generic: info@powerlinkelectrics.com.au
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 4 hours ago":
+            - generic: about 4 hours ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61400756664":
+            - generic: "+61400756664"
+          - cell "Synced":
+            - generic: Synced
+          - cell "instantly":
+            - generic: instantly
+          - cell "Perth, WA":
+            - generic: Perth, WA
+          - cell "powerlinkelectrics.com.au":
+            - link "powerlinkelectrics.com.au":
+              - /url: https://powerlinkelectrics.com.au
+              - text: powerlinkelectrics.com.au
+          - cell "—"
+          - cell "174":
+            - generic: "174"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select rapidresponsewa@gmail.com 37 rapidresponsewa@gmail.com — Rapid Response Plumbing & Gas instantly rapidresponsewa@gmail.com — Plumber | Perth | 211 | 08/26 — — 11 days ago Very strong — Out of office instantly — — — — — —":
+          - cell "Select rapidresponsewa@gmail.com 37":
+            - generic "Select rapidresponsewa@gmail.com":
+              - checkbox "Select rapidresponsewa@gmail.com"
+            - generic: "37"
+          - cell "rapidresponsewa@gmail.com":
+            - generic: rapidresponsewa@gmail.com
+          - cell "—"
+          - cell "Rapid Response Plumbing & Gas":
+            - generic: Rapid Response Plumbing & Gas
+          - cell "instantly":
+            - generic: instantly
+          - cell "rapidresponsewa@gmail.com":
+            - generic: rapidresponsewa@gmail.com
+          - cell "—"
+          - cell "Plumber | Perth | 211 | 08/26":
+            - generic: Plumber | Perth | 211 | 08/26
+          - cell "—"
+          - cell "—"
+          - cell "11 days ago":
+            - generic: 11 days ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "—"
+          - cell "Out of office":
+            - generic: Out of office
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select REQ team 38 REQ team REQ Other hvac-adelaide-2026-08-24-out instantly sales@reqrefrigeration.com.au Saw REQ closes at 5pm, calls after then usually just ring the next aircon business. HVAC | Adelaide | 95 | 08/26 — Other 13 days ago Very weak +611800202073 Not interested instantly Port Adelaide reqrefrigeration.com.au/ — 161 — —":
+          - cell "Select REQ team 38":
+            - generic "Select REQ team":
+              - checkbox "Select REQ team"
+            - generic: "38"
+          - cell "REQ":
+            - generic: REQ
+          - cell "team":
+            - generic: team
+          - cell "REQ":
+            - generic: REQ
+          - cell "Other hvac-adelaide-2026-08-24-out instantly":
+            - generic: Other
+            - generic: hvac-adelaide-2026-08-24-out
+            - generic: instantly
+          - cell "sales@reqrefrigeration.com.au":
+            - generic: sales@reqrefrigeration.com.au
+          - cell "Saw REQ closes at 5pm, calls after then usually just ring the next aircon business.":
+            - generic: Saw REQ closes at 5pm, calls after then usually just ring the next aircon business.
+          - cell "HVAC | Adelaide | 95 | 08/26":
+            - generic: HVAC | Adelaide | 95 | 08/26
+          - cell "—"
+          - cell "Other":
+            - generic: Other
+          - cell "13 days ago":
+            - generic: 13 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+611800202073":
+            - generic: "+611800202073"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "Port Adelaide":
+            - generic: Port Adelaide
+          - cell "reqrefrigeration.com.au/":
+            - link "reqrefrigeration.com.au/":
+              - /url: https://reqrefrigeration.com.au/
+              - text: reqrefrigeration.com.au/
+          - cell "—"
+          - cell "161":
+            - generic: "161"
+          - cell "—"
+          - cell "—"
+        - row "Select service@dannik.com.au 39 service@dannik.com.au — Dannik instantly service@dannik.com.au — Probe | julianhoward@myswitchflow | 7 | 09/26 — — 7 days ago Very strong — Replied instantly — — — — — —":
+          - cell "Select service@dannik.com.au 39":
+            - generic "Select service@dannik.com.au":
+              - checkbox "Select service@dannik.com.au"
+            - generic: "39"
+          - cell "service@dannik.com.au":
+            - generic: service@dannik.com.au
+          - cell "—"
+          - cell "Dannik":
+            - generic: Dannik
+          - cell "instantly":
+            - generic: instantly
+          - cell "service@dannik.com.au":
+            - generic: service@dannik.com.au
+          - cell "—"
+          - cell "Probe | julianhoward@myswitchflow | 7 | 09/26":
+            - generic: Probe | julianhoward@myswitchflow | 7 | 09/26
+          - cell "—"
+          - cell "—"
+          - cell "7 days ago":
+            - generic: 7 days ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "—"
+          - cell "Replied":
+            - generic: Replied
+          - cell "instantly":
+            - generic: instantly
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "—"
+        - row "Select Shuvro 40 Shuvro — Sahara Energy HVAC hvac-melbourne-2026-08-24-out instantly info@saharaenergy.com.au Saw Sahara Energy handles HVAC work in Mernda. HVAC | Melbourne | 116 | 08/26 — HVAC 11 days ago Very weak +61478454185 Not interested instantly Mernda saharaenergy.com.au/ Pass 9 — Published":
+          - cell "Select Shuvro 40":
+            - generic "Select Shuvro":
+              - checkbox "Select Shuvro"
+            - generic: "40"
+          - cell "Shuvro":
+            - generic: Shuvro
+          - cell "—"
+          - cell "Sahara Energy":
+            - generic: Sahara Energy
+          - cell "HVAC hvac-melbourne-2026-08-24-out instantly":
+            - generic: HVAC
+            - generic: hvac-melbourne-2026-08-24-out
+            - generic: instantly
+          - cell "info@saharaenergy.com.au":
+            - generic: info@saharaenergy.com.au
+          - cell "Saw Sahara Energy handles HVAC work in Mernda.":
+            - generic: Saw Sahara Energy handles HVAC work in Mernda.
+          - cell "HVAC | Melbourne | 116 | 08/26":
+            - generic: HVAC | Melbourne | 116 | 08/26
+          - cell "—"
+          - cell "HVAC":
+            - generic: HVAC
+          - cell "11 days ago":
+            - generic: 11 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61478454185":
+            - generic: "+61478454185"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "Mernda":
+            - generic: Mernda
+          - cell "saharaenergy.com.au/":
+            - link "saharaenergy.com.au/":
+              - /url: http://saharaenergy.com.au/
+              - text: saharaenergy.com.au/
+          - cell "Pass":
+            - generic: Pass
+          - cell "9":
+            - generic: "9"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select TCL Electrical Contractors 41 TCL Electrical Contractors TCL Electrician instantly tclelectrical@outlook.com — Perth Electrical | fill | 397 | Sep — Electrician about 4 hours ago Very strong +61430906678 Synced instantly Perth, WA tclelectrical.com.au — 55 — Published":
+          - cell "Select TCL Electrical Contractors 41":
+            - generic "Select TCL Electrical Contractors":
+              - checkbox "Select TCL Electrical Contractors"
+            - generic: "41"
+          - cell "TCL":
+            - generic: TCL
+          - cell "Electrical Contractors":
+            - generic: Electrical Contractors
+          - cell "TCL":
+            - generic: TCL
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "tclelectrical@outlook.com":
+            - generic: tclelectrical@outlook.com
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 4 hours ago":
+            - generic: about 4 hours ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61430906678":
+            - generic: "+61430906678"
+          - cell "Synced":
+            - generic: Synced
+          - cell "instantly":
+            - generic: instantly
+          - cell "Perth, WA":
+            - generic: Perth, WA
+          - cell "tclelectrical.com.au":
+            - link "tclelectrical.com.au":
+              - /url: http://tclelectrical.com.au
+              - text: tclelectrical.com.au
+          - cell "—"
+          - cell "55":
+            - generic: "55"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Ted Churchyard 42 Ted Churchyard Bear Air Pty Ltd HVAC hvac sydney hvac-sydney-2026-09-02 instantly ted@bearair.com.au Hi Ted, saw Bear Air handles refrigeration repair work across Como. HVAC | Sydney | 300 | Sept26 — HVAC 5 days ago Very strong +61417447044 Replied instantly Como, NSW bearair.com.au Pass — — Published":
+          - cell "Select Ted Churchyard 42":
+            - generic "Select Ted Churchyard":
+              - checkbox "Select Ted Churchyard"
+            - generic: "42"
+          - cell "Ted":
+            - generic: Ted
+          - cell "Churchyard":
+            - generic: Churchyard
+          - cell "Bear Air Pty Ltd":
+            - generic: Bear Air Pty Ltd
+          - cell "HVAC hvac sydney hvac-sydney-2026-09-02 instantly":
+            - generic: HVAC
+            - generic: hvac
+            - generic: sydney
+            - generic: hvac-sydney-2026-09-02
+            - generic: instantly
+          - cell "ted@bearair.com.au":
+            - generic: ted@bearair.com.au
+          - cell "Hi Ted, saw Bear Air handles refrigeration repair work across Como.":
+            - generic: Hi Ted, saw Bear Air handles refrigeration repair work across Como.
+          - cell "HVAC | Sydney | 300 | Sept26":
+            - generic: HVAC | Sydney | 300 | Sept26
+          - cell "—"
+          - cell "HVAC":
+            - generic: HVAC
+          - cell "5 days ago":
+            - generic: 5 days ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61417447044":
+            - generic: "+61417447044"
+          - cell "Replied":
+            - generic: Replied
+          - cell "instantly":
+            - generic: instantly
+          - cell "Como, NSW":
+            - generic: Como, NSW
+          - cell "bearair.com.au":
+            - link "bearair.com.au":
+              - /url: http://bearair.com.au
+              - text: bearair.com.au
+          - cell "Pass":
+            - generic: Pass
+          - cell "—"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Thompson Solar team 43 Thompson Solar team Thompson Solar Solutions/Thompson HVAC hvac-melbourne-2026-08-24-out instantly alex@thompsonelectricalsolutions.com.au Saw Thompson Solar /Thompson handles HVAC work in Mornington. HVAC | Melbourne | 116 | 08/26 — HVAC 14 days ago Very weak +61412262361 Not interested instantly Mornington thompsonelectricalsolutions.com.au/ Pass 36 — Published":
+          - cell "Select Thompson Solar team 43":
+            - generic "Select Thompson Solar team":
+              - checkbox "Select Thompson Solar team"
+            - generic: "43"
+          - cell "Thompson":
+            - generic: Thompson
+          - cell "Solar team":
+            - generic: Solar team
+          - cell "Thompson Solar Solutions/Thompson":
+            - generic: Thompson Solar Solutions/Thompson
+          - cell "HVAC hvac-melbourne-2026-08-24-out instantly":
+            - generic: HVAC
+            - generic: hvac-melbourne-2026-08-24-out
+            - generic: instantly
+          - cell "alex@thompsonelectricalsolutions.com.au":
+            - generic: alex@thompsonelectricalsolutions.com.au
+          - cell "Saw Thompson Solar /Thompson handles HVAC work in Mornington.":
+            - generic: Saw Thompson Solar /Thompson handles HVAC work in Mornington.
+          - cell "HVAC | Melbourne | 116 | 08/26":
+            - generic: HVAC | Melbourne | 116 | 08/26
+          - cell "—"
+          - cell "HVAC":
+            - generic: HVAC
+          - cell "14 days ago":
+            - generic: 14 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61412262361":
+            - generic: "+61412262361"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "Mornington":
+            - generic: Mornington
+          - cell "thompsonelectricalsolutions.com.au/":
+            - link "thompsonelectricalsolutions.com.au/":
+              - /url: https://thompsonelectricalsolutions.com.au/
+              - text: thompsonelectricalsolutions.com.au/
+          - cell "Pass":
+            - generic: Pass
+          - cell "36":
+            - generic: "36"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Tony 44 Tony — Compella Compression Plumber plumber-brisbane-2026-08-24-out instantly tony.williams@compellacompression.com Saw Compella Compression handles gas fitting work across North Lakes. Plumber | Brisbane | 194 | 08/26 — Plumber 8 days ago Very weak +61732857228 Not interested instantly North Lakes compellacompression.com/ Pass — — Published":
+          - cell "Select Tony 44":
+            - generic "Select Tony":
+              - checkbox "Select Tony"
+            - generic: "44"
+          - cell "Tony":
+            - generic: Tony
+          - cell "—"
+          - cell "Compella Compression":
+            - generic: Compella Compression
+          - cell "Plumber plumber-brisbane-2026-08-24-out instantly":
+            - generic: Plumber
+            - generic: plumber-brisbane-2026-08-24-out
+            - generic: instantly
+          - cell "tony.williams@compellacompression.com":
+            - generic: tony.williams@compellacompression.com
+          - cell "Saw Compella Compression handles gas fitting work across North Lakes.":
+            - generic: Saw Compella Compression handles gas fitting work across North Lakes.
+          - cell "Plumber | Brisbane | 194 | 08/26":
+            - generic: Plumber | Brisbane | 194 | 08/26
+          - cell "—"
+          - cell "Plumber":
+            - generic: Plumber
+          - cell "8 days ago":
+            - generic: 8 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61732857228":
+            - generic: "+61732857228"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "North Lakes":
+            - generic: North Lakes
+          - cell "compellacompression.com/":
+            - link "compellacompression.com/":
+              - /url: https://compellacompression.com/
+              - text: compellacompression.com/
+          - cell "Pass":
+            - generic: Pass
+          - cell "—"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Top Knotch team 45 Top Knotch team Top Knotch Plumbing Plumber plumber-brisbane-2026-08-24-out instantly ryan@topknotchplumbing.com.au Saw Top Knotch Plumbing handles blocked drain work across Yatala. Plumber | Brisbane | 194 | 08/26 — Plumber 11 days ago Very strong +61401188207 Out of office instantly Yatala topknotchplumbing.com.au/ Pass 70 — Published":
+          - cell "Select Top Knotch team 45":
+            - generic "Select Top Knotch team":
+              - checkbox "Select Top Knotch team"
+            - generic: "45"
+          - cell "Top":
+            - generic: Top
+          - cell "Knotch team":
+            - generic: Knotch team
+          - cell "Top Knotch Plumbing":
+            - generic: Top Knotch Plumbing
+          - cell "Plumber plumber-brisbane-2026-08-24-out instantly":
+            - generic: Plumber
+            - generic: plumber-brisbane-2026-08-24-out
+            - generic: instantly
+          - cell "ryan@topknotchplumbing.com.au":
+            - generic: ryan@topknotchplumbing.com.au
+          - cell "Saw Top Knotch Plumbing handles blocked drain work across Yatala.":
+            - generic: Saw Top Knotch Plumbing handles blocked drain work across Yatala.
+          - cell "Plumber | Brisbane | 194 | 08/26":
+            - generic: Plumber | Brisbane | 194 | 08/26
+          - cell "—"
+          - cell "Plumber":
+            - generic: Plumber
+          - cell "11 days ago":
+            - generic: 11 days ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61401188207":
+            - generic: "+61401188207"
+          - cell "Out of office":
+            - generic: Out of office
+          - cell "instantly":
+            - generic: instantly
+          - cell "Yatala":
+            - generic: Yatala
+          - cell "topknotchplumbing.com.au/":
+            - link "topknotchplumbing.com.au/":
+              - /url: https://topknotchplumbing.com.au/
+              - text: topknotchplumbing.com.au/
+          - cell "Pass":
+            - generic: Pass
+          - cell "70":
+            - generic: "70"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Urban Shores team 46 Urban Shores team Urban Shores Plumbing & Gas Plumber plumber-brisbane-2026-08-24-out instantly dennis@urbanshores.net Saw Urban Shores Plumbing & Gas handles gas fitting work across Petrie Terrace. Plumber | Brisbane | 194 | 08/26 — Plumber 8 days ago Very weak +61474205160 Not interested instantly Petrie Terrace urbanshoresplumbing.com.au/ Pass 6 — Published":
+          - cell "Select Urban Shores team 46":
+            - generic "Select Urban Shores team":
+              - checkbox "Select Urban Shores team"
+            - generic: "46"
+          - cell "Urban":
+            - generic: Urban
+          - cell "Shores team":
+            - generic: Shores team
+          - cell "Urban Shores Plumbing & Gas":
+            - generic: Urban Shores Plumbing & Gas
+          - cell "Plumber plumber-brisbane-2026-08-24-out instantly":
+            - generic: Plumber
+            - generic: plumber-brisbane-2026-08-24-out
+            - generic: instantly
+          - cell "dennis@urbanshores.net":
+            - generic: dennis@urbanshores.net
+          - cell "Saw Urban Shores Plumbing & Gas handles gas fitting work across Petrie Terrace.":
+            - generic: Saw Urban Shores Plumbing & Gas handles gas fitting work across Petrie Terrace.
+          - cell "Plumber | Brisbane | 194 | 08/26":
+            - generic: Plumber | Brisbane | 194 | 08/26
+          - cell "—"
+          - cell "Plumber":
+            - generic: Plumber
+          - cell "8 days ago":
+            - generic: 8 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+61474205160":
+            - generic: "+61474205160"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "Petrie Terrace":
+            - generic: Petrie Terrace
+          - cell "urbanshoresplumbing.com.au/":
+            - link "urbanshoresplumbing.com.au/":
+              - /url: https://urbanshoresplumbing.com.au/
+              - text: urbanshoresplumbing.com.au/
+          - cell "Pass":
+            - generic: Pass
+          - cell "6":
+            - generic: "6"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Volt-Tech WA 47 Volt-Tech WA Volt-Tech Electrician instantly volttechwa@tradehq.com.au — Perth Electrical | fill | 397 | Sep — Electrician 1 day ago Very strong +61449729051 Replied instantly Butler, Western Australia volt-techwa.com — 44 — Published":
+          - cell "Select Volt-Tech WA 47":
+            - generic "Select Volt-Tech WA":
+              - checkbox "Select Volt-Tech WA"
+            - generic: "47"
+          - cell "Volt-Tech":
+            - generic: Volt-Tech
+          - cell "WA":
+            - generic: WA
+          - cell "Volt-Tech":
+            - generic: Volt-Tech
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "volttechwa@tradehq.com.au":
+            - generic: volttechwa@tradehq.com.au
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "1 day ago":
+            - generic: 1 day ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61449729051":
+            - generic: "+61449729051"
+          - cell "Replied":
+            - generic: Replied
+          - cell "instantly":
+            - generic: instantly
+          - cell "Butler, Western Australia":
+            - generic: Butler, Western Australia
+          - cell "volt-techwa.com":
+            - link "volt-techwa.com":
+              - /url: https://volt-techwa.com
+              - text: volt-techwa.com
+          - cell "—"
+          - cell "44":
+            - generic: "44"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Wanneroo Electric 48 Wanneroo Electric Wanneroo Electric Electrician instantly admin@wannerooelectric.com.au — Perth Electrical | fill | 397 | Sep — Electrician about 4 hours ago Very strong +61894085744 Synced instantly Clarkson, Western Australia wannerooelectric.com.au — — — Published":
+          - cell "Select Wanneroo Electric 48":
+            - generic "Select Wanneroo Electric":
+              - checkbox "Select Wanneroo Electric"
+            - generic: "48"
+          - cell "Wanneroo":
+            - generic: Wanneroo
+          - cell "Electric":
+            - generic: Electric
+          - cell "Wanneroo Electric":
+            - generic: Wanneroo Electric
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "admin@wannerooelectric.com.au":
+            - generic: admin@wannerooelectric.com.au
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 4 hours ago":
+            - generic: about 4 hours ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61894085744":
+            - generic: "+61894085744"
+          - cell "Synced":
+            - generic: Synced
+          - cell "instantly":
+            - generic: instantly
+          - cell "Clarkson, Western Australia":
+            - generic: Clarkson, Western Australia
+          - cell "wannerooelectric.com.au":
+            - link "wannerooelectric.com.au":
+              - /url: http://wannerooelectric.com.au
+              - text: wannerooelectric.com.au
+          - cell "—"
+          - cell "—"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Western Suburbs team 49 Western Suburbs team Plumbing and Gas Western Suburbs Plumber plumber-brisbane-2026-08-24-out instantly hello@bris-plumb-gas.com.au Saw Plumbing and Gas Western Suburbs handles blocked drain work across Jindalee. Plumber | Brisbane | 194 | 08/26 — Plumber 14 days ago Very weak +611300668770 Not interested instantly Jindalee bris-plumb-gas.com.au/ Pass 27 — Published":
+          - cell "Select Western Suburbs team 49":
+            - generic "Select Western Suburbs team":
+              - checkbox "Select Western Suburbs team"
+            - generic: "49"
+          - cell "Western":
+            - generic: Western
+          - cell "Suburbs team":
+            - generic: Suburbs team
+          - cell "Plumbing and Gas Western Suburbs":
+            - generic: Plumbing and Gas Western Suburbs
+          - cell "Plumber plumber-brisbane-2026-08-24-out instantly":
+            - generic: Plumber
+            - generic: plumber-brisbane-2026-08-24-out
+            - generic: instantly
+          - cell "hello@bris-plumb-gas.com.au":
+            - generic: hello@bris-plumb-gas.com.au
+          - cell "Saw Plumbing and Gas Western Suburbs handles blocked drain work across Jindalee.":
+            - generic: Saw Plumbing and Gas Western Suburbs handles blocked drain work across Jindalee.
+          - cell "Plumber | Brisbane | 194 | 08/26":
+            - generic: Plumber | Brisbane | 194 | 08/26
+          - cell "—"
+          - cell "Plumber":
+            - generic: Plumber
+          - cell "14 days ago":
+            - generic: 14 days ago
+          - cell "Very weak":
+            - generic: Very weak
+          - cell "+611300668770":
+            - generic: "+611300668770"
+          - cell "Not interested":
+            - generic: Not interested
+          - cell "instantly":
+            - generic: instantly
+          - cell "Jindalee":
+            - generic: Jindalee
+          - cell "bris-plumb-gas.com.au/":
+            - link "bris-plumb-gas.com.au/":
+              - /url: https://bris-plumb-gas.com.au/
+              - text: bris-plumb-gas.com.au/
+          - cell "Pass":
+            - generic: Pass
+          - cell "27":
+            - generic: "27"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+        - row "Select Yanchep Electrics 50 Yanchep Electrics Yanchep Electrics Electrician instantly info@yanchepelectrics.com.au — Perth Electrical | fill | 397 | Sep — Electrician about 4 hours ago Very strong +61424361696 Synced instantly Perth, WA yanchepelectrics.com.au — 19 — Published":
+          - cell "Select Yanchep Electrics 50":
+            - generic "Select Yanchep Electrics":
+              - checkbox "Select Yanchep Electrics"
+            - generic: "50"
+          - cell "Yanchep":
+            - generic: Yanchep
+          - cell "Electrics":
+            - generic: Electrics
+          - cell "Yanchep Electrics":
+            - generic: Yanchep Electrics
+          - cell "Electrician instantly":
+            - generic: Electrician
+            - generic: instantly
+          - cell "info@yanchepelectrics.com.au":
+            - generic: info@yanchepelectrics.com.au
+          - cell "—"
+          - cell "Perth Electrical | fill | 397 | Sep":
+            - generic: Perth Electrical | fill | 397 | Sep
+          - cell "—"
+          - cell "Electrician":
+            - generic: Electrician
+          - cell "about 4 hours ago":
+            - generic: about 4 hours ago
+          - cell "Very strong":
+            - generic: Very strong
+          - cell "+61424361696":
+            - generic: "+61424361696"
+          - cell "Synced":
+            - generic: Synced
+          - cell "instantly":
+            - generic: instantly
+          - cell "Perth, WA":
+            - generic: Perth, WA
+          - cell "yanchepelectrics.com.au":
+            - link "yanchepelectrics.com.au":
+              - /url: http://yanchepelectrics.com.au
+              - text: yanchepelectrics.com.au
+          - cell "—"
+          - cell "19":
+            - generic: "19"
+          - cell "—"
+          - cell "Published":
+            - generic: Published
+  - generic: Showing 1–50 of 7,444 leads (7,444 match filters)
+  - button "Previous" [disabled]
+  - generic: Page 1
+  - button "Next"
+- alert
+- generic: "0"

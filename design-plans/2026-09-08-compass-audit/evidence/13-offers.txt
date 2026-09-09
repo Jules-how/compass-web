@@ -1,0 +1,494 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- complementary:
+  - link "switchflow compass":
+    - /url: /home
+    - generic: switchflow compass
+  - navigation "Operator":
+    - link "Home":
+      - /url: /home
+      - generic: Home
+    - link "Inbox 87":
+      - /url: /inbox
+      - generic: Inbox
+      - generic: "87"
+    - generic: Workspace
+    - link "Goals & notes":
+      - /url: /planning
+      - generic: Goals & notes
+    - link "My Tasks":
+      - /url: /tasks
+      - generic: My Tasks
+    - link "Projects":
+      - /url: /projects
+      - generic: Projects
+    - link "Functions":
+      - /url: /functions
+      - generic: Functions
+    - link "Clients":
+      - /url: /clients
+      - generic: Clients
+    - generic: Sales
+    - link "Overview":
+      - /url: /sales
+      - generic: Overview
+    - link "Offer & economics":
+      - /url: /sales/offer-plan
+      - generic: Offer & economics
+    - link "Email tests":
+      - /url: /sales/experiments
+      - generic: Email tests
+    - link "Offers" [active]:
+      - /url: /sales/offers
+      - generic: Offers
+    - link "Outbound":
+      - /url: /sales/outbound
+      - generic: Outbound
+    - link "CRM":
+      - /url: /leads
+      - generic: CRM
+    - generic: Operations
+    - link "Finances":
+      - /url: /operations/finances
+      - generic: Finances
+    - link "Installs":
+      - /url: /operations/installs
+      - generic: Installs
+    - link "Retention":
+      - /url: /operations/cs
+      - generic: Retention
+    - link "Settings":
+      - /url: /settings
+      - generic: Settings
+  - button "Sign out"
+- main:
+  - heading "Offers" [level=1]
+  - generic: Test plan
+  - paragraph: One Instantly campaign per offer × vertical × city. Clone copy from a control so only the named variable changes. A campaign with no city tag is reused, not duplicated.
+  - generic: Offer
+  - combobox "Offer":
+    - option "Installation booking" [selected]
+  - generic: Variable under test
+  - combobox "Variable under test":
+    - option "None"
+    - option "CTA"
+    - option "Body"
+    - option "Offer"
+    - option "Risk reversal"
+    - option "Length"
+    - option "ICP"
+    - option "Tone"
+    - option "Personalisation depth"
+    - option "Audience" [selected]
+    - option "Subject"
+    - option "Opener mode"
+  - generic: Clone copy from
+  - combobox "Clone copy from":
+    - option "None. Empty sequence." [selected]
+    - option "Sydney Hvac"
+  - generic: Target sends (optional)
+  - textbox "Target sends (optional)":
+    - /placeholder: Keep volume equal
+  - generic: Verticals
+  - button "Hvac"
+  - generic: Cities
+  - button "Sydney"
+  - button "Melbourne"
+  - button "Brisbane"
+  - button "Perth"
+  - button "Adelaide"
+  - button "Gold Coast"
+  - button "Canberra"
+  - generic: Hypothesis for new cells
+  - textbox "Hypothesis for new cells":
+    - /placeholder: Optional. Same line on every new cell.
+  - button "Create 0 missing cells" [disabled]
+  - table:
+    - rowgroup:
+      - row "Vertical Sydney":
+        - columnheader "Vertical"
+        - columnheader "Sydney"
+    - rowgroup:
+      - row "Hvac Sydney Hvac — sent · 0 pos":
+        - cell "Hvac"
+        - cell "Sydney Hvac — sent · 0 pos":
+          - link "Sydney Hvac — sent · 0 pos":
+            - /url: /sales/outbound/editor/campaign-5fd67add-23d4-403b-b09b-78cf9d37cd53
+            - generic: Sydney Hvac
+            - generic: — sent · 0 pos
+  - generic: Results
+  - paragraph: Every tagged campaign. Flags mean the row is not comparable.
+  - combobox "Filter offer":
+    - option "All offers" [selected]
+    - option "Installation booking"
+  - combobox "Filter vertical":
+    - option "All verticals" [selected]
+    - option "electricians"
+    - option "hvac"
+    - option "trades"
+    - option "agencies"
+    - option "locksmith"
+    - option "plumber"
+    - option "mortgage-brokers"
+    - option "plumbers"
+    - option "real-estate"
+    - option "wellness"
+  - combobox "Filter city":
+    - option "All cities" [selected]
+    - option "AU"
+    - option "au"
+    - option "melbourne"
+    - option "sydney"
+    - option "wa"
+  - table:
+    - rowgroup:
+      - row "Offer Vertical City Variable Sent Target Positive Meetings Pos % Flags":
+        - columnheader "Offer"
+        - columnheader "Vertical"
+        - columnheader "City"
+        - columnheader "Variable"
+        - columnheader "Sent"
+        - columnheader "Target"
+        - columnheader "Positive"
+        - columnheader "Meetings"
+        - columnheader "Pos %"
+        - columnheader "Flags"
+    - rowgroup:
+      - row "After-hours booking electricians AU None — — 0 0 — Multiple campaigns Copy differs":
+        - cell "After-hours booking":
+          - link "After-hours booking":
+            - /url: /sales/outbound/editor/campaign-au-electricians-receptionist-2026-08
+        - cell "electricians"
+        - cell "AU"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "Multiple campaigns Copy differs":
+          - generic: Multiple campaigns
+          - generic: Copy differs
+      - row "After-hours booking hvac au None — — 0 0 — Copy differs":
+        - cell "After-hours booking":
+          - link "After-hours booking":
+            - /url: /sales/outbound/editor/campaign-au-hvac-receptionist-2026-08
+        - cell "hvac"
+        - cell "au"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "Copy differs":
+          - generic: Copy differs
+      - row "After-hours booking trades AU None — — 0 0 — Multiple campaigns Copy differs":
+        - cell "After-hours booking":
+          - link "After-hours booking":
+            - /url: /sales/outbound/editor/campaign-au-trades-receptionist-2026-08
+        - cell "trades"
+        - cell "AU"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "Multiple campaigns Copy differs":
+          - generic: Multiple campaigns
+          - generic: Copy differs
+      - row "Agency AI Reporting System agencies AU None — — 0 0 — Multiple campaigns":
+        - cell "Agency AI Reporting System":
+          - link "Agency AI Reporting System":
+            - /url: /sales/outbound/editor/campaign-au-agencies-reporting-2026-08
+        - cell "agencies"
+        - cell "AU"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "Multiple campaigns":
+          - generic: Multiple campaigns
+      - row "Booked jobs locksmith melbourne Audience — 500 0 0 — —":
+        - cell "Booked jobs":
+          - link "Booked jobs":
+            - /url: /sales/outbound/editor/campaign-194d75b8-1350-40cd-b1e8-9dfa2a4606a0
+        - cell "locksmith"
+        - cell "melbourne"
+        - cell "Audience"
+        - cell "—"
+        - cell "500"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "—"
+      - row "Booked jobs locksmith sydney None — — 1 0 — —":
+        - cell "Booked jobs":
+          - link "Booked jobs":
+            - /url: /sales/outbound/editor/campaign-098be736-0dcc-4a13-bc33-9fae26f959ec
+        - cell "locksmith"
+        - cell "sydney"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "1"
+        - cell "0"
+        - cell "—"
+        - cell "—"
+      - row "Booked jobs plumber melbourne Audience — 500 0 0 — —":
+        - cell "Booked jobs":
+          - link "Booked jobs":
+            - /url: /sales/outbound/editor/campaign-0f3b8e54-6f52-4af3-8403-37982fa7a978
+        - cell "plumber"
+        - cell "melbourne"
+        - cell "Audience"
+        - cell "—"
+        - cell "500"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "—"
+      - row "Booked jobs plumber sydney Audience — 500 0 0 — —":
+        - cell "Booked jobs":
+          - link "Booked jobs":
+            - /url: /sales/outbound/editor/campaign-d02784fc-c1c0-4f54-9b8b-7a3fa8365f18
+        - cell "plumber"
+        - cell "sydney"
+        - cell "Audience"
+        - cell "—"
+        - cell "500"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "—"
+      - row "Installation booking hvac sydney None — — 0 0 — —":
+        - cell "Installation booking":
+          - link "Installation booking":
+            - /url: /sales/outbound/editor/campaign-5fd67add-23d4-403b-b09b-78cf9d37cd53
+        - cell "hvac"
+        - cell "sydney"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "—"
+      - row "Switchflow Growth System mortgage-brokers au None — 150 0 0 — Copy differs":
+        - cell "Switchflow Growth System":
+          - link "Switchflow Growth System":
+            - /url: /sales/outbound/editor/campaign-au-brokers-growth-2026-08
+        - cell "mortgage-brokers"
+        - cell "au"
+        - cell "None"
+        - cell "—"
+        - cell "150"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "Copy differs":
+          - generic: Copy differs
+      - row "Switchflow Growth System mortgage-brokers AU None — — 0 0 — Multiple campaigns Copy differs":
+        - cell "Switchflow Growth System":
+          - link "Switchflow Growth System":
+            - /url: /sales/outbound/editor/campaign-au-brokers-growth-2026-08-18
+        - cell "mortgage-brokers"
+        - cell "AU"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "Multiple campaigns Copy differs":
+          - generic: Multiple campaigns
+          - generic: Copy differs
+      - row "Switchflow Growth System plumbers wa None — — 0 0 — Multiple campaigns Copy differs":
+        - cell "Switchflow Growth System":
+          - link "Switchflow Growth System":
+            - /url: /sales/outbound/editor/campaign-perth-plumbers-growth-2026-08
+        - cell "plumbers"
+        - cell "wa"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "Multiple campaigns Copy differs":
+          - generic: Multiple campaigns
+          - generic: Copy differs
+      - row "Switchflow Growth System real-estate AU None — — 0 0 — Multiple campaigns Copy differs":
+        - cell "Switchflow Growth System":
+          - link "Switchflow Growth System":
+            - /url: /sales/outbound/editor/campaign-au-real-estate-growth-2026-08-18
+        - cell "real-estate"
+        - cell "AU"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "Multiple campaigns Copy differs":
+          - generic: Multiple campaigns
+          - generic: Copy differs
+      - row "Switchflow Growth System wellness AU None — — 0 0 — Multiple campaigns Copy differs":
+        - cell "Switchflow Growth System":
+          - link "Switchflow Growth System":
+            - /url: /sales/outbound/editor/campaign-au-medspas-leftover-2026-08
+        - cell "wellness"
+        - cell "AU"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "Multiple campaigns Copy differs":
+          - generic: Multiple campaigns
+          - generic: Copy differs
+      - row "Unbound — — None — — 0 0 — No offer No vertical No city":
+        - cell "Unbound":
+          - link "Unbound":
+            - /url: /sales/outbound/editor/campaign-864722c4-5e4e-40dd-8ac5-7e4bffacfc54
+        - cell "—"
+        - cell "—"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "No offer No vertical No city":
+          - generic: No offer
+          - generic: No vertical
+          - generic: No city
+      - row "Unbound electricians — None — — 0 0 — No offer No city":
+        - cell "Unbound":
+          - link "Unbound":
+            - /url: /sales/outbound/editor/campaign-05b77ff9-4c0a-449c-9572-59fb3b72b4b4
+        - cell "electricians"
+        - cell "—"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "No offer No city":
+          - generic: No offer
+          - generic: No city
+      - row "Unbound hvac sydney None — — 0 0 — No offer":
+        - cell "Unbound":
+          - link "Unbound":
+            - /url: /sales/outbound/editor/campaign-a7b69b4c-9097-4f79-9201-a44ee339ba64
+        - cell "hvac"
+        - cell "sydney"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "No offer":
+          - generic: No offer
+      - row "Unbound trades — None — — 0 0 — No offer No city":
+        - cell "Unbound":
+          - link "Unbound":
+            - /url: /sales/outbound/editor/campaign-67e90eea-2d12-404a-b7ad-7b94784017c1
+        - cell "trades"
+        - cell "—"
+        - cell "None"
+        - cell "—"
+        - cell "—"
+        - cell "0"
+        - cell "0"
+        - cell "—"
+        - cell "No offer No city":
+          - generic: No offer
+          - generic: No city
+  - generic: Live
+  - generic: "0"
+  - generic: Outbound SKUs
+  - generic: Testing
+  - generic: "1"
+  - generic: Not live outbound
+  - generic: Meetings
+  - generic: "0"
+  - generic: Booked on live SKUs
+  - generic: Positive replies
+  - generic: "0"
+  - generic: Interested, meeting, converted
+  - paragraph: 4 campaigns have no offer bound.
+  - button "Testing Installation booking We manage installation enquiries through to qualified quote appointments, including qualification, booking, follow-up and outcome reporting. Sent — Meetings 0 Positive 0":
+    - generic: Testing
+    - heading "Installation booking" [level=3]
+    - paragraph: We manage installation enquiries through to qualified quote appointments, including qualification, booking, follow-up and outcome reporting.
+    - generic: Sent
+    - generic: —
+    - generic: Meetings
+    - generic: "0"
+    - generic: Positive
+    - generic: "0"
+  - button "Retired Switchflow Growth System Qualified booked appointments from paid ads — hybrid signup + retainer + performance Sent — Meetings 0 Positive 0 Price not locked":
+    - generic: Retired
+    - heading "Switchflow Growth System" [level=3]
+    - paragraph: Qualified booked appointments from paid ads — hybrid signup + retainer + performance
+    - generic: Sent
+    - generic: —
+    - generic: Meetings
+    - generic: "0"
+    - generic: Positive
+    - generic: "0"
+    - paragraph: Price not locked
+  - button "Retired AI Enablement Install marketing, quote follow-up, and review tools in-house; install fee refund path Sent — Meetings 0 Positive 0 Price not locked":
+    - generic: Retired
+    - heading "AI Enablement" [level=3]
+    - paragraph: Install marketing, quote follow-up, and review tools in-house; install fee refund path
+    - generic: Sent
+    - generic: —
+    - generic: Meetings
+    - generic: "0"
+    - generic: Positive
+    - generic: "0"
+    - paragraph: Price not locked
+  - button "Retired Booked jobs Established trade shops get more showed jobs by tightening the booking line, then buying emergency and local Google into that line. Sent — Meetings 0 Positive 1":
+    - generic: Retired
+    - heading "Booked jobs" [level=3]
+    - paragraph: Established trade shops get more showed jobs by tightening the booking line, then buying emergency and local Google into that line.
+    - generic: Sent
+    - generic: —
+    - generic: Meetings
+    - generic: "0"
+    - generic: Positive
+    - generic: "1"
+  - button "Retired After-hours booking We install missed-call and after-hours booking for established trade shops that already get inbound, so the job books while they are on the tools. Sent — Meetings 0 Positive 0":
+    - generic: Retired
+    - heading "After-hours booking" [level=3]
+    - paragraph: We install missed-call and after-hours booking for established trade shops that already get inbound, so the job books while they are on the tools.
+    - generic: Sent
+    - generic: —
+    - generic: Meetings
+    - generic: "0"
+    - generic: Positive
+    - generic: "0"
+  - button "Retired Agency AI Reporting System Client reporting automation for marketing agencies Sent — Meetings 0 Positive 0 Price not locked":
+    - generic: Retired
+    - heading "Agency AI Reporting System" [level=3]
+    - paragraph: Client reporting automation for marketing agencies
+    - generic: Sent
+    - generic: —
+    - generic: Meetings
+    - generic: "0"
+    - generic: Positive
+    - generic: "0"
+    - paragraph: Price not locked
+  - button "New testing SKU Starts testing. Not live outbound.":
+    - generic: New testing SKU
+    - generic: Starts testing. Not live outbound.
+- alert
+- generic: "0"

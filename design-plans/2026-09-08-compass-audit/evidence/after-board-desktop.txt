@@ -1,0 +1,25 @@
+- main:
+  - strong: LOCAL VERIFICATION FIXTURE · actual components, synthetic data
+  - button "editor"
+  - button "calendar"
+  - button "board" [pressed]
+  - button "modals"
+  - button "inbox"
+  - heading "To do" [level=3]
+  - generic: "0"
+  - paragraph: Drop a card here.
+  - heading "Done" [level=3]
+  - generic: "1"
+  - heading "Review the full campaign preview and confirm variable quality" [level=4]:
+    - button "Review the full campaign preview and confirm variable quality"
+  - paragraph: Synthetic description that stays unchanged.
+  - generic: HVAC · Sydney
+  - term: Replies
+  - definition: "0"
+  - term: Remaining
+  - definition: "130"
+  - generic: Move to
+  - combobox "Move Review the full campaign preview and confirm variable quality to":
+    - option "To do"
+    - option "Done" [selected]
+  - status: Moved task-a to done

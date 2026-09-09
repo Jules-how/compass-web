@@ -14,32 +14,9 @@ Local and cloud agents connect to Compass over `/api/agent/*` (secret auth). Dai
 - Outbound craft UI persists campaigns + library to Supabase (same store as `/api/agent/outbound/*`). Unbound editor drafts stay browser-local until “save as campaign.”
 - Sequence body of record = Compass campaign copy (`sequence_draft`, `cold_expression`, …). Outbound doctrine = `cold-email/AGENTS.md`. Current offer terms = the named contract in `../switchflow-offer/`, checked against Compass when relevant.
 
-## UI aesthetic is locked
+## UI work
 
-The operator UI depth effect, rounded corners, card separation, and **sidebar (sidecar) animations/UI** are **approved and locked**.
-
-- Always-on rule: [`.cursor/rules/compass-ui-lock.mdc`](.cursor/rules/compass-ui-lock.mdc)
-- Skill: [`.cursor/skills/compass-ui-lock/SKILL.md`](.cursor/skills/compass-ui-lock/SKILL.md)
-- Tokens: `src/app/globals.css`, `tailwind.config.ts` (`shadow-soft`, compass colors)
-- Primitives: `src/components/ui/card.tsx`
-- Sidebar motion & chrome: `src/components/ui/sidebar.tsx` (72↔248 hover expand, active pill + orange rail, mobile slide-in)
-
-Do **not** restyle shadows, radii, spacing, wash background, Geist Sans typography, accent treatment, or sidebar expand/collapse motion unless the user explicitly requests a visual change. New UI should match Sales / Home / current shell patterns.
-
-### How to style new operator UI
-
-Reuse existing helpers. Do not invent sharp `rounded-md` forms or a second card language.
-
-| Piece | Use |
-| --- | --- |
-| Page cards / panels | `Card` or `.compass-panel` (`rounded-2xl`, soft stone border, `shadow-soft`) |
-| Nested blocks inside a panel | `rounded-xl`, light stone border, airy `p-4` / `p-5` |
-| Inputs, selects, textareas | `.compass-input` |
-| Buttons | `.compass-btn-primary` / `.compass-btn-secondary` / `.compass-btn-ghost` |
-| Section captions | `.compass-section-label` |
-| Page titles | `.compass-page-title` / `.compass-page-subtitle` |
-
-Controls are **rounded-xl**. Primary surfaces are **rounded-2xl**. If a screen looks boxy next to the nav pill, it is missing these classes.
+For UI changes or reviews, use [Compass UI guidance](.cursor/rules/compass-ui-lock.mdc). It owns design identity, source pointers, and the distinction between incidental code changes and requested improvements. For a mockup, see [preview formats](.cursor/rules/ui-mockups-coded-preview.mdc).
 
 ## Local work and context
 
@@ -67,7 +44,7 @@ Compass-Web is a Next.js App Router + React app using hosted Supabase. Check `pa
 - Dev server: `npm run dev` serves on port **3100** (not 3000). Production
   `npm run start` uses Next's default 3000.
 - Verify a running server quickly: `curl -s -o /dev/null -w '%{http_code}' \
-  http://localhost:3100/tasks` (expect `200` after auto-login).
+  http://localhost:3100/tasks` (a protected route may require sign-in; do not bypass authentication to make this check pass).
 
 ### Tests / lint / build
 - `npm run lint`, `npm run typecheck`, and `npm run build` should pass.

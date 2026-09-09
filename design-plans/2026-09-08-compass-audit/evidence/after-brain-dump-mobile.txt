@@ -1,0 +1,51 @@
+- main:
+  - strong: LOCAL VERIFICATION FIXTURE · actual components, synthetic data
+  - button: editor
+  - button: calendar
+  - button: board
+  - button: modals
+  - button: inbox
+  - button [pressed]: home
+  - button: login
+  - paragraph: Operator home
+  - heading [level=1]: Tuesday 8 Sept
+  - button: Brain dump
+  - heading [level=2]: Morning wave
+  - paragraph: Brief accepted. List-builds may run for empty next. Live land is open.
+  - link:
+    - /url: /sales/outbound
+    - text: Waves
+  - button: Synthetic morning brief for layout verification.
+  - paragraph: "Pinned next: Fixture · next campaign"
+  - heading [level=3]: Sending
+  - generic: Fixture · active Sydney campaign
+  - paragraph: 130 remaining
+  - generic: Copy confirmed
+  - button: Re-tick openers
+  - button: Open chunk
+  - heading [level=3]: Highest leverage
+  - paragraph: No Jules-led items from this morning’s run.
+  - paragraph: Land is Cursor after remaining is under 50. Activate stays Instantly. Type replies in Instantly or Gmail.
+  - heading [level=2]: Emails going out
+  - link:
+    - /url: /sales/outbound
+    - text: Open outbound
+  - generic: Sent today
+  - generic: "120"
+  - generic: Reply rate
+  - generic: 2.5%
+  - heading [level=2]: Replies coming in
+  - link:
+    - /url: /inbox?tab=instantly
+    - text: Open inbox
+  - generic: Waiting in Instantly
+  - generic: "2"
+  - status: Moved task-a to done
+- dialog "Brain dump":
+  - heading "Details" [level=2]
+  - heading "Brain dump" [level=2]
+  - paragraph: Turn your notes into suggested tasks, then review what to add.
+  - button "Close" [active]
+  - textbox "Brain dump notes":
+    - /placeholder: One thought per line…
+  - button "Reorganize with AI" [disabled]

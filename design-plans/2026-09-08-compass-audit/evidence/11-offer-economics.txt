@@ -1,0 +1,147 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- complementary:
+  - link "switchflow compass":
+    - /url: /home
+    - generic: switchflow compass
+  - navigation "Operator":
+    - link "Home":
+      - /url: /home
+      - generic: Home
+    - link "Inbox 87":
+      - /url: /inbox
+      - generic: Inbox
+      - generic: "87"
+    - generic: Workspace
+    - link "Goals & notes":
+      - /url: /planning
+      - generic: Goals & notes
+    - link "My Tasks":
+      - /url: /tasks
+      - generic: My Tasks
+    - link "Projects":
+      - /url: /projects
+      - generic: Projects
+    - link "Functions":
+      - /url: /functions
+      - generic: Functions
+    - link "Clients":
+      - /url: /clients
+      - generic: Clients
+    - generic: Sales
+    - link "Overview":
+      - /url: /sales
+      - generic: Overview
+    - link "Offer & economics" [active]:
+      - /url: /sales/offer-plan
+      - generic: Offer & economics
+    - link "Email tests":
+      - /url: /sales/experiments
+      - generic: Email tests
+    - link "Offers":
+      - /url: /sales/offers
+      - generic: Offers
+    - link "Outbound":
+      - /url: /sales/outbound
+      - generic: Outbound
+    - link "CRM":
+      - /url: /leads
+      - generic: CRM
+    - generic: Operations
+    - link "Finances":
+      - /url: /operations/finances
+      - generic: Finances
+    - link "Installs":
+      - /url: /operations/installs
+      - generic: Installs
+    - link "Retention":
+      - /url: /operations/cs
+      - generic: Retention
+    - link "Settings":
+      - /url: /settings
+      - generic: Settings
+  - button "Sign out"
+- main:
+  - heading "Offer & economics" [level=1]
+  - paragraph: One clear service, the reason to buy, and the work needed to deliver it.
+  - link "Open offer records":
+    - /url: /sales/offers
+  - paragraph: Current offer · testing
+  - heading "Installation booking" [level=2]
+  - paragraph: We manage installation enquiries through to qualified quote appointments, including qualification, booking, follow-up and outcome reporting.
+  - paragraph: A$2,500 / month
+  - paragraph: Retainer direction to test. Setup, start date and cancellation need agreement. No GST while unregistered.
+  - heading "Who buys" [level=2]
+  - paragraph: Established Sydney residential ducted installation/replacement businesses with existing enquiries, a demonstrable response or booking gap, estimating capacity and access to outcomes.
+  - heading "What the client gets" [level=2]
+  - paragraph: A managed route from an eligible enquiry to a suitable quote appointment. Response, qualification, scheduling, reminders, human handoff and reporting for one agreed enquiry stream.
+  - heading "What Switchflow builds" [level=2]
+  - paragraph: One tested, reusable workflow with clear ownership, monitoring and exception handling. The value is ongoing operation and improvement; a collection of tools alone does not justify a retainer.
+  - heading "Why this scope first?" [level=2]
+  - heading "1 · Existing enquiries" [level=3]
+  - paragraph: Best first test when a booking gap exists. Fewer delivery dependencies and a repeatable process.
+  - heading "2 · Ads + booking" [level=3]
+  - paragraph: Use when demand is the constraint and acquisition delivery is ready. More scope, spend and attribution complexity; quote separately.
+  - heading "3 · Bespoke AI build" [level=3]
+  - paragraph: Use for a specific funded requirement. It can be valuable, but each custom build increases scoping and maintenance effort.
+  - paragraph: "Your benefit: a repeatable delivery process and recurring revenue toward the 2–4 client goal. Client benefit: fewer eligible enquiries left without a next step and clear appointment outcomes. Both remain hypotheses until measured."
+  - heading "Optional work, priced separately" [level=2]
+  - paragraph: These are scoping options, not included services or approved prices.
+  - heading "Google Search acquisition" [level=3]
+  - paragraph:
+    - strong: "When:"
+    - text: Eligible enquiries are insufficient
+  - paragraph: Campaign setup, management and paid media budget
+  - paragraph: Quote setup and management from scoped effort; media is a separate client cost.
+  - heading "Landing page" [level=3]
+  - paragraph:
+    - strong: "When:"
+    - text: The existing page cannot support the agreed enquiry journey
+  - paragraph: One defined page, tracking and handoff
+  - paragraph: Quote the build once; ongoing changes are separate unless agreed.
+  - heading "Additional enquiry stream or integration" [level=3]
+  - paragraph:
+    - strong: "When:"
+    - text: A second source or system needs its own workflow
+  - paragraph: Mapping, testing, monitoring and exception handling
+  - paragraph: Quote incremental setup and recurring support; avoid unlimited custom work.
+  - heading "Does the price make economic sense?" [level=2]
+  - paragraph: Enter a scenario. Include Jules’ supervision, fixes and maintenance in human hours. Use the client’s contribution per additional installation after their variable costs, not the full invoice value.
+  - text: Monthly fee (AUD)
+  - spinbutton "Monthly fee (AUD)": "2500"
+  - text: Your hours / month
+  - spinbutton "Your hours / month"
+  - text: Your cost / hour (AUD)
+  - spinbutton "Your cost / hour (AUD)"
+  - text: Tools / month (AUD)
+  - spinbutton "Tools / month (AUD)"
+  - text: Client contribution / win (AUD)
+  - spinbutton "Client contribution / win (AUD)"
+  - paragraph: Enter the fee, hours, hourly cost and tools to calculate. Unknown costs are not assumed to be zero.
+  - paragraph: This is a scenario, not a forecast or proof of incremental wins. It excludes acquisition costs, general overhead and tax. Setup work needs a separate estimate.
+  - button "Save scenario to notes" [disabled]
+  - heading "Questions that decide the offer" [level=2]
+  - paragraph: The Whimsical board is a source of ideas. These questions can confirm, narrow or reject the proposed service.
+  - heading "Is there a valuable problem?" [level=3]
+  - paragraph: "Review recent real enquiries with the owner: eligible volume, response time, contact attempts, booking, attendance and won jobs. A slow response alone is not proof of lost revenue."
+  - heading "What actually limits growth?" [level=3]
+  - paragraph: Separate insufficient demand, weak qualification, slow follow-up, low quote acceptance and full installation capacity. Choose the service that addresses the demonstrated constraint.
+  - heading "Would improvement pay for the service?" [level=3]
+  - paragraph: Estimate recoverable opportunities, realistic close rates and contribution per additional job. Compare with the fee and all other incremental costs; do not use revenue as profit.
+  - heading "Why pay monthly?" [level=3]
+  - paragraph: Specify ongoing monitoring, exceptions, reporting and improvement. If the work is mainly a one-off fix, consider a setup project plus lighter maintenance instead of forcing a retainer.
+  - heading "Can we measure and deliver it?" [level=3]
+  - paragraph: Agree the enquiry source, consent and contact rules, booking qualification, human handoff and access to attended, quoted and won outcomes. Separate attributed results from proven incremental lift.
+  - heading "What would make us stop?" [level=3]
+  - paragraph: No meaningful booking gap, too little eligible volume, no estimating capacity, inadequate job economics or no usable outcome data means narrow the scope or decline the pilot. Agent count is not a success metric.
+  - paragraph: "Market question: how many unique, suitable businesses can we actually reach, with relevant published contact details? Directory listings, branches and all HVAC contractors are not the addressable market. Team size and review counts are screening clues, not proof of budget or pain."
+  - heading "Before you promise results" [level=2]
+  - paragraph: Confirm eligible enquiry volume, the booking gap, available capacity, expected job contribution and who owns technical handoffs. Track contacted → qualified → booked → attended → quoted → won. Advertising, SEO, websites and unlimited integrations are excluded from the base service.
+  - link "Prepare client agreement":
+    - /url: /clients
+  - link "Plan an email test":
+    - /url: /sales/experiments
+  - link "Goals & notes":
+    - /url: /planning
+- alert
+- generic: "0"

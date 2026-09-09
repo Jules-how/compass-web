@@ -1,0 +1,311 @@
+Vercel CLI 54.11.1 (Node.js 26.8.1)
+Fetching deployment "compass-ejvifzu6e-jules-4233s-projects.vercel.app" in jules-4233s-projects
+2026-09-08T10:44:28.182Z  Running build in Washington, D.C., USA (East) – iad1
+2026-09-08T10:44:28.183Z  Build machine configuration: 2 cores, 8 GB
+2026-09-08T10:44:28.216Z  Retrieving list of deployment files...
+2026-09-08T10:44:28.722Z  Downloading 741 deployment files...
+2026-09-08T10:44:30.986Z  Restored build cache from previous deployment (8D86fMwWUfU4KwXAcDfsaZbNRHoR)
+2026-09-08T10:44:32.090Z  Running "vercel build"
+2026-09-08T10:44:32.109Z  Vercel CLI 59.11.7
+2026-09-08T10:44:32.412Z  Running "install" command: `npm install`...
+2026-09-08T10:44:36.484Z  
+2026-09-08T10:44:36.485Z  up to date, audited 512 packages in 4s
+2026-09-08T10:44:36.486Z  
+2026-09-08T10:44:36.486Z  154 packages are looking for funding
+2026-09-08T10:44:36.486Z  run `npm fund` for details
+2026-09-08T10:44:36.574Z  
+2026-09-08T10:44:36.576Z  7 high severity vulnerabilities
+2026-09-08T10:44:36.579Z  
+2026-09-08T10:44:36.580Z  To address issues that do not require attention, run:
+2026-09-08T10:44:36.581Z  npm audit fix
+2026-09-08T10:44:36.581Z  
+2026-09-08T10:44:36.582Z  To address all issues, run:
+2026-09-08T10:44:36.582Z  npm audit fix --force
+2026-09-08T10:44:36.582Z  
+2026-09-08T10:44:36.583Z  Run `npm audit` for details.
+2026-09-08T10:44:36.584Z  npm warn allow-scripts 2 packages have install scripts not yet covered by allowScripts:
+2026-09-08T10:44:36.584Z  npm warn allow-scripts   sharp@0.34.5 (install: node install/check.js || npm run build)
+2026-09-08T10:44:36.584Z  npm warn allow-scripts   unrs-resolver@1.12.2 (postinstall: node postinstall.js)
+2026-09-08T10:44:36.585Z  npm warn allow-scripts
+2026-09-08T10:44:36.585Z  npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.
+2026-09-08T10:44:36.616Z  Detected Next.js version: 15.5.20
+2026-09-08T10:44:36.617Z  Running "npm run build"
+2026-09-08T10:44:36.720Z  
+2026-09-08T10:44:36.720Z  > compass-web@0.1.0 build
+2026-09-08T10:44:36.720Z  > next build
+2026-09-08T10:44:36.721Z  
+2026-09-08T10:44:37.896Z  ▲ Next.js 15.5.20
+2026-09-08T10:44:37.896Z  - Experiments (use with caution):
+2026-09-08T10:44:37.896Z  · staleTimes
+2026-09-08T10:44:37.896Z  · optimizePackageImports
+2026-09-08T10:44:37.896Z  
+2026-09-08T10:44:37.985Z  Creating an optimized production build ...
+2026-09-08T10:45:07.604Z  ✓ Compiled successfully in 26.2s
+2026-09-08T10:45:07.609Z  Linting and checking validity of types ...
+2026-09-08T10:45:27.342Z  
+2026-09-08T10:45:27.343Z  ./src/components/LeadTable.tsx
+2026-09-08T10:45:27.344Z  107:6  Warning: React Hook useEffect has a missing dependency: 'onLeadSelect'. Either include it or remove the dependency array. If 'onLeadSelect' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.346Z  
+2026-09-08T10:45:27.346Z  ./src/components/campaigns/CampaignPlanner.tsx
+2026-09-08T10:45:27.346Z  129:9  Warning: The 'campaigns' logical expression could make the dependencies of useMemo Hook (at line 184) change on every render. To fix this, wrap the initialization of 'campaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.347Z  164:6  Warning: React Hook useCallback has a missing dependency: 'campaignsQuery'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.347Z  
+2026-09-08T10:45:27.348Z  ./src/components/campaigns/CampaignReviewModal.tsx
+2026-09-08T10:45:27.348Z  107:6  Warning: React Hook useEffect has a missing dependency: 'initialCampaign'. Either include it or remove the dependency array. If 'setCampaign' needs the current value of 'initialCampaign', you can also switch to useReducer instead of useState and read 'initialCampaign' in the reducer.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.349Z  
+2026-09-08T10:45:27.349Z  ./src/components/offers/TestCellsBoard.tsx
+2026-09-08T10:45:27.351Z  72:9  Warning: The 'cells' logical expression could make the dependencies of useMemo Hook (at line 95) change on every render. To fix this, wrap the initialization of 'cells' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.352Z  72:9  Warning: The 'cells' logical expression could make the dependencies of useMemo Hook (at line 100) change on every render. To fix this, wrap the initialization of 'cells' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.352Z  72:9  Warning: The 'cells' logical expression could make the dependencies of useMemo Hook (at line 109) change on every render. To fix this, wrap the initialization of 'cells' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.352Z  
+2026-09-08T10:45:27.355Z  ./src/components/outbound/EditorComponentsAccordion.tsx
+2026-09-08T10:45:27.356Z  399:9  Warning: The 'ctx' logical expression could make the dependencies of useMemo Hook (at line 538) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.356Z  
+2026-09-08T10:45:27.356Z  ./src/components/outbound/OutboundHistorySection.tsx
+2026-09-08T10:45:27.356Z  69:9  Warning: The 'instantlyHistory' logical expression could make the dependencies of useMemo Hook (at line 170) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'instantlyHistory' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.356Z  
+2026-09-08T10:45:27.357Z  ./src/components/outbound/mock/ClocksPreview.tsx
+2026-09-08T10:45:27.357Z  155:6  Warning: React Hook useCallback has missing dependencies: 'campaignsQuery' and 'queueQuery'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.357Z  
+2026-09-08T10:45:27.357Z  ./src/components/outbound/mock/FactoryPreview.tsx
+2026-09-08T10:45:27.360Z  124:9  Warning: The 'allCampaigns' logical expression could make the dependencies of useMemo Hook (at line 127) change on every render. To fix this, wrap the initialization of 'allCampaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.363Z  124:9  Warning: The 'allCampaigns' logical expression could make the dependencies of useMemo Hook (at line 135) change on every render. To fix this, wrap the initialization of 'allCampaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.367Z  
+2026-09-08T10:45:27.368Z  ./src/components/outbound/mock/RunwayPreview.tsx
+2026-09-08T10:45:27.368Z  199:9  Warning: The 'campaigns' logical expression could make the dependencies of useMemo Hook (at line 214) change on every render. To fix this, wrap the initialization of 'campaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.368Z  199:9  Warning: The 'campaigns' logical expression could make the dependencies of useMemo Hook (at line 222) change on every render. To fix this, wrap the initialization of 'campaigns' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+2026-09-08T10:45:27.368Z  
+2026-09-08T10:45:27.369Z  info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+2026-09-08T10:45:45.965Z  Collecting page data ...
+2026-09-08T10:45:53.358Z  Generating static pages (0/6) ...
+2026-09-08T10:45:54.240Z  Generating static pages (1/6)
+2026-09-08T10:45:54.241Z  Generating static pages (2/6)
+2026-09-08T10:45:54.362Z  Generating static pages (4/6)
+2026-09-08T10:45:54.364Z  ✓ Generating static pages (6/6)
+2026-09-08T10:45:56.096Z  Finalizing page optimization ...
+2026-09-08T10:45:56.100Z  Collecting build traces ...
+2026-09-08T10:46:14.088Z  
+2026-09-08T10:46:14.109Z  Route (app)                                                          Size  First Load JS
+2026-09-08T10:46:14.111Z  ┌ ƒ /                                                               488 B         103 kB
+2026-09-08T10:46:14.111Z  ├ ○ /_not-found                                                      1 kB         104 kB
+2026-09-08T10:46:14.112Z  ├ ƒ /api/ads/accounts                                               488 B         103 kB
+2026-09-08T10:46:14.112Z  ├ ƒ /api/ads/accounts/[id]                                          488 B         103 kB
+2026-09-08T10:46:14.112Z  ├ ƒ /api/ads/accounts/[id]/sync                                     488 B         103 kB
+2026-09-08T10:46:14.112Z  ├ ƒ /api/ads/discover                                               488 B         103 kB
+2026-09-08T10:46:14.112Z  ├ ƒ /api/ads/glance                                                 488 B         103 kB
+2026-09-08T10:46:14.113Z  ├ ƒ /api/ads/oauth/meta                                             488 B         103 kB
+2026-09-08T10:46:14.113Z  ├ ƒ /api/ads/oauth/meta/callback                                    488 B         103 kB
+2026-09-08T10:46:14.113Z  ├ ƒ /api/agent/brief                                                488 B         103 kB
+2026-09-08T10:46:14.113Z  ├ ƒ /api/agent/campaigns                                            488 B         103 kB
+2026-09-08T10:46:14.114Z  ├ ƒ /api/agent/cs                                                   488 B         103 kB
+2026-09-08T10:46:14.114Z  ├ ƒ /api/agent/instantly/backfill                                   488 B         103 kB
+2026-09-08T10:46:14.114Z  ├ ƒ /api/agent/instantly/duplicate-template                         488 B         103 kB
+2026-09-08T10:46:14.114Z  ├ ƒ /api/agent/instantly/ensure                                     488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/instantly/push-leads                                 488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/instantly/push-sequence                              488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/leads                                                488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/leads/cohort                                         488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/leads/export                                         488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/leads/inventory                                      488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/leads/ledger                                         488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/leads/mark                                           488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/offers/cells                                         488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/offers/desk                                          488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/outbound/[kind]                                      488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/outbound/[kind]/[id]                                 488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/outbound/campaigns/[campaignId]/copy                 488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/outbound/pathway                                     488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/outbound/pathway/runs                                488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/outbound/summary                                     488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/outbound/waves                                       488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/planning                                             488 B         103 kB
+2026-09-08T10:46:14.115Z  ├ ƒ /api/agent/sync                                                 488 B         103 kB
+2026-09-08T10:46:14.117Z  ├ ƒ /api/agent/workspace                                            488 B         103 kB
+2026-09-08T10:46:14.119Z  ├ ƒ /api/auth/login                                                 488 B         103 kB
+2026-09-08T10:46:14.120Z  ├ ƒ /api/auth/set-password                                          488 B         103 kB
+2026-09-08T10:46:14.120Z  ├ ƒ /api/brain-dump/reorganize                                      488 B         103 kB
+2026-09-08T10:46:14.120Z  ├ ƒ /api/calendar/oauth                                             488 B         103 kB
+2026-09-08T10:46:14.121Z  ├ ƒ /api/calendar/oauth/callback                                    488 B         103 kB
+2026-09-08T10:46:14.121Z  ├ ƒ /api/calendar/settings                                          488 B         103 kB
+2026-09-08T10:46:14.121Z  ├ ƒ /api/campaigns                                                  488 B         103 kB
+2026-09-08T10:46:14.121Z  ├ ƒ /api/campaigns/[id]                                             488 B         103 kB
+2026-09-08T10:46:14.121Z  ├ ƒ /api/campaigns/[id]/challenger                                  488 B         103 kB
+2026-09-08T10:46:14.122Z  ├ ƒ /api/campaigns/[id]/instantly/duplicate-template                488 B         103 kB
+2026-09-08T10:46:14.122Z  ├ ƒ /api/campaigns/[id]/instantly/ensure                            488 B         103 kB
+2026-09-08T10:46:14.122Z  ├ ƒ /api/campaigns/[id]/instantly/push-leads                        488 B         103 kB
+2026-09-08T10:46:14.122Z  ├ ƒ /api/campaigns/[id]/instantly/push-sequence                     488 B         103 kB
+2026-09-08T10:46:14.123Z  ├ ƒ /api/campaigns/[id]/milestones                                  488 B         103 kB
+2026-09-08T10:46:14.123Z  ├ ƒ /api/campaigns/queue                                            488 B         103 kB
+2026-09-08T10:46:14.123Z  ├ ƒ /api/clients                                                    488 B         103 kB
+2026-09-08T10:46:14.123Z  ├ ƒ /api/clients/[id]                                               488 B         103 kB
+2026-09-08T10:46:14.125Z  ├ ƒ /api/clients/[id]/agreements                                    488 B         103 kB
+2026-09-08T10:46:14.125Z  ├ ƒ /api/clients/[id]/channel                                       488 B         103 kB
+2026-09-08T10:46:14.125Z  ├ ƒ /api/clients/[id]/comms                                         488 B         103 kB
+2026-09-08T10:46:14.125Z  ├ ƒ /api/clients/[id]/comms/[threadId]                              488 B         103 kB
+2026-09-08T10:46:14.126Z  ├ ƒ /api/clients/[id]/comms/[threadId]/messages                     488 B         103 kB
+2026-09-08T10:46:14.126Z  ├ ƒ /api/clients/[id]/deal-terms                                    488 B         103 kB
+2026-09-08T10:46:14.126Z  ├ ƒ /api/clients/[id]/google-attach                                 488 B         103 kB
+2026-09-08T10:46:14.126Z  ├ ƒ /api/clients/[id]/google-attach/[attachId]                      488 B         103 kB
+2026-09-08T10:46:14.126Z  ├ ƒ /api/clients/[id]/invoices                                      488 B         103 kB
+2026-09-08T10:46:14.127Z  ├ ƒ /api/clients/[id]/issues                                        488 B         103 kB
+2026-09-08T10:46:14.127Z  ├ ƒ /api/clients/[id]/meta-ads                                      488 B         103 kB
+2026-09-08T10:46:14.127Z  ├ ƒ /api/clients/[id]/meta-attach                                   488 B         103 kB
+2026-09-08T10:46:14.127Z  ├ ƒ /api/clients/[id]/meta-attach/[attachId]                        488 B         103 kB
+2026-09-08T10:46:14.127Z  ├ ƒ /api/clients/[id]/onboarding                                    488 B         103 kB
+2026-09-08T10:46:14.127Z  ├ ƒ /api/clients/[id]/reactivation                                  488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/clients/[id]/reactivation/[listId]                         488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/clients/[id]/reactivation/[listId]/contacts/[contactId]    488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/clients/[id]/voice                                         488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/component-stats                                            488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/cron/daily-sync                                            488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/cs                                                         488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/delivery-dept/installs                                     488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/delivery-dept/installs/[id]                                488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/delivery-dept/sop                                          488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/delivery/attachments/[attachmentId]/download               488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/delivery/items/[itemId]/attachments                        488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/delivery/items/[itemId]/comments                           488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/delivery/items/[itemId]/complete                           488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/delivery/items/[itemId]/decisions                          488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/delivery/projects                                          488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/delivery/projects/[projectId]                              488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/digest                                                     488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/expenses                                                   488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/experiments/prepare                                        488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/functions                                                  488 B         103 kB
+2026-09-08T10:46:14.128Z  ├ ƒ /api/functions/[id]                                             488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/home                                                       488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/home/wave                                                  488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/inbox                                                      488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/inbox/suggest                                              488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/inbox/triage                                               488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/ingest/comms                                               488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/ingest/leads                                               488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/ingest/site-events                                         488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/instantly/campaigns/[id]/analytics                         488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/instantly/cold-email                                       488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/instantly/outbound-campaigns                               488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/instantly/sales-overview                                   488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/instantly/settings                                         488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/leads/[id]                                                 488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/leads/[id]/outreach                                        488 B         103 kB
+2026-09-08T10:46:14.129Z  ├ ƒ /api/leads/bulk                                                 488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/leads/facets                                               488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/leads/list                                                 488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/leads/local-sync                                           488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/leads/summary                                              488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/leads/targeting-map                                        488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/leads/upload                                               488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/offers/cells                                               488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/offers/desk                                                488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/onboarding/[token]                                         488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/operator/invitations                                       488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/outbound/copy-archive                                      488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/outbound/copy-archive/[id]                                 488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/outbound/ctas                                              488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/outbound/ctas/[id]                                         488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/outbound/expressions                                       488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/outbound/expressions/[id]                                  488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/outbound/library                                           488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/outbound/library-lock                                      488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/outbound/offers                                            488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/outbound/offers/[id]                                       488 B         103 kB
+2026-09-08T10:46:14.130Z  ├ ƒ /api/outbound/opener-chunk                                      488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/outbound/openers                                           488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/outbound/openers/[id]                                      488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/outbound/pathways                                          488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/outbound/pathways/templates                                488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/outbound/seed                                              488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/outbound/structures                                        488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/outbound/structures/[id]                                   488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/outbound/subjects                                          488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/outbound/subjects/[id]                                     488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/outbound/templates                                         488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/outbound/templates/[id]                                    488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/outbound/wave-desk                                         488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/payments/stripe-webhook                                    488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/planning                                                   488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/projects                                                   488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/projects/[id]                                              488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/qbo/callback                                               488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/qbo/connect                                                488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/qbo/finances                                               488 B         103 kB
+2026-09-08T10:46:14.131Z  ├ ƒ /api/qbo/settings                                               488 B         103 kB
+2026-09-08T10:46:14.132Z  ├ ƒ /api/qbo/webhook                                                488 B         103 kB
+2026-09-08T10:46:14.132Z  ├ ƒ /api/reactivation/sms                                           488 B         103 kB
+2026-09-08T10:46:14.132Z  ├ ƒ /api/signing/[token]                                            488 B         103 kB
+2026-09-08T10:46:14.132Z  ├ ƒ /api/tasks                                                      488 B         103 kB
+2026-09-08T10:46:14.132Z  ├ ƒ /api/tasks/[id]                                                 488 B         103 kB
+2026-09-08T10:46:14.132Z  ├ ƒ /api/tasks/[id]/notes                                           488 B         103 kB
+2026-09-08T10:46:14.133Z  ├ ƒ /api/voice/inbound                                              488 B         103 kB
+2026-09-08T10:46:14.133Z  ├ ƒ /api/voice/postcall                                             488 B         103 kB
+2026-09-08T10:46:14.134Z  ├ ƒ /api/voice/sms                                                  488 B         103 kB
+2026-09-08T10:46:14.134Z  ├ ƒ /api/voice/tools                                                488 B         103 kB
+2026-09-08T10:46:14.134Z  ├ ƒ /api/webhooks/instantly                                         488 B         103 kB
+2026-09-08T10:46:14.134Z  ├ ƒ /auth/callback                                                  488 B         103 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /clients                                                        213 B         244 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /clients/[id]                                                 50.2 kB         294 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /delivery                                                       188 B         244 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /delivery/[projectId]                                         1.49 kB         245 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /functions                                                      213 B         244 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /functions/[id]                                               7.43 kB         251 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /home                                                           213 B         244 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /inbox                                                          213 B         244 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /leads                                                          213 B         244 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /leads/upload                                                 11.4 kB         255 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /login                                                        1.08 kB         104 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /onboard/[token]                                              2.92 kB         106 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /operations/cs                                                  213 B         244 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /operations/finances                                            213 B         244 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /operations/installs                                            213 B         244 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /planning                                                     4.44 kB         248 kB
+2026-09-08T10:46:14.135Z  ├ ƒ /projects                                                       213 B         244 kB
+2026-09-08T10:46:14.136Z  ├ ƒ /projects/[id]                                                6.98 kB         251 kB
+2026-09-08T10:46:14.136Z  ├ ƒ /sales                                                          213 B         244 kB
+2026-09-08T10:46:14.137Z  ├ ƒ /sales/experiments                                            3.68 kB         264 kB
+2026-09-08T10:46:14.137Z  ├ ƒ /sales/offer-plan                                             4.73 kB         249 kB
+2026-09-08T10:46:14.137Z  ├ ƒ /sales/offers                                                   213 B         244 kB
+2026-09-08T10:46:14.137Z  ├ ƒ /sales/offers/[offerKey]                                        213 B         244 kB
+2026-09-08T10:46:14.137Z  ├ ƒ /sales/outbound                                                 213 B         244 kB
+2026-09-08T10:46:14.138Z  ├ ƒ /sales/outbound/craft                                           792 B         369 kB
+2026-09-08T10:46:14.138Z  ├ ƒ /sales/outbound/ctas                                            159 B         289 kB
+2026-09-08T10:46:14.138Z  ├ ƒ /sales/outbound/editor/[campaignId]                           1.43 kB         343 kB
+2026-09-08T10:46:14.138Z  ├ ƒ /sales/outbound/editor/live/[instantlyId]                     1.43 kB         343 kB
+2026-09-08T10:46:14.138Z  ├ ƒ /sales/outbound/editor/new                                    1.38 kB         343 kB
+2026-09-08T10:46:14.139Z  ├ ƒ /sales/outbound/expressions                                     158 B         289 kB
+2026-09-08T10:46:14.139Z  ├ ƒ /sales/outbound/mock                                          1.19 kB         245 kB
+2026-09-08T10:46:14.139Z  ├ ƒ /sales/outbound/mock/cassette                                 5.21 kB         355 kB
+2026-09-08T10:46:14.139Z  ├ ƒ /sales/outbound/mock/clocks                                    5.3 kB         355 kB
+2026-09-08T10:46:14.139Z  ├ ƒ /sales/outbound/mock/compare                                  8.56 kB         255 kB
+2026-09-08T10:46:14.140Z  ├ ƒ /sales/outbound/mock/factory                                  4.41 kB         354 kB
+2026-09-08T10:46:14.140Z  ├ ƒ /sales/outbound/mock/runway                                   3.72 kB         261 kB
+2026-09-08T10:46:14.140Z  ├ ƒ /sales/outbound/offers                                          159 B         289 kB
+2026-09-08T10:46:14.140Z  ├ ƒ /sales/outbound/openers                                         159 B         289 kB
+2026-09-08T10:46:14.140Z  ├ ƒ /sales/outbound/structures                                      159 B         289 kB
+2026-09-08T10:46:14.141Z  ├ ƒ /sales/outbound/subjects                                        159 B         289 kB
+2026-09-08T10:46:14.141Z  ├ ƒ /sales/outbound/templates                                       159 B         289 kB
+2026-09-08T10:46:14.141Z  ├ ƒ /sales/pipeline                                                 488 B         103 kB
+2026-09-08T10:46:14.141Z  ├ ƒ /sales/pipeline/[id]                                          9.55 kB         351 kB
+2026-09-08T10:46:14.141Z  ├ ○ /set-password                                                 1.13 kB         104 kB
+2026-09-08T10:46:14.142Z  ├ ƒ /settings                                                     6.21 kB         250 kB
+2026-09-08T10:46:14.142Z  ├ ƒ /sign/[token]                                                 3.61 kB         106 kB
+2026-09-08T10:46:14.142Z  └ ƒ /tasks                                                          213 B         244 kB
+2026-09-08T10:46:14.142Z  + First Load JS shared by all                                      103 kB
+2026-09-08T10:46:14.142Z  ├ chunks/1255-d3a86a180c7e60d3.js                                 46 kB
+2026-09-08T10:46:14.142Z  ├ chunks/4bd1b696-100b9d70ed4e49c1.js                           54.2 kB
+2026-09-08T10:46:14.142Z  └ other shared chunks (total)                                   2.58 kB
+2026-09-08T10:46:14.142Z  
+2026-09-08T10:46:14.142Z  
+2026-09-08T10:46:14.142Z  ƒ Middleware                                                      90.8 kB
+2026-09-08T10:46:14.149Z  
+2026-09-08T10:46:14.150Z  ○  (Static)   prerendered as static content
+2026-09-08T10:46:14.150Z  ƒ  (Dynamic)  server-rendered on demand
+2026-09-08T10:46:14.150Z  
+2026-09-08T10:46:14.575Z  Traced Next.js server files in: 86.611ms
+2026-09-08T10:46:15.344Z  Created all serverless functions in: 768.555ms
+2026-09-08T10:46:15.464Z  Collected static files (public/, static/, .next/static): 29.714ms
+2026-09-08T10:46:15.719Z  Build Completed in /vercel/output [2m]
+2026-09-08T10:46:15.744Z  Deploying outputs...
+2026-09-08T10:46:28.894Z  Deployment completed
+2026-09-08T10:46:28.898Z  Creating build cache...
+status	● Ready

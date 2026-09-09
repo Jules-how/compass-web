@@ -1,0 +1,120 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- complementary:
+  - link "switchflow compass":
+    - /url: /home
+    - generic: switchflow compass
+  - navigation "Operator":
+    - link "Home":
+      - /url: /home
+      - generic: Home
+    - link "Inbox 87":
+      - /url: /inbox
+      - generic: Inbox
+      - generic: "87"
+    - generic: Workspace
+    - link "Goals & notes":
+      - /url: /planning
+      - generic: Goals & notes
+    - link "My Tasks":
+      - /url: /tasks
+      - generic: My Tasks
+    - link "Projects":
+      - /url: /projects
+      - generic: Projects
+    - link "Functions":
+      - /url: /functions
+      - generic: Functions
+    - link "Clients":
+      - /url: /clients
+      - generic: Clients
+    - generic: Sales
+    - link "Overview":
+      - /url: /sales
+      - generic: Overview
+    - link "Offer & economics":
+      - /url: /sales/offer-plan
+      - generic: Offer & economics
+    - link "Email tests":
+      - /url: /sales/experiments
+      - generic: Email tests
+    - link "Offers":
+      - /url: /sales/offers
+      - generic: Offers
+    - link "Outbound":
+      - /url: /sales/outbound
+      - generic: Outbound
+    - link "CRM":
+      - /url: /leads
+      - generic: CRM
+    - generic: Operations
+    - link "Finances":
+      - /url: /operations/finances
+      - generic: Finances
+    - link "Installs":
+      - /url: /operations/installs
+      - generic: Installs
+    - link "Retention":
+      - /url: /operations/cs
+      - generic: Retention
+    - link "Settings" [active]:
+      - /url: /settings
+      - generic: Settings
+  - button "Sign out"
+- main:
+  - heading "Settings" [level=1]
+  - paragraph: Instantly, ad accounts, and workspace preferences
+  - heading "QuickBooks Online" [level=3]
+  - generic: AU company file is the only ledger. Compass stores QBO ids and cached status, never a second invoice book.
+  - generic: "Status:"
+  - generic: Needs OAuth env
+  - paragraph: "Set QBO_CLIENT_ID, QBO_CLIENT_SECRET, QBO_REDIRECT_URI, QBO_ENV, and QBO_WEBHOOK_VERIFIER. Checklist: docs/QBO.md"
+  - heading "Instantly (cold email)" [level=3]
+  - generic: Home cold-email metrics pull live from Instantly when an API key is set
+  - generic: "Status:"
+  - generic: Live · env
+  - paragraph:
+    - text: Instantly is configured via
+    - code: INSTANTLY_API_KEY
+    - text: on the server. You can still store a backup key below.
+  - generic: Instantly API key
+  - textbox "Paste from Instantly → Settings → Integrations → API"
+  - button "Save & verify" [disabled]
+  - heading "Google Calendar (campaign go-lives)" [level=3]
+  - generic: Each campaign shows as an all-day item on the go-live day, like a holiday, not a timed block
+  - generic: "Status:"
+  - generic: Needs OAuth env
+  - paragraph:
+    - text: Set
+    - code: GOOGLE_CALENDAR_CLIENT_ID
+    - text: and
+    - code: GOOGLE_CALENDAR_CLIENT_SECRET
+    - text: ", then add redirect"
+    - code: /api/calendar/oauth/callback
+    - text: on the Google Cloud OAuth client.
+  - heading "Ad accounts" [level=3]
+  - generic: Connect Meta, Google, and LinkedIn so Home shows live spend health — not demo numbers
+  - button "Meta"
+  - button "Google Ads"
+  - button "LinkedIn"
+  - paragraph: Facebook & Instagram ads — spend, CTR, leads, creative health
+  - generic: Access token
+  - textbox "System user or long-lived user token with ads_read"
+  - generic: Account id
+  - textbox "act_… account id (or pick from Discover)"
+  - generic: Display name
+  - textbox "Optional label"
+  - generic: Lead value ($)
+  - textbox: "200"
+  - button "Discover accounts"
+  - button "Connect account"
+  - heading "Connected" [level=3]
+  - generic: Sync pulls the last 30 days of creatives into Home
+  - generic: Brisbane City Home Loans
+  - generic: meta · connected
+  - generic: Token needed
+  - generic: act_1322750802266064 · AUD · Synced 09/08/2026, 20:22:24 · Re-connect with a token to enable Sync refreshes
+  - button "Sync" [disabled]
+  - button "Disconnect"
+- alert
+- generic: "0"

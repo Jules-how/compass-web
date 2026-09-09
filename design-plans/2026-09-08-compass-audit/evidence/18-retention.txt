@@ -1,0 +1,119 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- complementary:
+  - link "switchflow compass":
+    - /url: /home
+    - generic: switchflow compass
+  - navigation "Operator":
+    - link "Home":
+      - /url: /home
+      - generic: Home
+    - link "Inbox 87":
+      - /url: /inbox
+      - generic: Inbox
+      - generic: "87"
+    - generic: Workspace
+    - link "Goals & notes":
+      - /url: /planning
+      - generic: Goals & notes
+    - link "My Tasks":
+      - /url: /tasks
+      - generic: My Tasks
+    - link "Projects":
+      - /url: /projects
+      - generic: Projects
+    - link "Functions":
+      - /url: /functions
+      - generic: Functions
+    - link "Clients":
+      - /url: /clients
+      - generic: Clients
+    - generic: Sales
+    - link "Overview":
+      - /url: /sales
+      - generic: Overview
+    - link "Offer & economics":
+      - /url: /sales/offer-plan
+      - generic: Offer & economics
+    - link "Email tests":
+      - /url: /sales/experiments
+      - generic: Email tests
+    - link "Offers":
+      - /url: /sales/offers
+      - generic: Offers
+    - link "Outbound":
+      - /url: /sales/outbound
+      - generic: Outbound
+    - link "CRM":
+      - /url: /leads
+      - generic: CRM
+    - generic: Operations
+    - link "Finances":
+      - /url: /operations/finances
+      - generic: Finances
+    - link "Installs":
+      - /url: /operations/installs
+      - generic: Installs
+    - link "Retention" [active]:
+      - /url: /operations/cs
+      - generic: Retention
+    - link "Settings":
+      - /url: /settings
+      - generic: Settings
+  - button "Sign out"
+- main:
+  - heading "Retention" [level=1]
+  - paragraph: Monday review. Drafts only. Approve, skip, or call the save play.
+  - paragraph: Clients
+  - paragraph: "5"
+  - paragraph: Demo seed
+  - paragraph: At risk
+  - paragraph: "2"
+  - paragraph: Save play drafted
+  - paragraph: Drafts
+  - paragraph: "20"
+  - paragraph: Approve or skip
+  - paragraph: Monday budget
+  - paragraph: 30 min
+  - paragraph: 1 healthy to scan
+  - tablist "Retention views":
+    - tab "Monday review" [selected]
+    - tab "ROI portal"
+    - tab "QBR"
+  - button "Approve healthy"
+  - button "Run this week"
+  - paragraph: "Open the red and amber cards. Healthy clients stay one line. Goal: drafts reviewed in 30 minutes at 50 clients."
+  - article:
+    - button "Coastal Gas At risk Save play Perth · gas · score 45 · down 16 · $840 this week Open":
+      - heading "Coastal Gas" [level=2]
+      - generic: At risk
+      - generic: Save play
+      - paragraph: Perth · gas · score 45 · down 16 · $840 this week
+      - generic: Open
+  - article:
+    - button "Northside HVAC At risk Save play Brisbane · hvac · score 53 · down 29 · $480 this week Open":
+      - heading "Northside HVAC" [level=2]
+      - generic: At risk
+      - generic: Save play
+      - paragraph: Brisbane · hvac · score 53 · down 29 · $480 this week
+      - generic: Open
+  - article:
+    - button "Ridge Line Roofing Healthy Day 25 short Adelaide · roofing · score 77 · $0 this week Open":
+      - heading "Ridge Line Roofing" [level=2]
+      - generic: Healthy
+      - generic: Day 25 short
+      - paragraph: Adelaide · roofing · score 77 · $0 this week
+      - generic: Open
+  - article:
+    - button "Volt and Co Electrical Healthy Day 25 covered Melbourne · electrical · score 100 · $1,900 this week Open":
+      - heading "Volt and Co Electrical" [level=2]
+      - generic: Healthy
+      - generic: Day 25 covered
+      - paragraph: Melbourne · electrical · score 100 · $1,900 this week
+      - generic: Open
+  - generic: Healthy · scan only
+  - paragraph: Harbour Plumbing 100
+  - paragraph: Mick, last week the after hours line took 18 calls, booked 7, and 6 showed (about $2,520 back). Full numbers in the email. Jules
+  - button "Approve"
+- alert
+- generic: "0"
