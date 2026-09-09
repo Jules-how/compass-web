@@ -12,7 +12,6 @@ import {
   normalizeLinkedin,
   normalizePhone
 } from '@/lib/lead-import-shared'
-import { isHotOutboundStatus } from '@/lib/recontact-eligibility'
 import { isIcpSkip } from '@/lib/lead-icp'
 import { applySharedMarkFields, type SharedMarkBody } from '@/lib/lead-mark'
 import { appendEvidence } from '@/lib/events'
@@ -253,15 +252,8 @@ function buildUpdatePatch(
   if (isIcpSkip(existing.icp_status)) {
     patch.icp_status = 'skip'
   }
-  const incomingStatus = incoming.outbound_status !== undefined
-  if (!incomingStatus && isHotOutboundStatus(existing.outbound_status)) {
-    delete patch.outbound_status
-  } else if (
-    !incomingStatus &&
-    patch.outbound_status &&
-    isHotOutboundStatus(existing.outbound_status) &&
-    !isHotOutboundStatus(String(patch.outbound_status))
-  ) {
+  // Import enriches identity; it cannot erase any established outreach state.
+  if (existing.outbound_status && existing.outbound_status !== 'uncontacted') {
     delete patch.outbound_status
   }
   return patch

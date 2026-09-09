@@ -21,6 +21,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verify
+      - run: node --test test/outbound-preparation*.test.mjs
       - name: Production build
         env:
           # Build-time placeholders so Next can compile without real secrets.
