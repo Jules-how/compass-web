@@ -47,7 +47,7 @@ This path needs Instantly read API access even when browser upload is required. 
 
 ## Migration and release
 
-Apply `supabase/migrations/0080_outbound_preparation.sql` before deploying the new routes. It is additive: eight new tables, a private artifact bucket, narrowly scoped RPCs and invalidation triggers. Authenticated clients have SELECT only on the new tables; the approval RPC is the only human write path. The invalidation trigger runs as its owner so normal operator copy edits can invalidate protected runs without gaining broad write access.
+Apply `supabase/migrations/0082_outbound_preparation.sql` before deploying the new routes. It is additive: eight new tables, a private artifact bucket, narrowly scoped RPCs and invalidation triggers. Authenticated clients have SELECT only on the new tables; the approval RPC is the only human write path. The invalidation trigger runs as its owner so normal operator copy edits can invalidate protected runs without gaining broad write access.
 
 Existing ledger rows, historical campaign history and verification statuses are not bulk rewritten. Legacy import enrichment now preserves every established non-uncontacted outreach state. The legacy Instantly API mapper's delay/subject and chunk-receipt bugs are fixed, and installation-booking cannot bypass preparation through old push/template endpoints.
 

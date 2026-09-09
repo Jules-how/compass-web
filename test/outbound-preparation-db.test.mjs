@@ -23,7 +23,7 @@ async function database() {
     GRANT EXECUTE ON FUNCTION auth.uid(),public.portal_is_operator() TO authenticated,service_role;
   `)
   await db.exec(
-    fs.readFileSync('supabase/migrations/0080_outbound_preparation.sql', 'utf8')
+    fs.readFileSync('supabase/migrations/0082_outbound_preparation.sql', 'utf8')
   )
   const f = fixture()
   await db.query(
