@@ -66,7 +66,7 @@ Retain the existing five-weekday pilot and 8 am Australia/Sydney schedule unless
 - [x] Native cloud task created; actual Compass login requirement observed.
 - [x] Shared-note write failure reproduced with a fresh revision; large encrypted URL filter also fails.
 - [x] Atomic-save regression tests cover large values, stale writers, permissions and error classification.
-- [ ] Fix deployed; existing shared note updates and reads back with preserved history.
+- [x] Fix deployed via PR85; production read-back at 07:30 UTC verified brief revision4, preserved history, stale-write rejection and authentication. Local handover note saved as planning.note.9a847bf1-1eff-4861-b175-dc8587afe0b9 revision2. Cloud verification remains separate.
 - [ ] Cloud reads the current Compass brief and existing work without the Mac.
 - [ ] Cloud saves a real dated plan; local Codex reads the exact saved plan.
 - [ ] Local Codex appends a checked result; cloud reads that result and changes its next action appropriately.
