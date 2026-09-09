@@ -92,6 +92,7 @@ export function canonical(value: unknown): string {
     return (
       '{' +
       Object.keys(value)
+        .filter((key) => (value as Record<string, unknown>)[key] !== undefined)
         .sort()
         .map(
           (key) =>

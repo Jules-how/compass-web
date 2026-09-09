@@ -11,6 +11,7 @@ const uid = '11111111-1111-4111-8111-111111111111'
 async function database() {
   const db = new PGlite()
   await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO service_role;
     CREATE SCHEMA auth; CREATE SCHEMA storage;
     CREATE TABLE auth.users(id uuid PRIMARY KEY); INSERT INTO auth.users VALUES('${uid}');
     CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('test.actor_uid',true),'')::uuid $$;
@@ -24,6 +25,9 @@ async function database() {
   `)
   await db.exec(
     fs.readFileSync('supabase/migrations/0082_outbound_preparation.sql', 'utf8')
+  )
+  await db.exec(
+    fs.readFileSync('supabase/migrations/0083_outbound_function_privileges.sql', 'utf8')
   )
   const f = fixture()
   await db.query(
@@ -45,7 +49,12 @@ async function database() {
 async function prepared(db, suffix = '1') {
   const f = fixture()
   f.context.campaign_id = 'cell-' + suffix
-  const candidate = { ...f.candidate, id: 'candidate-' + suffix }
+  const candidate = {
+    ...f.candidate,
+    id: 'candidate-' + suffix,
+    hold_reason: undefined,
+    exclude_reason: undefined
+  }
   const values = p.expectedValues(candidate, f.context.recipe)
   const copy = loadTypescript('src/lib/outbound-copy.ts')
   const output = {
@@ -62,7 +71,11 @@ async function prepared(db, suffix = '1') {
       )
     }))
   }
-  const bundle = p.prepareBundle(f.context, [candidate], f.ledger, [output])
+  // Supabase stores JSON: absent optional fields must keep the same hash after
+  // the worker reads the persisted ticket, not merely in one in-memory fixture.
+  const storedCandidates = JSON.parse(JSON.stringify([candidate]))
+  assert.equal(p.digest([candidate]), p.digest(storedCandidates))
+  const bundle = p.prepareBundle(f.context, storedCandidates, f.ledger, [output])
   const contextHash = p.digest(f.context)
   await db.query(
     'INSERT INTO compass_pipeline_campaigns VALUES($1,$2,$3,$4,$5,$6,$7)',

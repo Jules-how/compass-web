@@ -17,6 +17,7 @@ type State = {
     status: string
     candidates: Candidate[]
     error: string | null
+    created_at: string
   }>
   preparations: Array<{ id: string; run_id: string; bundle: Bundle }>
   approvals: Array<{
@@ -35,7 +36,7 @@ type State = {
 const button =
   'rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-800 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600'
 const input =
-  'w-full rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-neutral-900'
+  'w-full rounded-xl border border-stone-300 bg-white px-2 py-1.5 text-sm text-neutral-900'
 const labels: Record<string, string> = {
   service: 'Ducted installation service',
   service_area: 'Sydney service area',
@@ -72,6 +73,7 @@ export function CampaignPreparationPanel({
   const [note, setNote] = useState('')
   const [reviewed, setReviewed] = useState(false)
   const [selected, setSelected] = useState('')
+  const [selectedRun, setSelectedRun] = useState('')
   const [recipe, setRecipe] = useState<Recipe>({ subject: '', opener: '' })
   const [settings, setSettings] = useState<Settings>({
     timezone: 'Australia/Sydney',
@@ -96,6 +98,7 @@ export function CampaignPreparationPanel({
     setState(null)
     setReviewed(false)
     setSelected('')
+    setSelectedRun('')
     void refresh().catch((e) => setError(e.message))
   }, [refresh, campaign.updated_at])
   useEffect(() => {
@@ -106,7 +109,7 @@ export function CampaignPreparationPanel({
       setRevision(state.config.revision)
     }
   }, [state?.config])
-  const run = state?.runs[0]
+  const run = state?.runs.find((r) => r.id === selectedRun) ?? state?.runs[0]
   const prep = state?.preparations.find((p) => p.run_id === run?.id)
   const approved = state?.approvals.find(
     (a) => a.preparation_id === prep?.id && a.hash === prep.bundle.hash
@@ -148,10 +151,13 @@ export function CampaignPreparationPanel({
         )
       if (
         ['create', 'revise', 'import_inventory'].includes(String(body.action))
-      )
+      ) {
+        setSelectedRun(data.id)
+        setSelected('')
         setNote(
           'Source records retained. Waiting for the local preparation worker.'
         )
+      }
       await refresh()
       return true
     } catch (e) {
@@ -296,7 +302,7 @@ export function CampaignPreparationPanel({
             Sydney time · weekdays · tracking off · stop on reply · unsubscribe
             header and link.
           </p>
-          <button disabled={busy} className={button}>
+          <button disabled={busy || !state} className={button}>
             Save settings
           </button>
         </form>
@@ -336,11 +342,31 @@ export function CampaignPreparationPanel({
           </button>
         </div>
       </details>
+      {state && state.runs.length > 1 && (
+        <label className="block text-xs">
+          Recent preparation runs
+          <select
+            className={input}
+            value={run?.id ?? ''}
+            onChange={(e) => {
+              setSelectedRun(e.target.value)
+              setSelected('')
+              setNote('')
+            }}
+          >
+            {state.runs.map((r) => (
+              <option key={r.id} value={r.id}>
+                {new Date(r.created_at).toLocaleString('en-AU', { timeZone: 'Australia/Sydney' })} · {r.candidates.length} candidates · {reasonLabel(r.status)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-neutral-600">
           {run
             ? `${candidates.length} retained · ${reasonLabel(run.status)}`
-            : 'No preparation yet.'}
+            : state ? 'No preparation yet.' : 'Loading preparation…'}
         </p>
         <button
           type="button"
