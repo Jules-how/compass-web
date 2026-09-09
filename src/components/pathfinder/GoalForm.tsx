@@ -40,6 +40,7 @@ export function GoalForm({
   const set = (key: string, value: unknown) =>
     setForm({ ...form, [key]: value });
   const numeric = form.measurementType !== "qualitative";
+  const committed = form.status === "committed";
   async function save(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -74,6 +75,7 @@ export function GoalForm({
       {label}
       <input
         className="compass-input mt-1 w-full"
+        data-autofocus={key === "title" ? true : undefined}
         type={type}
         step={type === "number" ? "any" : undefined}
         value={form[key] ?? ""}
@@ -87,6 +89,7 @@ export function GoalForm({
       open
       onClose={onClose}
       label={goal ? "Edit outcome definition" : "Define an outcome"}
+      motion="dialog"
       overlayClassName="fixed inset-0 z-[70] overflow-y-auto bg-stone-950/40 p-4 sm:p-10"
       contentClassName="compass-panel mx-auto max-w-2xl p-6 outline-none"
     >
@@ -119,7 +122,7 @@ export function GoalForm({
             </select>
           </label>
           {field("owner", "Owner", "text", true)}
-          {field("due", "Chosen target date", "date", true)}
+          {field("due", "Chosen target date", "date", committed)}
           <label className="text-sm">
             Horizon
             <select
@@ -151,10 +154,10 @@ export function GoalForm({
                 "unit",
                 "Unit / period (for example, AUD MRR)",
                 "text",
-                true,
+                committed,
               )}
               {field("baseline", "Baseline · blank if unknown", "number")}
-              {field("regular", "Target", "number", true)}
+              {field("regular", "Target", "number", committed)}
               {field("stretch", "Stretch · optional", "number")}
               {field("currency", "Currency · financial measures only")}
             </>
@@ -165,7 +168,7 @@ export function GoalForm({
             ? "Metric definition and inclusion rules"
             : "Observable acceptance condition"}
           <textarea
-            required
+            required={committed}
             className="compass-input mt-1 min-h-24 w-full"
             value={form[numeric ? "metricDefinition" : "criteria"] ?? ""}
             onChange={(e) =>
@@ -179,6 +182,11 @@ export function GoalForm({
           />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
+          {field(
+            "expectedSprints",
+            "Expected sprints · optional planning estimate",
+            "number",
+          )}
           {field(
             "freshnessDays",
             "Refresh evidence after this many days",

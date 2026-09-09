@@ -12,46 +12,89 @@ import {
   type Node,
   type Viewport,
 } from "@xyflow/react";
+import {
+  ArrowUpRight,
+  Flag,
+  Maximize2,
+  Minus,
+  Plus,
+  Search,
+  Target,
+} from "lucide-react";
 import "@xyflow/react/dist/style.css";
-import { graphForView, semanticLevel } from "@/lib/pathfinder/core.mjs";
+import { journeyForView } from "@/lib/pathfinder/workspace.mjs";
+import { semanticLevel } from "@/lib/pathfinder/core.mjs";
 import type { PathfinderData } from "@/lib/pathfinder/types";
-
+import type { AddKind } from "./QuickAdd";
 type NodeData = {
   kind: string;
   recordId: string;
   label: string;
   subtitle: string;
+  goalId: string;
+  notes?: string;
+  date?: string;
+  detail?: string;
+  projectId?: string;
+  add: (kind: AddKind, goalId: string, projectId?: string) => void;
 };
-function CircleNode({ data, selected }: NodeProps<Node<NodeData>>) {
-  const goal = data.kind === "goal";
+function JourneyNode({ data, selected }: NodeProps<Node<NodeData>>) {
+  const stage = data.kind === "goal" || data.kind === "checkpoint";
   return (
     <div
-      className={`folio-map-note flex flex-col items-center justify-center rounded-full border-2 bg-white p-4 text-center shadow-soft ${goal ? "size-40" : "size-32"} ${selected ? "border-[#c2410c] ring-4 ring-orange-100" : "border-stone-200"}`}
+      className={`pathfinder-journey-node is-${data.kind} ${selected ? "is-selected" : ""}`}
     >
-      <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
-      <span className="text-[10px] font-medium uppercase tracking-wider text-stone-500">
-        {goal
-          ? "Outcome"
-          : data.kind === "checkpoint"
-            ? "Checkpoint"
-            : data.kind === "issue"
-              ? "Decision"
+      <Handle id="route-in" type="target" position={Position.Left} />
+      <Handle id="route-out" type="source" position={Position.Right} />
+      <Handle id="work-in" type="target" position={Position.Top} />
+      <Handle id="work-out" type="source" position={Position.Bottom} />
+      <div className="journey-node-eyebrow">
+        <span>
+          {data.kind === "goal" ? (
+            <Target size={13} aria-hidden="true" />
+          ) : data.kind === "checkpoint" ? (
+            <Flag size={13} aria-hidden="true" />
+          ) : null}
+          {data.kind === "checkpoint"
+            ? "Milestone"
+            : data.subtitle.startsWith("Sprint")
+              ? "Sprint"
               : data.kind}
-      </span>
-      <strong
-        className={`${goal ? "text-[14px]" : "text-[12px]"} mt-1 line-clamp-3 leading-snug text-stone-900`}
-      >
-        {data.label}
-      </strong>
-      <span className="mt-2 line-clamp-2 text-[10px] leading-tight text-stone-600">
+        </span>
+        <span>
+          {data.date
+            ? new Intl.DateTimeFormat("en-AU", {
+                day: "numeric",
+                month: "short",
+              }).format(new Date(`${data.date.slice(0, 10)}T12:00:00`))
+            : "No date yet"}
+        </span>
+      </div>
+      <strong>{data.label}</strong>
+      <p className="journey-node-status">
         {data.subtitle.replaceAll("_", " ").replaceAll("-", " ")}
-      </span>
-      <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+      </p>
+      {data.detail !== "strategy" && data.notes && (
+        <p className="journey-node-notes">{data.notes}</p>
+      )}
+      {stage && (
+        <button
+          className="journey-node-add nodrag nopan"
+          onClick={(event) => {
+            event.stopPropagation();
+            data.add("task", data.goalId, data.projectId);
+          }}
+        >
+          <Plus size={13} aria-hidden="true" />
+          Add next action
+          <ArrowUpRight size={12} aria-hidden="true" />
+        </button>
+      )}
     </div>
   );
 }
-const nodeTypes = { pathfinder: CircleNode };
-const KEY = "compass.pathfinder.map.v1";
+const nodeTypes = { pathfinder: JourneyNode };
+const KEY = "compass.pathfinder.journey.v2";
 type MapMemory = {
   positions: Record<string, { x: number; y: number }>;
   viewport?: Viewport;
@@ -59,9 +102,8 @@ type MapMemory = {
 function readMemory(): MapMemory {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || "{}");
-    if (!saved || typeof saved !== "object") return { positions: {} };
     const positions = Object.fromEntries(
-      Object.entries(saved.positions ?? {}).filter(
+      Object.entries(saved?.positions ?? {}).filter(
         ([, p]) =>
           p &&
           typeof p === "object" &&
@@ -69,7 +111,7 @@ function readMemory(): MapMemory {
           Number.isFinite((p as any).y),
       ),
     );
-    const v = saved.viewport;
+    const v = saved?.viewport;
     return {
       positions: positions as MapMemory["positions"],
       viewport:
@@ -89,28 +131,38 @@ function MapContents({
   goalId,
   onFocus,
   onOpen,
+  onAdd,
+  onCreateGoal,
 }: {
   data: PathfinderData;
   goalId: string;
   onFocus: (id: string) => void;
   onOpen: (kind: string, id: string) => void;
+  onAdd: (kind: AddKind, goalId?: string, projectId?: string) => void;
+  onCreateGoal: () => void;
 }) {
   const flow = useReactFlow();
-  const [zoom, setZoom] = useState(1);
-  const [proposals, setProposals] = useState(false);
-  const [history, setHistory] = useState(true);
-  const [list, setList] = useState(false);
-  useEffect(() => { if (window.matchMedia('(max-width: 650px)').matches) setList(true) }, []);
-  const [query, setQuery] = useState("");
-  const [memory, setMemory] = useState<MapMemory>({ positions: {} });
-  const [loaded, setLoaded] = useState(false);
+  const [zoom, setZoom] = useState(0.9),
+    [proposals, setProposals] = useState(false),
+    [history, setHistory] = useState(true),
+    [list, setList] = useState(false),
+    [query, setQuery] = useState("");
+  const [memory, setMemory] = useState<MapMemory>({ positions: {} }),
+    [loaded, setLoaded] = useState(false);
   const current = useRef(memory);
+  const [detail, setDetail] = useState<
+    "strategy" | "route" | "execution" | null
+  >("route");
+  const level = detail ?? semanticLevel(zoom);
+  const reducedMotion = useRef(false);
   useEffect(() => {
-    const m = readMemory();
-    m.positions ??= {};
-    setMemory(m);
-    current.current = m;
+    const saved = readMemory();
+    setMemory(saved);
+    current.current = saved;
     setLoaded(true);
+    reducedMotion.current = matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
   }, []);
   const persist = useCallback((patch: Partial<MapMemory>) => {
     const next = { ...current.current, ...patch };
@@ -119,17 +171,12 @@ function MapContents({
     try {
       localStorage.setItem(KEY, JSON.stringify(next));
     } catch {
-      /* no persistence */
+      /* layout remains usable without storage */
     }
   }, []);
-  const [detail, setDetail] = useState<
-    "strategy" | "route" | "execution" | null
-  >(null);
-  const [fitRequested, setFitRequested] = useState(false);
-  const level = detail ?? semanticLevel(zoom);
   const graph = useMemo(
     () =>
-      graphForView(data, {
+      journeyForView(data, {
         level,
         goalId,
         proposals,
@@ -138,32 +185,30 @@ function MapContents({
       }),
     [data, level, goalId, proposals, history, memory.positions],
   );
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<NodeData>>([]);
   useEffect(() => {
-    if (!loaded) return;
-    const missing = graph.nodes.filter((n) => !current.current.positions[n.id]);
-    if (missing.length)
-      persist({
-        positions: {
-          ...current.current.positions,
-          ...Object.fromEntries(missing.map((n) => [n.id, n.position])),
-        },
-      });
-  }, [graph.nodes, loaded, persist]);
-  const [renderedNodes, setRenderedNodes, onNodesChange] = useNodesState<
-    Node<NodeData>
-  >([]);
-  useEffect(() => {
-    setRenderedNodes(graph.nodes);
-  }, [graph.nodes, setRenderedNodes]);
+    setNodes(
+      graph.nodes.map((node) => ({
+        ...node,
+        data: { ...node.data, add: onAdd },
+      })),
+    );
+  }, [graph.nodes, onAdd, setNodes]);
+  const [fitRequested, setFitRequested] = useState(false);
   useEffect(() => {
     if (!fitRequested) return;
     const frame = requestAnimationFrame(() => {
-      void flow.fitView({ padding: 0.25, maxZoom: 1.4 });
+      void flow.fitView({
+        padding: 0.18,
+        minZoom: 0.35,
+        maxZoom: 1.05,
+        duration: reducedMotion.current ? 0 : 260,
+      });
       setFitRequested(false);
     });
     return () => cancelAnimationFrame(frame);
-  }, [fitRequested, renderedNodes, flow]);
-  const allMatches = useMemo(
+  }, [fitRequested, nodes, flow]);
+  const matches = useMemo(
     () =>
       [
         ...data.goals
@@ -178,149 +223,160 @@ function MapContents({
           id: p.id,
           title: p.name,
         })),
+        ...data.checkpoints.map((c) => ({
+          kind: "checkpoint",
+          id: c.id,
+          title: c.title,
+        })),
         ...data.tasks.map((t) => ({ kind: "task", id: t.id, title: t.title })),
       ]
         .filter(
           (r) => query && r.title.toLowerCase().includes(query.toLowerCase()),
         )
-        .slice(0, 10),
+        .slice(0, 12),
     [data, query],
   );
+  const previousGoal = useRef(goalId);
   useEffect(() => {
-    if (goalId && loaded) {
-      const p = current.current.positions[goalId] ?? { x: 500, y: 0 };
-      void flow.setCenter(p.x + 80, p.y + 80, { zoom: 1 });
+    if (loaded && previousGoal.current !== goalId) {
+      previousGoal.current = goalId;
+      void flow.setViewport(
+        { x: 36, y: 28, zoom: 0.9 },
+        { duration: reducedMotion.current ? 0 : 260 },
+      );
     }
   }, [goalId, flow, loaded]);
   if (!loaded)
     return (
-      <p role="status" className="p-8">
-        Opening map…
-      </p>
+      <div className="pathfinder-map-loading" role="status">
+        Opening your path…
+      </div>
     );
   return (
-    <section
-      className="compass-panel overflow-hidden"
-      aria-label="Pathfinder strategy map"
-    >
-      <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 p-3">
-        <label className="relative min-w-48 flex-1">
-          <span className="sr-only">Search goals and work</span>
+    <section className="pathfinder-map" aria-label="Pathfinder journey map">
+      <div className="pathfinder-map-toolbar">
+        <div
+          className="pathfinder-map-views"
+          role="group"
+          aria-label="Map detail level"
+        >
+          {(
+            [
+              ["strategy", "Milestones"],
+              ["route", "Sprints & projects"],
+              ["execution", "Tasks & notes"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              aria-pressed={level === value}
+              onClick={() => {
+                setDetail(value);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div>
+          <button
+            className="compass-btn-ghost"
+            aria-pressed={list}
+            onClick={() => setList(!list)}
+          >
+            {list ? "Map view" : "List view"}
+          </button>
+          <button className="compass-btn-primary" onClick={() => onAdd("task")}>
+            <Plus size={14} aria-hidden="true" />
+            Add
+          </button>
+        </div>
+      </div>
+      <div className="pathfinder-map-subtoolbar">
+        <label className="pathfinder-map-search">
+          <Search size={14} aria-hidden="true" />
           <input
-            className="compass-input w-full"
+            aria-label="Search goals and work"
+            placeholder="Find a goal, milestone or task…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search goals and work…"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setQuery("");
+            }}
           />
           {query && (
-            <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-xl border border-stone-200 bg-white p-2 shadow-soft">
-              {allMatches.length ? (
-                allMatches.map((r) => (
+            <ul>
+              {matches.length ? (
+                matches.map((r) => (
                   <li key={`${r.kind}:${r.id}`}>
                     <button
-                      className="w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-stone-100"
                       onClick={() => {
                         onOpen(r.kind, r.id);
                         setQuery("");
                       }}
                     >
                       {r.title}
-                      <span className="ml-2 text-xs text-stone-500">
-                        {r.kind}
-                      </span>
+                      <small>
+                        {r.kind === "checkpoint" ? "milestone" : r.kind}
+                      </small>
                     </button>
                   </li>
                 ))
               ) : (
-                <li className="p-3 text-sm text-stone-500">
-                  No matching work.
-                </li>
+                <li>No matching work.</li>
               )}
             </ul>
           )}
         </label>
-        <button
-          className="compass-btn-secondary"
-          onClick={() => {
-            setDetail(level);
-            setFitRequested(true);
-          }}
-        >
-          Fit view
-        </button>
-        <button
-          className="compass-btn-secondary"
-          onClick={() => {
-            setDetail(null);
-            setHistory(false);
-            onFocus("");
-            void flow.setViewport({ x: 60, y: 80, zoom: 0.65 });
-          }}
-        >
-          Present
-        </button>
-        {goalId && (
-          <button
-            className="compass-btn-secondary"
-            onClick={() => {
-              setDetail(null);
-              onFocus("");
-              void flow.setViewport({ x: 60, y: 80, zoom: 0.65 });
-            }}
-          >
-            All outcomes
-          </button>
-        )}
-        <button
-          className="compass-btn-secondary"
-          aria-pressed={list}
-          onClick={() => setList(!list)}
-        >
-          {list ? "Map" : "List"}
-        </button>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-4 py-2">
-        <div role="group" aria-label="Map detail level" className="flex gap-1">
-          {(["strategy", "route", "execution"] as const).map((name) => (
+        <details className="pathfinder-map-options">
+          <summary>View options</summary>
+          <div>
+            <label>
+              <input
+                type="checkbox"
+                checked={proposals}
+                onChange={(e) => setProposals(e.target.checked)}
+              />
+              Include proposed links
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={history}
+                onChange={(e) => setHistory(e.target.checked)}
+              />
+              Include achieved goals
+            </label>
             <button
-              key={name}
-              className={`rounded-xl px-3 py-1.5 text-xs capitalize ${level === name ? "bg-stone-900 text-white" : "text-stone-600 hover:bg-stone-100"}`}
-              aria-pressed={level === name}
               onClick={() => {
-                setDetail(name);
+                persist({ positions: {}, viewport: undefined });
                 setFitRequested(true);
               }}
             >
-              {name}
+              Arrange by date
             </button>
-          ))}
-        </div>
-        <div className="flex gap-4 text-xs text-stone-600">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={proposals}
-              onChange={(e) => setProposals(e.target.checked)}
-            />
-            Proposals
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={history}
-              onChange={(e) => setHistory(e.target.checked)}
-            />
-            Achieved outcomes
-          </label>
-        </div>
+            {goalId && (
+              <button onClick={() => onFocus("")}>Show the full journey</button>
+            )}
+          </div>
+        </details>
       </div>
-      <div className="folio-pathfinder-canvas relative h-[min(68vh,760px)] min-h-[430px] bg-[#faf9f6]">
+      <div className="pathfinder-map-canvas">
         <div
+          className={list ? "invisible h-full" : "h-full"}
+          aria-hidden={list || undefined}
+          inert={list || undefined}
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              const target = (event.target as HTMLElement).closest("[data-id]");
+            if (
+              event.key === "Enter" &&
+              !(event.target as HTMLElement).closest("button,input")
+            ) {
               const node = graph.nodes.find(
-                (n) => n.id === target?.getAttribute("data-id"),
+                (n) =>
+                  n.id ===
+                  (event.target as HTMLElement)
+                    .closest("[data-id]")
+                    ?.getAttribute("data-id"),
               );
               if (node) {
                 event.preventDefault();
@@ -328,25 +384,23 @@ function MapContents({
               }
             }
           }}
-          className={list ? "invisible h-full" : "h-full"}
-          aria-hidden={list || undefined}
-          inert={list || undefined}
         >
           <ReactFlow
-            nodes={renderedNodes}
+            nodes={nodes}
             onNodesChange={onNodesChange}
             edges={graph.edges}
             nodeTypes={nodeTypes}
             nodesConnectable={false}
             edgesReconnectable={false}
             deleteKeyCode={null}
-            defaultViewport={memory.viewport ?? { x: 60, y: 70, zoom: 0.65 }}
+            defaultViewport={memory.viewport ?? { x: 36, y: 28, zoom: 0.9 }}
             minZoom={0.25}
             maxZoom={2}
             onInit={(instance) => setZoom(instance.getZoom())}
-            onMove={(event, v) => {
-              if (event && v.zoom !== zoom) setDetail(null);
-              setZoom(v.zoom);
+            onMove={(event, viewport) => {
+              if (event && Math.abs(viewport.zoom - zoom) > 0.001)
+                setDetail(null);
+              setZoom(viewport.zoom);
             }}
             onMoveEnd={(_, viewport) => persist({ viewport })}
             onNodeDragStop={(_, node) =>
@@ -358,36 +412,64 @@ function MapContents({
               })
             }
             onNodeClick={(event, node) => {
+              if ((event.target as HTMLElement).closest("button")) return;
               (event.currentTarget as HTMLElement).focus();
               onOpen(node.data.kind, node.data.recordId);
             }}
             onNodeDoubleClick={(_, node) => {
               if (node.data.kind === "goal") onFocus(node.data.recordId);
             }}
-            proOptions={{ hideAttribution: false }}
           >
-            <Background color="#dedbd5" gap={24} />
+            <Background color="#d9d2e0" gap={22} size={1} />
           </ReactFlow>
         </div>
+        {!list && (
+          <div className="pathfinder-map-zoom">
+            <button
+              aria-label="Zoom out"
+              onClick={() => {
+                setDetail(null);
+                void flow.zoomOut({
+                  duration: reducedMotion.current ? 0 : 200,
+                });
+              }}
+            >
+              <Minus size={15} aria-hidden="true" />
+            </button>
+            <span>{Math.round(zoom * 100)}%</span>
+            <button
+              aria-label="Zoom in"
+              onClick={() => {
+                setDetail(null);
+                void flow.zoomIn({ duration: reducedMotion.current ? 0 : 200 });
+              }}
+            >
+              <Plus size={15} aria-hidden="true" />
+            </button>
+            <button
+              aria-label="Fit journey in view"
+              onClick={() => setFitRequested(true)}
+            >
+              <Maximize2 size={15} aria-hidden="true" />
+            </button>
+          </div>
+        )}
         {list && (
-          <div className="absolute inset-0 overflow-auto p-5">
-            <ul className="grid gap-3 sm:grid-cols-2">
+          <div className="pathfinder-map-list">
+            <ul>
               {graph.nodes.map((node) => (
                 <li key={node.id}>
                   <button
-                    className="flex w-full items-center justify-between rounded-xl border border-stone-200 bg-white p-4 text-left"
                     onClick={() => onOpen(node.data.kind, node.data.recordId)}
                   >
-                    <span>
-                      <span className="block text-xs capitalize text-stone-500">
-                        {node.data.kind}
-                      </span>
-                      <strong className="text-sm">{node.data.label}</strong>
-                      <span className="block text-xs text-stone-500">
-                        {node.data.subtitle}
-                      </span>
-                    </span>
-                    <span aria-hidden>↗</span>
+                    <small>
+                      {node.data.kind === "checkpoint"
+                        ? "Milestone"
+                        : node.data.kind}
+                    </small>
+                    <strong>{node.data.label}</strong>
+                    <span>{node.data.subtitle}</span>
+                    <ArrowUpRight size={15} aria-hidden="true" />
                   </button>
                 </li>
               ))}
@@ -395,18 +477,21 @@ function MapContents({
           </div>
         )}
         {!graph.nodes.length && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-8 text-center text-sm text-stone-500">
-            {data.goals.length
-              ? "No outcomes match this view. Enable achieved outcomes or return to all outcomes."
-              : "Start with one outcome. Connect the work you already have."}
+          <div className="pathfinder-map-empty">
+            <Target size={30} aria-hidden="true" />
+            <h3>Your next chapter starts here.</h3>
+            <p>Add a goal, then build a path of milestones and small steps.</p>
+            <button className="compass-btn-primary" onClick={onCreateGoal}>
+              <Plus size={15} aria-hidden="true" />
+              Add a goal
+            </button>
           </div>
         )}
       </div>
-      <p className="border-t border-stone-200 px-4 py-3 text-xs text-stone-500">
-        Scroll to reveal detail · click for context · drag to arrange · dashed
-        connections are proposals. Connections express contribution, not proven
-        causation.
-      </p>
+      <footer>
+        <span>Left to right, by date · zoom in for the work underneath</span>
+        <span>Drag to arrange · click to open</span>
+      </footer>
     </section>
   );
 }

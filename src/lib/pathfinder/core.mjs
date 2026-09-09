@@ -21,6 +21,16 @@ export function assessOutcome(
   // An estimate does not replace an observed actual, even if it was added more recently.
   const observation = relevant.find((o) => o.provenance !== "estimate") ?? null;
   const estimate = relevant.find((o) => o.provenance === "estimate") ?? null;
+  const qualitative = goal.data.measurementType === "qualitative";
+  if (qualitative ? !String(goal.data.criteria || "").trim() : goal.data.regular == null)
+    return {
+      state: "unknown",
+      label: "Define success",
+      progress: null,
+      observation: null,
+      estimate,
+      reason: "Add a target or an observable success condition when this idea is ready.",
+    };
   if (!observation)
     return {
       state: "unknown",
@@ -34,7 +44,6 @@ export function assessOutcome(
     (Date.parse(now) - Date.parse(`${observation.period_end}T23:59:59Z`)) /
     86400000;
   const stale = days > (goal.data.freshnessDays ?? 30);
-  const qualitative = goal.data.measurementType === "qualitative";
   const satisfied = qualitative
     ? observation.accepted === true
     : observation.value != null &&

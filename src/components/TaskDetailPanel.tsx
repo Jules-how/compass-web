@@ -13,6 +13,7 @@ import type {
 import { TASK_STATUSES, TASK_TYPES } from '@/lib/types'
 import { ModalFrame } from '@/components/ui/ModalFrame'
 import NotesEditor from '@/components/NotesEditor'
+import { NotebookEditor } from '@/components/planning/NotebookEditor'
 import { TASK_PRIORITIES } from '@/lib/task-priority'
 
 interface TaskDetailPanelProps {
@@ -21,6 +22,7 @@ interface TaskDetailPanelProps {
   businessFunctionsById: Record<string, CompassBusinessFunction>
   onClose: () => void
   onChanged: () => void | Promise<void>
+  presentation?: 'dialog' | 'sheet'
 }
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -36,7 +38,8 @@ export default function TaskDetailPanel({
   projectsById,
   businessFunctionsById,
   onClose,
-  onChanged
+  onChanged,
+  presentation = 'dialog'
 }: TaskDetailPanelProps) {
   const loadedStamp = useRef(task.updated_at)
   const [title, setTitle] = useState(task.title)
@@ -108,8 +111,9 @@ export default function TaskDetailPanel({
       open
       onClose={onClose}
       labelledBy="task-detail-title"
-      overlayClassName="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-950/40 px-4 py-10 sm:py-16"
-      contentClassName="relative z-10 w-full max-w-2xl rounded-2xl border border-stone-200/80 bg-white p-5 shadow-soft"
+      motion={presentation}
+      overlayClassName={presentation === 'sheet' ? 'planning-sheet-overlay' : 'fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-950/40 px-4 py-10 sm:py-16'}
+      contentClassName={presentation === 'sheet' ? 'planning-task-sheet' : 'relative z-10 w-full max-w-2xl rounded-2xl border border-stone-200/80 bg-white p-5 shadow-soft'}
     >
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
@@ -117,7 +121,7 @@ export default function TaskDetailPanel({
             Task
           </p>
           <h2 id="task-detail-title" className="text-lg font-semibold text-neutral-900">
-            Edit task
+            {presentation === 'sheet' ? task.title : 'Edit task'}
           </h2>
         </div>
         <button
@@ -134,6 +138,7 @@ export default function TaskDetailPanel({
           <span className="mb-1 block text-xs font-medium text-neutral-500">Title</span>
           <input
             required
+            data-autofocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="compass-input"
@@ -232,7 +237,10 @@ export default function TaskDetailPanel({
           </label>
         </div>
 
-        <label className="block">
+        {presentation === 'sheet' ? <fieldset disabled={saving}>
+          <legend className="mb-3 text-xs font-medium text-neutral-500">Definition of done & notes</legend>
+          <NotebookEditor value={notes} onChange={setNotes} label="Task notes" placeholder="What does done look like? Add the steps and context here…" maxLength={10000} />
+        </fieldset> : <label className="block">
           <span className="mb-1 block text-xs font-medium text-neutral-500">
             Definition of done / notes
           </span>
@@ -244,11 +252,18 @@ export default function TaskDetailPanel({
             disabled={saving}
             placeholder="What done looks like"
           />
-        </label>
+        </label>}
 
-        <div className="rounded-2xl border border-stone-200/70 bg-stone-50/50 p-4">
-          <NotesEditor task={task} />
-        </div>
+        {presentation === 'sheet' ? (
+          <details className="planning-task-context">
+            <summary>Context & activity</summary>
+            <NotesEditor task={task} />
+          </details>
+        ) : (
+          <div className="rounded-2xl border border-stone-200/70 bg-stone-50/50 p-4">
+            <NotesEditor task={task} />
+          </div>
+        )}
 
         <div className="flex items-center gap-3">
           <button type="submit" disabled={saving} className="compass-btn-primary">
