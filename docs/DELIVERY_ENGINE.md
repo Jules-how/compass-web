@@ -113,7 +113,7 @@ Productisation here is a shared engine, versioned `installation-v1` rules, one c
 
 ## Verification
 
-The delivery-only branch is `codex/compass-delivery-live`, based on production `main` at `8ba9b764a112bd14aaaa94ba022ba4789a9000ab`. Vercel's canonical alias was checked on 9 September 2026 and resolved to deployment `dpl_B1SpeMjsjm4a7i17iTP8RZR6Gcxm`. The earlier `codex/compass-delivery-loop` branch also contains unrelated planning and interface work; it is not the release base for this change. The production shell, sidebar implementation and global design tokens are unchanged on the delivery-only branch; navigation gains only the Client delivery entry. Recheck the production revision before a later release.
+The initial delivery interface was aligned to production `main` at `8ba9b764a112bd14aaaa94ba022ba4789a9000ab`, using the existing shell, sidebar and design tokens. Jules subsequently requested consolidation of all outstanding Compass branches. That release is assembled on `codex/compass-consolidation-20260909`, including the newer Pathfinder, commercial/operator and outbound production fixes, plus CRM lists adapted to the current search implementation. The Folio design package is retained as reference material; it does not replace the live interface. See [the consolidation release record](RELEASE_2026-09-09_CONSOLIDATION.md) for validation and deployment evidence.
 
 ```sh
 node --test test/delivery-engine.test.mjs

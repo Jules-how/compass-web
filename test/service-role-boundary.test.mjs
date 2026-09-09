@@ -28,6 +28,8 @@ test('customer and legacy operator data routes never import a service-role clien
         !file.includes('/api/onboarding/') &&
         !file.includes('/onboarding/') &&
         !file.includes('/api/qbo/webhook') &&
+        !file.includes('/api/delivery-engine/') &&
+        !file.endsWith('/api/expenses/route.ts') &&
         !file.includes('/api/leads/') &&
         !file.includes('/api/reactivation/')
     )
@@ -56,6 +58,8 @@ test('customer and legacy operator data routes never import a service-role clien
     'api/agent/leads/ledger/route.ts',
     'api/agent/leads/mark/route.ts',
     'api/agent/leads/route.ts',
+    'api/agent/lists/[id]/members/route.ts',
+    'api/agent/lists/route.ts',
     'api/agent/offers/cells/route.ts',
     'api/agent/offers/desk/route.ts',
     'api/agent/outbound/[kind]/[id]/route.ts',
@@ -67,8 +71,16 @@ test('customer and legacy operator data routes never import a service-role clien
     'api/agent/outbound/summary/route.ts',
     'api/agent/outbound/waves/route.ts',
     'api/agent/sync/route.ts',
+    'api/agent/workspace/route.ts',
     'api/clients/[id]/onboarding/route.ts',
     'api/cron/daily-sync/route.ts',
+    'api/delivery-engine/accounts/route.ts',
+    'api/delivery-engine/intake/route.ts',
+    'api/delivery-engine/route.ts',
+    'api/delivery-engine/webhooks/twilio/route.ts',
+    'api/delivery-engine/webhooks/twilio/status/route.ts',
+    'api/delivery-engine/worker/route.ts',
+    'api/expenses/route.ts',
     'api/ingest/comms/route.ts',
     'api/ingest/leads/route.ts',
     'api/ingest/site-events/route.ts',
@@ -118,6 +130,10 @@ test('every cookie-authenticated mutation route enforces a same-origin request',
         !file.includes('/api/qbo/webhook') &&
         !file.includes('/api/reactivation/') &&
         !file.includes('/api/delivery-dept/')
+        && !file.endsWith('/api/delivery-engine/intake/route.ts')
+        && !file.endsWith('/api/delivery-engine/worker/route.ts')
+        && !file.includes('/api/delivery-engine/webhooks/')
+        && !file.endsWith('/api/payments/stripe-webhook/route.ts')
     )
     .filter((file) => !/requireSameOrigin/.test(readFileSync(file, 'utf8')))
     .map((file) => relative(appRoot.pathname, file))

@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS public.compass_lead_lists (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Production already has the mirrored list catalogue; preserve its extra columns.
+ALTER TABLE public.compass_lead_lists ADD COLUMN IF NOT EXISTS notes text;
+
 COMMENT ON TABLE public.compass_lead_lists IS
   'Operator CRM lists (named lead segments). Not Instantly lead lists.';
 

@@ -66,8 +66,13 @@ test('real list migrations deduplicate cohorts, retain RLS and roll back failed 
       alter default privileges in schema public grant execute on functions to anon,authenticated;
       create table lead_contacts(id text primary key,email text);
       create table compass_pipeline_campaigns(id text primary key);
+      create table compass_lead_lists(id text primary key,name text not null,vertical text,color text,category text,
+        created_at timestamptz not null default now(),updated_at timestamptz not null default now(),mirrored_at timestamptz not null default now());
+      insert into compass_lead_lists(id,name,vertical,color) values('legacy','Existing catalogue','HVAC','orange');
       create function portal_is_operator() returns boolean language sql stable as $$ select coalesce(current_setting('test.operator',true),'false')='true' $$;`)
     for (const name of ['20260909020900_lead_lists.sql','20260909021000_compass_list_integration.sql']) await db.exec(await readFile(new URL(`../supabase/migrations/${name}`, import.meta.url), 'utf8'))
+    assert.deepEqual((await db.query("select name,vertical,color,notes from compass_lead_lists where id='legacy'")).rows,
+      [{ name: 'Existing catalogue', vertical: 'HVAC', color: 'orange', notes: null }])
     await db.exec(`insert into lead_contacts values('a',null),('b','b@example.test'),('c','c@example.test');
       insert into compass_pipeline_campaigns values('campaign-a');
       insert into compass_lead_lists(id,name) values('list-a','A'),('list-b','B');

@@ -42,6 +42,9 @@ export async function harness(options = {}) {
   await db.waitReady
   if (!options.existing) {
     await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
+      alter default privileges in schema public grant all on tables to anon,authenticated;
+      alter default privileges in schema public grant all on sequences to anon,authenticated;
+      alter default privileges in schema public grant execute on functions to anon,authenticated;
       create table public.compass_clients(id text primary key);
       create function public.portal_is_operator() returns boolean language sql stable as $$ select coalesce(current_setting('test.operator',true),'false')='true' $$;`)
     await db.exec(readFileSync(resolve(root, 'supabase/migrations/0080_compass_delivery_engine.sql'), 'utf8'))
