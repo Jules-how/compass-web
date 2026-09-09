@@ -1,0 +1,122 @@
+- main:
+  - strong: LOCAL FIXTURE · synthetic Inbox
+  - button "Exit Inbox fixture"
+  - button "Update cached Inbox badge"
+  - button "History back"
+  - button "History forward"
+  - link "Skip to main content":
+    - /url: "#compass-main"
+  - complementary:
+    - link "switchflow compass":
+      - /url: /home
+      - generic: switchflow compass
+    - navigation "Operator":
+      - link "Home":
+        - /url: /home
+        - generic: Home
+      - link "Inbox 3":
+        - /url: /inbox
+        - generic: Inbox
+        - generic: "3"
+      - generic: Workspace
+      - link "Goals & notes":
+        - /url: /planning
+        - generic: Goals & notes
+      - link "My Tasks":
+        - /url: /tasks
+        - generic: My Tasks
+      - link "Projects":
+        - /url: /projects
+        - generic: Projects
+      - link "Functions":
+        - /url: /functions
+        - generic: Functions
+      - link "Clients":
+        - /url: /clients
+        - generic: Clients
+      - generic: Sales
+      - link "Overview":
+        - /url: /sales
+        - generic: Overview
+      - link "Offer & economics":
+        - /url: /sales/offer-plan
+        - generic: Offer & economics
+      - link "Email tests":
+        - /url: /sales/experiments
+        - generic: Email tests
+      - link "Offers":
+        - /url: /sales/offers
+        - generic: Offers
+      - link "Outbound":
+        - /url: /sales/outbound
+        - generic: Outbound
+      - link "CRM":
+        - /url: /leads
+        - generic: CRM
+      - generic: Operations
+      - link "Finances":
+        - /url: /operations/finances
+        - generic: Finances
+      - link "Installs":
+        - /url: /operations/installs
+        - generic: Installs
+      - link "Retention":
+        - /url: /operations/cs
+        - generic: Retention
+      - link "Settings":
+        - /url: /settings
+        - generic: Settings
+    - button "Sign out"
+  - main:
+    - heading "Inbox" [level=1]
+    - paragraph: Instantly replies — positive, negative, and OOO — ranked by intent
+    - generic: 3 need you · 2 shown
+    - generic: Needs you
+    - button "Fixture agents notification 1 Agents · 11h":
+      - generic: A
+      - generic: Fixture agents notification 1
+      - generic: Agents · 11h
+    - button "Fixture agents notification 2 Agents · 11h":
+      - generic: A
+      - generic: Fixture agents notification 2
+      - generic: Agents · 11h
+    - button "Fixture instantly notification 1 Instantly · 11h":
+      - generic: I
+      - generic: Fixture instantly notification 1
+      - generic: Instantly · 11h
+    - button "Fixture instantly notification 2 Instantly · 11h":
+      - generic: I
+      - generic: Fixture instantly notification 2
+      - generic: Instantly · 11h
+    - button "Fixture leads notification 1 Leads · 11h":
+      - generic: L
+      - generic: Fixture leads notification 1
+      - generic: Leads · 11h
+    - button "Fixture leads notification 2 Leads · 11h":
+      - generic: L
+      - generic: Fixture leads notification 2
+      - generic: Leads · 11h
+    - tablist "Inbox channels":
+      - tab "Agents 2":
+        - text: Agents
+        - generic: "2"
+      - tab "Instantly 2" [selected]:
+        - text: Instantly
+        - generic: "2"
+      - tab "Leads 2":
+        - text: Leads
+        - generic: "2"
+    - tabpanel "Instantly 2":
+      - button "Fixture instantly notification 1 Synthetic notification with a readable summary and next action. 11h Unread":
+        - generic: I
+        - generic: Fixture instantly notification 1
+        - generic: Synthetic notification with a readable summary and next action.
+        - generic: 11h
+        - generic: Unread
+      - button "Fixture instantly notification 2 Synthetic notification with a readable summary and next action. 11h Unread":
+        - generic: I
+        - generic: Fixture instantly notification 2
+        - generic: Synthetic notification with a readable summary and next action.
+        - generic: 11h
+        - generic: Unread
+  - status: "Fixture cache badge: 3"

@@ -1,0 +1,233 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- complementary:
+  - link "switchflow compass":
+    - /url: /home
+    - generic: switchflow compass
+  - navigation "Operator":
+    - link "Home":
+      - /url: /home
+      - generic: Home
+    - link "Inbox 87":
+      - /url: /inbox
+      - generic: Inbox
+      - generic: "87"
+    - generic: Workspace
+    - link "Goals & notes":
+      - /url: /planning
+      - generic: Goals & notes
+    - link "My Tasks":
+      - /url: /tasks
+      - generic: My Tasks
+    - link "Projects":
+      - /url: /projects
+      - generic: Projects
+    - link "Functions":
+      - /url: /functions
+      - generic: Functions
+    - link "Clients":
+      - /url: /clients
+      - generic: Clients
+    - generic: Sales
+    - link "Overview":
+      - /url: /sales
+      - generic: Overview
+    - link "Offer & economics":
+      - /url: /sales/offer-plan
+      - generic: Offer & economics
+    - link "Email tests":
+      - /url: /sales/experiments
+      - generic: Email tests
+    - link "Offers":
+      - /url: /sales/offers
+      - generic: Offers
+    - link "Outbound":
+      - /url: /sales/outbound
+      - generic: Outbound
+    - link "CRM":
+      - /url: /leads
+      - generic: CRM
+    - generic: Operations
+    - link "Finances":
+      - /url: /operations/finances
+      - generic: Finances
+    - link "Installs":
+      - /url: /operations/installs
+      - generic: Installs
+    - link "Retention":
+      - /url: /operations/cs
+      - generic: Retention
+    - link "Settings":
+      - /url: /settings
+      - generic: Settings
+  - button "Sign out"
+- main
+- alert: Compass
+- button "Close editor backdrop"
+- dialog "Sequence editor":
+  - banner:
+    - button "Close editor":
+    - textbox "Untitled Campaign": Sydney Hvac
+    - navigation:
+      - button "Analytics"
+      - button "Editor": Editor
+      - button "Experiment"
+      - button "Archive"
+      - button "Settings"
+    - generic: Draft
+    - generic: Autosave on
+    - button "Save"
+    - button "Push to Instantly":
+      - text: Push to Instantly
+  - paragraph: No Instantly bind yet. Rates show here after you push.
+  - button "Vertical hvac":
+    - generic: Vertical
+    - generic: hvac
+  - button "Offer installation-booking":
+    - generic: Offer
+    - generic: installation-booking
+  - button "Template connor-3para":
+    - generic: Template
+    - generic: connor-3para
+  - 'button "Opener {{personalization}}"':
+    - generic: Opener
+    - generic: "{{personalization}}"
+  - button "Subject ducted installation enquiries":
+    - generic: Subject
+    - generic: ducted installation enquiries
+  - 'button "Body The service I’m offering handles follow-up on existing ducted-installation enquiries: collecting the job details, arranging suitable quote appointments and sending reminders. It works around your existing estimating process."':
+    - generic: Body
+    - generic: "The service I’m offering handles follow-up on existing ducted-installation enquiries: collecting the job details, arranging suitable quote appointments and sending reminders. It works around your existing estimating process."
+  - button "Risk empty":
+    - generic: Risk
+    - generic: empty
+  - button "CTA Would a one-page outline of that process be useful, or is follow-up already covered?":
+    - generic: CTA
+    - generic: Would a one-page outline of that process be useful, or is follow-up already covered?
+  - button "P.S. empty":
+    - generic: P.S.
+    - generic: empty
+  - generic: Initial enquiry
+  - generic: "1"
+  - button "Remove step":
+  - textbox "Subject line": ducted installation enquiries
+  - generic: Published factual opener
+  - textbox "Published factual opener":
+    - /placeholder: "{{personalization}}"
+    - text: "{{personalization}}"
+  - generic: Service
+  - textbox "Service": "The service I’m offering handles follow-up on existing ducted-installation enquiries: collecting the job details, arranging suitable quote appointments and sending reminders. It works around your existing estimating process."
+  - generic: Permission CTA
+  - textbox "Permission CTA": Would a one-page outline of that process be useful, or is follow-up already covered?
+  - generic: Who line
+  - textbox "Who line"
+  - generic: Why / priorities & outcomes
+  - textbox "Why / priorities & outcomes"
+  - generic: Risk reversal
+  - textbox "Risk reversal":
+    - /placeholder: You carry the risk. They pay on results.
+  - generic: Availability ask
+  - textbox "Availability ask"
+  - generic: P.S.
+  - textbox "P.S.":
+    - /placeholder: P.S. half-done work, objection, or give-first.
+  - paragraph: "Inbox preview · {{personalization}} The service I’m offering handle… · 54 words"
+  - text: Wait
+  - spinbutton: "3"
+  - text: days
+  - generic: Follow-up
+  - generic: "2"
+  - button "Remove step":
+  - textbox "Leave empty to use previous step's subject"
+  - generic: Diagnostic follow-up
+  - textbox "Diagnostic follow-up": When a homeowner enquires about ducted aircon, is following up and getting a suitable quote appointment booked a headache, or is that already covered? If useful, I can send a one-page outline of the follow-up process.
+  - generic: Bump
+  - textbox "Bump":
+    - /placeholder: "{{personalization}}"
+  - generic: Risk reversal
+  - textbox "Risk reversal":
+    - /placeholder: You carry the risk. They pay on results.
+  - generic: CTA
+  - textbox "CTA"
+  - generic: P.S.
+  - textbox "P.S.":
+    - /placeholder: P.S. half-done work, objection, or give-first.
+  - button "Add follow-up":
+  - text: Instantly variables
+  - generic: · insert into body
+  - button "Preview delivered email":
+  - button "Desktop width":
+  - button "Mobile width":
+  - 'button "{{email}}"'
+  - 'button "{{firstName}}"'
+  - 'button "{{lastName}}"'
+  - 'button "{{companyName}}"'
+  - 'button "{{jobTitle}}"'
+  - 'button "{{personalization}}"'
+  - 'button "{{phone}}"'
+  - 'button "{{website}}"'
+  - 'button "{{location}}"'
+  - 'button "{{linkedIn}}"'
+  - complementary:
+    - separator "Resize components panel"
+    - button "Library"
+    - button "Levers"
+    - button "QA"
+    - heading "Components" [level=2]
+    - paragraph: Yours is sendable. Source is playbooks. Default is this campaign + Yours.
+    - textbox "Search components…"
+    - button "Playbooks"
+    - button "Source"
+    - button "Yours"
+    - button "This campaign"
+    - button "Bench"
+    - button "More filters"
+    - button "Structures4":
+      - generic: Structures4
+    - button "Subjects0":
+      - generic: Subjects0
+    - button "Openers0":
+      - generic: Openers0
+    - button "Expressions0":
+      - generic: Expressions0
+    - button "CTAs0":
+      - generic: CTAs0
+    - button "Templates0":
+      - generic: Templates0
+    - button "Offers1":
+      - generic: Offers1
+    - heading "Structures" [level=3]
+    - paragraph: Slot-order skeletons
+    - paragraph: 4 shown
+    - 'button "Nick 4-step (default) Source · Nick nick-4step When brief has approved peer-relevant proof. Order: opener → who/proof (1–2 lines peer+number+time) → offer (X in Y or Z) → CTA (permission default; timed call A/B). Follow-up: one short human ping; new subject; point back to email 1 / restate give. [Source · Nick · context/playbooks/outbound/structures.md] Open Use"':
+      - generic: Nick 4-step (default)
+      - generic: Source · Nick
+      - generic: nick-4step
+      - paragraph: "When brief has approved peer-relevant proof. Order: opener → who/proof (1–2 lines peer+number+time) → offer (X in Y or Z) → CTA (permission default; timed call A/B). Follow-up: one short human ping; new subject; point back to email 1 / restate give. [Source · Nick · context/playbooks/outbound/structures.md]"
+      - button "Open"
+      - button "Use"
+    - 'button "Nick 3-step Source · Nick nick-3step When thin / no niche proof; brevity A/B. Order: opener → offer → CTA. Sender identity in From + signature only (no who-proof body). [Source · Nick · context/playbooks/outbound/structures.md] Open Use"':
+      - generic: Nick 3-step
+      - generic: Source · Nick
+      - generic: nick-3step
+      - paragraph: "When thin / no niche proof; brevity A/B. Order: opener → offer → CTA. Sender identity in From + signature only (no who-proof body). [Source · Nick · context/playbooks/outbound/structures.md]"
+      - button "Open"
+      - button "Use"
+    - 'button "Platten AIDA Source · Platten platten-aida Optional when strong named proof; Attention→Interest→Desire→Action. Desire must include X in Y or Z (not case-study-only). Slots: opener (often platten-hook), interest_mechanism, proof_block + cold_expression, CTA. [Source · Platten · context/playbooks/outbound/structures.md] Open Use"':
+      - generic: Platten AIDA
+      - generic: Source · Platten
+      - generic: platten-aida
+      - paragraph: "Optional when strong named proof; Attention→Interest→Desire→Action. Desire must include X in Y or Z (not case-study-only). Slots: opener (often platten-hook), interest_mechanism, proof_block + cold_expression, CTA. [Source · Platten · context/playbooks/outbound/structures.md]"
+      - button "Open"
+      - button "Use"
+    - 'button "Connor 3-paragraph Source · Connor connor-3para Optional enterprise/title×industry. Order: who I am → why (priorities/challenges + how you solve, weave X-in-Y-or-Z) → what I want (assumptive time ask). Assumptive calendar language allowed only on this structure. Not default for AU SMB owners. [Source · Connor · context/playbooks/outbound/structures.md] Open Use"':
+      - generic: Connor 3-paragraph
+      - generic: Source · Connor
+      - generic: connor-3para
+      - paragraph: "Optional enterprise/title×industry. Order: who I am → why (priorities/challenges + how you solve, weave X-in-Y-or-Z) → what I want (assumptive time ask). Assumptive calendar language allowed only on this structure. Not default for AU SMB owners. [Source · Connor · context/playbooks/outbound/structures.md]"
+      - button "Open"
+      - button "Use"
+  - button "Resize leads list"
+  - generic: Campaign leads
+  - button "Expand"
+  - button "Show leads":

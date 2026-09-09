@@ -1,0 +1,102 @@
+- main:
+  - strong: LOCAL VERIFICATION FIXTURE · actual components, synthetic data
+  - button "editor"
+  - button "calendar" [active] [pressed]
+  - button "board"
+  - button "modals"
+  - button "inbox"
+  - button "Day"
+  - button "Week"
+  - heading "Tuesday 8 September 2026" [level=2]
+  - paragraph: 6 campaigns
+  - generic: Tuesday 8 Sept
+  - generic: 1 am
+  - generic: 2 am
+  - generic: 3 am
+  - generic: 4 am
+  - generic: 5 am
+  - generic: 6 am
+  - generic: 7 am
+  - generic: 8 am
+  - generic: 9 am
+  - generic: 10 am
+  - generic: 11 am
+  - generic: 12 pm
+  - generic: 1 pm
+  - generic: 2 pm
+  - generic: 3 pm
+  - generic: 4 pm
+  - generic: 5 pm
+  - generic: 6 pm
+  - generic: 7 pm
+  - generic: 8 pm
+  - generic: 9 pm
+  - generic: 10 pm
+  - generic: 11 pm
+  - button "Add campaign Tuesday 8 Sept 12 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 1 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 2 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 3 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 4 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 5 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 6 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 7 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 8 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 9 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 10 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 11 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 12 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 1 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 2 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 3 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 4 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 5 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 6 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 7 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 8 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 9 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 10 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 11 pm":
+    - generic: + Add
+  - button "9:00 am Fixture 1 · Same-time start":
+    - generic: 9:00 am
+    - generic: Fixture 1 · Same-time start
+  - button "9:00 am Fixture 2 · Same-time start":
+    - generic: 9:00 am
+    - generic: Fixture 2 · Same-time start
+  - button "9:00 am Fixture 3 · Same-time start":
+    - generic: 9:00 am
+    - generic: Fixture 3 · Same-time start
+  - button "9:30 am Fixture 4 · Later start":
+    - generic: 9:30 am
+    - generic: Fixture 4 · Later start
+  - button "10:00 am Fixture 5 · Later start":
+    - generic: 10:00 am
+    - generic: Fixture 5 · Later start
+  - button "12:00 pm Fixture 6 · Later start":
+    - generic: 12:00 pm
+    - generic: Fixture 6 · Later start
+  - status: "Fixture cache badge: 3"

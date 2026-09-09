@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-09-08T10:47:04.453Z",
+  "deploymentId": "dpl_6fSGiMktMixqX7usf4aAvLiqskJo",
+  "results": [
+    {
+      "path": "/login",
+      "status": 200,
+      "location": null,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/home",
+      "status": 307,
+      "location": "/login",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/inbox",
+      "status": 307,
+      "location": "/login",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/operations/installs",
+      "status": 307,
+      "location": "/login",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/api/inbox",
+      "status": 401,
+      "location": null,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "path": "/api/delivery-dept/installs?source=demo",
+      "status": 401,
+      "location": null,
+      "contentType": "application/json; charset=utf-8"
+    }
+  ]
+}

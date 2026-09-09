@@ -1,0 +1,152 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- complementary:
+  - link "switchflow compass":
+    - /url: /home
+    - generic: switchflow compass
+  - navigation "Operator":
+    - link "Home":
+      - /url: /home
+      - generic: Home
+    - link "Inbox 87":
+      - /url: /inbox
+      - generic: Inbox
+      - generic: "87"
+    - generic: Workspace
+    - link "Goals & notes":
+      - /url: /planning
+      - generic: Goals & notes
+    - link "My Tasks":
+      - /url: /tasks
+      - generic: My Tasks
+    - link "Projects":
+      - /url: /projects
+      - generic: Projects
+    - link "Functions":
+      - /url: /functions
+      - generic: Functions
+    - link "Clients":
+      - /url: /clients
+      - generic: Clients
+    - generic: Sales
+    - link "Overview":
+      - /url: /sales
+      - generic: Overview
+    - link "Offer & economics":
+      - /url: /sales/offer-plan
+      - generic: Offer & economics
+    - link "Email tests" [active]:
+      - /url: /sales/experiments
+      - generic: Email tests
+    - link "Offers":
+      - /url: /sales/offers
+      - generic: Offers
+    - link "Outbound":
+      - /url: /sales/outbound
+      - generic: Outbound
+    - link "CRM":
+      - /url: /leads
+      - generic: CRM
+    - generic: Operations
+    - link "Finances":
+      - /url: /operations/finances
+      - generic: Finances
+    - link "Installs":
+      - /url: /operations/installs
+      - generic: Installs
+    - link "Retention":
+      - /url: /operations/cs
+      - generic: Retention
+    - link "Settings":
+      - /url: /settings
+      - generic: Settings
+  - button "Sign out"
+- main:
+  - heading "Email tests" [level=1]
+  - paragraph: Choose a change, prepare a separate draft, then compare the evidence.
+  - link "Preparation queue":
+    - /url: /planning
+  - heading "1 · Plan" [level=2]
+  - paragraph: Choose one factor and a measurable hypothesis.
+  - heading "2 · Prepare" [level=2]
+  - paragraph: Edit the draft. Check leads, evidence, merge fields and settings.
+  - heading "3 · Review & launch" [level=2]
+  - paragraph: Show the exact campaign and checks to Jules. Activation needs his instruction.
+  - heading "4 · Learn" [level=2]
+  - paragraph: Wait for both samples and reply windows; preserve inconclusive results.
+  - heading "Create a test draft" [level=2]
+  - text: Control campaign
+  - combobox "Control campaign":
+    - option "Choose…" [selected]
+    - option "Sydney Hvac · planned"
+  - checkbox "Show other offers for historical tests"
+  - text: Show other offers for historical tests
+  - text: What changes?
+  - combobox "What changes?":
+    - option "Copy / length / tone" [selected]
+    - option "Risk reversal"
+    - option "Email structure"
+    - option "Location"
+    - option "Qualification signals"
+    - option "Personalisation"
+    - option "Call to action"
+    - option "Subject"
+    - option "Offer"
+  - text: Planned delivered sample per arm
+  - spinbutton "Planned delivered sample per arm"
+  - text: Earliest outcome review
+  - textbox "Earliest outcome review"
+  - text: Exact proposed change and why it should help
+  - textbox "Exact proposed change and why it should help":
+    - /placeholder: Define the change, primary outcome, what stays constant and evidence that would contradict it.
+  - paragraph: Creating a draft copies the control; it does not write the variation for you. Sample size is a planning choice, not a guarantee of statistical certainty. Set the control’s sample target in its campaign editor too.
+  - button "Create separate draft"
+  - heading "Preparation must produce evidence" [level=2]
+  - paragraph: The agent checks source-backed lead criteria, prior-contact exclusions, verification policy, all rendered names and personalisations, sequence spacing, inbox assignments, capacity and paused status. Changes to copy, audience or settings invalidate the old review. Queueing does not start paid scraping automatically.
+  - heading "Experiment compare" [level=3]
+  - generic: Control vs challenger — one factor at a time. Separate Instantly campaigns only.
+  - generic: Control campaign
+  - combobox "Control campaign":
+    - option "Select…"
+    - option "Sydney Hvac" [selected]
+  - text: Challenger campaign
+  - combobox "Challenger campaign":
+    - option "Choose the specific challenger…" [selected]
+  - paragraph: Control
+  - link "Sydney Hvac":
+    - /url: /sales/pipeline/campaign-5fd67add-23d4-403b-b09b-78cf9d37cd53
+  - generic: Queued
+  - paragraph: "Exploratory relevance test: owner/manager-led residential ducted installers serving Greater Sydney with a published homeowner quote journey may have a recoverable enquiry-follow-up problem. Establish actual enquiry volume, booking gap, capacity and job economics through conversations; do not assert those facts in personalisation. Review qualified conversations and explicit objections before changing geography or promise."
+  - term: Offer
+  - definition: installation-booking
+  - term: Structure
+  - definition: connor-3para
+  - term: CTA type
+  - definition: permission
+  - term: Expression
+  - definition: —
+  - generic: —
+  - generic: Delivered
+  - generic: —
+  - generic: Positive
+  - generic: —
+  - generic: Mtgs/100
+  - paragraph: No live metrics available for this arm.
+  - generic: No challenger linked. Use Spawn challenger on the Planner card.
+  - paragraph: A manual assessment is not a statistical significance claim. A sample target alone does not establish certainty.
+  - text: Planned review date
+  - textbox "Planned review date"
+  - checkbox "I checked non-overlapping company cohorts, sender conditions, timing and the intended changed factor."
+  - text: I checked non-overlapping company cohorts, sender conditions, timing and the intended changed factor.
+  - checkbox "Both arms have had the planned follow-ups and enough time for the chosen outcome."
+  - text: Both arms have had the planned follow-ups and enough time for the chosen outcome.
+  - text: Evidence, outcome window and limitations
+  - textbox "Evidence, outcome window and limitations"
+  - paragraph: "Winner assessment unavailable: Choose both arms. Each arm needs a different Instantly campaign. Control has not met its planned delivered sample. Challenger has not met its planned delivered sample. The planned review date has not arrived. Confirm comparable cohorts and a complete outcome window. Record the evidence and limitations."
+  - button "Ready to call" [disabled]
+  - button "Control wins" [disabled]
+  - button "Challenger wins" [disabled]
+  - button "Inconclusive" [disabled]
+  - button "Kill" [disabled]
+- alert
+- generic: "0"

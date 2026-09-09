@@ -1,0 +1,70 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- complementary:
+  - link "switchflow compass":
+    - /url: /home
+    - generic: switchflow compass
+  - navigation "Operator":
+    - link "Home":
+      - /url: /home
+      - generic: Home
+    - link "Inbox 87":
+      - /url: /inbox
+      - generic: Inbox
+      - generic: "87"
+    - generic: Workspace
+    - link "Goals & notes":
+      - /url: /planning
+      - generic: Goals & notes
+    - link "My Tasks":
+      - /url: /tasks
+      - generic: My Tasks
+    - link "Projects":
+      - /url: /projects
+      - generic: Projects
+    - link "Functions":
+      - /url: /functions
+      - generic: Functions
+    - link "Clients":
+      - /url: /clients
+      - generic: Clients
+    - generic: Sales
+    - link "Overview":
+      - /url: /sales
+      - generic: Overview
+    - link "Offer & economics":
+      - /url: /sales/offer-plan
+      - generic: Offer & economics
+    - link "Email tests":
+      - /url: /sales/experiments
+      - generic: Email tests
+    - link "Offers":
+      - /url: /sales/offers
+      - generic: Offers
+    - link "Outbound":
+      - /url: /sales/outbound
+      - generic: Outbound
+    - link "CRM":
+      - /url: /leads
+      - generic: CRM
+    - generic: Operations
+    - link "Finances":
+      - /url: /operations/finances
+      - generic: Finances
+    - link "Installs" [active]:
+      - /url: /operations/installs
+      - generic: Installs
+    - link "Retention":
+      - /url: /operations/cs
+      - generic: Retention
+    - link "Settings":
+      - /url: /settings
+      - generic: Settings
+  - button "Sign out"
+- main:
+  - heading "Installs" [level=1]
+  - paragraph: Configure each client system from intake to monitored lead delivery.
+  - text: load_failed
+  - button "Retry installs"
+- alert
+- generic: "0"

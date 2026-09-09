@@ -1,0 +1,503 @@
+- link "Skip to main content":
+  - /url: "#compass-main"
+- complementary:
+  - link "switchflow compass":
+    - /url: /home
+    - generic: switchflow compass
+  - navigation "Operator":
+    - link "Home":
+      - /url: /home
+      - generic: Home
+    - link "Inbox 87":
+      - /url: /inbox
+      - generic: Inbox
+      - generic: "87"
+    - generic: Workspace
+    - link "Goals & notes":
+      - /url: /planning
+      - generic: Goals & notes
+    - link "My Tasks":
+      - /url: /tasks
+      - generic: My Tasks
+    - link "Projects":
+      - /url: /projects
+      - generic: Projects
+    - link "Functions":
+      - /url: /functions
+      - generic: Functions
+    - link "Clients":
+      - /url: /clients
+      - generic: Clients
+    - generic: Sales
+    - link "Overview":
+      - /url: /sales
+      - generic: Overview
+    - link "Offer & economics":
+      - /url: /sales/offer-plan
+      - generic: Offer & economics
+    - link "Email tests":
+      - /url: /sales/experiments
+      - generic: Email tests
+    - link "Offers":
+      - /url: /sales/offers
+      - generic: Offers
+    - link "Outbound":
+      - /url: /sales/outbound
+      - generic: Outbound
+    - link "CRM":
+      - /url: /leads
+      - generic: CRM
+    - generic: Operations
+    - link "Finances":
+      - /url: /operations/finances
+      - generic: Finances
+    - link "Installs":
+      - /url: /operations/installs
+      - generic: Installs
+    - link "Retention":
+      - /url: /operations/cs
+      - generic: Retention
+    - link "Settings":
+      - /url: /settings
+      - generic: Settings
+  - button "Sign out"
+- main:
+  - heading "Outbound" [level=1]
+  - tablist "Outbound desk":
+    - tab "Waves"
+    - tab "Calendar" [selected]
+    - tab "Timeline"
+  - button "Filter":
+  - button "Display options":
+  - button "Toggle details":
+  - button "Today"
+  - button "Previous period": ‹
+  - button "Next period": ›
+  - combobox "▾":
+    - option "Day"
+    - option "Week" [selected]
+    - option "Month"
+  - generic: ▾
+  - button "New campaign": +
+  - button "+ Copy"
+  - link "Craft":
+    - /url: /sales/outbound/craft
+  - complementary:
+    - paragraph: Inventory
+    - paragraph: 2 of 3–5 this week · room to fill
+    - heading "Next slots" [level=3]
+    - button "plumber 574 sendable · ≈11 waves Fresh · drag onto calendar":
+      - generic: plumber
+      - generic: 574 sendable · ≈11 waves
+      - generic: Fresh · drag onto calendar
+    - button "mortgage-brokers 219 sendable · ≈4 waves Fresh · drag onto calendar":
+      - generic: mortgage-brokers
+      - generic: 219 sendable · ≈4 waves
+      - generic: Fresh · drag onto calendar
+    - button "electrician 94 sendable · ≈1 waves Fresh · drag onto calendar":
+      - generic: electrician
+      - generic: 94 sendable · ≈1 waves
+      - generic: Fresh · drag onto calendar
+    - heading "Ready to recontact" [level=3]
+    - paragraph: Batches under 30 stay in CRM until they earn a slot.
+  - heading "7 – 13 Sept 2026" [level=2]
+  - paragraph: 4 campaigns
+  - button "Mon 7":
+    - generic: Mon
+    - generic: "7"
+  - button "Tue 8":
+    - generic: Tue
+    - generic: "8"
+  - button "Wed 9":
+    - generic: Wed
+    - generic: "9"
+  - button "Thu 10":
+    - generic: Thu
+    - generic: "10"
+  - button "Fri 11":
+    - generic: Fri
+    - generic: "11"
+  - button "Sat 12":
+    - generic: Sat
+    - generic: "12"
+  - button "Sun 13":
+    - generic: Sun
+    - generic: "13"
+  - generic: 1 am
+  - generic: 2 am
+  - generic: 3 am
+  - generic: 4 am
+  - generic: 5 am
+  - generic: 6 am
+  - generic: 7 am
+  - generic: 8 am
+  - generic: 9 am
+  - generic: 10 am
+  - generic: 11 am
+  - generic: 12 pm
+  - generic: 1 pm
+  - generic: 2 pm
+  - generic: 3 pm
+  - generic: 4 pm
+  - generic: 5 pm
+  - generic: 6 pm
+  - generic: 7 pm
+  - generic: 8 pm
+  - generic: 9 pm
+  - generic: 10 pm
+  - generic: 11 pm
+  - button "Add campaign Monday 7 Sept 12 am":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 1 am":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 2 am":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 3 am":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 4 am":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 5 am":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 6 am":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 7 am":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 8 am":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 9 am":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 10 am":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 11 am":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 12 pm":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 1 pm":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 2 pm":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 3 pm":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 4 pm":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 5 pm":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 6 pm":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 7 pm":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 8 pm":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 9 pm":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 10 pm":
+    - generic: + Add
+  - button "Add campaign Monday 7 Sept 11 pm":
+    - generic: + Add
+  - button "9:00 am Melbourne Locksmith booked-jobs-system":
+    - generic: 9:00 am
+    - generic: Melbourne Locksmith
+    - generic: booked-jobs-system
+  - button "9:00 am Melbourne Plumber booked-jobs-system 709 leads":
+    - generic: 9:00 am
+    - generic: Melbourne Plumber
+    - generic: booked-jobs-system
+    - generic: 709 leads
+  - button "9:00 am Sydney Plumber booked-jobs-system":
+    - generic: 9:00 am
+    - generic: Sydney Plumber
+    - generic: booked-jobs-system
+  - button "Add campaign Tuesday 8 Sept 12 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 1 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 2 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 3 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 4 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 5 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 6 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 7 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 8 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 9 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 10 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 11 am":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 12 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 1 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 2 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 3 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 4 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 5 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 6 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 7 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 8 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 9 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 10 pm":
+    - generic: + Add
+  - button "Add campaign Tuesday 8 Sept 11 pm":
+    - generic: + Add
+  - button "9:00 am Sydney Hvac custom installation-booking":
+    - generic: 9:00 am
+    - generic: Sydney Hvac
+    - generic: custom
+    - generic: installation-booking
+  - button "Add campaign Wednesday 9 Sept 12 am":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 1 am":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 2 am":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 3 am":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 4 am":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 5 am":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 6 am":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 7 am":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 8 am":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 9 am":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 10 am":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 11 am":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 12 pm":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 1 pm":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 2 pm":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 3 pm":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 4 pm":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 5 pm":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 6 pm":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 7 pm":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 8 pm":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 9 pm":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 10 pm":
+    - generic: + Add
+  - button "Add campaign Wednesday 9 Sept 11 pm":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 12 am":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 1 am":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 2 am":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 3 am":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 4 am":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 5 am":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 6 am":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 7 am":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 8 am":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 9 am":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 10 am":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 11 am":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 12 pm":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 1 pm":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 2 pm":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 3 pm":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 4 pm":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 5 pm":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 6 pm":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 7 pm":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 8 pm":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 9 pm":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 10 pm":
+    - generic: + Add
+  - button "Add campaign Thursday 10 Sept 11 pm":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 12 am":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 1 am":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 2 am":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 3 am":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 4 am":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 5 am":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 6 am":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 7 am":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 8 am":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 9 am":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 10 am":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 11 am":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 12 pm":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 1 pm":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 2 pm":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 3 pm":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 4 pm":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 5 pm":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 6 pm":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 7 pm":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 8 pm":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 9 pm":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 10 pm":
+    - generic: + Add
+  - button "Add campaign Friday 11 Sept 11 pm":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 12 am":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 1 am":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 2 am":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 3 am":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 4 am":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 5 am":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 6 am":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 7 am":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 8 am":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 9 am":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 10 am":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 11 am":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 12 pm":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 1 pm":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 2 pm":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 3 pm":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 4 pm":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 5 pm":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 6 pm":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 7 pm":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 8 pm":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 9 pm":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 10 pm":
+    - generic: + Add
+  - button "Add campaign Saturday 12 Sept 11 pm":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 12 am":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 1 am":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 2 am":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 3 am":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 4 am":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 5 am":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 6 am":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 7 am":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 8 am":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 9 am":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 10 am":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 11 am":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 12 pm":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 1 pm":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 2 pm":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 3 pm":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 4 pm":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 5 pm":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 6 pm":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 7 pm":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 8 pm":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 9 pm":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 10 pm":
+    - generic: + Add
+  - button "Add campaign Sunday 13 Sept 11 pm":
+    - generic: + Add
+- alert

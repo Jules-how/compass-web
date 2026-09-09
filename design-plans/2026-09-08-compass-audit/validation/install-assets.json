@@ -1,0 +1,10 @@
+{
+  "traced_assets": [
+    "../../../../../../src/lib/delivery-dept/demo-installs.json",
+    "../../../../../../src/lib/delivery-dept/pipeline.json"
+  ],
+  "standalone_assets": [
+    ".next/standalone/src/lib/delivery-dept/demo-installs.json",
+    ".next/standalone/src/lib/delivery-dept/pipeline.json"
+  ]
+}
