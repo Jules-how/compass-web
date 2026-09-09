@@ -20,7 +20,7 @@ Apply migrations:
 - `0041_lead_enrich_readiness.sql` — `enrich_status` on `lead_contacts`
 - `0043_lead_facts.sql` — `lead_facts` jsonb on `lead_contacts`
 - `0044_lead_facts_shape.sql` — engager-fact array comment (`kind` / `claim` / `url`)
-- `20260909020900_lead_lists.sql` and `20260909021000_compass_list_integration.sql` — named lists, atomic campaign attachments and paginated cohort queries
+- `20260909022151_lead_lists.sql` and `20260909022207_compass_list_integration.sql` — named lists, atomic campaign attachments and paginated cohort queries
 - `0045_campaign_wave.sql` — `opener_reviewed_at`, `copy_confirmed_at` on pipeline campaigns
 - `0050_drop_wave_cap.sql` — drop unused campaign column
 - `0051_opener_track_kind.sql` — `opener_track` + `opener_kind` on `lead_contacts`
