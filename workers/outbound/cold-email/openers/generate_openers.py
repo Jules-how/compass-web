@@ -927,15 +927,23 @@ def render_preparation_ticket(ticket: dict) -> list[dict]:
     for row in ticket["candidates"]:
         try:
             facts = {"company": row["company"], "service": fact(row, "service"), "service_area": fact(row, "service_area")}
+            for evidence in row.get("evidence", []):
+                kind = evidence.get("kind", "")
+                if re.fullmatch(r"[a-z][a-z0-9_]*", kind) and kind not in {"company", "service", "service_area"}:
+                    facts[kind] = fact(row, kind)
+            rule = next((r for r in recipe.get("rules", []) if fact(row, r["field"]) and (not r.get("contains", "").strip() or r["contains"].strip().lower() in fact(row, r["field"]).lower())), None)
+            facts["signal"] = fact(row, rule["field"]) if rule else ""
             person = fact(row, "person_name").split()
-            first_name = person[0] if person else ""
-            opener = merge(recipe["opener"], facts, False)
+            first_name = person[0] if person and recipe.get("include_name") is not False else ""
+            opener = merge(rule["opener"] if rule else recipe["opener"], facts, False)
             if first_name:
                 opener = f"Hi {first_name}, " + opener[0].lower() + opener[1:]
             values = {"email": row["email"].strip().lower(), "first_name": first_name, "firstName": first_name,
                       "company_name": row["company"], "companyName": row["company"], "companyShort": row["company"],
                       "service": facts["service"], "suburb": facts["service_area"], "city": "Sydney",
-                      "subject": merge(recipe["subject"], facts, False).lower(), "opener": opener, "Opener": opener, "personalization": opener}
+                      "subject": merge((rule.get("subject", "").strip() if rule else "") or recipe["subject"], facts, False).lower(), "opener": opener, "Opener": opener, "personalization": opener}
+            if "rules" in recipe:
+                values.update(signal_id=rule["id"] if rule else "fallback", signal_label=rule["label"] if rule else "Factual fallback", signal_value=facts["signal"])
             merges = dict(values, unsubscribe="[Unsubscribe]")
             steps = [{"subject": merge(step["subject"], merges),
                       "body": merge("\n\n".join(slot["body"].strip() for slot in step["slots"] if slot["key"] != "subject" and slot["body"].strip()), merges)}

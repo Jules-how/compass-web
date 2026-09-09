@@ -1,179 +1,183 @@
-'use client'
+"use client";
 
-import { useCallback, useEffect, useId, useState } from 'react'
-import type { CompassCampaign } from '@/lib/campaigns'
+import { useCallback, useEffect, useId, useState } from "react";
+import { parsePreparationCsv, reviewCsv } from "@/lib/outbound-csv";
+import { SignalRecipeEditor } from "./SignalRecipeEditor";
+import type { CompassCampaign } from "@/lib/campaigns";
 import type {
   Bundle,
   Candidate,
   Evidence,
   Recipe,
-  Settings
-} from '@/lib/outbound-preparation'
+  Settings,
+} from "@/lib/outbound-preparation";
 
 type State = {
-  config: null | { recipe: Recipe; settings: Settings; revision: number }
+  config: null | { recipe: Recipe; settings: Settings; revision: number };
   runs: Array<{
-    id: string
-    status: string
-    candidates: Candidate[]
-    error: string | null
-    created_at: string
-  }>
-  preparations: Array<{ id: string; run_id: string; bundle: Bundle }>
+    id: string;
+    status: string;
+    candidates: Candidate[];
+    error: string | null;
+    created_at: string;
+  }>;
+  preparations: Array<{ id: string; run_id: string; bundle: Bundle }>;
   approvals: Array<{
-    preparation_id: string
-    hash: string
-    approved_at: string
-  }>
+    preparation_id: string;
+    hash: string;
+    approved_at: string;
+  }>;
   loads: Array<{
-    preparation_id: string
-    status: string
-    instantly_campaign_id: string
-    receipts: Array<{ email: string; status: string }>
-    snapshot?: { extras?: string[] }
-  }>
-}
+    preparation_id: string;
+    status: string;
+    instantly_campaign_id: string;
+    receipts: Array<{ email: string; status: string }>;
+    snapshot?: { extras?: string[] };
+  }>;
+};
 const button =
-  'rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-800 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600'
+  "rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-800 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600";
 const input =
-  'w-full rounded-xl border border-stone-300 bg-white px-2 py-1.5 text-sm text-neutral-900'
+  "w-full rounded-xl border border-stone-300 bg-white px-2 py-1.5 text-sm text-neutral-900";
 const labels: Record<string, string> = {
-  service: 'Ducted installation service',
-  service_area: 'Sydney service area',
-  residential: 'Residential work',
-  quote_journey: 'Quote or enquiry path',
-  independent: 'Independent ownership',
-  email: 'Published work email',
-  person_name: 'Recipient name (optional)'
-}
+  service: "Ducted installation service",
+  service_area: "Sydney service area",
+  residential: "Residential work",
+  quote_journey: "Quote or enquiry path",
+  independent: "Independent ownership",
+  email: "Published work email",
+  person_name: "Recipient name (optional)",
+};
 const reasonLabel = (reason: string) =>
-  reason.replaceAll('_', ' ').replaceAll(':', ': ')
+  reason.replaceAll("_", " ").replaceAll(":", ": ");
 function emailText(body: string) {
   return body
-    .replace(/<a\b[^>]*>\s*Unsubscribe\s*<\/a>/gi, 'Unsubscribe')
-    .replace(/<br\s*\/?\s*>/gi, '\n')
+    .replace(/<a\b[^>]*>\s*Unsubscribe\s*<\/a>/gi, "Unsubscribe")
+    .replace(/<br\s*\/?\s*>/gi, "\n");
 }
 function download(text: string, name: string, type: string) {
-  const url = URL.createObjectURL(new Blob([text], { type }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function CampaignPreparationPanel({
-  campaign
+  campaign,
 }: {
-  campaign: CompassCampaign
+  campaign: CompassCampaign;
 }) {
-  const [state, setState] = useState<State | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [note, setNote] = useState('')
-  const [reviewed, setReviewed] = useState(false)
-  const [selected, setSelected] = useState('')
-  const [selectedRun, setSelectedRun] = useState('')
-  const [recipe, setRecipe] = useState<Recipe>({ subject: '', opener: '' })
+  const [state, setState] = useState<State | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [note, setNote] = useState("");
+  const [reviewed, setReviewed] = useState(false);
+  const [selected, setSelected] = useState("");
+  const [selectedRun, setSelectedRun] = useState("");
+  const [recipe, setRecipe] = useState<Recipe>({ subject: "", opener: "" });
   const [settings, setSettings] = useState<Settings>({
-    timezone: 'Australia/Sydney',
+    timezone: "Australia/Sydney",
     email_list: [],
-    from: '09:00',
-    to: '17:00',
-    daily_limit: 20
-  })
-  const [senders, setSenders] = useState('')
-  const [leadIds, setLeadIds] = useState('')
-  const [revision, setRevision] = useState(0)
-  const uid = useId()
+    from: "09:00",
+    to: "17:00",
+    daily_limit: 20,
+  });
+  const [senders, setSenders] = useState("");
+  const [leadIds, setLeadIds] = useState("");
+  const [csvRows, setCsvRows] = useState<Record<string, unknown>[]>([]);
+  const [csvName, setCsvName] = useState("");
+  const [revision, setRevision] = useState(0);
+  const uid = useId();
   const endpoint =
-    '/api/operator/outbound/preparation/' + encodeURIComponent(campaign.id)
+    "/api/operator/outbound/preparation/" + encodeURIComponent(campaign.id);
   const refresh = useCallback(async () => {
-    const res = await fetch(endpoint, { cache: 'no-store' })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Could not read preparation')
-    setState(data)
-  }, [endpoint])
+    const res = await fetch(endpoint, { cache: "no-store" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not read preparation");
+    setState(data);
+  }, [endpoint]);
   useEffect(() => {
-    setState(null)
-    setReviewed(false)
-    setSelected('')
-    setSelectedRun('')
-    void refresh().catch((e) => setError(e.message))
-  }, [refresh, campaign.updated_at])
+    setState(null);
+    setReviewed(false);
+    setSelected("");
+    setSelectedRun("");
+    void refresh().catch((e) => setError(e.message));
+  }, [refresh, campaign.updated_at]);
   useEffect(() => {
     if (state?.config) {
-      setRecipe(state.config.recipe)
-      setSettings(state.config.settings)
-      setSenders(state.config.settings.email_list.join('\n'))
-      setRevision(state.config.revision)
+      setRecipe(state.config.recipe);
+      setSettings(state.config.settings);
+      setSenders(state.config.settings.email_list.join("\n"));
+      setRevision(state.config.revision);
     }
-  }, [state?.config])
-  const run = state?.runs.find((r) => r.id === selectedRun) ?? state?.runs[0]
-  const prep = state?.preparations.find((p) => p.run_id === run?.id)
+  }, [state?.config]);
+  const run = state?.runs.find((r) => r.id === selectedRun) ?? state?.runs[0];
+  const prep = state?.preparations.find((p) => p.run_id === run?.id);
   const approved = state?.approvals.find(
-    (a) => a.preparation_id === prep?.id && a.hash === prep.bundle.hash
-  )
-  const load = state?.loads.find((l) => l.preparation_id === prep?.id)
-  const current = run?.status === 'ready'
+    (a) => a.preparation_id === prep?.id && a.hash === prep.bundle.hash,
+  );
+  const load = state?.loads.find((l) => l.preparation_id === prep?.id);
+  const current = run?.status === "ready";
   useEffect(() => {
-    setReviewed(false)
-  }, [prep?.id, run?.status])
+    setReviewed(false);
+  }, [prep?.id, run?.status]);
   async function act(body: Record<string, unknown>) {
-    setBusy(true)
-    setError('')
-    setNote('')
+    setBusy(true);
+    setError("");
+    setNote("");
     try {
       const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Action failed')
-      if (body.action === 'export')
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Action failed");
+      if (body.action === "export")
         download(
           data.csv,
-          'outbound-' + data.hash.slice(0, 12) + '.csv',
-          'text/csv;charset=utf-8'
-        )
-      if (body.action === 'approve')
-        setNote('This exact batch is approved for a paused import.')
-      if (body.action === 'reserve')
+          "outbound-" + data.hash.slice(0, 12) + ".csv",
+          "text/csv;charset=utf-8",
+        );
+      if (body.action === "approve")
+        setNote("This exact batch is approved for a paused import.");
+      if (body.action === "reserve")
         setNote(
-          'Paused campaign checked. Recipients reserved; the reviewed CSV is ready.'
-        )
-      if (body.action === 'reconcile')
+          "Paused campaign checked. Recipients reserved; the reviewed CSV is ready.",
+        );
+      if (body.action === "reconcile")
         setNote(
           data.complete
-            ? 'Every recipient and merge value matches. The campaign is paused.'
-            : 'Import is incomplete. Review the receipt below before proceeding.'
-        )
+            ? "Every recipient and merge value matches. The campaign is paused."
+            : "Import is incomplete. Review the receipt below before proceeding.",
+        );
       if (
-        ['create', 'revise', 'import_inventory'].includes(String(body.action))
+        ["create", "revise", "import_inventory"].includes(String(body.action))
       ) {
-        setSelectedRun(data.id)
-        setSelected('')
+        setSelectedRun(data.id);
+        setSelected("");
         setNote(
-          'Source records retained. Waiting for the local preparation worker.'
-        )
+          "Source records retained. Waiting for the local preparation worker.",
+        );
       }
-      await refresh()
-      return true
+      await refresh();
+      return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-      return false
+      setError(e instanceof Error ? e.message : String(e));
+      return false;
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
-  const candidates = run?.candidates ?? []
-  const chosen = candidates.find((c) => c.id === selected)
+  const candidates = run?.candidates ?? [];
+  const chosen = candidates.find((c) => c.id === selected);
   return (
-    <section aria-labelledby={uid + '-title'} className="space-y-4">
+    <section aria-labelledby={uid + "-title"} className="space-y-4">
       <div>
         <h3
-          id={uid + '-title'}
+          id={uid + "-title"}
           className="text-sm font-semibold text-neutral-900"
         >
           Prepare campaign
@@ -198,53 +202,27 @@ export function CampaignPreparationPanel({
         open={!state?.config}
       >
         <summary className="cursor-pointer text-sm font-medium">
-          Opener and send settings
+          Signals, openers and send settings
         </summary>
         <form
           className="mt-3 space-y-3"
           onSubmit={(e) => {
-            e.preventDefault()
+            e.preventDefault();
             void act({
-              action: 'configure',
+              action: "configure",
               recipe,
               settings: {
                 ...settings,
                 email_list: senders
                   .split(/[\n,]+/)
                   .map((s) => s.trim())
-                  .filter(Boolean)
+                  .filter(Boolean),
               },
-              revision
-            })
+              revision,
+            });
           }}
         >
-          <p className="text-xs text-neutral-600">
-            Use {'{company}'}, {'{service}'} and {'{service_area}'} from the
-            quoted evidence. Start the opener with “Saw”. Edit the email bodies
-            in this campaign’s Copy section. Saving changes requires a fresh
-            preparation and review.
-          </p>
-          <label className="block text-xs">
-            Subject recipe
-            <input
-              required
-              className={input}
-              value={recipe.subject}
-              onChange={(e) =>
-                setRecipe({ ...recipe, subject: e.target.value })
-              }
-            />
-          </label>
-          <label className="block text-xs">
-            Opener recipe
-            <textarea
-              required
-              rows={3}
-              className={input}
-              value={recipe.opener}
-              onChange={(e) => setRecipe({ ...recipe, opener: e.target.value })}
-            />
-          </label>
+          <SignalRecipeEditor recipe={recipe} onChange={setRecipe} />
           <label className="block text-xs">
             Existing sender email addresses
             <textarea
@@ -292,7 +270,7 @@ export function CampaignPreparationPanel({
                 onChange={(e) =>
                   setSettings({
                     ...settings,
-                    daily_limit: Number(e.target.value)
+                    daily_limit: Number(e.target.value),
                   })
                 }
               />
@@ -303,15 +281,70 @@ export function CampaignPreparationPanel({
             header and link.
           </p>
           <button disabled={busy || !state} className={button}>
-            Save settings
+            Save writing rules and settings
           </button>
         </form>
       </details>
       <details className="rounded-xl border border-stone-200 p-3">
         <summary className="cursor-pointer text-sm font-medium">
-          Bring in existing candidates
+          Input list
         </summary>
         <div className="mt-3 space-y-2">
+          <label className="block text-xs">
+            Upload CSV (up to 200 rows)
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              disabled={busy}
+              className="mt-2 block max-w-full"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                setCsvRows([]);
+                setCsvName("");
+                if (!file) return;
+                try {
+                  const rows = parsePreparationCsv(await file.text());
+                  setCsvRows(rows);
+                  setCsvName(file.name);
+                  setError("");
+                } catch (err) {
+                  setError(
+                    err instanceof Error ? err.message : "Could not read CSV",
+                  );
+                }
+              }}
+            />
+          </label>
+          <p className="text-xs text-neutral-600">
+            Company, website and email columns are mapped automatically. Keep
+            evidence, verification and contact_basis as structured JSON columns.
+            Raw scraped fields remain retained; missing research stays on hold.
+          </p>
+          {!!csvRows.length && (
+            <div>
+              <p className="text-xs">
+                {csvName} · {csvRows.length} source rows. No contacts have been
+                added or sent.
+              </p>
+              <button
+                type="button"
+                className={button}
+                disabled={busy || !state?.config}
+                onClick={() =>
+                  void act({
+                    action: "create",
+                    rows: csvRows.map((row) => ({
+                      ...row,
+                      source_file: csvName,
+                    })),
+                  })
+                }
+              >
+                Retain CSV for processing
+              </button>
+            </div>
+          )}
+          <hr className="my-3" />
           <p className="text-xs text-neutral-600">
             Retain up to 200 ledger records, including those without email.
             Leave the selection empty to use this campaign’s attached inventory.
@@ -331,10 +364,10 @@ export function CampaignPreparationPanel({
             className={button}
             onClick={() =>
               void act({
-                action: 'import_inventory',
+                action: "import_inventory",
                 ...(leadIds.trim()
                   ? { lead_ids: leadIds.split(/[\s,]+/).filter(Boolean) }
-                  : {})
+                  : {}),
               })
             }
           >
@@ -347,16 +380,19 @@ export function CampaignPreparationPanel({
           Recent preparation runs
           <select
             className={input}
-            value={run?.id ?? ''}
+            value={run?.id ?? ""}
             onChange={(e) => {
-              setSelectedRun(e.target.value)
-              setSelected('')
-              setNote('')
+              setSelectedRun(e.target.value);
+              setSelected("");
+              setNote("");
             }}
           >
             {state.runs.map((r) => (
               <option key={r.id} value={r.id}>
-                {new Date(r.created_at).toLocaleString('en-AU', { timeZone: 'Australia/Sydney' })} · {r.candidates.length} candidates · {reasonLabel(r.status)}
+                {new Date(r.created_at).toLocaleString("en-AU", {
+                  timeZone: "Australia/Sydney",
+                })}{" "}
+                · {r.candidates.length} candidates · {reasonLabel(r.status)}
               </option>
             ))}
           </select>
@@ -366,7 +402,9 @@ export function CampaignPreparationPanel({
         <p className="text-xs text-neutral-600">
           {run
             ? `${candidates.length} retained · ${reasonLabel(run.status)}`
-            : state ? 'No preparation yet.' : 'Loading preparation…'}
+            : state
+              ? "No preparation yet."
+              : "Loading preparation…"}
         </p>
         <button
           type="button"
@@ -382,7 +420,7 @@ export function CampaignPreparationPanel({
           {run.error}
         </p>
       )}
-      {run?.status === 'stale' && (
+      {run?.status === "stale" && (
         <p className="text-xs text-amber-800">
           Campaign inputs changed. Retain the candidate set again to prepare the
           current version.
@@ -399,7 +437,7 @@ export function CampaignPreparationPanel({
             <option value="">Choose a candidate</option>
             {candidates.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.company || 'Unresolved company'} · {c.email || 'No email'}
+                {c.company || "Unresolved company"} · {c.email || "No email"}
               </option>
             ))}
           </select>
@@ -409,13 +447,17 @@ export function CampaignPreparationPanel({
         <EvidenceEditor
           key={chosen.id}
           candidate={chosen}
+          signalFields={(recipe.rules ?? []).map((r) => ({
+            field: r.field,
+            label: r.label,
+          }))}
           busy={busy}
           onSave={(changes) =>
             act({
-              action: 'revise',
+              action: "revise",
               run_id: run.id,
               candidate_id: chosen.id,
-              changes
+              changes,
             })
           }
         />
@@ -430,33 +472,46 @@ export function CampaignPreparationPanel({
             {
               prep.bundle.records.filter(
                 (r) =>
-                  r.status === 'pass' &&
-                  !['valid', 'ok'].includes(
-                    r.candidate.verification?.status ?? ''
-                  )
+                  r.status === "pass" &&
+                  !["valid", "ok"].includes(
+                    r.candidate.verification?.status ?? "",
+                  ),
               ).length
-            }{' '}
+            }{" "}
             ready recipients have a recorded catch-all, uncertain, risky or
             error result. Review those results before approval.
           </p>
+          <button
+            type="button"
+            className={button}
+            onClick={() =>
+              download(
+                reviewCsv(prep.bundle.records),
+                "review-output-" + prep.bundle.hash.slice(0, 12) + ".csv",
+                "text/csv;charset=utf-8",
+              )
+            }
+          >
+            Download all output and hold reasons
+          </button>
           {prep.bundle.records.map((record) => (
             <details
               key={record.candidate.id}
               className="rounded-xl border border-stone-200 p-3"
             >
               <summary className="cursor-pointer text-xs font-medium">
-                {record.candidate.company || 'Unresolved company'} ·{' '}
-                {record.status === 'pass'
-                  ? 'Ready'
-                  : record.status === 'hold'
-                    ? 'Hold'
-                    : 'Excluded'}
+                {record.candidate.company || "Unresolved company"} ·{" "}
+                {record.status === "pass"
+                  ? "Ready"
+                  : record.status === "hold"
+                    ? "Hold"
+                    : "Excluded"}
               </summary>
               <div className="mt-2 space-y-3 text-xs">
                 <p className="break-all text-neutral-600">
-                  {record.candidate.email || 'No email'} ·{' '}
+                  {record.candidate.email || "No email"} ·{" "}
                   {record.candidate.verification?.status ||
-                    'Verification pending'}
+                    "Verification pending"}
                 </p>
                 {!!record.reasons.length && (
                   <ul className="list-disc pl-4 text-amber-900">
@@ -465,10 +520,40 @@ export function CampaignPreparationPanel({
                     ))}
                   </ul>
                 )}
+                {record.rendered?.values.signal_label && (
+                  <p className="font-medium">
+                    Selected signal: {record.rendered.values.signal_label}{" "}
+                    {record.rendered.values.signal_value &&
+                      `· ${record.rendered.values.signal_value}`}
+                  </p>
+                )}
+                <details>
+                  <summary className="cursor-pointer">
+                    Source evidence ({record.candidate.evidence.length})
+                  </summary>
+                  <ul className="mt-2 space-y-2">
+                    {record.candidate.evidence.map((fact, i) => (
+                      <li key={i}>
+                        <strong>{fact.kind}</strong>: {fact.quote} ·{" "}
+                        <a
+                          className="underline"
+                          href={
+                            /^https?:\/\//.test(fact.url) ? fact.url : undefined
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Source
+                        </a>{" "}
+                        · {fact.observed_at}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
                 {record.rendered?.steps.map((step, i) => (
                   <div key={i}>
                     <p className="font-medium">
-                      Email {i + 1} · {step.subject || 'Same subject thread'}
+                      Email {i + 1} · {step.subject || "Same subject thread"}
                     </p>
                     <pre className="mt-1 whitespace-pre-wrap break-words font-sans leading-relaxed text-neutral-700">
                       {emailText(step.body)}
@@ -479,10 +564,10 @@ export function CampaignPreparationPanel({
             </details>
           ))}
           <p className="text-xs text-neutral-500">
-            Version {prep.bundle.hash.slice(0, 12)} ·{' '}
-            {prep.bundle.context.settings.email_list.join(', ')} ·{' '}
+            Version {prep.bundle.hash.slice(0, 12)} ·{" "}
+            {prep.bundle.context.settings.email_list.join(", ")} ·{" "}
             {prep.bundle.context.settings.from}–
-            {prep.bundle.context.settings.to} Sydney time ·{' '}
+            {prep.bundle.context.settings.to} Sydney time ·{" "}
             {prep.bundle.context.settings.daily_limit}/day
           </p>
           {!approved && (
@@ -507,9 +592,9 @@ export function CampaignPreparationPanel({
                 className={button}
                 onClick={() =>
                   void act({
-                    action: 'approve',
+                    action: "approve",
                     preparation_id: prep.id,
-                    hash: prep.bundle.hash
+                    hash: prep.bundle.hash,
                   })
                 }
               >
@@ -528,8 +613,8 @@ export function CampaignPreparationPanel({
                 onClick={() =>
                   download(
                     JSON.stringify(prep.bundle, null, 2),
-                    'reviewed-batch-' + prep.bundle.hash.slice(0, 12) + '.json',
-                    'application/json'
+                    "reviewed-batch-" + prep.bundle.hash.slice(0, 12) + ".json",
+                    "application/json",
                   )
                 }
               >
@@ -544,7 +629,7 @@ export function CampaignPreparationPanel({
                 disabled={busy || !current}
                 className={button}
                 onClick={() =>
-                  void act({ action: 'reserve', preparation_id: prep.id })
+                  void act({ action: "reserve", preparation_id: prep.id })
                 }
               >
                 Check paused campaign
@@ -554,9 +639,9 @@ export function CampaignPreparationPanel({
                   <a
                     className="block text-xs underline"
                     href={
-                      'https://app.instantly.ai/app/campaign/' +
+                      "https://app.instantly.ai/app/campaign/" +
                       encodeURIComponent(load.instantly_campaign_id) +
-                      '/leads'
+                      "/leads"
                     }
                     target="_blank"
                     rel="noreferrer"
@@ -574,17 +659,17 @@ export function CampaignPreparationPanel({
                     disabled={busy || !current}
                     className={button}
                     onClick={() =>
-                      void act({ action: 'export', preparation_id: prep.id })
+                      void act({ action: "export", preparation_id: prep.id })
                     }
                   >
                     Download approved CSV
-                  </button>{' '}
+                  </button>{" "}
                   <button
                     type="button"
                     disabled={busy || !current}
                     className={button}
                     onClick={() =>
-                      void act({ action: 'reconcile', preparation_id: prep.id })
+                      void act({ action: "reconcile", preparation_id: prep.id })
                     }
                   >
                     Check imported recipients
@@ -609,80 +694,130 @@ export function CampaignPreparationPanel({
         </div>
       )}
     </section>
-  )
+  );
 }
 
 function EvidenceEditor({
   candidate,
+  signalFields,
   busy,
-  onSave
+  onSave,
 }: {
-  candidate: Candidate
-  busy: boolean
-  onSave: (changes: Record<string, unknown>) => Promise<boolean>
+  candidate: Candidate;
+  signalFields: Array<{ field: string; label: string }>;
+  busy: boolean;
+  onSave: (changes: Record<string, unknown>) => Promise<boolean>;
 }) {
-  const [evidence, setEvidence] = useState<Evidence[]>(candidate.evidence)
-  const [identity, setIdentity] = useState(candidate.identity_reviewed)
-  const [hold, setHold] = useState(candidate.hold_reason ?? '')
-  const [exclude, setExclude] = useState(candidate.exclude_reason ?? '')
+  const [evidence, setEvidence] = useState<Evidence[]>(candidate.evidence);
+  const [geography, setGeography] = useState(
+    candidate.geography_review ?? {
+      region: "unconfirmed",
+      rationale: "",
+      checked_at: "",
+    },
+  );
+  const [identity, setIdentity] = useState(candidate.identity_reviewed);
+  const [hold, setHold] = useState(candidate.hold_reason ?? "");
+  const [exclude, setExclude] = useState(candidate.exclude_reason ?? "");
   const [basis, setBasis] = useState(
     candidate.contact_basis ?? {
-      kind: '',
-      rationale: '',
-      url: '',
-      checked_at: ''
-    }
-  )
+      kind: "",
+      rationale: "",
+      url: "",
+      checked_at: "",
+    },
+  );
   const [verification, setVerification] = useState(
     candidate.verification ?? {
-      status: 'pending',
-      provider: '',
-      checked_at: ''
-    }
-  )
+      status: "pending",
+      provider: "",
+      checked_at: "",
+    },
+  );
   function edit(kind: string, field: string, value: string) {
     setEvidence((old) => {
       const fact = old.find((e) => e.kind === kind) ?? {
         kind,
-        value: '',
-        quote: '',
-        url: '',
-        observed_at: ''
-      }
+        value: "",
+        quote: "",
+        url: "",
+        observed_at: "",
+      };
       return [
         ...old.filter((e) => e.kind !== kind),
-        { ...fact, [field]: value, observed_at: new Date().toISOString() }
-      ]
-    })
+        { ...fact, [field]: value, observed_at: new Date().toISOString() },
+      ];
+    });
   }
   return (
     <form
       className="space-y-3 rounded-xl border border-stone-200 p-3"
       onSubmit={(e) => {
-        e.preventDefault()
+        e.preventDefault();
         void onSave({
           evidence: evidence.filter((e) => e.value || e.quote || e.url),
+          geography_review: geography,
           identity_reviewed: identity,
           hold_reason: hold,
           exclude_reason: exclude,
           contact_basis: basis,
-          verification
-        })
+          verification,
+        });
       }}
     >
+      <fieldset className="space-y-2">
+        <legend className="text-xs font-medium">Service-area review</legend>
+        <label className="flex gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={geography.region === "greater_sydney"}
+            onChange={(e) =>
+              setGeography({
+                ...geography,
+                region: e.target.checked ? "greater_sydney" : "unconfirmed",
+                checked_at: new Date().toISOString(),
+              })
+            }
+          />
+          Published service coverage includes Greater Sydney
+        </label>
+        <label className="block text-xs">
+          Geography evidence explanation
+          <input
+            className={input}
+            value={geography.rationale}
+            placeholder="Explain which published suburbs are within Greater Sydney"
+            onChange={(e) =>
+              setGeography({
+                ...geography,
+                rationale: e.target.value,
+                checked_at: new Date().toISOString(),
+              })
+            }
+          />
+        </label>
+      </fieldset>
       <p className="text-xs text-neutral-600">
         Record exact published quotes and their source. Saving keeps the
         original record and queues a new preparation. Conflicting evidence must
         be resolved explicitly.
       </p>
-      {Object.entries(labels).map(([kind, label]) => {
-        const facts = evidence.filter((e) => e.kind === kind)
-        const fact = facts[0]
+      {Object.entries({
+        ...labels,
+        ...Object.fromEntries(signalFields.map((r) => [r.field, r.label])),
+        ...Object.fromEntries(
+          candidate.evidence
+            .filter((e) => !labels[e.kind])
+            .map((e) => [e.kind, e.kind]),
+        ),
+      }).map(([kind, label]) => {
+        const facts = evidence.filter((e) => e.kind === kind);
+        const fact = facts[0];
         return (
           <details key={kind}>
             <summary className="cursor-pointer text-xs font-medium">
               {label}
-              {fact?.value ? ' · recorded' : ''}
+              {fact?.value ? " · recorded" : ""}
             </summary>
             <div className="mt-2 space-y-2">
               {facts.length > 1 && (
@@ -700,8 +835,8 @@ function EvidenceEditor({
                 Exact value in quote
                 <input
                   className={input}
-                  value={fact?.value ?? ''}
-                  onChange={(e) => edit(kind, 'value', e.target.value)}
+                  value={fact?.value ?? ""}
+                  onChange={(e) => edit(kind, "value", e.target.value)}
                 />
               </label>
               <label className="block text-xs">
@@ -709,8 +844,8 @@ function EvidenceEditor({
                 <textarea
                   className={input}
                   rows={2}
-                  value={fact?.quote ?? ''}
-                  onChange={(e) => edit(kind, 'quote', e.target.value)}
+                  value={fact?.quote ?? ""}
+                  onChange={(e) => edit(kind, "quote", e.target.value)}
                 />
               </label>
               <label className="block text-xs">
@@ -718,8 +853,8 @@ function EvidenceEditor({
                 <input
                   type="url"
                   className={input}
-                  value={fact?.url ?? ''}
-                  onChange={(e) => edit(kind, 'url', e.target.value)}
+                  value={fact?.url ?? ""}
+                  onChange={(e) => edit(kind, "url", e.target.value)}
                 />
               </label>
               {fact?.url && /^https?:\/\//i.test(fact.url) && (
@@ -734,7 +869,7 @@ function EvidenceEditor({
               )}
             </div>
           </details>
-        )
+        );
       })}
       <label className="flex items-start gap-2 text-xs">
         <input
@@ -756,7 +891,7 @@ function EvidenceEditor({
             setBasis({
               ...basis,
               kind: e.target.value,
-              checked_at: new Date().toISOString()
+              checked_at: new Date().toISOString(),
             })
           }
         >
@@ -778,7 +913,7 @@ function EvidenceEditor({
             setBasis({
               ...basis,
               rationale: e.target.value,
-              checked_at: new Date().toISOString()
+              checked_at: new Date().toISOString(),
             })
           }
         />
@@ -793,7 +928,7 @@ function EvidenceEditor({
             setBasis({
               ...basis,
               url: e.target.value,
-              checked_at: new Date().toISOString()
+              checked_at: new Date().toISOString(),
             })
           }
         />
@@ -808,14 +943,14 @@ function EvidenceEditor({
           }
         >
           {[
-            'pending',
-            'valid',
-            'ok',
-            'catch_all',
-            'unknown',
-            'risky',
-            'error',
-            'invalid'
+            "pending",
+            "valid",
+            "ok",
+            "catch_all",
+            "unknown",
+            "risky",
+            "error",
+            "invalid",
           ].map((s) => (
             <option key={s} value={s}>
               {reasonLabel(s)}
@@ -866,5 +1001,5 @@ function EvidenceEditor({
         Save research and prepare again
       </button>
     </form>
-  )
+  );
 }

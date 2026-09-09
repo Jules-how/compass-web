@@ -1,0 +1,76 @@
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+
+export function OutboundResearch({
+  sources,
+}: {
+  sources: Array<{
+    path: string;
+    title: string;
+    body: string;
+    captured: string;
+  }>;
+}) {
+  const [query, setQuery] = useState(""),
+    [selected, setSelected] = useState(sources[0]?.path);
+  const rows = sources.filter((s) =>
+    (s.title + " " + s.body).toLowerCase().includes(query.toLowerCase()),
+  );
+  const current = sources.find((s) => s.path === selected);
+  return (
+    <div className="space-y-5">
+      <nav className="flex flex-wrap gap-4 text-sm">
+        <Link href="/sales/outbound">← Outbound notebook</Link>
+        <Link href="/sales/outbound/craft">Copy and elements ↗</Link>
+        <Link href="/leads">Lead data ↗</Link>
+        <Link href="/sales/offers">Current ads + booking offer ↗</Link>
+      </nav>
+      <p className="text-sm text-neutral-600">
+        Research is reference material. Older offers, rules and example promises
+        remain historical; the current Ads + booking offer owns targeting and
+        copy.
+      </p>
+      <label className="block text-sm">
+        Search research
+        <input
+          className="compass-input mt-1 w-full"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Find signals, copy shapes, sourcing or verification…"
+        />
+      </label>
+      <div className="outbound-notebook">
+        <aside
+          className="outbound-notebook-index"
+          aria-label="Research documents"
+        >
+          {rows.map((s) => (
+            <button
+              key={s.path}
+              aria-pressed={current?.path === s.path}
+              onClick={() => setSelected(s.path)}
+            >
+              {s.title}
+            </button>
+          ))}
+          {!rows.length && <p>No matching documents.</p>}
+        </aside>
+        {current && (
+          <article className="outbound-notebook-page">
+            <h2 className="font-serif text-2xl">{current.title}</h2>
+            <p className="my-3 break-all text-xs text-neutral-500">
+              Workspace source: {current.path}
+              <br />
+              Snapshot captured {current.captured}. Updates to the source
+              require a refreshed snapshot.
+            </p>
+            <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed">
+              {current.body}
+            </pre>
+          </article>
+        )}
+      </div>
+    </div>
+  );
+}

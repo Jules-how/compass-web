@@ -1,31 +1,31 @@
 /* Compass: cream and orange, with Folio typography and document layouts. */
 @font-face {
   font-family: Folio Sans;
-  src: url('/fonts/folio/dm-regular.ttf') format('truetype');
+  src: url("/fonts/folio/dm-regular.ttf") format("truetype");
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: Folio Sans;
-  src: url('/fonts/folio/dm-medium.ttf') format('truetype');
+  src: url("/fonts/folio/dm-medium.ttf") format("truetype");
   font-weight: 500;
   font-display: swap;
 }
 @font-face {
   font-family: Folio Sans;
-  src: url('/fonts/folio/dm-semibold.ttf') format('truetype');
+  src: url("/fonts/folio/dm-semibold.ttf") format("truetype");
   font-weight: 600;
   font-display: swap;
 }
 @font-face {
   font-family: Folio Sans;
-  src: url('/fonts/folio/dm-bold.ttf') format('truetype');
+  src: url("/fonts/folio/dm-bold.ttf") format("truetype");
   font-weight: 700;
   font-display: swap;
 }
 @font-face {
   font-family: Folio Editorial;
-  src: url('/fonts/folio/newsreader.ttf') format('truetype');
+  src: url("/fonts/folio/newsreader.ttf") format("truetype");
   font-weight: 400;
   font-display: swap;
 }
@@ -162,7 +162,7 @@ body:has(.folio-shell) {
   background: var(--folio-selection);
   color: var(--folio-ink);
 }
-.folio-nav-link[aria-current='page'] {
+.folio-nav-link[aria-current="page"] {
   background: var(--folio-selection);
   color: #713419;
   font-weight: 600;
@@ -311,7 +311,7 @@ body:has(.folio-shell) .folio-card {
   border-radius: var(--folio-radius);
   box-shadow: var(--compass-shadow);
 }
-body:has(.folio-shell) [data-slot='card-header'] {
+body:has(.folio-shell) [data-slot="card-header"] {
   border-color: var(--folio-line);
 }
 body:has(.folio-shell)
@@ -367,31 +367,31 @@ body:has(.folio-shell) .compass-seg-btn-active {
   box-shadow: 0 1px 4px #0f121710;
 }
 /* Compatibility colours keep retained business components in the same visual language. */
-body:has(.folio-shell) [class*='text-[#e85d2a]'],
-body:has(.folio-shell) [class*='text-[#c2410c]'],
-body:has(.folio-shell) [class*='text-orange-'],
-body:has(.folio-shell) [class*='text-sf-orange'] {
+body:has(.folio-shell) [class*="text-[#e85d2a]"],
+body:has(.folio-shell) [class*="text-[#c2410c]"],
+body:has(.folio-shell) [class*="text-orange-"],
+body:has(.folio-shell) [class*="text-sf-orange"] {
   color: var(--folio-plum);
 }
-body:has(.folio-shell) [class*='bg-[#e85d2a]'],
-body:has(.folio-shell) [class*='bg-sf-orange'] {
+body:has(.folio-shell) [class*="bg-[#e85d2a]"],
+body:has(.folio-shell) [class*="bg-sf-orange"] {
   background-color: var(--folio-plum);
 }
-body:has(.folio-shell) [class*='bg-[#e85d2a]/'],
-body:has(.folio-shell) [class*='bg-orange-50'] {
+body:has(.folio-shell) [class*="bg-[#e85d2a]/"],
+body:has(.folio-shell) [class*="bg-orange-50"] {
   background-color: var(--compass-accent-soft);
 }
-body:has(.folio-shell) [class*='border-[#e85d2a]'],
-body:has(.folio-shell) [class*='border-orange-'] {
+body:has(.folio-shell) [class*="border-[#e85d2a]"],
+body:has(.folio-shell) [class*="border-orange-"] {
   border-color: var(--folio-accent-line);
 }
-body:has(.folio-shell) [class*='text-neutral-900'],
-body:has(.folio-shell) [class*='text-stone-900'] {
+body:has(.folio-shell) [class*="text-neutral-900"],
+body:has(.folio-shell) [class*="text-stone-900"] {
   color: var(--folio-ink);
 }
-body:has(.folio-shell) [class*='text-neutral-500'],
-body:has(.folio-shell) [class*='text-stone-500'],
-body:has(.folio-shell) [class*='text-neutral-400'] {
+body:has(.folio-shell) [class*="text-neutral-500"],
+body:has(.folio-shell) [class*="text-stone-500"],
+body:has(.folio-shell) [class*="text-neutral-400"] {
   color: var(--folio-muted);
 }
 .folio-shell .bg-white {
@@ -420,7 +420,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   align-items: center;
   gap: 8px;
 }
-.folio-folders button[aria-pressed='true'] {
+.folio-folders button[aria-pressed="true"] {
   background: var(--folio-paper);
   border-color: var(--folio-line);
   color: var(--folio-ink);
@@ -933,7 +933,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
 .folio-inbox-priorities > div:first-child {
   font-size: 10px;
 }
-.folio-inbox [aria-label='Inbox channels'] {
+.folio-inbox [aria-label="Inbox channels"] {
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -942,7 +942,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   gap: 5px;
   border-radius: 0;
 }
-.folio-inbox [aria-label='Inbox channels'] > button {
+.folio-inbox [aria-label="Inbox channels"] > button {
   background: var(--folio-accent-soft);
   border: 1px solid transparent;
   border-bottom: 0;
@@ -950,12 +950,12 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   min-height: 45px;
   padding: 12px 23px;
 }
-.folio-inbox [aria-label='Inbox channels'] > button[aria-selected='true'] {
+.folio-inbox [aria-label="Inbox channels"] > button[aria-selected="true"] {
   background: var(--folio-paper);
   border-color: var(--folio-line);
   color: var(--folio-plum);
 }
-.folio-inbox [role='tabpanel'] {
+.folio-inbox [role="tabpanel"] {
   gap: 24px;
   padding-top: 0;
   min-height: 450px;
@@ -966,7 +966,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   width: 280px !important;
   padding-top: 16px;
 }
-.folio-inbox-index [role='option'],
+.folio-inbox-index [role="option"],
 .folio-inbox-index button {
   text-align: left;
 }
@@ -989,7 +989,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
 .folio-inbox-case > div {
   padding: 10px;
 }
-.folio-inbox-case [class*='border-b'] {
+.folio-inbox-case [class*="border-b"] {
   border-color: var(--folio-line);
 }
 /* Campaign writing: the manuscript is primary; the full library is opened when needed. */
@@ -1012,21 +1012,21 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   font-size: 34px !important;
   font-weight: 400;
 }
-.folio-editor [aria-label='Campaign views'] {
+.folio-editor [aria-label="Campaign views"] {
   margin-top: 16px;
   border-bottom: 1px solid var(--folio-line);
   gap: 8px;
 }
-.folio-editor [aria-label='Campaign views'] button {
+.folio-editor [aria-label="Campaign views"] button {
   min-height: 43px;
   border-radius: 8px 8px 0 0;
   font-size: 12px;
   padding: 10px 17px;
 }
-.folio-editor [aria-label='Campaign views'] button[aria-pressed='true'] {
+.folio-editor [aria-label="Campaign views"] button[aria-pressed="true"] {
   background: var(--folio-paper);
 }
-.folio-editor [aria-label='Editor workspace'] {
+.folio-editor [aria-label="Editor workspace"] {
   display: flex !important;
   flex-wrap: wrap;
   background: transparent;
@@ -1034,14 +1034,14 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   padding: 0 0 12px;
   gap: 5px;
 }
-.folio-editor [aria-label='Editor workspace'] button {
+.folio-editor [aria-label="Editor workspace"] button {
   font-size: 11px;
   min-height: 40px;
   padding: 9px 15px;
   border-radius: 8px;
   background: var(--folio-accent-soft);
 }
-.folio-editor [aria-label='Editor workspace'] button[aria-pressed='true'] {
+.folio-editor [aria-label="Editor workspace"] button[aria-pressed="true"] {
   background: var(--folio-plum);
   color: white;
 }
@@ -1097,13 +1097,13 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
 .folio-editor .folio-writing-tools[hidden] {
   display: none !important;
 }
-.folio-editor .folio-writing-tools [role='separator'] {
+.folio-editor .folio-writing-tools [role="separator"] {
   display: none;
 }
 .folio-editor .folio-compose-hidden {
   display: none !important;
 }
-.folio-editor [aria-label='Writing tools'] > div:nth-child(2) {
+.folio-editor [aria-label="Writing tools"] > div:nth-child(2) {
   display: flex !important;
 }
 /* Dense records keep a shared reading rhythm without inheriting manuscript proportions. */
@@ -1227,7 +1227,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   .folio-inbox-index {
     width: 250px !important;
   }
-  .folio-inbox [role='tabpanel'] {
+  .folio-inbox [role="tabpanel"] {
     gap: 18px;
   }
 }
@@ -1287,7 +1287,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
     color: var(--folio-muted);
     font-size: 10px;
   }
-  .folio-mobile-nav > [aria-current='page'] {
+  .folio-mobile-nav > [aria-current="page"] {
     background: var(--folio-accent-soft);
     color: var(--folio-plum);
     font-weight: 600;
@@ -1310,7 +1310,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
     flex-direction: column;
     gap: 10px;
   }
-  .folio-inbox [role='tabpanel'] {
+  .folio-inbox [role="tabpanel"] {
     min-height: 380px;
   }
   .folio-inbox-index {
@@ -1319,7 +1319,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   .folio-inbox-case {
     width: 100%;
   }
-  .folio-inbox [aria-label='Inbox channels'] > button {
+  .folio-inbox [aria-label="Inbox channels"] > button {
     padding: 12px 19px;
   }
   .folio-editor {
@@ -1506,7 +1506,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
     padding: 8px;
   }
   .folio-capture-dialog textarea,
-  body:has(.folio-shell) input:not([type='checkbox']):not([type='radio']),
+  body:has(.folio-shell) input:not([type="checkbox"]):not([type="radio"]),
   body:has(.folio-shell) textarea,
   body:has(.folio-shell) select {
     font-size: 16px;
@@ -1541,7 +1541,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   .folio-editor .folio-email-step textarea {
     font-size: 16px;
   }
-  .folio-editor [aria-label='Campaign views'] button {
+  .folio-editor [aria-label="Campaign views"] button {
     padding: 10px 13px;
     font-size: 11px;
   }
@@ -1885,7 +1885,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   transition: background 150ms;
 }
 .folio-client-card:before {
-  content: '';
+  content: "";
   position: absolute;
   height: 8px;
   top: -8px;
@@ -1977,7 +1977,7 @@ body:has(.folio-shell) [class*='text-neutral-400'] {
   .folio-planning .compass-btn-secondary {
     font-size: 11px;
   }
-  .folio-planning [aria-label='Map detail level'] {
+  .folio-planning [aria-label="Map detail level"] {
     flex-wrap: wrap;
   }
 }
@@ -1993,7 +1993,7 @@ body:has(.folio-shell) .folio-inbox > .compass-panel {
   padding-top: 17px;
   padding-bottom: 17px;
 }
-.folio-inbox-index button[aria-current='true'] {
+.folio-inbox-index button[aria-current="true"] {
   background: var(--folio-selection);
 }
 .folio-inbox-index .truncate {
@@ -2013,7 +2013,7 @@ body:has(.folio-shell) .folio-inbox > .compass-panel {
   font-size: 31px !important;
 }
 @media (max-width: 1023px) {
-  .folio-inbox[data-context-open='true'] .folio-inbox-priorities {
+  .folio-inbox[data-context-open="true"] .folio-inbox-priorities {
     display: none;
   }
   .folio-correspondence-head {
@@ -2029,7 +2029,7 @@ body:has(.folio-shell) .folio-inbox > .compass-panel {
     white-space: normal;
     overflow-wrap: anywhere;
   }
-  .folio-inbox[data-context-open='true'] [role='tabpanel'] {
+  .folio-inbox[data-context-open="true"] [role="tabpanel"] {
     min-height: 0;
   }
 }
@@ -2069,13 +2069,13 @@ body:has(.folio-shell) .folio-inbox > .compass-panel {
   line-height: 1.7;
 }
 .folio-outbound-brief > summary:after {
-  content: '+';
+  content: "+";
   color: var(--folio-plum);
   margin-left: auto;
   font-size: 18px;
 }
 .folio-outbound-brief[open] > summary:after {
-  content: '−';
+  content: "−";
 }
 .folio-outbound-brief > summary strong {
   font-weight: 500;
@@ -2315,4 +2315,63 @@ body:has(.folio-shell) .folio-inbox > .compass-panel {
 .folio-connection-setup p {
   padding: 12px 0;
   overflow-wrap: anywhere;
+}
+
+/* Outbound uses the same notebook blocks and canonical notes as Planning. */
+.outbound-notebook {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.outbound-notebook-index {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+}
+.outbound-notebook-index > button {
+  padding: 12px;
+  text-align: left;
+  border-radius: 7px;
+  font-size: 14px;
+}
+.outbound-notebook-index > button[aria-pressed="true"] {
+  background: #fffefa;
+  border: 1px solid #e8e6e3;
+}
+.outbound-notebook-index small {
+  display: block;
+  color: #6b7280;
+  font-size: 11px;
+  margin-top: 3px;
+}
+.outbound-notebook-index > a {
+  font-size: 12px;
+  padding: 6px 12px;
+  color: #6b7280;
+}
+.outbound-notebook-page {
+  padding: 28px 36px;
+  background: #fffefa;
+  border: 1px solid #e8e6e3;
+  border-radius: 12px;
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .outbound-notebook {
+    grid-template-columns: 1fr;
+  }
+  .outbound-notebook-index {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .outbound-notebook-index > p {
+    width: 100%;
+  }
+  .outbound-notebook-page {
+    padding: 20px 16px;
+  }
 }

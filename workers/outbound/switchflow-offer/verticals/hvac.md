@@ -18,12 +18,12 @@ Mixed-service vocabulary preserves factual openers for existing records; it does
 
 ## 3. Qualification
 - Pass for research: published residential ducted installation/replacement service, within campaign service area, and a customer enquiry/quote journey.
-- Hold for review: missing evidence, mixed residential/commercial positioning, uncertain parent/branch, or an existing sophisticated booking process. A strong existing process is counterevidence to generic missed-enquiry claims, not automatic proof there is no opportunity.
+- Hold for review: missing evidence, mixed residential/commercial positioning, uncertain parent/branch, or unclear residential service/area evidence. A sophisticated booking process is not an exclusion for ads plus booking.
 - Call qualification: eligible volume, recoverable booking gap, capacity, job contribution and decision authority. Team size and reviews cannot establish these.
 
 ## 4. Delivery boundaries
 - Booking and qualification are administrative. Technical assessment, sizing, installation advice and final quotes belong to the client's qualified staff.
-- Never promise breakdown dispatch, extra jobs, a refund guarantee or ads in the base installation-booking service.
+- The base offer is ads plus booking. Never promise breakdown dispatch, guaranteed extra jobs, a refund guarantee or unapproved commercial terms.
 
 ## 5. Anti-ICP
 - Commercial-only tender contractors, refrigeration-only repair shops, parts wholesalers, duct-cleaning-only firms, national manufacturers and directories are not this buyer.
