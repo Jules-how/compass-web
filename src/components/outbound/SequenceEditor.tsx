@@ -920,7 +920,7 @@ export function SequenceEditor({
                   Compass copy. Instantly may differ until you push copy.
                 </p>
               ) : null}
-              <div className="mb-5 rounded-2xl border border-stone-200/70 bg-white p-4 shadow-soft">
+              <details className="folio-campaign-context"><summary>Campaign context & components</summary><div>
               <ComposeRatesStrip campaign={campaign} />
               <div className="mt-3 border-t border-stone-100 pt-3">
               <ComposeRecipeStrip
@@ -998,7 +998,7 @@ export function SequenceEditor({
                 }}
               />
               </div>
-              </div>
+              </div></details>
               <nav className="folio-folders folio-step-tabs" aria-label="Sequence steps">{sequence.steps.map((step,index)=><button key={step.id} type="button" aria-pressed={step.id===(activeStepId??sequence.steps[0]?.id)} onClick={()=>setActiveStepId(step.id)}>{String(index+1).padStart(2,'0')} / {step.label}</button>)}</nav>
               {sequence.steps.map((step, index) => (
                 <div key={step.id} hidden={step.id!==(activeStepId??sequence.steps[0]?.id)}>
@@ -1133,13 +1133,7 @@ export function SequenceEditor({
                                 }
                                 updateSequence(next, patch)
                               }}
-                              rows={
-                                slot.key === 'opener'
-                                  ? 2
-                                  : previewDevice === 'mobile'
-                                    ? 4
-                                    : 5
-                              }
+                              rows={Math.max(2,Math.min(8,Math.ceil(slot.body.length/90)))}
                               placeholder={
                                 slot.key === 'opener'
                                   ? '{{personalization}}'
@@ -1289,8 +1283,7 @@ export function SequenceEditor({
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
                     <Zap className="size-3.5 text-[#e85d2a]" />
-                    <span className="hidden md:inline">Instantly variables</span>
-                    <button type="button" aria-expanded={variablesOpen} aria-controls="editor-variable-tray" onClick={() => setVariablesOpen((open) => !open)} className="inline-flex items-center gap-1 rounded-lg py-1 md:hidden">
+                    <button type="button" aria-expanded={variablesOpen} aria-controls="editor-variable-tray" onClick={() => setVariablesOpen((open) => !open)} className="inline-flex items-center gap-1 rounded-lg py-1">
                       Variables <ChevronDown className={cn('size-3.5 transition-transform', variablesOpen && 'rotate-180')} />
                     </button>
                     <span className="hidden font-normal normal-case tracking-normal text-neutral-500 sm:inline">
@@ -1351,7 +1344,7 @@ export function SequenceEditor({
                     </button>
                   </div>
                 </div>
-                <div id="editor-variable-tray" className={cn("max-h-32 flex-wrap gap-1.5 overflow-y-auto md:flex md:max-h-none", variablesOpen ? "flex" : "hidden")}>
+                <div id="editor-variable-tray" className={cn("max-h-32 flex-wrap gap-1.5 overflow-y-auto", variablesOpen ? "flex" : "hidden")}>
                   {INSTANTLY_BASE_VARIABLES.map((variable) => (
                     <button
                       key={variable.key}

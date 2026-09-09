@@ -22,3 +22,12 @@ export function selectHomeWork(tasks: CompassTask[]) {
 export function homeTaskNotes(notes: string | null | undefined) {
   return (notes ?? '').replace(/^daily_setup:[^\n]+\n*/, '').trim()
 }
+
+/** Compact source excerpt; full context stays in the review dialog. */
+export function homeExcerpt(text: string, limit = 240) {
+  if (text.length <= limit) return text
+  const sentence = text.match(/^.*?[.!?](?=\s|$)/s)?.[0]
+  if (sentence && sentence.length <= limit) return sentence
+  const clipped = text.slice(0, limit).replace(/\s+\S*$/, '')
+  return clipped + '…'
+}

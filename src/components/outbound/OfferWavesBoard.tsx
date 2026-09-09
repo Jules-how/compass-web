@@ -371,34 +371,40 @@ export function OfferWavesBoard({ className }: { className?: string }) {
       </section>
 
       {brief.headline ? (
-        <Card>
-          <CardContent className="space-y-3">
-            <p className="text-[11px] font-semibold text-neutral-400">
-              This morning · {latestBrief?.id}
-            </p>
-            <h3 className="text-balance text-[16px] font-semibold leading-snug text-neutral-900">
-              {brief.headline}
-            </h3>
-            {brief.watches.length ? (
-              <details className="folio-brief-details">
-                <summary>
-                  Read the supporting notes ({brief.watches.length})
-                </summary>
-                <ul className="space-y-2 text-[13px] leading-relaxed text-neutral-600">
-                  {brief.watches.map((line) => (
-                    <li key={line} className="flex gap-2">
-                      <span
-                        className="mt-2 size-1.5 shrink-0 rounded-full bg-[#e85d2a]"
-                        aria-hidden
-                      />
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            ) : null}
-          </CardContent>
-        </Card>
+        <details className="folio-outbound-brief">
+          <summary>
+            <span className="folio-caption">Daily brief</span>
+            <strong>{brief.headline}</strong>
+          </summary>
+          <Card>
+            <CardContent className="space-y-3">
+              <p className="text-[11px] font-semibold text-neutral-400">
+                This morning · {latestBrief?.id}
+              </p>
+              <h3 className="text-balance text-[16px] font-semibold leading-snug text-neutral-900">
+                {brief.headline}
+              </h3>
+              {brief.watches.length ? (
+                <details className="folio-brief-details">
+                  <summary>
+                    Read the supporting notes ({brief.watches.length})
+                  </summary>
+                  <ul className="space-y-2 text-[13px] leading-relaxed text-neutral-600">
+                    {brief.watches.map((line) => (
+                      <li key={line} className="flex gap-2">
+                        <span
+                          className="mt-2 size-1.5 shrink-0 rounded-full bg-[#e85d2a]"
+                          aria-hidden
+                        />
+                        <span>{line}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
+            </CardContent>
+          </Card>
+        </details>
       ) : null}
 
       {loading && !campaignsQuery.data ? (
@@ -434,7 +440,14 @@ export function OfferWavesBoard({ className }: { className?: string }) {
                   onChange={setCampaignFolder}
                   items={kanbanColumns.map((c) => ({
                     id: c.id,
-                    label: c.title,
+                    label:
+                      c.id === 'recommended'
+                        ? 'Recommended'
+                        : c.id === 'next'
+                          ? 'Next'
+                          : c.id === 'live'
+                            ? 'Live'
+                            : c.title,
                     count: c.tasks.length,
                   }))}
                 />

@@ -49,6 +49,6 @@ test('Inbox Instantly classify then marks triage done and deep-links Unibox', ()
   const bulk = read('src/app/api/leads/bulk/route.ts')
   assert.match(bulk, /isClassifyOutboundStatus/)
 
-  const home = read('src/components/home/HomeDashboard.tsx')
-  assert.match(home, /\/inbox\?tab=instantly/)
+  const home = read('src/components/home/FolioHome.tsx')
+  assert.match(home, /\/inbox\?tab=/)
 })

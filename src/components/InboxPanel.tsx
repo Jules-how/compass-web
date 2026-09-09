@@ -134,8 +134,8 @@ function NotificationRow({
             ) : null}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1 pt-0.5">
-            <span className="text-[11px] tabular-nums text-neutral-400">
-              {formatInboxRelative(item.occurredAt)}
+            <span title={formatInboxWhen(item.occurredAt)} className="text-[11px] tabular-nums text-neutral-400">
+              {new Date(item.occurredAt).toLocaleDateString('en-AU',{day:'numeric',month:'short',timeZone:'Australia/Sydney'})}
             </span>
             {item.unread ? (
               <>
@@ -216,7 +216,7 @@ function ContextPane({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stone-100 px-5 py-3.5">
+      <div className="folio-correspondence-head flex shrink-0 items-center justify-between gap-3 border-b border-stone-100 px-5 py-3.5">
         <div className="min-w-0">
           <div className="truncate text-[13px] text-neutral-500">
             {INBOX_TAB_LABELS[item.tab]}
@@ -264,7 +264,6 @@ function ContextPane({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-        <h3 className="text-2xl font-semibold tracking-tight text-neutral-900">{item.title}</h3>
         <p className="mt-1 text-sm text-neutral-500">{formatInboxWhen(item.occurredAt)}</p>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -791,7 +790,7 @@ export function InboxPanel() {
   const empty = EMPTY_COPY[tab]
 
   return (
-    <div className="folio-inbox flex min-h-0 flex-1 flex-col p-3 sm:p-4">
+    <div data-context-open={mobileShowContext} className="folio-inbox flex min-h-0 flex-1 flex-col p-3 sm:p-4">
       <div className="compass-panel flex min-h-0 flex-1 flex-col overflow-hidden text-neutral-900">
       <header className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-4 py-2.5">
         <div className="min-w-0">

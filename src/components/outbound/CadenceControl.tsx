@@ -64,7 +64,7 @@ export function CadenceControl({
           load.overCapacity ? 'text-rose-700' : load.underTarget ? 'text-amber-700' : 'text-neutral-500'
         }`}
       >
-        {load.label}
+        {load.label.replace('launched this week','campaigns dated this week')}
       </p>
       <label className="flex flex-col gap-1">
         <span className="text-[10px] font-semibold text-neutral-400">Target</span>

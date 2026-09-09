@@ -70,13 +70,13 @@ test('projects API returns stats and project detail GET is operator-gated', () =
 
 test('operator shell is sidebar-first with Compass brand and sectioned surfaces', () => {
   const shell = read('src/components/OperatorShell.tsx')
-  const sidebar = read('src/components/ui/sidebar.tsx')
+  const sidebar = read('src/components/folio/FolioChrome.tsx')
   const nav = read('src/components/NavLinks.tsx')
 
-  assert.match(shell, /switchflow/)
+  assert.match(sidebar, /Switchflow/)
   assert.match(shell, /compass/)
-  assert.match(sidebar, /compass-sidebar/)
-  assert.match(shell, /orientation="vertical"/)
+  assert.match(sidebar, /folio-sidebar/)
+  assert.match(sidebar, /aria-label="Primary"/)
   for (const href of ['/home', '/inbox', '/tasks', '/projects', '/functions', '/sales/outbound', '/leads']) {
     assert.match(nav, new RegExp(`href: '${href}'`))
   }

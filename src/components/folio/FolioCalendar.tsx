@@ -1,8 +1,10 @@
 'use client'
 import Link from 'next/link'
+import { useState } from 'react'
+import { dateOnlyInZone } from '@/lib/campaigns'
 import { ArrowRight, CalendarDays } from 'lucide-react'
 import { CampaignPlanner } from '@/components/campaigns/CampaignPlanner'
-import { FolioState } from '@/components/folio/FolioPrimitives'
+import { FolioState, FolioFolders } from '@/components/folio/FolioPrimitives'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { CAMPAIGNS_QUERY_KEY } from '@/lib/campaigns-client'
 import type { CompassCampaign } from '@/lib/campaigns'
@@ -13,12 +15,21 @@ export function FolioCalendar() {
     '/api/campaigns',
     { staleMs: 30_000 },
   )
+  const [scope, setScope] = useState<'upcoming' | 'past'>('upcoming')
+  const today = dateOnlyInZone(new Date().toISOString())
   const dated = (query.data?.campaigns ?? [])
-    .filter((c) => c.go_live_at || c.start_date)
-    .toSorted((a, b) =>
-      (a.go_live_at || a.start_date || '').localeCompare(
-        b.go_live_at || b.start_date || '',
-      ),
+    .filter((c) => {
+      const date = c.go_live_at
+        ? dateOnlyInZone(c.go_live_at)
+        : c.start_date?.slice(0, 10)
+      return date && (scope === 'upcoming' ? date >= today : date < today)
+    })
+    .toSorted(
+      (a, b) =>
+        (scope === 'past' ? -1 : 1) *
+        (a.go_live_at || a.start_date || '').localeCompare(
+          b.go_live_at || b.start_date || '',
+        ),
     )
   return (
     <main className="folio-calendar">
@@ -44,9 +55,15 @@ export function FolioCalendar() {
           <FolioState loading title="Loading the plan." />
         ) : (
           <>
-            <div className="folio-folders">
-              <span className="folio-folder-label">Campaign agenda</span>
-            </div>
+            <FolioFolders
+              label="Calendar folders"
+              value={scope}
+              onChange={setScope}
+              items={[
+                { id: 'upcoming', label: 'Upcoming' },
+                { id: 'past', label: 'Past dates' },
+              ]}
+            />
             <section className="folio-paper">
               {dated.length ? (
                 <ul className="folio-work-list">
@@ -77,7 +94,11 @@ export function FolioCalendar() {
                 </ul>
               ) : (
                 <div className="folio-quiet">
-                  <p>No campaign dates are set.</p>
+                  <p>
+                    {scope === 'upcoming'
+                      ? 'No upcoming campaign dates are set.'
+                      : 'No past campaign dates.'}
+                  </p>
                   <Link className="compass-btn-primary" href="/sales/outbound">
                     Plan a campaign <ArrowRight size={15} />
                   </Link>

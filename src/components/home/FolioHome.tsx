@@ -24,7 +24,7 @@ import type { MorningWavePayload } from '@/lib/wave-morning'
 import type { CompassTask } from '@/lib/types'
 import { useCachedJson } from '@/lib/use-cached-json'
 import { INBOX_CACHE_KEY, type InboxPayload } from '@/lib/inbox-ui'
-import { selectHomeWork, homeTaskNotes } from '@/lib/folio-home'
+import { selectHomeWork, homeTaskNotes, homeExcerpt } from '@/lib/folio-home'
 import { resolveTaskActionPlan } from '@/lib/task-action-targets'
 import { workFetch } from '@/lib/workspace-change'
 
@@ -222,7 +222,7 @@ export function FolioHome({
                   {folder === 'today'
                     ? 'Daily brief'
                     : folder === 'waiting'
-                      ? 'Waiting / external decisions'
+                      ? 'Waiting / blocked work'
                       : 'Captured / working notes'}
                 </p>
                 <span
@@ -277,7 +277,7 @@ export function FolioHome({
                       )}
                     </h2>
                     <p>
-                      {brief ||
+                      {(brief ? homeExcerpt(brief) : '') ||
                         'There’s no daily brief to review yet. Choose a task or capture what needs your attention.'}
                     </p>
                     <div className="folio-actions">
@@ -447,12 +447,12 @@ export function FolioHome({
           <section className="folio-pinned">
             <div className="folio-pin" />
             <p className="folio-caption">
-              {waiting ? 'Waiting on someone else' : 'Room for the next move'}
+              {waiting ? 'Waiting for the next move' : 'Room for the next move'}
             </p>
             <h2>{waiting ? waiting.title : 'The work has a home.'}</h2>
             <p>
               {waiting
-                ? homeTaskNotes(waiting.notes).slice(0, 220) ||
+                ? homeExcerpt(homeTaskNotes(waiting.notes), 240) ||
                   'This task is blocked. Open its context to see what is needed.'
                 : taskError
                   ? 'Waiting tasks could not load. Retry Home to see the current context.'
