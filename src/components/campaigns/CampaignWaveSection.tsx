@@ -2,13 +2,20 @@
 
 import type { CampaignPatch } from '@/lib/campaigns-client'
 import type { WaveSnapshot } from '@/lib/campaign-wave'
+import type { CompassLeadList } from '@/lib/lead-lists'
 
 export function CampaignWaveSection({
   wave,
-  onSave
+  attachedLists,
+  availableLists,
+  onSave,
+  onReplaceLists
 }: {
   wave: WaveSnapshot | null
+  attachedLists: CompassLeadList[]
+  availableLists: CompassLeadList[]
   onSave: (patch: CampaignPatch) => void
+  onReplaceLists: (listIds: string[]) => void
 }) {
   if (!wave) {
     return <p className="text-sm text-neutral-500">Loading wave…</p>
@@ -18,6 +25,8 @@ export function CampaignWaveSection({
   const confirmed = Boolean(wave.copyConfirmedAt)
   const bounce = wave.instantly
   const failing = wave.checks.filter((check) => check.blocking && !check.ok)
+  const attachedIds = new Set(attachedLists.map((row) => row.id))
+  const unattached = availableLists.filter((row) => !attachedIds.has(row.id))
 
   return (
     <div className="space-y-4 text-sm">
@@ -27,6 +36,57 @@ export function CampaignWaveSection({
           {wave.cohort}
         </p>
       </div>
+
+      <div className="space-y-1.5">
+        <span className="text-[11px] font-medium text-neutral-500">CRM lists</span>
+        {attachedLists.length === 0 ? (
+          <p className="text-[12px] text-neutral-500">
+            No list attached. Cohort falls back to leads stamped with this campaign.
+          </p>
+        ) : (
+          <ul className="space-y-1">
+            {attachedLists.map((list) => (
+              <li key={list.id} className="flex items-center justify-between gap-2 text-[12px]">
+                <span className="min-w-0 truncate text-neutral-800">
+                  {list.name}
+                  <span className="text-neutral-400"> · {list.member_count ?? 0}</span>
+                </span>
+                <button
+                  type="button"
+                  className="text-neutral-500 hover:text-neutral-800"
+                  onClick={() =>
+                    onReplaceLists(attachedLists.filter((row) => row.id !== list.id).map((row) => row.id))
+                  }
+                >
+                  Detach
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {unattached.length > 0 ? (
+          <select
+            defaultValue=""
+            key={attachedLists.map((row) => row.id).join(',')}
+            onChange={(e) => {
+              const id = e.target.value
+              if (!id) return
+              onReplaceLists([...attachedLists.map((row) => row.id), id])
+            }}
+            className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-[12px]"
+          >
+            <option value="">Attach a list…</option>
+            {unattached.map((list) => (
+              <option key={list.id} value={list.id}>
+                {list.name} ({list.member_count ?? 0})
+              </option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-[12px] text-neutral-400">Create lists on Leads first.</p>
+        )}
+      </div>
+
       <p className="text-[12px] text-neutral-600">
         First lines {wave.openers} / {wave.cohort - (wave.thin || 0) - (wave.skip || 0)} sendable
         {wave.missingCompanyOrEmail > 0

@@ -16,8 +16,10 @@ import {
 import {
   buildWaveSnapshot,
   summarizeWaveLeads,
+  type WaveLeadRow,
   type WaveSnapshot
 } from '@/lib/campaign-wave'
+import { loadCampaignCohortLeadRows, listCrmLists } from '@/lib/lead-lists'
 import {
   getPipelineCampaignRow,
   listCampaignActivity,
@@ -34,11 +36,8 @@ async function loadWaveForCampaign(
   supabase: Awaited<ReturnType<typeof requirePortalAccess>>['supabase'],
   campaign: CompassCampaign
 ): Promise<WaveSnapshot> {
-  const { data } = await supabase
-    .from('lead_contacts')
-    .select('enrich_status,opener,email,company,outbound_status,opener_track,opener_kind,icp_status')
-    .eq('pipeline_campaign_id', campaign.id)
-    .limit(5000)
+  const { rows: data } = await loadCampaignCohortLeadRows<WaveLeadRow>(supabase, campaign.id,
+    'id,enrich_status,opener,email,company,outbound_status,opener_track,opener_kind,icp_status')
   const leads = summarizeWaveLeads(data ?? [])
   return buildWaveSnapshot({ campaign, leads, instantly: null, includeCopyMatch: true })
 }
@@ -53,12 +52,17 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       listCampaignActivity(supabase, id),
       loadWaveForCampaign(supabase, campaign)
     ])
+    const attached = await supabase.from('compass_campaign_lists').select('list_id').eq('campaign_id', id)
+    if (attached.error) throw new Error(attached.error.message)
+    const ids = new Set((attached.data ?? []).map(row => row.list_id))
+    const lists = (await listCrmLists(supabase)).filter(row => ids.has(row.id))
     return portalJsonCached(
       {
         campaign: projectCampaignCopy(campaign),
         milestones: [],
         activity,
-        wave
+        wave,
+        lists
       },
       {},
       5

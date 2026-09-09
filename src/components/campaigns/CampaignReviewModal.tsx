@@ -36,7 +36,7 @@ function stepBody(step: OutboundStep): string {
 
 async function fetchLeadPage(campaignId: string, page: number, pageSize: number) {
   const res = await fetch(
-    `/api/leads/list?pipeline_campaign_id=${encodeURIComponent(campaignId)}&page=${page}&pageSize=${pageSize}`,
+    `/api/leads/list?cohort_campaign_id=${encodeURIComponent(campaignId)}&page=${page}&pageSize=${pageSize}`,
     { headers: { Accept: 'application/json' }, cache: 'no-store' }
   )
   const body = (await res.json().catch(() => ({}))) as {

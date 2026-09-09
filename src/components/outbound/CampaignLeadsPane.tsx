@@ -29,7 +29,7 @@ export function CampaignLeadsPane({
 }) {
   const locked = useMemo<LeadListFilters>(
     () => ({
-      pipeline_campaign_id: pipelineCampaignId?.trim() || undefined,
+      cohort_campaign_id: pipelineCampaignId?.trim() || undefined,
       instantly_campaign_id: instantlyCampaignId?.trim() || undefined
     }),
     [pipelineCampaignId, instantlyCampaignId]
@@ -48,25 +48,25 @@ export function CampaignLeadsPane({
   useEffect(() => {
     setFilters((current) => ({
       ...current,
-      pipeline_campaign_id: locked.pipeline_campaign_id,
+      cohort_campaign_id: locked.cohort_campaign_id,
       instantly_campaign_id: locked.instantly_campaign_id
     }))
     setPage(1)
-  }, [locked.pipeline_campaign_id, locked.instantly_campaign_id])
+  }, [locked.cohort_campaign_id, locked.instantly_campaign_id])
 
   const listUrl = useMemo(() => {
     const listParams = leadFiltersToSearchParams({
       ...filters,
-      pipeline_campaign_id: locked.pipeline_campaign_id,
+      cohort_campaign_id: locked.cohort_campaign_id,
       instantly_campaign_id: locked.instantly_campaign_id
     })
     listParams.set('page', String(page))
     listParams.set('pageSize', String(LEAD_PAGE_SIZE))
     return `/api/leads/list?${listParams.toString()}`
-  }, [filters, locked.instantly_campaign_id, locked.pipeline_campaign_id, page])
+  }, [filters, locked.instantly_campaign_id, locked.cohort_campaign_id, page])
 
   const loadList = useCallback(async () => {
-    if (!locked.pipeline_campaign_id && !locked.instantly_campaign_id) {
+    if (!locked.cohort_campaign_id && !locked.instantly_campaign_id) {
       setDisplay({ leads: [], total: 0, page: 1, pageSize: LEAD_PAGE_SIZE })
       setListBusy(false)
       return
@@ -96,7 +96,7 @@ export function CampaignLeadsPane({
     } finally {
       if (id === requestId.current) setListBusy(false)
     }
-  }, [listUrl, locked.instantly_campaign_id, locked.pipeline_campaign_id, page])
+  }, [listUrl, locked.instantly_campaign_id, locked.cohort_campaign_id, page])
 
   useEffect(() => {
     void loadList()
@@ -105,13 +105,13 @@ export function CampaignLeadsPane({
   const navigate = useCallback((nextFilters: LeadListFilters, nextPage = 1) => {
     setFilters({
       ...nextFilters,
-      pipeline_campaign_id: locked.pipeline_campaign_id,
+      cohort_campaign_id: locked.cohort_campaign_id,
       instantly_campaign_id: locked.instantly_campaign_id
     })
     setPage(nextPage)
-  }, [locked.instantly_campaign_id, locked.pipeline_campaign_id])
+  }, [locked.instantly_campaign_id, locked.cohort_campaign_id])
 
-  if (!locked.pipeline_campaign_id && !locked.instantly_campaign_id) {
+  if (!locked.cohort_campaign_id && !locked.instantly_campaign_id) {
     return (
       <div className={className}>
         <p className="px-4 py-6 text-sm text-neutral-500">No campaign membership to list.</p>

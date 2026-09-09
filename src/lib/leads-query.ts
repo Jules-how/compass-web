@@ -49,7 +49,9 @@ export function parseLeadListFilters(searchParams: URLSearchParams): LeadListFil
         ? (searchParams.get('after_hours') as '1' | '0')
         : undefined,
     email_origin: emptyToUndef(searchParams.get('email_origin')),
-    min_reviews: emptyToUndef(searchParams.get('min_reviews'))
+    min_reviews: emptyToUndef(searchParams.get('min_reviews')),
+    list_id: emptyToUndef(searchParams.get('list_id')),
+    cohort_campaign_id: emptyToUndef(searchParams.get('cohort_campaign_id'))
   }
 }
 
@@ -397,6 +399,8 @@ export function leadFiltersToSearchParams(filters: LeadListFilters, page?: numbe
   if (filters.after_hours) params.set('after_hours', filters.after_hours)
   if (filters.email_origin) params.set('email_origin', filters.email_origin)
   if (filters.min_reviews) params.set('min_reviews', filters.min_reviews)
+  if (filters.list_id) params.set('list_id', filters.list_id)
+  if (filters.cohort_campaign_id) params.set('cohort_campaign_id', filters.cohort_campaign_id)
   if (filters.bucket === 'prospects') params.set('bucket', 'prospects')
   else if (filters.bucket === 'archived') params.set('bucket', 'archived')
   if (page && page > 1) params.set('page', String(page))
@@ -417,6 +421,8 @@ export function leadFiltersNeedExactCount(filters: LeadListFilters): boolean {
       filters.recontact_ok ||
       filters.suppressed ||
       filters.recontact_ready ||
+      filters.list_id ||
+      filters.cohort_campaign_id ||
       filters.pipeline_campaign_id ||
       filters.instantly_campaign_id ||
       filters.cohort_tag ||
