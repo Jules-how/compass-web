@@ -1,0 +1,27 @@
+{
+  "clientId": "REPLACE_WITH_EXISTING_COMPASS_CLIENT_ID",
+  "twilioNumber": "+61400000000",
+  "twilioAccountSid": "AC00000000000000000000000000000000",
+  "calendarId": "REPLACE_WITH_CLIENT_ASSESSMENT_CALENDAR_ID",
+  "config": {
+    "businessName": "REPLACE_WITH_CLIENT_APPROVED_NAME",
+    "timezone": "Australia/Sydney",
+    "service": "ducted_replacement",
+    "suburbs": ["REPLACE_WITH_APPROVED_SUBURB"],
+    "owner": "REPLACE_WITH_NAMED_OFFICE_OWNER",
+    "hours": {
+      "mon": ["09:00", "17:00"],
+      "tue": ["09:00", "17:00"],
+      "wed": ["09:00", "17:00"],
+      "thu": ["09:00", "17:00"],
+      "fri": ["09:00", "17:00"],
+      "sat": [],
+      "sun": []
+    },
+    "slotMinutes": 60,
+    "bufferMinutes": 30,
+    "minimumNoticeMinutes": 120,
+    "followupHours": [24, 72],
+    "quietHours": [9, 18]
+  }
+}
