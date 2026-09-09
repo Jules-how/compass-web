@@ -129,8 +129,6 @@ export async function loadRecipeBundle(
   input: { trade?: string | null; campaignId?: string | null }
 ): Promise<{ defaultRecipe: PathwayRecipeRow; overlay: PathwayRecipeRow | null; stages: PathwayStage[] }> {
   const trade = (input.trade || 'hvac').trim().toLowerCase() || 'hvac'
-  await ensureDefaultRecipe(supabase, trade)
-
   const defaultQuery = supabase
     .from('compass_pathway_recipes')
     .select('id,trade,kind,campaign_id,stages')

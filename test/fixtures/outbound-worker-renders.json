@@ -1,0 +1,516 @@
+{
+  "a1cd2690ae7f769d017da28de5e1fd0628e4cdccfabab5f5017796d596f7894b": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "94b22ee9e3e6599faf13ec96b5b5710379b760c15a92206133df8a827ff79bfb": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "5fe38bdd76c7eeea736f0e7d9521ffeea24bccc4dd1f859b272ac3759c0f620e": [],
+  "b8cdf20eecab2331ec1d295880ac41138b7b94e76f44712da2d05780974ce8cb": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "ca93ba57c4624226a4d41e12c61382f897defcc0a1eb7e0e3858b512767e4e5b": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "a63942be9f8df300f691add174cf1e472f50cb0047d892d3d01a4545ae9f0ef5": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "2ec1284ec89ef42f78547ce04c10aa26a071bf1c70cec6ef39e439e456c2ccfb": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "8adfab01ea2a7ae7bffc17c7f72a804644a73eab6f9955745017ed673ee7967b": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "2ed8335132275104448f1d35e39c61f7f2f735576bdd5f7395a0a828347fa633": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "10e9175eba6627043ca269490514027c5331ddf1cd2ee48ac0d4edbfa5a6fad7": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "1fbd94bfb6718421fb0d858b331af7e9e43dbabb8e919052f4b3587ef441df89": [],
+  "5ec0774b5ed00761e0dc4150bf6a762bad945c5de33870ffc29710877ecf3d8c": [],
+  "226fbfe2f8b6e01beccc77d59710a94cbbc7f2fc9235b30c9ba6f98a754731b8": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "james@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "7fdee621941ff2733f4d201e4168d3e63b17e56bf6494f183afb0a93c053044e": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "james@example.test",
+        "first_name": "Morgan",
+        "firstName": "Morgan",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Hi Morgan, saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Hi Morgan, saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Hi Morgan, saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Hi Morgan, saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "c2491107761d537c238200dd90e087ab8adb678e3912a16b7afdd83be6e5b200": [],
+  "bc7f21452aa148a28f94f3e92bb8ced41ec6da185a0510de8d4d2e1169a9255c": [],
+  "dafeaed1f3adaabd9c9504f530da5010ea9dc21a0992d15eb1e3fe17cb9e5079": [],
+  "470e658e98d47267ab07f5d29af5f4677f76ef8331db8fcf08ebdf0e98fa513d": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    },
+    {
+      "candidate_id": "candidate-2",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "907b2b039b2b20d17193233253b4f43c9b4891f237aa43db7f54940643228900": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "ed866214c565138fbe65701a02a2043824d3b50216fabe2e53d6595d3b89e0b3": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below. Extra.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "39f4a2dd8db60f130bcf805d5e3072cab9a7fc05468185a46176fb604e285f17": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ],
+  "d0e07999c2e6131722608ca5386549363a0dd1ac438b2c9de3a60e872c6485fc": [
+    {
+      "candidate_id": "test-candidate",
+      "values": {
+        "email": "work@example.test",
+        "first_name": "",
+        "firstName": "",
+        "company_name": "Example Air",
+        "companyName": "Example Air",
+        "companyShort": "Example Air",
+        "service": "ducted installation",
+        "suburb": "Sydney",
+        "city": "Sydney",
+        "subject": "ducted installation in sydney",
+        "opener": "Saw Example Air offers ducted installation in Sydney.",
+        "Opener": "Saw Example Air offers ducted installation in Sydney.",
+        "personalization": "Saw Example Air offers ducted installation in Sydney."
+      },
+      "steps": [
+        {
+          "subject": "ducted installation in sydney",
+          "body": "Saw Example Air offers ducted installation in Sydney.\n\nWould this be relevant to your installation team?\n\nJules, Switchflow\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        },
+        {
+          "subject": "",
+          "body": "Following up on the note below.\n\n<a href=\"[Unsubscribe]\">Unsubscribe</a>"
+        }
+      ]
+    }
+  ]
+}
