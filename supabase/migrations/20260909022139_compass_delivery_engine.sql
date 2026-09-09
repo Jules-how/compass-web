@@ -86,11 +86,13 @@ do $$ declare tab text; begin
     execute format('alter table public.%I enable row level security', tab);
     execute format('alter table public.%I force row level security', tab);
     execute format('create policy operator_read on public.%I for select to authenticated using (public.portal_is_operator())', tab);
+    -- Supabase may inherit broad default grants. RLS does not protect TRUNCATE.
+    execute format('revoke all on public.%I from public,anon,authenticated', tab);
     execute format('grant select on public.%I to authenticated', tab);
     execute format('grant all on public.%I to service_role', tab);
-    execute format('revoke all on public.%I from anon', tab);
   end loop;
 end $$;
+revoke all on sequence public.delivery_jobs_seq_seq,public.delivery_messages_seq_seq,public.delivery_events_seq_seq from public,anon,authenticated;
 grant usage,select on sequence public.delivery_jobs_seq_seq to service_role;
 grant usage,select on sequence public.delivery_messages_seq_seq,public.delivery_events_seq_seq to service_role;
 

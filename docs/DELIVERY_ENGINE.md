@@ -24,7 +24,9 @@ The office handoff is a persisted task in the Compass delivery workspace, with a
 
 ## Try the demo
 
-1. Apply migration `0080_compass_delivery_engine.sql` to a **review/staging** database with the existing Compass portal/client baseline. Point the review deployment at that database and keep `COMPASS_DELIVERY_LIVE` unset.
+For a local interface review, run `node scripts/preview-delivery.mjs`. It prints a loopback URL and renders the real delivery route inside the existing Compass shell, with the same sidebar, page header, fonts and CSS. The fixture uses the real delivery engine and an ephemeral PGlite database; it substitutes browser routing/auth and inactive pages. Other Compass pages are not included. It does not exercise hosted authentication or Supabase connectivity, and its fictional records reset when stopped. No `next dev` server or production credentials are required.
+
+1. Apply migration `20260909022139_compass_delivery_engine.sql` to a **review/staging** database with the existing Compass portal/client baseline. Point the review deployment at that database and keep `COMPASS_DELIVERY_LIVE` unset.
 2. Sign in as a Compass operator, open **Client delivery**, and create an enquiry that needs qualification.
 3. Send fictional replies: `Yes`, `Ryde`, `Yes`, `Next month`, `10 Example Street`. The demo then offers appointment options. Reply `1` or `2` to book; it must never book merely because availability exists.
 4. Try `reschedule`, choose a replacement, then `cancel appointment`. The old appointment stays recorded until the replacement is confirmed.
@@ -110,6 +112,8 @@ For the first pilot, review every handoff and a sample of successful conversatio
 Productisation here is a shared engine, versioned `installation-v1` rules, one client configuration, an adapter contract, a repeatable demo, tests and the setup/runbook above. A second client should change configuration and the supported integration mapping; it should not require copying a separate workflow tree.
 
 ## Verification
+
+The initial delivery interface was aligned to production `main` at `8ba9b764a112bd14aaaa94ba022ba4789a9000ab`, using the existing shell, sidebar and design tokens. Jules subsequently requested consolidation of all outstanding Compass branches. That release is assembled on `codex/compass-consolidation-20260909`, including the newer Pathfinder, commercial/operator and outbound production fixes, plus CRM lists adapted to the current search implementation. The Folio design package is retained as reference material; it does not replace the live interface. See [the consolidation release record](RELEASE_2026-09-09_CONSOLIDATION.md) for validation and deployment evidence.
 
 ```sh
 node --test test/delivery-engine.test.mjs

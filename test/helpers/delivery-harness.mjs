@@ -42,9 +42,12 @@ export async function harness(options = {}) {
   await db.waitReady
   if (!options.existing) {
     await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
+      alter default privileges in schema public grant all on tables to anon,authenticated;
+      alter default privileges in schema public grant all on sequences to anon,authenticated;
+      alter default privileges in schema public grant execute on functions to anon,authenticated;
       create table public.compass_clients(id text primary key);
       create function public.portal_is_operator() returns boolean language sql stable as $$ select coalesce(current_setting('test.operator',true),'false')='true' $$;`)
-    await db.exec(readFileSync(resolve(root, 'supabase/migrations/0080_compass_delivery_engine.sql'), 'utf8'))
+    await db.exec(readFileSync(resolve(root, 'supabase/migrations/20260909022139_compass_delivery_engine.sql'), 'utf8'))
   }
   const rpc = async (name, args) => {
     if (!/^delivery_[a-z_]+$/.test(name) || Object.keys(args).some(k => !/^p_[a-z_]+$/.test(k))) throw Error('Unsafe test SQL identifier')

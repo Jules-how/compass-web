@@ -92,6 +92,7 @@ export function canonical(value: unknown): string {
     return (
       '{' +
       Object.keys(value)
+        .filter((key) => (value as Record<string, unknown>)[key] !== undefined)
         .sort()
         .map(
           (key) =>
@@ -241,7 +242,7 @@ export function assessCandidate(
   for (const other of ledger) {
     if (other.id === own?.id) continue
     if (
-      emailKey(other.email) === emailKey(row.email) ||
+      (emailKey(row.email) && emailKey(other.email) === emailKey(row.email)) ||
       (domain &&
         other.company_domain?.toLowerCase().replace(/^www\./, '') === domain)
     ) {

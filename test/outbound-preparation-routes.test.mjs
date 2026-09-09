@@ -218,3 +218,45 @@ test('CSV export rechecks the remote pause state after an earlier reservation', 
   )
   assert.equal(reserved, false)
 })
+
+test('import actions explain missing approval and reservation before platform access', async () => {
+  const { fixture } = await import('./helpers/outbound-fixture.mjs')
+  const f = fixture()
+  const bundle = { context: f.context, hash: 'a'.repeat(64) }
+  const records = {
+    compass_pipeline_campaigns: {
+      id: 'test-cell', offer_key: 'installation-booking', status: 'planned',
+      vertical_tags: ['hvac'], location_tags: ['sydney'],
+      sequence_draft: f.context.sequence, instantly_campaign_id: 'instant'
+    },
+    compass_outbound_offers: f.context.offer,
+    compass_outbound_configs: { recipe: f.context.recipe, settings: f.context.settings },
+    compass_outbound_approvals: null,
+    compass_outbound_loads: null
+  }
+  const db = {
+    rpc: async (name) => {
+      assert.equal(name, 'outbound_check_preparation')
+      return { data: bundle, error: null }
+    },
+    from(table) {
+      const q = {
+        select() { return q }, eq() { return q },
+        single: async () => ({ data: records[table], error: null }),
+        maybeSingle: async () => ({ data: records[table], error: null })
+      }
+      return q
+    }
+  }
+  const server = loadTypescript('src/lib/outbound-preparation-server.ts', {
+    './instantly': { resolveInstantlyApiKey: async () => assert.fail('premature platform access') },
+    './instantly-write': {}
+  })
+  for (const action of ['preparationExport', 'reserveBrowserLoad', 'reconcileBrowserLoad']) {
+    await assert.rejects(server[action](db, 'prep'), /human_approval_required/)
+  }
+  records.compass_outbound_approvals = { hash: bundle.hash }
+  for (const action of ['preparationExport', 'reconcileBrowserLoad']) {
+    await assert.rejects(server[action](db, 'prep'), /check_paused_campaign_first/)
+  }
+})

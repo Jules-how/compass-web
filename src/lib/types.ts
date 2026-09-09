@@ -556,6 +556,10 @@ export interface LeadListFilters {
   after_hours?: '1' | '0'
   email_origin?: string
   min_reviews?: string
+  /** CRM list membership. */
+  list_id?: string
+  /** Campaign cohort via attached lists, else pipeline_campaign_id stamp. */
+  cohort_campaign_id?: string
 }
 
 export interface LeadSummaryCounts {

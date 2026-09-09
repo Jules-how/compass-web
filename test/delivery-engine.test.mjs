@@ -226,6 +226,8 @@ test('database browser roles cannot execute delivery mutations or read other cli
   await h.db.exec("set test.operator='true'")
   assert.equal((await h.db.query('select count(*)::int as n from delivery_enquiries')).rows[0].n, 1)
   await assert.rejects(h.db.query('select delivery_claim(now())'), /permission denied/)
+  await assert.rejects(h.db.query('truncate delivery_demo_crm'), /permission denied/)
+  await assert.rejects(h.db.query("select nextval('delivery_jobs_seq_seq')"), /permission denied/)
   await h.db.exec('reset role; set role anon')
   await assert.rejects(h.db.query('select * from delivery_enquiries'), /permission denied/)
   await h.db.exec('reset role')

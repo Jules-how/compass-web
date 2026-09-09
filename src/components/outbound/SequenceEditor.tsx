@@ -64,7 +64,7 @@ const COMPONENTS_WIDTH_DEFAULT = 680
 const COMPONENTS_WIDTH_MIN = 480
 const COMPONENTS_WIDTH_MAX = 960
 
-type EditorTab = 'analytics' | 'editor' | 'experiment' | 'archive' | 'settings'
+type EditorTab = 'analytics' | 'editor' | 'experiment' | 'archive' | 'settings' | 'prepare'
 
 const LEADS_HEIGHT_KEY = 'compass.outbound.editor-leads-height.v1'
 const LEADS_HEIGHT_DEFAULT = 36
@@ -742,6 +742,7 @@ export function SequenceEditor({
   const tabs: { id: EditorTab; label: string }[] = [
     { id: 'analytics', label: 'Analytics' },
     { id: 'editor', label: 'Editor' },
+    ...(campaign.offer_key === 'installation-booking' ? [{ id: 'prepare' as const, label: 'Prepare' }] : []),
     { id: 'experiment', label: 'Experiment' },
     { id: 'archive', label: 'Archive' },
     { id: 'settings', label: 'Settings' }
@@ -818,11 +819,11 @@ export function SequenceEditor({
           <button
             type="button"
             disabled={unbound || instantlyUnbound || !campaignId || launchBusy}
-            onClick={() => void launchToInstantly()}
+            onClick={() => campaign.offer_key === 'installation-booking' ? setTab('prepare') : void launchToInstantly()}
             className="inline-flex items-center gap-1.5 rounded-xl bg-[#e85d2a] px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-soft disabled:opacity-50"
           >
             <Rocket className="size-3.5" />
-            {launchBusy ? 'Pushing…' : 'Push to Instantly'}
+            {campaign.offer_key === 'installation-booking' ? 'Review preparation' : launchBusy ? 'Pushing…' : 'Push to Instantly'}
           </button>
         </div>
         <nav aria-label="Campaign views" className="flex w-full items-center gap-0.5 overflow-x-auto pb-1">
@@ -1205,6 +1206,13 @@ export function SequenceEditor({
             </div>
           ) : null}
 
+          {tab === 'prepare' && campaign.offer_key === 'installation-booking' ? (
+            <div className="mx-auto w-full max-w-3xl px-4 py-8">
+              <div className="rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft">
+                <CampaignInstantlyPanel campaign={campaign} />
+              </div>
+            </div>
+          ) : null}
           {tab === 'settings' ? (
             <div className="mx-auto max-w-lg space-y-4 px-4 py-8">
               <CampaignCopyMeta
@@ -1218,7 +1226,7 @@ export function SequenceEditor({
                   if (sequence) scheduleAutosave()
                 }}
               />
-              {!unbound && !instantlyUnbound ? (
+              {!unbound && !instantlyUnbound && campaign.offer_key !== 'installation-booking' ? (
                 <div className="rounded-2xl border border-stone-200/70 bg-white p-4 shadow-soft">
                   <h2 className="text-[13px] font-semibold text-neutral-900">Instantly</h2>
                   <div className="mt-3">
