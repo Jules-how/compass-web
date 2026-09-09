@@ -437,22 +437,27 @@ export async function currentBundle(
     throw new Error('preparation_stale')
   return bundle
 }
-export async function preparationExport(db: SupabaseClient, id: string) {
+async function approvedBundle(db: SupabaseClient, id: string) {
   const bundle = await currentBundle(db, id)
   const approved = await db
     .from('compass_outbound_approvals')
     .select('hash')
     .eq('preparation_id', id)
-    .single()
-  requireData(approved)
-  if (approved.data.hash !== bundle.hash)
+    .maybeSingle()
+  check(approved.error)
+  if (approved.data?.hash !== bundle.hash)
     throw new Error('human_approval_required')
+  return bundle
+}
+export async function preparationExport(db: SupabaseClient, id: string) {
+  const bundle = await approvedBundle(db, id)
   const load = await db
     .from('compass_outbound_loads')
     .select('preparation_id')
     .eq('preparation_id', id)
-    .single()
-  requireData(load)
+    .maybeSingle()
+  check(load.error)
+  if (!load.data) throw new Error('check_paused_campaign_first')
   // A reservation can outlive changes made directly in Instantly.
   await reserveBrowserLoad(db, id)
   return {
@@ -555,7 +560,7 @@ export function verifyPausedCampaign(
   }
 }
 export async function reserveBrowserLoad(db: SupabaseClient, id: string) {
-  const bundle = await currentBundle(db, id)
+  const bundle = await approvedBundle(db, id)
   const camp = await db
     .from('compass_pipeline_campaigns')
     .select('instantly_campaign_id')
@@ -585,13 +590,14 @@ export async function reserveBrowserLoad(db: SupabaseClient, id: string) {
   }
 }
 export async function reconcileBrowserLoad(db: SupabaseClient, id: string) {
-  const bundle = await currentBundle(db, id)
+  const bundle = await approvedBundle(db, id)
   const load = await db
     .from('compass_outbound_loads')
     .select('instantly_campaign_id')
     .eq('preparation_id', id)
-    .single()
-  requireData(load)
+    .maybeSingle()
+  check(load.error)
+  if (!load.data) throw new Error('check_paused_campaign_first')
   const key = await resolveInstantlyApiKey(db)
   if (!key) throw new Error('instantly_readback_not_configured')
   const remote = await instantlyGetCampaign(
