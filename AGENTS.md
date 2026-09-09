@@ -22,6 +22,8 @@ For UI changes or reviews, use [Compass UI guidance](.cursor/rules/compass-ui-lo
 
 ## Local work and context
 
+For Switchflow business planning or execution, first read the current Compass decision note `planning.note.458e8ef0-80cc-5405-aa5c-eb804faf70b0` and latest `Switchflow — day plan — YYYY-MM-DD` working note through the agent planning API. After material work, append checked results, evidence and the next action to the existing dated handover; preserve other writers' changes and use the current revision. Keep tasks open for Jules to confirm, and propose changes to accepted priorities or schedules. The workflow and source gaps are defined in `docs/CLOUD_MORNING_OPERATING_PLAN.md`; do not infer all-chat access or new execution authority from shared context.
+
 Do not start `next dev` / `npm run dev` unless Jules asks. Hosted Compass: https://compass-web-eosin.vercel.app. Choose a preview format appropriate to the request; static HTML is available without starting a compiler.
 
 When opened as a standalone repository, also consult `../AGENTS.md` if this is the Switchflow workspace. It contains business constraints that do not automatically cross the Git root. Use independent judgement; historical methods and preferences are context, and the current request determines the scope.

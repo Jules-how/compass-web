@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { getPortalAdminClient } from "@/lib/portal-admin";
 import { sealCommercial, openCommercial } from "@/lib/agreement-server";
+import { compareAndSwapPlanning } from "@/lib/planning-persist.mjs";
 import {
   PLANNING_KINDS,
   validatePlanning,
@@ -34,6 +35,14 @@ export async function listPlanning(kind: string, page = 0) {
     total: count || 0,
     page,
   };
+}
+export async function getPlanning(kind: string, id: string) {
+  if (!PLANNING_KINDS.includes(kind) || !new RegExp(`^planning\\.${kind}\\.[a-f0-9-]{36}$`).test(id))
+    throw new Error("Invalid record ID.");
+  const { data, error } = await getPortalAdminClient()
+    .from("compass_settings").select("value").eq("id", id).maybeSingle();
+  if (error) throw new Error("Unable to load planning record.");
+  return data ? openCommercial<PlanningRow>(String(data.value)) : null;
 }
 export async function savePlanning(body: {
   kind: string;
@@ -112,14 +121,7 @@ export async function savePlanning(body: {
     );
   const value = sealCommercial(row);
   if (old) {
-    const { data: changed, error } = await db
-      .from("compass_settings")
-      .update({ value, updated_at: at, mirrored_at: at })
-      .eq("id", id)
-      .eq("value", old.value)
-      .select("id");
-    if (error || !changed?.length)
-      throw new Error("This record changed. Reload before editing it.");
+    await compareAndSwapPlanning(db, id, old.value, value, at);
   } else {
     const { error } = await db
       .from("compass_settings")
