@@ -1,0 +1,44 @@
+.desk {
+  container: delivery / inline-size;
+}
+
+.enquiries {
+  max-height: 22rem;
+}
+
+/* Measure the canvas remaining beside Compass's sidebar, not the viewport. */
+@container delivery (min-width: 34rem) {
+  .metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container delivery (min-width: 46rem) {
+  .workspace {
+    grid-template-columns: 15rem minmax(0, 1fr);
+  }
+
+  .context {
+    grid-column: 2;
+  }
+
+  .enquiries {
+    max-height: 41rem;
+  }
+}
+
+@container delivery (min-width: 58rem) {
+  .metrics {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@container delivery (min-width: 78rem) {
+  .workspace {
+    grid-template-columns: 15rem minmax(0, 1fr) 17.5rem;
+  }
+
+  .context {
+    grid-column: 3;
+  }
+}
