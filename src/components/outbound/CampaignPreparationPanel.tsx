@@ -277,7 +277,7 @@ export function CampaignPreparationPanel({
             </label>
           </div>
           <p className="text-xs text-neutral-500">
-            Sydney time · weekdays · tracking off · stop on reply · unsubscribe
+            {settings.timezone.replace("Australia/", "").replaceAll("_", " ")} time · weekdays · tracking off · stop on reply · unsubscribe
             header and link.
           </p>
           <button disabled={busy || !state} className={button}>
@@ -567,7 +567,7 @@ export function CampaignPreparationPanel({
             Version {prep.bundle.hash.slice(0, 12)} ·{" "}
             {prep.bundle.context.settings.email_list.join(", ")} ·{" "}
             {prep.bundle.context.settings.from}–
-            {prep.bundle.context.settings.to} Sydney time ·{" "}
+            {prep.bundle.context.settings.to} {prep.bundle.context.settings.timezone.replace("Australia/", "").replaceAll("_", " ")} time ·{" "}
             {prep.bundle.context.settings.daily_limit}/day
           </p>
           {!approved && (

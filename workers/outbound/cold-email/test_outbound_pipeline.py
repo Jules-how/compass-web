@@ -5,9 +5,26 @@ import tempfile
 import time
 import unittest
 from unittest.mock import patch
-from outbound_pipeline import Pipeline, validate_assessment, save, read, fresh, now, useful_links
+from outbound_pipeline import Pipeline, validate_assessment, save, read, fresh, now, useful_links, protected_contacts, indexed_evidence, materialize_evidence
 
 class PipelineTests(unittest.TestCase):
+    def test_public_email_encoding_is_decoded_from_retained_html(self):
+        email='quotes@example.org';key=43;encoded=bytes([key]+[ord(c)^key for c in email]).hex()
+        self.assertEqual(protected_contacts('<a data-cfemail="'+encoded+'">email</a>')[0]['email'],email)
+        self.assertEqual(protected_contacts('<a data-cfemail="invalid">email</a>'),[])
+    def test_indexed_contacts_restore_exact_website_source_and_reject_maps_only(self):
+        packet={'sources':[{'url':'https://example.org','text':'We install split systems in Perth.\nquotes@example.org'},{'url':'https://www.google.com/maps/test','text':'maps-only@example.org'}]}
+        entries=indexed_evidence(packet);wrong=next(x['id'] for x in entries if not x['website'])
+        result={'selected_email':'quotes@example.org','contact_name':'','facts':[{'kind':'email','evidence_id':wrong}]}
+        fixed=materialize_evidence(result,entries);self.assertEqual(fixed['facts'][0]['url'],'https://example.org')
+        result['selected_email']='maps-only@example.org';fixed=materialize_evidence(result,entries)
+        self.assertEqual(fixed['selected_email'],'');self.assertEqual(fixed['facts'],[])
+    def test_failed_model_response_is_not_retried_on_unchanged_resume(self):
+        with tempfile.TemporaryDirectory() as d,patch('outbound_pipeline.config_secrets',return_value={}):
+            p=Pipeline({**self.config(),'model_provider':'parallel'},d)
+            with patch('outbound_pipeline.request_json',side_effect=RuntimeError('provider_http_401')) as request:
+                packet={'source_id':'one','company':'One','sources':[],'body':'Fixed body'}
+                first=p.assess(packet);self.assertEqual(first['status'],'assessment_error');self.assertEqual(p.assess(packet),first);self.assertEqual(request.call_count,1)
     def config(self):
         return dict(city='Perth',limit=4,body='Fixed body',followup='Fixed follow-up',model_provider='handoff',verification_batch=1)
     def test_source_gate_rejects_invented_email_and_unquoted_claim(self):
