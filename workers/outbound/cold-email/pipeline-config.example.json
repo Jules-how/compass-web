@@ -1,9 +1,11 @@
 {
   "limit": 10,
   "timezone": "Australia/Perth",
-  "search_terms": ["air conditioning installation"],
-  "model_provider": "handoff",
-  "model": "openai/gpt-4.1-mini",
+  "search_terms": [
+    "air conditioning installation"
+  ],
+  "model_provider": "parallel",
+  "model": "speed",
   "http_workers": 12,
   "model_workers": 6,
   "company_workers": 12,
@@ -13,6 +15,21 @@
   "verification_cap_usd": 0.5,
   "model_cap_usd": 0.5,
   "followup_delay_days": 4,
-  "body": "REPLACE WITH THE CAMPAIGN BODY TO REVIEW. Include signature and {{unsubscribe}}.",
-  "followup": "REPLACE WITH THE FIXED FOLLOW-UP TO REVIEW."
+  "body": "REPLACE WITH THE FIXED CAMPAIGN BODY, CTA, SIGNATURE AND OPT-OUT.",
+  "followup": "REPLACE WITH THE FIXED FOLLOW-UP TO REVIEW.",
+  "require_preflight": true,
+  "preflight_cases": [
+    {
+      "packet": "/absolute/path/to/known-installer-packet.json",
+      "expected_fit": "fit"
+    },
+    {
+      "packet": "/absolute/path/to/known-mixed-trade-packet.json",
+      "expected_fit": "fit"
+    },
+    {
+      "packet": "/absolute/path/to/known-non-fit-packet.json",
+      "expected_fit": "not_fit"
+    }
+  ]
 }

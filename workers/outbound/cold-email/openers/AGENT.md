@@ -19,7 +19,7 @@ Each result retains source row/Compass ID, signal type/strength, supporting quot
 
 ## Compass and validation
 
-Compass owns leads, reviewed copy and the sequence. Use the existing outbound_worker.py/generate_openers.py integration as the implementation starting point; do not create a city-specific writing script. Current template rendering and preparation validation do not yet implement flexible evidence-constrained drafting. Amend those contracts together before production use; a generated CSV alone is not a reviewed Compass preparation.
+Compass owns leads, reviewed copy and the sequence. Use the existing outbound_worker.py/generate_openers.py integration as the implementation starting point; do not create a city-specific writing script. Current deployed preparation supports evidence-constrained drafts; a generated CSV alone is not a reviewed Compass preparation.
 
 Validate every row for eligible valid email, factual claims traceable to evidence, correct company/name/area, compatible customer type, complete subject/opener, no unfilled tokens and unchanged fixed body. Do not rely only on a sample for these mechanical checks. Read a representative sample plus flagged exceptions for naturalness; Jules reviews the exact recipients/openers and count before upload.
 

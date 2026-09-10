@@ -23,8 +23,40 @@ class PipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d,patch('outbound_pipeline.config_secrets',return_value={}):
             p=Pipeline({**self.config(),'model_provider':'parallel'},d)
             with patch('outbound_pipeline.request_json',side_effect=RuntimeError('provider_http_401')) as request:
-                packet={'source_id':'one','company':'One','sources':[],'body':'Fixed body'}
+                packet={'source_id':'one','company':'One','sources':[{'url':'https://example.org','text':'We install split systems in Perth.'}],'body':'Fixed body'}
                 first=p.assess(packet);self.assertEqual(first['status'],'assessment_error');self.assertEqual(p.assess(packet),first);self.assertEqual(request.call_count,1)
+    def test_preflight_failure_blocks_before_discovery(self):
+        with tempfile.TemporaryDirectory() as d,patch('outbound_pipeline.config_secrets',return_value={}):
+            p=Pipeline({**self.config(),'require_preflight':True},d)
+            with patch.object(p,'discovery') as discovery:
+                with self.assertRaisesRegex(RuntimeError,'preflight_required'):p.run()
+                discovery.assert_not_called()
+    def test_qualification_can_defer_drafting_until_verification(self):
+        packet={'sources':[{'url':'https://example.org','text':'We install split systems in Perth. quotes@example.org'}]}
+        a={'fit':'fit','system_types':['single_split'],'drafting_deferred':True,'selected_email':'quotes@example.org','subject':'','opener':'','signal_type':'none','facts':[{'kind':k,'value':'install','quote':'We install split systems in Perth.','url':'https://example.org'} for k in ['service','service_area','operating']]+[{'kind':'email','value':'quotes@example.org','quote':'quotes@example.org','url':'https://example.org'}]}
+        self.assertEqual(validate_assessment(a,packet),[])
+        a.pop('drafting_deferred');self.assertIn('missing_draft',validate_assessment(a,packet))
+    def test_no_website_evidence_avoids_paid_model_request(self):
+        with tempfile.TemporaryDirectory() as d,patch('outbound_pipeline.config_secrets',return_value={}):
+            p=Pipeline({**self.config(),'model_provider':'parallel'},d)
+            with patch('outbound_pipeline.request_json') as request:
+                result=p.assess({'source_id':'empty','company':'Empty','sources':[]})
+                self.assertEqual(result['errors'],['no_installation_website_evidence']);request.assert_not_called()
+    def test_writing_retry_only_includes_rejected_recipient(self):
+        with tempfile.TemporaryDirectory() as d,patch('outbound_pipeline.config_secrets',return_value={}):
+            p=Pipeline({**self.config(),'model_provider':'parallel'},d)
+            rows=[{'source_id':str(i),'company':'Installer '+str(i),'route':'email_review','assessment':{'signal_type':'basic_relevance','customer_type':'mixed','facts':[{'kind':k,'quote':'We install split systems.'} for k in ['service','signal']]}} for i in range(2)]
+            sizes=[]
+            def reply(url,key,payload,**kwargs):
+                items=json.loads(payload['messages'][1]['content']);sizes.append(len(items))
+                drafts=[{'id':x['id'],'subject':'Split installations','opener':'Saw you install split systems for homes and businesses.' if x['id']=='0' else 'Saw you offer commercial refrigeration for temperature-sensitive operations and facilities.'} for x in items]
+                return {'choices':[{'message':{'content':json.dumps({'drafts':drafts})}}]}
+            with patch('outbound_pipeline.request_json',side_effect=reply):p.finish_drafts(rows)
+            self.assertEqual(sizes,[2,1]);self.assertEqual(rows[0]['route'],'email_review');self.assertEqual(rows[1]['route'],'writing_hold')
+            rows[1]['route']='email_review'
+            with patch('outbound_pipeline.request_json') as request:
+                p.finish_drafts(rows);request.assert_not_called()
+            self.assertEqual(rows[1]['route'],'writing_hold')
     def config(self):
         return dict(city='Perth',limit=4,body='Fixed body',followup='Fixed follow-up',model_provider='handoff',verification_batch=1)
     def test_source_gate_rejects_invented_email_and_unquoted_claim(self):
@@ -63,7 +95,7 @@ class PipelineTests(unittest.TestCase):
             self.assertTrue(all('Fixed body' in x for x in [Path(d,'review.csv').read_text()]))
     def test_cached_draft_is_revalidated_and_body_changes_invalidate_it(self):
         with tempfile.TemporaryDirectory() as d,patch('outbound_pipeline.config_secrets',return_value={}):
-            p=Pipeline(self.config(),d);packet={'source_id':'one','company':'One','sources':[],'body':'Fixed body'}
+            p=Pipeline(self.config(),d);packet={'source_id':'one','company':'One','sources':[{'url':'https://example.org','text':'We install split systems in Perth.'}],'body':'Fixed body'}
             a={'fit':'not_fit','selected_email':'','facts':[]}
             save(Path(d,'draft-inputs/one.json'),{'assessment':a,'usage':{'cost':None}})
             first=p.assess(packet);self.assertEqual(first['status'],'assessed')
