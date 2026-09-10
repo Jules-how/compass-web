@@ -187,7 +187,11 @@ export function groupCampaignsByWave(
       positiveReplies: instantly?.positiveReplies ?? campaign.wave_positive_count ?? 0,
       instantlyStatus: instantly?.status
     }
-    buckets[offerWaveColumn(campaign, metrics)].push(campaign)
+    // Observed sending takes precedence over a saved preparation lane.
+    // buildLiveDesk also finds these rows across all campaigns; keeping the
+    // grouping consistent prevents the same campaign appearing in Next too.
+    const lane = isInstantlySending(instantly?.status) ? 'live' : offerWaveColumn(campaign, metrics)
+    buckets[lane].push(campaign)
   }
   return buckets
 }

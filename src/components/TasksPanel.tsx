@@ -188,7 +188,7 @@ export function TasksPanel() {
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-wrap items-center justify-between gap-3">
+      {note || moveError ? <section className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center justify-end gap-2">
           {note ? (
             <p role="status" className="text-[12px] text-emerald-800">
@@ -201,7 +201,7 @@ export function TasksPanel() {
             </p>
           ) : null}
         </div>
-      </section>
+      </section> : null}
 
       {createLane ? (
         <TaskCreate

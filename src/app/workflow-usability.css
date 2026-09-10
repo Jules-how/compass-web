@@ -38,3 +38,5 @@
  .records-table .records-header-cell.records-identity { position:sticky; }
  .install-queue-column { width:min(86vw,340px); }
 }
+
+.crm-operating-toolbar .crm-view-select { width:auto; flex:0 0 190px; max-width:100%; }

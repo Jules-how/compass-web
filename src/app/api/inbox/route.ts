@@ -80,6 +80,9 @@ export async function GET(request: NextRequest) {
     }
     return portalJsonCached(payload)
   } catch (err) {
-    return portalAccessResponse(err) ?? portalJson({ error: 'Unable to read inbox sources. Retry to see current items.' }, { status: 500 })
+    const accessError = portalAccessResponse(err)
+    if (accessError) return accessError
+    console.error('[inbox] source read failed', err instanceof Error ? err.message : 'Unknown source error')
+    return portalJson({ error: 'Unable to read inbox sources. Retry to see current items.' }, { status: 500 })
   }
 }

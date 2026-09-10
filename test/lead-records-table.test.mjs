@@ -31,3 +31,14 @@ test('lead database uses the records-table grid', () => {
   assert.match(undo, /metaKey/)
   assert.match(shell, /UndoProvider/)
 })
+
+
+test('configured record widths govern fixed layout and the CRM view control remains compact', () => {
+  const records = readFileSync(resolve(root, 'src/components/ui/records-table.tsx'), 'utf8')
+  const table = readFileSync(resolve(root, 'src/components/LeadTable.tsx'), 'utf8')
+  const styles = readFileSync(resolve(root, 'src/app/workflow-usability.css'), 'utf8')
+  assert.match(records, /84 \+ columns\.reduce\(\(sum, id\) => sum \+ columnWidth\(id, effectiveWidths\), 0\)/)
+  assert.match(records, /style=\{\{ width: minWidth, minWidth, tableLayout: 'fixed' \}\}/)
+  assert.match(table, /className="compass-input crm-view-select"/)
+  assert.match(styles, /\.crm-operating-toolbar \.crm-view-select \{ width:auto; flex:0 0 190px; max-width:100%; \}/)
+})

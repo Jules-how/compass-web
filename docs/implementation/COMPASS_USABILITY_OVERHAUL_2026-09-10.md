@@ -1,7 +1,7 @@
 # Compass usability overhaul — execution specification
 
-Date: 10 September 2026. Status: implementation ready; product changes not started.
-Executor requested by Jules: gpt-5.3-codex-spark. Repository: /Users/Jules/switchflow-os/compass-web. Production: https://compass-web-eosin.vercel.app.
+Date: 10 September 2026. Status: implemented in 34c517a; release verification is recorded in COMPASS_USABILITY_RELEASE_2026-09-10.md.
+Executor revised by Jules: gpt-6-astra with low reasoning effort for subagents. Repository: /Users/Jules/switchflow-os/compass-web. Production: https://compass-web-eosin.vercel.app.
 
 ## Outcome and scope
 

@@ -428,7 +428,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
         <WaveSkeleton />
       ) : (
         <div className="folio-outbound-workspace" data-view={campaignView}>
-          <div className="order-1 min-w-0">
+          <div className="min-w-0">
             <div className="folio-campaign-toolbar">
               <div className="compass-seg" aria-label="Campaign layout">
                 <button

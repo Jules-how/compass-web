@@ -49,6 +49,7 @@ export function PathfinderTimeline({
   );
   const dated = all.filter((item) => item.date);
   const undated = all.filter((item) => !item.date);
+  const hasDatedSteps = dated.some((item) => item.kind === "checkpoint" || item.kind === "task");
   const allDates = dated.flatMap((item) => [
     dayTime(item.date),
     ...(item.start ? [dayTime(item.start)] : []),
@@ -194,12 +195,21 @@ export function PathfinderTimeline({
               </time>
             </div>
           ))}
-          {!visible.length && (
+          {!visible.length && hasDatedSteps && (
             <p className="timeline-empty">
               {dated.length
                 ? "No dated work in this window. Choose All dates to see the full plan."
                 : "No dated milestones or actions are connected. Add a milestone or open undated work to add dates."}
             </p>
+          )}
+          {!hasDatedSteps && (
+            <div className="timeline-setup-guidance">
+              <p>No dated milestones or actions are connected yet. Add the next milestone to turn the goal into a plan.</p>
+              <div>
+                <button className="compass-btn-secondary" onClick={onAdd}><Plus size={14} aria-hidden="true" /> Add milestone</button>
+                {undated.length > 0 && <button className="compass-btn-ghost" onClick={() => changeRange({ undatedOpen: true })}>Open {undated.length} undated items</button>}
+              </div>
+            </div>
           )}
         </div>
       </div>

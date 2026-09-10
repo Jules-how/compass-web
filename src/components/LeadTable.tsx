@@ -598,7 +598,7 @@ export default function LeadTable({
             </button>
           </div>
           {columnPreset === 'crm' ? (
-            <select className="compass-input" aria-label="CRM column view" value={grid.view}
+            <select className="compass-input crm-view-select" aria-label="CRM column view" value={grid.view}
               onChange={(event) => grid.setView(event.target.value as 'operating' | 'legacy')}>
               <option value="operating">Operating view</option>
               <option value="legacy">Legacy / custom view</option>

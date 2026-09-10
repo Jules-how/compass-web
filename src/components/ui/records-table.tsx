@@ -269,7 +269,7 @@ export default function RecordsTable({
         tabIndex={0}
         aria-label={`${entityLabel} table. Scroll horizontally and vertically to view all columns and records.`}
       >
-        <table className="records-table" style={{ minWidth }}>
+        <table className="records-table" style={{ width: minWidth, minWidth, tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: 84 }} />
             {columns.map((id) => (

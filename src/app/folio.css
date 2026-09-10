@@ -2346,7 +2346,7 @@ body:has(.folio-shell) .folio-inbox > .compass-panel {
 .folio-kanban-status { display: grid; gap: 6px; border-top: 1px solid #e8e6e3; margin-top: 16px; padding-top: 12px; color: #69645f; font-size: 12px; }
 .folio-kanban-status select { width: 100%; min-height: 36px; font-size: 14px; }
 .folio-outbound-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
-.folio-campaign-toolbar { justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.folio-campaign-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
 .folio-campaign-toolbar .folio-folders { margin: 0; }
 .folio-campaign-title a, .folio-campaign-title strong, .folio-wave-card h3 { font: 600 18px/25px Folio Sans, sans-serif; color: var(--folio-ink); }
 .folio-campaign-title p { font-size: 14px; line-height: 21px; }
@@ -2388,3 +2388,8 @@ body:has(.folio-shell) .folio-inbox > .compass-panel {
   .folio-inbox-index { width: 360px !important; flex: 0 0 360px; }
 }
 .folio-inbox-case { min-width: 0; background: #fffefa !important; }
+
+/* Keep operational titles neutral even where global link styles use orange. */
+body:has(.folio-shell) .folio-kanban-card h4 :is(a, button, span) { color:var(--folio-ink); font:inherit; }
+body:has(.folio-shell) .folio-kanban-card h4 :is(a, button):hover { color:var(--compass-accent); }
+.folio-page > header { margin-bottom:20px; }
