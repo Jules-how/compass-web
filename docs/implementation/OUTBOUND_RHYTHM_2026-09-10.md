@@ -1,6 +1,6 @@
 # Outbound rhythm: implementation plan
 
-10 September 2026. Prepared for Jules. Status: proposed implementation; no product changes, campaign changes or accepted schedule implied.
+10 September 2026. Prepared for Jules. Status: implemented and deployed on 10 September. See OUTBOUND_RHYTHM_RELEASE_2026-09-10.md for verified behaviour, operational setup and remaining trial.
 
 ## Outcome
 
