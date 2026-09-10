@@ -64,9 +64,19 @@ At 07:07 Sydney, outdated 7 September guidance was saved into the 10 September
 brief and queued duplicate actions. The 9 September review had already superseded
 Melbourne-first preparation. Prior writes did not record a named run or source
 revision. The configured Vercel sync preserves advice and does not generate this
-wording. Local pilot instructions already pointed to current decisions. Exact
-historical writer attribution is unresolved; do not claim that the pilot was the
-culprit or that an unidentified remote scheduler was disabled.
+wording. Local pilot instructions already pointed to current decisions.
+
+Confirmed writer: Cursor **Daily Setup Agent**, automation
+`abdd5393-a8cf-11f1-b532-320a589b8025`, scheduled daily at 07:00 GMT+10.
+Its 10 September run started 07:03, ran 4m29s and explicitly reports persisting
+WAIT into briefId 2026-09-10. It repeats the old booked-jobs offer, Melbourne
+Plumber preparation, after-MTC phone block and outdated verification cap.
+Its prompt prioritised existing brief/Waves and Cursor Memories without requiring
+the current Compass decision note. The automation uses the historical
+Jules-how/switchflow-os cloud environment, separate from the current Compass repo.
+Run evidence: https://cursor.com/agents/bc-c0e10bcd-8ed9-4f11-ab56-aae4b4f6021a
+Scheduler: https://cursor.com/automations/abdd5393-a8cf-11f1-b532-320a589b8025
+Retire this duplicate publisher; retain the updated Compass morning pilot.
 
 Release checks: database publication/retry/decision tests, API validation and
 source freshness checks, production build, deployed API readback, Home display,
