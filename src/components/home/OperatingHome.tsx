@@ -33,6 +33,10 @@ export function OperatingHome() {
     const version = ++readVersion.current;
     try {
       const r = await fetch(`/api/operating?day=${day}`, { cache: "no-store" });
+      if (!r.headers.get("content-type")?.includes("application/json"))
+        throw new Error(
+          "Compass could not refresh your work. Reload this page and retry",
+        );
       const b = await r.json();
       if (!r.ok) throw new Error(b.error || "Unable to load your work");
       if (version !== readVersion.current) return;
