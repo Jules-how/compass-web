@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { getPortalAdminClient } from '@/lib/portal-admin'
 import { openCommercial } from '@/lib/agreement-server'
 import type { PlanningRow } from '@/lib/planning-server'
@@ -5,8 +6,8 @@ import type { PlanningRow } from '@/lib/planning-server'
 export const WAVE_DECISION_ID = 'planning.note.458e8ef0-80cc-5405-aa5c-eb804faf70b0'
 export const WAVE_PUBLISHER = 'compass-morning-pilot'
 
-export async function readWaveDecision() {
-  const { data, error } = await getPortalAdminClient().from('compass_settings')
+export async function readWaveDecision(db: SupabaseClient = getPortalAdminClient()) {
+  const { data, error } = await db.from('compass_settings')
     .select('value').eq('id', WAVE_DECISION_ID).maybeSingle()
   if (error || !data) throw new Error('Current decisions are unavailable. Try again after restoring access.')
   const value = String(data.value)

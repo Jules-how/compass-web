@@ -10,7 +10,6 @@ import {
 import { loadMorningWavePayload } from '@/lib/wave-morning-server'
 import { sydneyDateOnly } from '@/lib/wave-desk'
 import { readWaveDecision, waveReviewState } from '@/lib/wave-publication'
-import { getPortalAdminClient } from '@/lib/portal-admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,11 +40,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await requirePortalAccess({ operator: true })
-    const admin = getPortalAdminClient()
+    const { supabase } = await requirePortalAccess({ operator: true })
     const day = sydneyDateOnly()
-    const source = await readWaveDecision()
-    const { data: today, error } = await admin.from('compass_wave_briefs')
+    const source = await readWaveDecision(supabase)
+    const { data: today, error } = await supabase.from('compass_wave_briefs')
       .select('id,revision,reviewed_at,publisher,decision_revision,recommendation')
       .eq('id', day).maybeSingle()
     if (error) throw new Error(error.message)
@@ -55,7 +53,7 @@ export async function POST(request: NextRequest) {
     if (!Number.isInteger(body.revision) || body.revision !== today?.revision) {
       return portalJson({ error: 'The brief changed. Refresh before deciding.' }, { status: 409 })
     }
-    const saved = await admin.rpc('compass_decide_wave_brief', {
+    const saved = await supabase.rpc('compass_decide_wave_brief', {
       p_day: day, p_revision: body.revision, p_decision_value: source.value, p_action: body.action
     })
     if (saved.error) return portalJson({ error: saved.error.code === '40001' ? saved.error.message : 'Unable to save the decision.' }, { status: saved.error.code === '40001' ? 409 : 503 })

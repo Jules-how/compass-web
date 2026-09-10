@@ -99,7 +99,7 @@ export async function loadMorningWavePayload(
       .is('parent_task_id', null)
       .order('created_at', { ascending: false })
       .limit(40),
-    readWaveDecision()
+    readWaveDecision(supabase)
   ])
 
   if (todayRes.error || acceptedRes.error) throw new Error('Unable to read the current brief.')

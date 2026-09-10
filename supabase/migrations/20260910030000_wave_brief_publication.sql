@@ -155,3 +155,6 @@ REVOKE ALL ON FUNCTION public.compass_decide_wave_brief(text,integer,text,text) 
 GRANT EXECUTE ON FUNCTION public.compass_publish_wave_brief(text,integer,text,jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.compass_update_wave_metrics(text,jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.compass_decide_wave_brief(text,integer,text,text) TO service_role;
+
+-- Invoker security retains the operator RLS policies for Home decisions.
+GRANT EXECUTE ON FUNCTION public.compass_decide_wave_brief(text,integer,text,text) TO authenticated;
