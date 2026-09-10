@@ -167,3 +167,10 @@ Re-read the saved finding/observation and compare IDs, revisions and evidence. A
 The single active offer is Ads + booking (stable Compass key `installation-booking`); read `switchflow-offer/installation-booking.md` and the live offer before research or copy. Existing enquiries and a proven booking leak are not mandatory entry conditions. Campaign planning is in Outbound → Notebook, stored as existing Planning notes linked to the campaign URL. Read those notes before changing writing rules or preparing output; prose is a plan, not an executed action.
 
 For prepared lists, use the campaign's saved ordered signal rules and exact sequence. `cold-email/outbound_worker.py --campaign CELL --input-csv RESEARCHED.csv --output-dir JOB_OUTPUT` retains batches, invokes the production opener engine and reads persisted results back. Record its receipt and all ready/held/excluded counts. Do not turn a verification column name, old source timestamp or queued run into proof of readiness. The 340 retained Sydney source records contain 2025 provider refresh dates and need current research. Use the existing task system for selected lead follow-ups and flag completed work for Jules to confirm. No automatic multichannel sends or live campaign activation is added by this workflow.
+
+
+## Brief publishing contract — 10 September 2026
+
+Read [WAVE_BRIEF_PUBLICATION.md](WAVE_BRIEF_PUBLICATION.md) before writing Home.
+Use the designated publisher, current source and brief revisions, and a stable run ID.
+A manual correction is not a scheduled pilot day. Historical briefs are evidence, not current instructions.

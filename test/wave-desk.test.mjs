@@ -107,15 +107,15 @@ test("waves UI and agent route exist", () => {
   );
   assert.match(
     read("src/app/api/agent/outbound/waves/route.ts"),
-    /normalizeWaveLane\(rec.wave_lane\) \|\| 'recommended'/,
+    /compass_publish_wave_brief/,
   );
   assert.match(
     read("src/app/api/agent/outbound/waves/route.ts"),
-    /instantly_campaign_id: instantlyId/,
+    /expectedRevision/,
   );
   assert.match(
     read("src/app/api/agent/outbound/waves/route.ts"),
-    /upsertDailySetupTasks/,
+    /dailySetupNoteMarker/,
   );
   assert.match(
     read("src/app/api/agent/outbound/waves/route.ts"),

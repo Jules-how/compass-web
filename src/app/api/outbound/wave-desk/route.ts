@@ -50,7 +50,7 @@ export async function GET() {
         .limit(80),
       supabase
         .from('compass_wave_briefs')
-        .select('id,generated_at,recommendation,scan,created_at')
+        .select('id,generated_at,recommendation,scan,created_at,revision,reviewed_at,publisher,run_id,decision_revision,metrics,metrics_updated_at')
         .order('generated_at', { ascending: false })
         .limit(14)
     ])
@@ -62,7 +62,7 @@ export async function GET() {
       liveCampaigns: forecast.liveCampaigns,
       thisWeekStart: mondayOfSydneyWeek(),
       actions: (actionsRes.data ?? []) as WaveAction[],
-      briefs: (briefsRes.data ?? []) as WaveBrief[],
+      briefs: (briefsRes.data ?? []).map(row => ({ ...row, scan: { ...row.scan, ...row.metrics } })) as WaveBrief[],
       actionsError: actionsRes.error?.message ?? null,
       briefsError: briefsRes.error?.message ?? null
     })

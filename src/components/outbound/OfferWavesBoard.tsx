@@ -220,7 +220,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
   }
 
   const openActions = (deskQuery.data?.actions ?? []).filter(
-    (action) => action.status !== 'done',
+    (action) => action.status !== 'done' && action.status !== 'cancelled',
   )
   const doneActions = (deskQuery.data?.actions ?? []).filter(
     (action) => action.status === 'done',
