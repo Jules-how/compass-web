@@ -527,6 +527,35 @@ export function CampaignPreparationPanel({
                       `· ${record.rendered.values.signal_value}`}
                   </p>
                 )}
+                {prep.bundle.context.recipe.mode === "evidence_draft" &&
+                  record.candidate.draft && (
+                    <div className="space-y-2">
+                      <p className="font-medium">
+                        Selected signal: {reasonLabel(record.candidate.draft.signal_type)}
+                      </p>
+                      <p>{record.candidate.draft.offer_connection}</p>
+                      <details>
+                        <summary className="cursor-pointer">Evidence used for this draft</summary>
+                        <ul className="mt-2 space-y-2">
+                          {record.candidate.evidence
+                            .filter((fact) => record.candidate.draft?.evidence_kinds.includes(fact.kind))
+                            .map((fact, i) => (
+                              <li key={i}>
+                                <strong>{reasonLabel(fact.kind)}</strong>: {fact.quote}{" "}
+                                <a
+                                  className="underline"
+                                  href={/^https?:\/\//.test(fact.url) ? fact.url : undefined}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Source
+                                </a>
+                              </li>
+                            ))}
+                        </ul>
+                      </details>
+                    </div>
+                  )}
                 <details>
                   <summary className="cursor-pointer">
                     Source evidence ({record.candidate.evidence.length})
