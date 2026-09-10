@@ -27,6 +27,7 @@ import {
 import type { TimelineZoom } from '@/lib/campaign-timeline'
 import { ProjectTimeline, TimelineZoomControls, type ProjectTimelineHandle } from '@/components/ProjectTimeline'
 import { ProjectDetailPanel } from '@/components/ProjectDetailPanel'
+import { ModalFrame } from '@/components/ui/ModalFrame'
 import { cn } from '@/lib/utils'
 
 type ViewMode = 'list' | 'board' | 'timeline'
@@ -120,12 +121,12 @@ function isViewMode(value: string | null): value is ViewMode {
 }
 
 function readStoredProjectsView(): ViewMode {
-  if (typeof window === 'undefined') return 'board'
+  if (typeof window === 'undefined') return 'timeline'
   try {
     const raw = window.localStorage.getItem(PROJECTS_VIEW_STORAGE_KEY)
-    return isViewMode(raw) ? raw : 'board'
+    return isViewMode(raw) ? raw : 'timeline'
   } catch {
-    return 'board'
+    return 'timeline'
   }
 }
 
@@ -267,11 +268,15 @@ function LeadAvatar({ label }: { label: string | null | undefined }) {
 function ToolbarIconButton({
   label,
   active,
+  expanded,
+  controls,
   onClick,
   children
 }: {
   label: string
   active?: boolean
+  expanded?: boolean
+  controls?: string
   onClick: () => void
   children: React.ReactNode
 }) {
@@ -279,11 +284,13 @@ function ToolbarIconButton({
     <button
       type="button"
       aria-label={label}
+      aria-expanded={expanded}
+      aria-controls={controls}
       title={label}
       onClick={onClick}
       className={cn(
-        'flex size-7 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-stone-100 hover:text-neutral-800',
-        active && 'bg-white text-[#c2410c] shadow-soft'
+        'flex size-8 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-stone-100 hover:text-neutral-800',
+        active && 'bg-[#efeffb] text-[#5753bf]'
       )}
     >
       {children}
@@ -366,7 +373,9 @@ export function ProjectManager({
   clients?: Array<{ id: string; name: string }>
   onRefresh?: () => void | Promise<void>
 }) {
-  const [view, setView] = useState<ViewMode>(readStoredProjectsView)
+  const [view, setView] = useState<ViewMode>('timeline')
+  const [viewLoaded, setViewLoaded] = useState(false)
+  const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -375,7 +384,7 @@ export function ProjectManager({
   const [groupBy, setGroupBy] = useState<GroupBy>('none')
   const [orderBy, setOrderBy] = useState<OrderBy>('name')
   const [insightsTab, setInsightsTab] = useState<InsightsTab>('health')
-  const [insightsOpen, setInsightsOpen] = useState(true)
+  const [insightsOpen, setInsightsOpen] = useState(false)
   const [timelineZoom, setTimelineZoom] = useState<TimelineZoom>('year')
   const [filterOpen, setFilterOpen] = useState(false)
   const [displayOpen, setDisplayOpen] = useState(false)
@@ -454,6 +463,9 @@ export function ProjectManager({
 
   const visibleProjects = useMemo(() => {
     const filtered = projects.filter((project) => {
+      if (search.trim() && ![project.name, project.summary, project.client_name,
+        project.client_id ? clientById[project.client_id]?.name : null]
+        .filter(Boolean).join(' ').toLowerCase().includes(search.trim().toLowerCase())) return false
       if (statusFilter !== 'all' && normalizeProjectStatus(project.status) !== statusFilter) {
         return false
       }
@@ -471,7 +483,7 @@ export function ProjectManager({
       return a.name.localeCompare(b.name)
     })
     return sorted
-  }, [projects, statusFilter, clientFilter, orderBy])
+  }, [projects, statusFilter, clientFilter, orderBy, search, clientById])
 
   const grouped = useMemo(() => {
     if (groupBy === 'none') return [{ key: 'all', label: 'All projects', items: visibleProjects }]
@@ -510,8 +522,13 @@ export function ProjectManager({
   const noLeadCount = projects.length
 
   useEffect(() => {
-    writeStoredProjectsView(view)
-  }, [view])
+    setView(readStoredProjectsView())
+    setViewLoaded(true)
+  }, [])
+
+  useEffect(() => {
+    if (viewLoaded) writeStoredProjectsView(view)
+  }, [view, viewLoaded])
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {
@@ -550,24 +567,6 @@ export function ProjectManager({
     setCardMenuId(null)
   }
 
-  useEffect(() => {
-    if (!creating) return
-    const frame = window.requestAnimationFrame(() => createTitleRef.current?.focus())
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setCreating(false)
-      }
-    }
-    document.addEventListener('keydown', onKey)
-    return () => {
-      window.cancelAnimationFrame(frame)
-      document.body.style.overflow = previousOverflow
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [creating])
-
   function resetCreateForm() {
     setName('')
     setSummary('')
@@ -585,7 +584,7 @@ export function ProjectManager({
 
   async function createProject(event: React.FormEvent) {
     event.preventDefault()
-    if (!name.trim()) return
+    if (!name.trim() || saving) return
     setSaving(true)
     setError(null)
 
@@ -634,10 +633,6 @@ export function ProjectManager({
       client_name: resolvedClientId ? (clientById[resolvedClientId]?.name ?? null) : null,
       stats: emptyProjectStats()
     })
-    resetCreateForm()
-    setCreating(false)
-    setSaving(false)
-
     try {
       const res = await workFetch('/api/projects', {
         method: 'POST',
@@ -672,10 +667,14 @@ export function ProjectManager({
           (created.client_id ? (clientById[created.client_id]?.name ?? null) : null),
         stats: created.stats ?? emptyProjectStats()
       })
+      resetCreateForm()
+      setCreating(false)
       void onRefresh?.()
     } catch (err) {
       removeCachedProject(tempId)
       setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -715,19 +714,23 @@ export function ProjectManager({
       })
     }
     setError(null)
-    const res = await workFetch(`/api/projects/${projectId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ start_date: start, target_date: end })
-    })
-    if (!res.ok) {
+    try {
+      const res = await workFetch(`/api/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start_date: start, target_date: end })
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error ?? `Request failed (${res.status})`)
+      }
+      void onRefresh?.()
+    } catch (err) {
       if (previous) upsertCachedProject(previous)
-      const body = await res.json().catch(() => ({}))
-      const message = body.error ?? `Request failed (${res.status})`
+      const message = err instanceof Error ? err.message : 'Could not save project dates'
       setError(message)
       throw new Error(message)
     }
-    void onRefresh?.()
   }
 
   async function removeProject(project: CompassProjectWithStats) {
@@ -862,28 +865,31 @@ export function ProjectManager({
     : null
 
   return (
-    <div className="space-y-2">
-      <div className="relative flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-1">
-          <button
-            type="button"
-            onClick={() => {
-              setFilterOpen((value) => !value)
-              setDisplayOpen(false)
-            }}
-            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[13px] font-medium text-neutral-700 hover:bg-neutral-100"
-          >
-            All projects
-            <span className="text-[10px] text-neutral-400">▾</span>
-          </button>
+    <div className="projects-workspace space-y-3">
+      <div className="projects-workspace-toolbar relative flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <span className="projects-view-label">All projects <span>{visibleProjects.length}</span></span>
+          <div className="projects-view-switch" role="group" aria-label="Project view">
+            {(['timeline', 'board', 'list'] as const).map(mode => (
+              <button key={mode} type="button" aria-pressed={view === mode} onClick={() => setView(mode)}>
+                {mode === 'timeline' ? <TimelineIcon /> : mode === 'board' ? <BoardIcon /> : <ListIcon />}
+                <span>{mode.charAt(0).toUpperCase() + mode.slice(1)}</span>
+              </button>
+            ))}
+          </div>
           {(statusFilter !== 'all' || clientFilter !== 'all') && (
-            <span className="rounded-md bg-neutral-100 px-1.5 py-0.5 text-[11px] tabular-nums text-neutral-500">
-              Filtered
-            </span>
+            <button type="button" onClick={() => { setStatusFilter('all'); setClientFilter('all') }}
+              className="rounded-md bg-neutral-100 px-2 py-1 text-xs text-neutral-600" title="Clear project filters">
+              {[statusFilter !== 'all' ? projectStatusLabel(statusFilter) : null,
+                clientFilter === 'unassigned' ? 'No client' : clientFilter !== 'all' ? clientById[clientFilter]?.name : null]
+                .filter(Boolean).join(' · ')} <span aria-hidden>×</span><span className="sr-only">. Clear filters</span>
+            </button>
           )}
         </div>
 
-        <div className="flex items-center gap-0.5">
+        <div className="projects-workspace-actions flex flex-wrap items-center gap-1.5">
+          <input type="search" value={search} onChange={event => setSearch(event.target.value)}
+            aria-label="Search projects" placeholder="Search projects…" className="projects-search" />
           {view === 'timeline' ? (
             <div className="mr-1">
               <TimelineZoomControls
@@ -897,6 +903,8 @@ export function ProjectManager({
           <div className="relative" ref={filterRef}>
             <ToolbarIconButton
               label="Filter"
+              expanded={filterOpen}
+              controls="project-filters"
               active={filterOpen || statusFilter !== 'all' || clientFilter !== 'all'}
               onClick={() => {
                 setFilterOpen((value) => !value)
@@ -906,7 +914,7 @@ export function ProjectManager({
               <FilterIcon />
             </ToolbarIconButton>
             {filterOpen ? (
-              <div className="absolute right-0 top-9 z-40 w-64 rounded-lg border border-neutral-200 bg-white p-3 shadow-lg">
+              <div id="project-filters" className="absolute right-0 top-9 z-40 w-64 rounded-lg border border-neutral-200 bg-white p-3 shadow-lg">
                 <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
                   Filter
                 </div>
@@ -960,6 +968,8 @@ export function ProjectManager({
           <div className="relative" ref={displayRef}>
             <ToolbarIconButton
               label="Display options"
+              expanded={displayOpen}
+              controls="project-display-options"
               active={displayOpen}
               onClick={() => {
                 setDisplayOpen((value) => !value)
@@ -969,7 +979,7 @@ export function ProjectManager({
               <DisplayIcon />
             </ToolbarIconButton>
             {displayOpen ? (
-              <div className="absolute right-0 top-9 z-40 w-72 rounded-lg border border-neutral-200 bg-white p-3 shadow-lg">
+              <div id="project-display-options" className="absolute right-0 top-9 z-40 w-72 rounded-lg border border-neutral-200 bg-white p-3 shadow-lg">
                 <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
                   Display
                 </div>
@@ -1040,26 +1050,26 @@ export function ProjectManager({
           <button
             type="button"
             onClick={() => openCreate(status)}
-            className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-900"
+            className="compass-btn-primary projects-new-button"
             aria-label="New project"
             title="New project"
           >
-            +
+            <span aria-hidden>+</span> New project
           </button>
         </div>
       </div>
 
       {creating ? (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-950/40 px-4 py-10 sm:py-16"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !saving) setCreating(false)
-          }}
+        <ModalFrame open label="New project" onClose={() => { if (!saving) setCreating(false) }}
+          overlayClassName="planning-dialog-overlay"
+          contentClassName="projects-create-dialog relative mx-auto w-full max-w-[720px] rounded-xl bg-white outline-none"
         >
           <form
             onSubmit={createProject}
+            aria-busy={saving}
             className="relative w-full max-w-[720px] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
           >
+            <fieldset disabled={saving} className="min-w-0">
             <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5">
               <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-neutral-500">
                 <ProjectGlyph color={createIconColor} />
@@ -1085,6 +1095,9 @@ export function ProjectManager({
                 <div className="min-w-0 flex-1">
                   <input
                     ref={createTitleRef}
+                    data-autofocus
+                    aria-label="Project name"
+                    required
                     type="text"
                     placeholder="Project name"
                     value={name}
@@ -1095,6 +1108,7 @@ export function ProjectManager({
                   <input
                     type="text"
                     placeholder="Add a short summary…"
+                    aria-label="Project summary"
                     value={summary}
                     onChange={(e) => setSummary(e.target.value)}
                     className="mt-1 w-full border-0 bg-transparent p-0 text-[13px] text-neutral-600 outline-none placeholder:text-neutral-400"
@@ -1105,6 +1119,7 @@ export function ProjectManager({
 
               <div className="flex flex-wrap gap-1.5">
                 <select
+                  aria-label="Project status"
                   value={status}
                   onChange={(e) => setStatus(e.target.value as ProjectBoardStatus)}
                   className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] text-neutral-700"
@@ -1117,6 +1132,7 @@ export function ProjectManager({
                   ))}
                 </select>
                 <select
+                  aria-label="Project priority"
                   value={priority}
                   onChange={(e) => setPriority(Number(e.target.value))}
                   className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] text-neutral-700"
@@ -1129,6 +1145,7 @@ export function ProjectManager({
                   ))}
                 </select>
                 <select
+                  aria-label="Business function"
                   value={businessFunctionId}
                   onChange={(e) => setBusinessFunctionId(e.target.value)}
                   className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] text-neutral-700"
@@ -1143,6 +1160,7 @@ export function ProjectManager({
                 </select>
                 {sortedClients.length > 0 ? (
                   <select
+                    aria-label="Client"
                     value={clientId}
                     onChange={(e) => setClientId(e.target.value)}
                     className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] text-neutral-700"
@@ -1190,6 +1208,7 @@ export function ProjectManager({
               </div>
 
               <textarea
+                aria-label="Project description"
                 placeholder="Write a description, a project brief, or collect ideas…"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -1222,6 +1241,7 @@ export function ProjectManager({
                       <div key={index} className="grid gap-2 md:grid-cols-[1fr_1fr_auto_auto]">
                         <input
                           type="text"
+                          aria-label={`Milestone ${index + 1} title`}
                           placeholder="Milestone title"
                           value={milestone.title}
                           onChange={(e) =>
@@ -1233,6 +1253,7 @@ export function ProjectManager({
                         />
                         <input
                           type="text"
+                          aria-label={`Milestone ${index + 1} description`}
                           placeholder="Description"
                           value={milestone.description}
                           onChange={(e) =>
@@ -1246,6 +1267,7 @@ export function ProjectManager({
                         />
                         <input
                           type="date"
+                          aria-label={`Milestone ${index + 1} date`}
                           value={milestone.target_date}
                           onChange={(e) =>
                             setMilestones((rows) =>
@@ -1275,6 +1297,7 @@ export function ProjectManager({
                 </summary>
                 <select
                   multiple
+                  aria-label="Project dependencies"
                   value={dependsOn}
                   onChange={(e) =>
                     setDependsOn([...e.target.selectedOptions].map((option) => option.value))
@@ -1291,6 +1314,7 @@ export function ProjectManager({
               </details>
             </div>
 
+            {error ? <p role="alert" className="px-5 pb-3 text-sm text-red-600">{error}</p> : null}
             <div className="flex items-center justify-end gap-2 border-t border-neutral-100 px-4 py-3">
               <button
                 type="button"
@@ -1312,11 +1336,12 @@ export function ProjectManager({
                 {saving ? 'Creating…' : 'Create project'}
               </button>
             </div>
+            </fieldset>
           </form>
-        </div>
+        </ModalFrame>
       ) : null}
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p role="alert" className="text-sm text-red-600">{error}</p> : null}
 
       <div className={`grid gap-3 ${insightsOpen ? 'xl:grid-cols-[minmax(0,1fr)_240px]' : ''}`}>
         <div className="min-w-0 space-y-4">
@@ -1333,7 +1358,7 @@ export function ProjectManager({
                     <div>Health</div>
                     <div>Priority</div>
                     <div>Target</div>
-                    <div>Issues</div>
+                    <div>Tasks</div>
                     <div>Progress</div>
                     <div className="text-right">Actions</div>
                   </div>
@@ -1350,7 +1375,7 @@ export function ProjectManager({
                             <ProjectTitleLink
                               projectId={project.id}
                               onOpen={openProject}
-                              className="block truncate text-sm font-medium text-neutral-900 hover:text-sf-orange-dark"
+                              className="block truncate text-sm font-medium text-neutral-900 hover:text-[#5753bf]"
                             >
                               {project.name}
                             </ProjectTitleLink>
@@ -1386,7 +1411,7 @@ export function ProjectManager({
                           <div className="flex items-center gap-2">
                             <div className="h-1.5 w-16 overflow-hidden rounded-full bg-stone-100">
                               <div
-                                className="h-full rounded-full bg-sf-orange"
+                                className="h-full rounded-full bg-[#6965db]"
                                 style={{ width: `${project.stats.percentComplete}%` }}
                               />
                             </div>
@@ -1426,7 +1451,7 @@ export function ProjectManager({
             : null}
 
           {view === 'board' ? (
-            <div className="-mx-1 overflow-x-auto pb-2">
+            <div className="projects-board -mx-1 overflow-x-auto pb-2" role="region" aria-label="Projects by status" tabIndex={0}>
               <div className="flex min-w-max gap-3 px-1">
                 {PROJECT_BOARD_STATUSES.map((column) => {
                   const items = visibleProjects.filter(
@@ -1439,8 +1464,8 @@ export function ProjectManager({
                       key={column}
                       data-project-board-column={column}
                       className={cn(
-                        'flex w-[260px] shrink-0 flex-col rounded-xl bg-[#f4f5f7]/80 transition-[box-shadow,background-color] duration-150',
-                        isDropTarget && 'bg-[#eef1f5] shadow-[inset_0_0_0_1.5px_rgba(229,87,10,0.35)]'
+                        'projects-board-column flex w-[312px] shrink-0 flex-col rounded-lg bg-[#f4f5f7]/80 transition-[box-shadow,background-color] duration-150',
+                        isDropTarget && 'bg-[#eef1f5] shadow-[inset_0_0_0_1.5px_rgba(105,101,219,0.35)]'
                       )}
                     >
                       <header className="flex items-center gap-1.5 px-2.5 pb-1.5 pt-2.5">
@@ -1450,14 +1475,6 @@ export function ProjectManager({
                         </h3>
                         <span className="text-[12px] tabular-nums text-neutral-400">{items.length}</span>
                         <div className="ml-auto flex items-center gap-0.5">
-                          <button
-                            type="button"
-                            className="flex h-6 w-6 items-center justify-center rounded-md text-neutral-400 hover:bg-white hover:text-neutral-700"
-                            aria-label={`${projectStatusLabel(column)} options`}
-                            title="Column options"
-                          >
-                            ···
-                          </button>
                           <button
                             type="button"
                             onClick={() => openCreate(column)}
@@ -1493,7 +1510,7 @@ export function ProjectManager({
                                 onPointerUp={endBoardCardDrag}
                                 onPointerCancel={cancelBoardCardDrag}
                                 className={cn(
-                                  'group relative touch-none select-none rounded-[8px] border border-neutral-200/90 bg-white p-2.5 shadow-[0_1px_1px_rgba(16,24,40,0.04)] transition-[border-color,box-shadow,opacity,transform] duration-150',
+                                  'projects-board-card group relative touch-pan-y select-none rounded-[8px] border border-neutral-200/90 bg-white p-3.5 shadow-[0_1px_1px_rgba(16,24,40,0.04)] transition-[border-color,box-shadow,opacity,transform] duration-150',
                                   isPendingProjectId(project.id)
                                     ? 'cursor-default'
                                     : 'cursor-grab active:cursor-grabbing',
@@ -1519,10 +1536,11 @@ export function ProjectManager({
                                       type="button"
                                       data-board-no-drag
                                       className={cn(
-                                        'flex h-5 w-5 items-center justify-center rounded text-[11px] text-neutral-400 opacity-0 transition hover:bg-neutral-100 hover:text-neutral-700 group-hover:opacity-100',
+                                        'flex h-7 w-7 items-center justify-center rounded text-[13px] text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700',
                                         menuOpen && 'opacity-100'
                                       )}
-                                      aria-label="Project actions"
+                                      aria-label={`Actions for ${project.name}`}
+                                      aria-expanded={menuOpen}
                                       onClick={(event) => {
                                         event.stopPropagation()
                                         setCardMenuId((id) => (id === project.id ? null : project.id))
@@ -1534,9 +1552,9 @@ export function ProjectManager({
                                   </div>
                                 </div>
 
-                                <div className="block text-[13px] font-medium leading-snug text-neutral-900">
+                                <ProjectTitleLink projectId={project.id} onOpen={openProject} className="block text-[14px] font-medium leading-snug text-neutral-900">
                                   {project.name}
-                                </div>
+                                </ProjectTitleLink>
 
                                 {(project.summary || clientLabel) && (
                                   <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-500">
@@ -1558,7 +1576,7 @@ export function ProjectManager({
 
                                 <div className="mt-2 text-[11px] tabular-nums text-neutral-400">
                                   {project.stats.issueCount}{' '}
-                                  {project.stats.issueCount === 1 ? 'issue' : 'issues'}
+                                  {project.stats.issueCount === 1 ? 'task' : 'tasks'}
                                 </div>
 
                                 {menuOpen ? (
@@ -1666,7 +1684,7 @@ export function ProjectManager({
                   )}
                   <div className="mt-2 text-[11px] tabular-nums text-neutral-400">
                     {draggingProject.stats.issueCount}{' '}
-                    {draggingProject.stats.issueCount === 1 ? 'issue' : 'issues'}
+                    {draggingProject.stats.issueCount === 1 ? 'task' : 'tasks'}
                   </div>
                 </div>
               ) : null}

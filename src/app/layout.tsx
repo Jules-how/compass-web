@@ -4,6 +4,10 @@ import './globals.css'
 import './folio.css'
 import './planning.css'
 import './workflow-usability.css'
+import './workspace.css'
+import './crm-reports.css'
+import './documents-workspace.css'
+import './projects-workspace.css'
 import { AuthProvider } from '@/components/AuthProvider'
 
 export const metadata: Metadata = {

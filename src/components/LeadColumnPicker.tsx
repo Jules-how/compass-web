@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
   LEAD_COLUMN_DEFS,
   loadHiddenLeadColumns,
@@ -36,6 +36,7 @@ export function LeadColumnPicker({
   variant?: 'button' | 'header'
 }) {
   const [open, setOpen] = useState(false)
+  const panelId = useId()
   const [query, setQuery] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
   const required = requiredColumnsFor(preset)
@@ -45,8 +46,13 @@ export function LeadColumnPicker({
     function onDoc(e: MouseEvent) {
       if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
     }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') { event.stopPropagation(); setOpen(false); rootRef.current?.querySelector('button')?.focus() }
+    }
     document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
+    rootRef.current?.addEventListener('keydown', onKey)
+    const root = rootRef.current
+    return () => { document.removeEventListener('mousedown', onDoc); root?.removeEventListener('keydown', onKey) }
   }, [open])
 
   useEffect(() => {
@@ -70,19 +76,21 @@ export function LeadColumnPicker({
 
   const menu = open ? (
     <div
-      role="menu"
-      className="absolute right-0 z-30 mt-1.5 w-60 rounded-xl border border-stone-200 bg-white p-2 shadow-soft"
+      id={panelId}
+      className="crm-column-panel"
+      aria-label="Visible columns"
     >
       <input
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        aria-label="Search columns"
         placeholder="Search columns…"
         className="mb-1.5 w-full rounded-lg border border-stone-200 px-2.5 py-1.5 text-sm focus:border-sf-orange focus:outline-none"
         autoFocus
       />
       <p className="px-2 pb-1 text-[10px] font-medium uppercase tracking-wide text-neutral-400">
-        Instantly-aligned columns
+        Visible columns
       </p>
       <ul className="max-h-72 space-y-0.5 overflow-y-auto">
         {options.map((col) => {
@@ -117,6 +125,8 @@ export function LeadColumnPicker({
           <li className="px-2 py-2 text-xs text-neutral-400">No matching columns</li>
         ) : null}
       </ul>
+      <p className="crm-preference-scope">Column choices are saved in this browser.</p>
+      <button type="button" className="crm-columns-done" onClick={() => { setOpen(false); rootRef.current?.querySelector('button')?.focus() }}>Done</button>
     </div>
   ) : null
 
@@ -131,7 +141,8 @@ export function LeadColumnPicker({
           }}
           className="rounded-md px-1.5 py-0.5 text-xs font-medium text-neutral-500 transition hover:bg-stone-100 hover:text-neutral-800"
           aria-expanded={open}
-          aria-haspopup="menu"
+          aria-controls={panelId}
+          aria-label="Choose visible columns"
           title="Add column"
         >
           +
@@ -148,9 +159,9 @@ export function LeadColumnPicker({
         onClick={() => setOpen((v) => !v)}
         className="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-stone-50"
         aria-expanded={open}
-        aria-haspopup="menu"
+        aria-controls={panelId}
       >
-        + Columns
+        Columns
       </button>
       {menu}
     </div>
@@ -163,11 +174,11 @@ export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[
   const activePresetRef = useRef(effectivePreset)
   activePresetRef.current = effectivePreset
   useEffect(() => {
-    if (preset === 'crm' && window.localStorage.getItem('compass.crm.view.v1') === 'legacy') setViewState('legacy')
+    try { if (preset === 'crm' && window.localStorage.getItem('compass.crm.view.v1') === 'legacy') setViewState('legacy') } catch { /* Storage may be unavailable. */ }
   }, [preset])
   function setView(next: 'operating' | 'legacy') {
     setViewState(next)
-    window.localStorage.setItem('compass.crm.view.v1', next)
+    try { window.localStorage.setItem('compass.crm.view.v1', next) } catch { /* The view still works for this session. */ }
   }
   const occupied = useMemo(() => occupiedLeadColumns(leads), [leads])
   const [pinned, setPinned] = useState<LeadColumnId[]>([])

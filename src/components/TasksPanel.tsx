@@ -1,10 +1,9 @@
 'use client'
 
-import { FolioFolders } from '@/components/folio/FolioPrimitives'
 import { ArrowRight, Plus } from 'lucide-react'
 import { workFetch } from '@/lib/workspace-change'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type {
   CompassBusinessFunction,
   CompassProject,
@@ -40,8 +39,8 @@ const LANES: Array<{
   { id: 'not-started', title: 'Todo', color: '#a8a29e', hint: 'Not started.' },
   {
     id: 'in-progress',
-    title: 'Doing',
-    color: '#e85d2a',
+    title: 'In progress',
+    color: '#e4b544',
     hint: 'In play today.',
   },
   {
@@ -53,7 +52,7 @@ const LANES: Array<{
   {
     id: 'completed',
     title: 'Done',
-    color: '#6B8E23',
+    color: '#6965db',
     hint: 'Finished or cancelled.',
   },
 ]
@@ -80,12 +79,10 @@ function taskToKanban(
 ): KanbanTask {
   const priority = normalizeTaskPriority(task.priority)
   const project = task.project_id ? projectsById[task.project_id] : null
-  const tags = [task.task_type, project?.name].filter(Boolean) as string[]
+  const tags = [project?.name].filter(Boolean) as string[]
   return {
     id: task.id,
     title: task.title,
-    description:
-      task.notes?.replace(/^daily_setup:[^\n]+\n*/, '').trim() || undefined,
     badge: priority === 1 ? 'Urgent' : priority === 2 ? 'High' : undefined,
     tags,
     dueDate: dueLabel(task.due),
@@ -97,12 +94,35 @@ export function TasksPanel() {
     '/api/tasks',
     '/api/tasks',
   )
-  const [view, setView] = useState<'list' | 'board'>('list')
+  const [view, setView] = useState<'list' | 'board'>('board')
+  const [viewLoaded, setViewLoaded] = useState(false)
+  const [search, setSearch] = useState('')
+  const [projectFilter, setProjectFilter] = useState('all')
+  const [pendingMoves, setPendingMoves] = useState<string[]>([])
   const [folder, setFolder] = useState<'open' | 'waiting' | 'completed'>('open')
   const [createLane, setCreateLane] = useState<TaskStatus | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const [moveError, setMoveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('compass.tasks.view')
+      if (stored === 'list' || stored === 'board') setView(stored)
+    } catch { /* The board remains usable without local storage. */ }
+    setViewLoaded(true)
+  }, [])
+
+  useEffect(() => {
+    if (!viewLoaded) return
+    try { localStorage.setItem('compass.tasks.view', view) } catch { /* Optional preference. */ }
+  }, [view, viewLoaded])
+
+  const filteredTasks = useMemo(() => (data?.topTasks ?? []).filter(task => {
+    if (projectFilter === 'unassigned' && task.project_id) return false
+    if (projectFilter !== 'all' && projectFilter !== 'unassigned' && task.project_id !== projectFilter) return false
+    return !search.trim() || task.title.toLowerCase().includes(search.trim().toLowerCase())
+  }), [data?.topTasks, search, projectFilter])
 
   const projectsById = useMemo(
     () =>
@@ -129,19 +149,19 @@ export function TasksPanel() {
   }, [selectedId, data])
 
   const kanbanColumns = useMemo((): KanbanColumn[] => {
-    const tasks = data?.topTasks ?? []
+    const tasks = filteredTasks
     return LANES.map((lane) => ({
       id: lane.id,
       title: lane.title,
       color: lane.color,
-      hint: lane.hint,
       emptyText: 'Drop a task here.',
       onAdd: () => setCreateLane(lane.id),
       tasks: tasks
         .filter((task) => laneForStatus(task.status) === lane.id)
-        .map((task) => taskToKanban(task, projectsById)),
+        .sort((a, b) => prioritySortKey(a.priority) - prioritySortKey(b.priority))
+        .map((task) => ({ ...taskToKanban(task, projectsById), draggable: !pendingMoves.includes(task.id) })),
     }))
-  }, [data?.topTasks, projectsById])
+  }, [filteredTasks, projectsById, pendingMoves])
 
   async function moveTask(
     taskId: string,
@@ -150,6 +170,8 @@ export function TasksPanel() {
   ) {
     if (fromColumnId === toColumnId) return
     if (!LANES.some((lane) => lane.id === toColumnId)) return
+    if (pendingMoves.includes(taskId)) return
+    setPendingMoves(current => [...current, taskId])
     setMoveError(null)
     setNote('Moving task…')
     try {
@@ -158,7 +180,10 @@ export function TasksPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: toColumnId, expected_updated_at: data?.topTasks.find(task => task.id === taskId)?.updated_at }),
       })
-      if (!res.ok) throw new Error('Could not move task')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Could not move task. Please try again.')
+      }
       setNote(
         `Moved to ${LANES.find((lane) => lane.id === toColumnId)?.title ?? toColumnId}.`,
       )
@@ -166,6 +191,8 @@ export function TasksPanel() {
     } catch (err) {
       setNote(null)
       setMoveError(err instanceof Error ? err.message : 'Move failed')
+    } finally {
+      setPendingMoves(current => current.filter(id => id !== taskId))
     }
   }
 
@@ -187,7 +214,7 @@ export function TasksPanel() {
   if (loading || !data) return <LoadingBlock label="Loading tasks…" />
 
   return (
-    <div className="space-y-6">
+    <div className="tasks-workspace space-y-4">
       {note || moveError ? <section className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center justify-end gap-2">
           {note ? (
@@ -218,17 +245,9 @@ export function TasksPanel() {
         />
       ) : null}
 
-      <div className="folio-task-toolbar">
-        {view === 'list' ? <FolioFolders
-          label="Task folders"
-          value={folder}
-          onChange={setFolder}
-          items={[
-            { id: 'open', label: 'Ready' },
-            { id: 'waiting', label: 'Waiting' },
-            { id: 'completed', label: 'Completed' },
-          ]}
-        /> : null}
+      <div className="tasks-workspace-toolbar">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="projects-view-label">All tasks <span>{filteredTasks.length}</span></span>
         <div className="compass-seg" aria-label="Task view">
           <button
             className={`compass-seg-btn ${view === 'list' ? 'compass-seg-btn-active' : ''}`}
@@ -245,7 +264,23 @@ export function TasksPanel() {
             Board
           </button>
         </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input className="projects-search" type="search" aria-label="Search tasks" placeholder="Search tasks…"
+            value={search} onChange={event => setSearch(event.target.value)} />
+          <select className="tasks-project-filter" aria-label="Filter tasks by project" value={projectFilter} onChange={event => setProjectFilter(event.target.value)}>
+            <option value="all">All projects</option>
+            <option value="unassigned">No project</option>
+            {data.projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
+          </select>
+          <button type="button" className="compass-btn-primary" onClick={() => setCreateLane('not-started')}><Plus size={15} aria-hidden /> New task</button>
+        </div>
       </div>
+      {view === 'list' ? <div className="projects-view-switch" role="group" aria-label="Task status filter">
+        {(['open', 'waiting', 'completed'] as const).map(value => <button key={value} type="button" aria-pressed={folder === value} onClick={() => setFolder(value)}>
+          {value === 'open' ? 'Active' : value === 'waiting' ? 'Blocked' : 'Completed'}
+        </button>)}
+      </div> : null}
       {view === 'board' ? (
         <KanbanBoard
           columns={kanbanColumns}
@@ -254,26 +289,8 @@ export function TasksPanel() {
         />
       ) : (
         <section className="folio-record-surface">
-          <div className="folio-section-heading">
-            <h2>
-              {folder === 'open'
-                ? 'Work you can move'
-                : folder === 'waiting'
-                  ? 'Waiting for the next move'
-                  : 'Finished work'}
-            </h2>
-            <button
-              className="compass-btn-secondary"
-              onClick={() =>
-                setCreateLane(folder === 'waiting' ? 'blocked' : 'not-started')
-              }
-            >
-              <Plus size={14} />
-              Add task
-            </button>
-          </div>
           <ul className="folio-task-list">
-            {data.topTasks
+            {filteredTasks
               .filter((t) =>
                 folder === 'open'
                   ? ['not-started', 'in-progress'].includes(
@@ -340,7 +357,7 @@ export function TasksPanel() {
                 </li>
               ))}
           </ul>
-          {!data.topTasks.some((t) =>
+          {!filteredTasks.some((t) =>
             folder === 'open'
               ? ['not-started', 'in-progress'].includes(laneForStatus(t.status))
               : folder === 'waiting'
@@ -349,7 +366,9 @@ export function TasksPanel() {
           ) ? (
             <div className="folio-quiet">
               <p>
-                {folder === 'open'
+                {search.trim() || projectFilter !== 'all'
+                  ? 'No tasks match these filters.'
+                  : folder === 'open'
                   ? 'No tasks ready to move. Capture a new task or review waiting work.'
                   : folder === 'waiting'
                     ? 'No blocked tasks.'
