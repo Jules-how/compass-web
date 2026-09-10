@@ -76,7 +76,7 @@ the current Compass decision note. The automation uses the historical
 Jules-how/switchflow-os cloud environment, separate from the current Compass repo.
 Run evidence: https://cursor.com/agents/bc-c0e10bcd-8ed9-4f11-ab56-aae4b4f6021a
 Scheduler: https://cursor.com/automations/abdd5393-a8cf-11f1-b532-320a589b8025
-Retire this duplicate publisher; retain the updated Compass morning pilot.
+The duplicate Cursor publisher was switched to Inactive on 10 September. The updated Compass morning pilot remains active.
 
 Release checks: database publication/retry/decision tests, API validation and
 source freshness checks, production build, deployed API readback, Home display,
