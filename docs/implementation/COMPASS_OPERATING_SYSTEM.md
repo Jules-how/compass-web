@@ -114,5 +114,44 @@ Source/worker failures surface as actionable coverage issues without false zeros
 
 ## Delivery status
 
-Plan written. Implementation and live acceptance in progress. Update this section
-with actual tests, release evidence, connected sources and remaining limitations.
+Implementation shipped to https://compass-web-eosin.vercel.app. Sources: commits
+482326e, 739d40e and b6f063d (final purpose/compact-read correction). Both operating
+migrations were applied to the hosted database. The production build and deploy
+guards pass. Initial integrated checks: 95 passed; final regression checks: 70
+passed, including precise provider timestamps, cursor exhaustion, no double counts,
+future deadlines versus availability, cancelled dependencies and review writes.
+
+Live checks completed: operator capture -> persisted personal task -> reload ->
+confirmation -> task leaves queue (synthetic verification task only); business work
+remains open. Home verified at desktop and true 390 CSS pixels with no horizontal
+overflow. Perth review renders exactly 21 recipients and 42 complete draft messages.
+Home/agent/Outbound share queue and provider evidence. Exact history refresh made
+three provider requests, completed pagination and read 40 Sydney sends, preserving
+paused status. Weekly/monthly goals each show five linked real open tasks.
+
+The current queue starts with recording the ten Perth calls, then reviewing Perth,
+deciding pilot terms and reviewing Sydney recovery. Five real contextual tasks,
+one sales project and a separate implementation review task, 21 new Perth drafts, five prior loaded recipients and 40 Sydney
+follow-up drafts are registered with sources. Sydney follow-ups are not new prospects.
+The existing Compass build project now reflects the approved operating scope.
+Two qualitative week/month goals are proposals beneath the unchanged December goal.
+
+Provider refresh works on open, on request and through existing hosted morning
+sync. The local 'Keep Compass current' heartbeat runs hourly 07:00–21:00 Sydney,
+reviews changed sources and stays quiet without meaningful changes. Its first
+unattended run remains to be observed; successful manual refresh is separate proof.
+Primary Google Calendar was read for 11–30 September (four events). Calendar-list
+permission is missing, so secondary coverage is not claimed. Working hours remain
+unknown. A bounded Computer History review and the named documents/tasks have
+recorded watermarks; this is not a completed sweep of every conversation. Local
+activity review depends on the Mac and recorder running.
+
+Next acceptance: Jules's first morning queue review and one successful unattended
+source review. No campaign launched, email sent, budget changed or business task
+closed during this implementation. Existing launch/schedule/completion authority
+is preserved.
+
+Final production: b6f063d, deployment dpl_BCXjxf6NJxY3h4KDvsvDBfyrbFcs.
+Unauthenticated agent read returns401; unsigned operator mutation returns403.
+Lean queue omits draft bodies; authenticated single-record read retains all21
+Perth recipient records and42 messages. Final provider/overview parity passed.

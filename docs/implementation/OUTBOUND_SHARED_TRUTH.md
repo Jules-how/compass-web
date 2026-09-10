@@ -52,8 +52,8 @@ This implementation adds the outbound view over those records; no second ledger.
 
 Uses operating-server.ts and its migration, owned by the concurrent operating-service
 build. This task owns outbound-overview-* modules, routes, UI, MCP bridge and tests.
-Implementation in progress; deployment and production verification will be recorded
-here with actual evidence. No claim of perfect or unattended operation from tests alone.
+Implementation deployed and verified on 10 September 2026. The evidence and remaining
+operational limits are recorded below. Tests alone do not establish unattended operation.
 
 ## Verified implementation details
 
@@ -73,9 +73,33 @@ here with actual evidence. No claim of perfect or unattended operation from test
   and https://developer.instantly.ai/api-reference/schemas/email (checked 10 September).
 - Source checks are bounded and stale/error observations remain explicit. Calls
   still require actual capture. Only preparation registered in Compass is visible.
-- 21 focused overview tests pass; the companion MCP/navigation suites passed 40
+- 22 focused overview tests pass; the companion MCP/navigation suites passed 40
   tests. Desktop and 390px static rendering of the actual component inspected.
 - First release 482326e live: signed-in Outbound and authenticated agent response
   matched Sydney paused/40 sent and Perth paused/unknown provider analytics. This
   live check exposed the historical daily-feed and future-deadline issues above;
-  final-patch production verification remains to be recorded below.
+  those issues were corrected and verified in the final release below.
+
+## Final production verification — 10 September 2026
+
+Release b6f063d is live at https://compass-web-eosin.vercel.app/sales/outbound.
+The authenticated agent response and signed-in UI were compared at approximately
+23:30 Sydney time and agreed on all of the following:
+
+- Sydney paused, 40 actual sends/contacted, zero first contacts prepared, and 40
+  recipient-specific recovery follow-up drafts. Pausing does not erase send history.
+- Perth paused, 21 first contacts prepared and five earlier loaded receipts. Missing
+  provider analytics explicitly remain Unknown rather than zero.
+- Dated history: 40 recorded email sends on 10 September and zero on 9 September
+  for the covered current-offer campaigns. Unrecorded phone outcomes remain a gap.
+- Outbound priority order: capture the ten Perth call outcomes/promises, review the
+  21 Perth messages, review Sydney recovery, then assess prospect supply.
+- The Perth review link opens all 21 recipient records and their complete messages.
+- Supply guidance distinguishes 21 new recipients from 40 follow-up drafts.
+- All 62 focused overview, MCP, cadence and wave tests pass. Type checking passed;
+  the integrated release owner completed the production build and deployment.
+
+The operating-service owner maintains the shared day-plan handover. Recommendations
+remain proposals; calls require real outcome capture, source freshness is displayed,
+and campaign activation still requires Jules' instruction. No prospect messages were
+sent, campaigns activated, call outcomes invented, or user tasks closed by this build.
