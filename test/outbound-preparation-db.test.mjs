@@ -29,6 +29,7 @@ async function database() {
   await db.exec(
     fs.readFileSync('supabase/migrations/0083_outbound_function_privileges.sql', 'utf8')
   )
+  await db.exec(fs.readFileSync('supabase/migrations/20260910070000_outbound_australian_installer_policy.sql','utf8'))
   const f = fixture()
   await db.query(
     'INSERT INTO compass_outbound_offers VALUES($1,$2,$3,$4)',
@@ -46,7 +47,7 @@ async function database() {
   )
   return db
 }
-async function prepared(db, suffix = '1') {
+async function prepared(db, suffix = '1', current = false) {
   const f = fixture()
   f.context.campaign_id = 'cell-' + suffix
   const candidate = {
@@ -54,6 +55,16 @@ async function prepared(db, suffix = '1') {
     id: 'candidate-' + suffix,
     hold_reason: undefined,
     exclude_reason: undefined
+  }
+  if (current) {
+    f.context.city='Perth';f.context.recipe.mode='evidence_draft';f.context.settings.timezone='Australia/Perth';
+    candidate.identity_reviewed=false;
+    candidate.evidence=candidate.evidence.filter(e=>['service','service_area','email'].includes(e.kind));
+    candidate.evidence.find(e=>e.kind==='service').value=candidate.evidence.find(e=>e.kind==='service').quote='We install split air conditioning.';
+    candidate.evidence.find(e=>e.kind==='service_area').value=candidate.evidence.find(e=>e.kind==='service_area').quote='Perth';
+    candidate.evidence.push({...candidate.evidence[0],kind:'operating'});
+    candidate.outreach_review={status:'uncontacted',source:'Live connector receipt',checked_at:new Date().toISOString()};
+    candidate.draft={subject:'Split quotes',opener:'Saw your split installation service. We could target installation searches.',signal_type:'basic_relevance',offer_connection:'Installation searches',evidence_kinds:['service']};
   }
   const values = p.expectedValues(candidate, f.context.recipe)
   const copy = loadTypescript('src/lib/outbound-copy.ts')
@@ -85,7 +96,7 @@ async function prepared(db, suffix = '1') {
       'planned',
       f.context.sequence,
       ['hvac'],
-      ['sydney'],
+      [f.context.city],
       'instant-' + suffix
     ]
   )
@@ -418,3 +429,14 @@ dbtest(
     )
   }
 )
+
+
+test('current policy ignores unsent assignment and shared domain but blocks actual outreach', async()=>{
+ const db=await database();await prepared(db,'perth',true);
+ await db.query("UPDATE lead_contacts SET pipeline_campaign_id='older-unsent-cell' WHERE id='test-lead'");
+ await db.query("INSERT INTO lead_contacts(id,email,company,company_domain,outbound_status) VALUES('other','other@example.test','Another branch','example.test','uncontacted')");
+ await db.query("SELECT outbound_check_preparation('prep-perth')");
+ await db.query("UPDATE lead_contacts SET outbound_status='contacted' WHERE id='test-lead'");
+ await assert.rejects(db.query("SELECT outbound_check_preparation('prep-perth')"),/outreach_state_changed/);
+ await db.close();
+});

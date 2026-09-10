@@ -1,54 +1,30 @@
-# Openers & Subjects
+# Subjects and openers
 
-Fill slots from the row. Do not freewrite. Do not requalify the list.
+Use the current [offer and signal contract](../../switchflow-offer/installation-booking.md). Jules' 10 September requirement is an individually drafted personalised subject and commercially relevant opener, with the remaining reviewed email stable. The previous instruction to fill rigid slots and never freewrite is superseded.
 
-**One production engine.** `generate_openers.py` is the live opener script. Do not write `generate_{trade}_{city}_openers.py`. The v2 trial packer is merged (site-extract `specialty` / `services` column order now wins over the Maps blob) and archived under `_archive/v2/`. Do not write Python or CSVs to the switchflow-os root or to this folder top. Broker and reactivation one-offs live in `_archive/`.
+## Writing operation
 
-Sentences and tier order live in `generate_openers.py`. Readable copy: `generate_openers.md`. Do not quote those lines here.
+Use the compact cached evidence packet from list building. Do not independently research every row again. Select the strongest supported signal and an appropriate acquisition connection, then draft subject and opener together. Run requests concurrently within the list-build limits. Missing optional signals do not disqualify a prospect.
 
-Load the relevance spec and opener waterfall from the offer Jules named (default: `switchflow-offer/installation-booking.md`). Facts come from the row. If a required slot is empty and Jules asked, use the `icp-research` skill.
+Each result retains source row/Compass ID, signal type/strength, supporting quote/URL, offer connection, subject, opener, body variant and draft status. Save one accepted version. Retry an unsupported/broken field once; hold a remaining error rather than regenerate the cohort.
 
-Pull input from `../list-builds/out/{trade}/`. Do not copy lists into `in/`. The sendable sheet must already have `verified_email` plus a recorded `email_status` / Compass `email_verify_status` (promote after site extract + verify). This job refuses a sheet that still uses `Email`. Rows with no usable address go to the opener unsendable file.
+- Subject: short, natural and specific to the evidenced service, offer or business. No fake Re:/Fwd:, urgency, unsupported saving or invented name. Personalisation does not require a different sentence structure for every recipient.
+- Opener: normally 1–2 short sentences. State the observation and connect it to a plausible installation-acquisition angle. Phrase the connection as our proposition, not a claim about their demand, capacity or advertising performance.
+- Signal order is a preference, not first-keyword-wins: specific installation/replacement offer or project; relevant brand/service positioning; applicable finance/rebate/explicit expansion; installation relevance fallback. Choose based on evidence and commercial usefulness.
+- Brand logos do not establish specialist status. A live page alone does not prove a time-limited promotion is current. Do not copy unsupported “pushing”, “most of your work” or “recently expanded” claims.
+- For NONE/basic relevance, write honestly from the installation service/area evidence. Do not manufacture praise, novelty or a pain point.
+- A published real contact name may be used only when appropriate to the selected inbox. Otherwise omit the greeting/name. No inferred first names, “there”, brand names as people or mandatory “Saw” phrasing.
+- Ordinary split-system, commercial and mixed-trade businesses are in scope. Do not apply residential homeowner language to a commercial-only business.
+- Keep body, CTA, signature and follow-up fixed within the named variant. The opener should not repeat the entire fixed body. Freeze the chosen variable and compare outcomes within comparable service/signal groups.
 
-For a CSV, run `../outbound_worker.py --campaign <cell-id> --input-csv <researched.csv> --output-dir <job-output>`. The worker retains all rows, renders against the saved signals and sequence, reads the persisted result back, and writes a review CSV plus per-batch receipts. Evidence, verification and contact_basis columns contain structured JSON; loose source text is not treated as verification.
+## Compass and validation
 
-For an installation-booking preparation, run `../outbound_worker.py --campaign <cell-id> --run <run-id>`. It calls this engine’s `render_preparation_ticket` with Compass’s frozen recipe and quoted facts, and submits the full rendered emails. Missing facts produce a hold; no legacy fallback applies.
+Compass owns leads, reviewed copy and the sequence. Use the existing outbound_worker.py/generate_openers.py integration as the implementation starting point; do not create a city-specific writing script. Current template rendering and preparation validation do not yet implement flexible evidence-constrained drafting. Amend those contracts together before production use; a generated CSV alone is not a reviewed Compass preparation.
 
-For historical campaigns, if Compass has a pathway for this trade/list, GET `/api/agent/outbound/pathway` and keep generating with this script (one engine). After commit, Jules edits templates and siblings on the Pathways desk. Do not rewrite this `.py` from a Compass overlay.
+Validate every row for eligible valid email, factual claims traceable to evidence, correct company/name/area, compatible customer type, complete subject/opener, no unfilled tokens and unchanged fixed body. Do not rely only on a sample for these mechanical checks. Read a representative sample plus flagged exceptions for naturalness; Jules reviews the exact recipients/openers and count before upload.
 
-Run:
+The review CSV should show company, email, fit/system priority, signal, evidence link, personalised subject/opener and rendered first email/follow-up. The sending export is minimal: email, first_name when known, company_name, subject, personalization, and only additional variables the approved sequence uses. Map personalization to the exact reviewed opener; avoid duplicate opener/Opener aliases unless an existing frozen recipe actually requires them.
 
-```
-python3 generate_openers.py --trade {trade} --city {city}
-```
+Only valid/provider-ok addresses enter the normal email review. Catch-all, unknown, invalid, error or missing verification stay out of the sending export. Preserve their source rows and call/unresolved route. Do not treat an unsent campaign assignment as a previous send.
 
-Write only `out/{trade}/{trade}-{city}-sendable-{YYYYMMDD}.csv` and `-unsendable-{YYYYMMDD}.csv`.
-
-Retention: keep source rows, evidence and receipts. The engine no longer removes staging, pipeline or quarantine files. Preparation source and output are immutable Compass records; CSV is transport.
-
-Named rows: opener is one line, `Hi {firstName}, saw …`. Unnamed rows: `firstName` blank, opener starts at `Saw`. Never write `there`. Never write `{shop} team`. Instantly email 1 starts with `{{personalization}}`, so a campaign-level `Hi {{firstName}},` would turn a blank name into `Hi ,`.
-
----
-
-## Field mapping
-
-Read input columns dynamically. Origami Title Case (`Business Name`, `Raw Data`, `First Name`, `Hours Claim`, `Review Count`, `Suburb`) maps to snake_case. The live address column is `verified_email`. Also `business_name`/`company`/`company_name`/`title`, `suburb`/`city`, `hours_claim`, `paid_demand`, `services`, `specialty`, `trade`, `review_count`, `website`/`website_url`, `raw_data`. Apify `status`/`valid`/`accept_all` folds to `email_status`. A lead status like `interested` does not.
-
-Uses Paid Demand → Specialty → Fallback. Specialty is detected column-first: the site-extract `specialty` then `services` cells in the shop's own order, then saved Compass specialty facts, then the Maps blob as fallback. Specialty keywords, shop-sign tails, identity, and the campaign trade noun come from `switchflow-offer/verticals/` for that `--trade`. No Hipages and no specialty still gets a trade-noun opener.
-
-
-- **firstName:** Real person/owner in `staffs`, `first_name`, or lead data → first token only (`Trent Goetze` → `Trent`). Slogan copy (`Australian owned`, `Your local`), placeholders, or the first word of the shop sign → blank. Opener starts at `Saw`.
-- **company:** Casualise the shop sign (`All Kind Gas & Plumbing Brisbane` → `All Kind`, `WPS PLUMBING & LEAK DETECTION` → `WPS`). Strip legal suffixes: `Pty Ltd`, `P/L`, `Services`, `Co`, `Group`, `Specialists`, `Contractors`, trailing city, plus shop-sign tails from the vertical files. If the sign is a person’s name, second person (`you`), not the company name.
-- **suburb:** Micro suburb over metro (`Cleveland` over `Brisbane`, `Gold Coast`).
-- **trade:** Natural noun from that vertical’s Campaign trade noun line. Never the appliance.
-
-Waterfall: first matching tier in the script wins. Subjects lowercase. Do not invent a close time. Family / since 19xx is not a tier in the script.
-
----
-
-## Output
-
-1. **Sendable** `out/{trade}/{trade}-{city}-sendable-{YYYYMMDD}.csv`: keepable inbox (`ok`, `catch_all`, `unknown`, `error`; quality `good`/`risky`). Missing status is pending, even if the column is called verified_email or quality is good. Archived, no-recontact, suppressed, ICP-skipped, held-for-review, and existing non-uncontacted outreach states are excluded. Duplicate inboxes go to unsendable. Columns: `firstName`, `subject`, `opener`, `Opener`, `companyShort`, `service`, then original lead columns (`raw_data` last). Instantly: `{{Opener}}`, `{{companyShort}}`, `{{service}}`, `{{suburb}}`.
-2. **Unsendable** `…-unsendable-{YYYYMMDD}.csv`: missing, pending or invalid/bad email, prior outreach, or duplicate inbox. Keep the row. Label why. No paid demand and no specialty still gets the fallback opener.
-
-Before save: unnamed openers do not start `Hey` or `Hello`. Named openers are one line `Hi {firstName}, saw …`. Every opener is 1–2 complete sentences ending `.` or `?`. No guessed hours. No leftover `{tags}` or empty slots.
+[Jules' reviewed upload](../../.agents/skills/instantly-load/SKILL.md) consumes this frozen artifact. Copy edits invalidate only the affected review/output; they do not justify fresh scraping or verification of unchanged addresses.

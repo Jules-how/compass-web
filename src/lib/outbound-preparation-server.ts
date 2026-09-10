@@ -10,6 +10,7 @@ import {
   domainKey,
   contextErrors,
   recipeErrors,
+  equivalentTimezone,
   prepareBundle,
   transportCsv,
   reconcileRecipients,
@@ -248,6 +249,8 @@ export async function createPreparationRun(
       exclude_reason: text(row.exclude_reason),
       contact_basis: row.contact_basis as Candidate["contact_basis"],
       verification: row.verification as Candidate["verification"],
+      draft: row.draft as Candidate["draft"],
+      outreach_review: row.outreach_review as Candidate["outreach_review"],
     });
   }
   const result = await db.from("compass_outbound_runs").upsert(
@@ -505,6 +508,11 @@ export function verifyPausedCampaign(
   ] as const)
     if (remote[field] !== expected[field])
       throw new Error("campaign_setting_mismatch:" + field);
+  if (bundle.context.recipe.mode === "evidence_draft") {
+    for (const field of ["email_gap", "random_wait_max", "match_lead_esp"] as const) {
+      if (remote[field] !== expected[field]) throw new Error("campaign_setting_mismatch:"+field);
+    }
+  }
   if (
     canonical([...((remote.email_list as string[]) ?? [])].sort()) !==
     canonical([...expected.email_list].sort())
@@ -543,7 +551,7 @@ export function verifyPausedCampaign(
   if (schedules?.length !== 1) throw new Error("one_schedule_required");
   for (const s of schedules) {
     if (
-      s.timezone !== bundle.context.settings.timezone ||
+      !equivalentTimezone(s.timezone, bundle.context.settings.timezone) ||
       s.timing?.from !== bundle.context.settings.from ||
       s.timing?.to !== bundle.context.settings.to
     )

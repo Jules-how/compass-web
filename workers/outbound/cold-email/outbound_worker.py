@@ -101,13 +101,24 @@ def process_csv(campaign: str, path: Path, output: Path) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--campaign", required=True)
+    parser.add_argument("--campaign")
+    parser.add_argument("--city", help="Run the city-to-review pipeline")
+    parser.add_argument("--pipeline-config", type=Path)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--run")
     group.add_argument("--input-csv", type=Path)
+    group.add_argument("--pipeline", action="store_true")
     parser.add_argument("--output-dir", type=Path)
     args = parser.parse_args()
     try:
+        if args.pipeline:
+            if not args.city or not args.pipeline_config or not args.output_dir:
+                raise ValueError("Pipeline requires --city, --pipeline-config and --output-dir")
+            from outbound_pipeline import run_pipeline
+            rows = run_pipeline(args.city, args.pipeline_config, args.output_dir)
+            print(json.dumps({"businesses": len(rows), "review": str(args.output_dir / "review.html"), "metrics": str(args.output_dir / "metrics.json")}, indent=2))
+            return 0
+        if not args.campaign: raise ValueError("--campaign is required for Compass preparation")
         if args.input_csv and not args.output_dir: raise ValueError("--output-dir is required with --input-csv")
         result = process_csv(args.campaign, args.input_csv, args.output_dir) if args.input_csv else execute(args.campaign,args.run)
         print(json.dumps(result, indent=2))

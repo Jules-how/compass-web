@@ -37,6 +37,8 @@ export type Candidate = {
   };
   geography_review?: { region: string; rationale: string; checked_at: string };
   verification?: { status: string; provider: string; checked_at: string };
+  draft?: { subject: string; opener: string; signal_type: string; offer_connection: string; evidence_kinds: string[] };
+  outreach_review?: { status: "uncontacted" | "contacted" | "unknown"; source: string; checked_at: string };
 };
 export type SignalRule = {
   id: string;
@@ -47,6 +49,7 @@ export type SignalRule = {
   subject?: string;
 };
 export type Recipe = {
+  mode?: "template" | "evidence_draft";
   subject: string;
   opener: string;
   rules?: SignalRule[];
@@ -58,6 +61,9 @@ export type Settings = {
   from: string;
   to: string;
   daily_limit: number;
+  email_gap?: number;
+  random_wait_max?: number;
+  match_lead_esp?: boolean;
 };
 export type Context = {
   campaign_id: string;
@@ -184,6 +190,7 @@ export function evidenceValue(row: Candidate, kind: string): string {
 export function ledgerBlock(
   row: LedgerRow | undefined,
   campaignId: string,
+  review?: Candidate["outreach_review"],
 ): string[] {
   if (!row) return ["not_in_lead_ledger"];
   const reasons: string[] = [];
@@ -194,9 +201,10 @@ export function ledgerBlock(
     row.recontact_ok === 0
   )
     reasons.push("suppressed");
-  if (row.outbound_status !== "uncontacted") reasons.push("previous_outreach");
+  const reviewedUnsent = review?.status === "uncontacted" && !!text(review.source) && validTime(review.checked_at) && Date.now() - Date.parse(review.checked_at) < 24 * 3600000;
+  if (row.outbound_status !== "uncontacted" && !(reviewedUnsent && ["in_instantly", "ready", "none"].includes(row.outbound_status ?? ""))) reasons.push("previous_outreach");
   if (row.icp_status === "skip") reasons.push("icp_excluded");
-  if (row.pipeline_campaign_id && row.pipeline_campaign_id !== campaignId)
+  if (!reviewedUnsent && row.pipeline_campaign_id && row.pipeline_campaign_id !== campaignId)
     reasons.push("different_campaign");
   return reasons;
 }
@@ -210,14 +218,16 @@ export function assessCandidate(
   if (!validUrl(row.website)) reasons.push("company_website_required");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email))
     reasons.push("missing_or_invalid_email");
-  if (!row.identity_reviewed) reasons.push("identity_review_required");
-  for (const kind of REQUIRED_EVIDENCE) {
+  const current = context.recipe.mode === "evidence_draft";
+  if (!current && !row.identity_reviewed) reasons.push("identity_review_required");
+  for (const kind of (current ? ["service", "service_area", "operating", "email"] : REQUIRED_EVIDENCE)) {
     if (!evidenceValue(row, kind))
       reasons.push("evidence_missing_or_contradictory:" + kind);
   }
   if (emailKey(evidenceValue(row, "email")) !== emailKey(row.email))
     reasons.push("email_not_published");
-  if (!/ducted/i.test(evidenceValue(row, "service")))
+  if (current && (!/install|replac/i.test(evidenceValue(row, "service")) || !/air.?condition|\bac\b|split|reverse.cycle|ducted/i.test(evidenceValue(row, "service")))) reasons.push("ac_installation_unconfirmed");
+  if (!current && !/ducted/i.test(evidenceValue(row, "service")))
     reasons.push("ducted_service_unconfirmed");
   const areaReview = row.geography_review;
   const reviewedSydney =
@@ -225,10 +235,16 @@ export function assessCandidate(
     !!text(areaReview.rationale) &&
     validTime(areaReview.checked_at);
   if (
-    !/\bsydney\b/i.test(evidenceValue(row, "service_area")) &&
+    !current && !/\bsydney\b/i.test(evidenceValue(row, "service_area")) &&
     !reviewedSydney
   )
     reasons.push("sydney_service_area_unconfirmed");
+  if (current) {
+    const area = evidenceValue(row, "service_area").toLowerCase();
+    const region = areaReview?.region?.replace(/^greater_/, "").replaceAll("_", " ").toLowerCase();
+    if (!area.includes(context.city.toLowerCase()) && !(region === context.city.toLowerCase() && !!text(areaReview?.rationale) && validTime(areaReview?.checked_at))) reasons.push("service_area_unconfirmed");
+    if (!row.outreach_review || row.outreach_review.status !== "uncontacted" || !text(row.outreach_review.source) || !validTime(row.outreach_review.checked_at) || Date.now()-Date.parse(row.outreach_review.checked_at)>24*3600000) reasons.push("outreach_history_check_required");
+  }
   const basis = row.contact_basis;
   if (
     !basis ||
@@ -244,15 +260,16 @@ export function assessCandidate(
   if (!check || !text(check.provider) || !validTime(check.checked_at))
     reasons.push("verification_pending");
   else if (
-    !["valid", "ok", "catch_all", "unknown", "risky", "error"].includes(
+    !["valid", "ok"].includes(
       check.status,
     )
   )
     reasons.push("verification_ineligible");
+  else if (Date.now() - Date.parse(check.checked_at) > 30 * 86400000) reasons.push("verification_stale");
   const own = ledger.find(
     (l) => l.id === row.lead_id && emailKey(l.email) === emailKey(row.email),
   );
-  reasons.push(...ledgerBlock(own, context.campaign_id));
+  reasons.push(...ledgerBlock(own, context.campaign_id, current ? row.outreach_review : undefined));
   const domain = domainKey(row.website);
   if (
     own &&
@@ -265,7 +282,7 @@ export function assessCandidate(
     if (other.id === own?.id) continue;
     if (
       (emailKey(row.email) && emailKey(other.email) === emailKey(row.email)) ||
-      (domain &&
+      (!current && domain &&
         other.company_domain?.toLowerCase().replace(/^www\./, "") === domain)
     ) {
       if (
@@ -286,11 +303,14 @@ export function contextErrors(ctx: Context): string[] {
     !["testing", "live"].includes(text(ctx.offer.gtm_status))
   )
     errors.push("active_installation_offer_required");
-  if (ctx.vertical !== "hvac" || ctx.city.toLowerCase() !== "sydney")
-    errors.push("sydney_hvac_cell_required");
+  if (ctx.vertical !== "hvac" || !text(ctx.city)) errors.push("hvac_city_required");
+  if (ctx.recipe.mode !== "evidence_draft" && ctx.city.toLowerCase() !== "sydney") errors.push("current_city_recipe_required");
   const relevance = (ctx.offer.lock as { relevance?: unknown[] })?.relevance;
   if (!Array.isArray(relevance) || !relevance.length)
     errors.push("targeting_contract_required");
+  const cityZones: Record<string,string> = {sydney:'Australia/Sydney',melbourne:'Australia/Melbourne',perth:'Australia/Perth',brisbane:'Australia/Brisbane',adelaide:'Australia/Adelaide',darwin:'Australia/Darwin',hobart:'Australia/Hobart',canberra:'Australia/Sydney'};
+  const expectedZone=cityZones[ctx.city.toLowerCase()];
+  if (expectedZone && !equivalentTimezone(ctx.settings?.timezone,expectedZone)) errors.push('city_timezone_mismatch');
   const steps = Array.isArray(ctx.sequence?.steps) ? ctx.sequence.steps : [];
   if (steps.length !== 2) errors.push("email_plus_followup_required");
   if (!text(ctx.recipe?.subject) || !text(ctx.recipe?.opener))
@@ -298,7 +318,7 @@ export function contextErrors(ctx: Context): string[] {
   errors.push(...recipeErrors(ctx.recipe));
   const time = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
   if (
-    ctx.settings?.timezone !== "Australia/Sydney" ||
+    !validAustralianTimezone(ctx.settings?.timezone) ||
     !Array.isArray(ctx.settings.email_list) ||
     !ctx.settings.email_list.length ||
     !Number.isInteger(ctx.settings.daily_limit) ||
@@ -328,7 +348,7 @@ export function contextErrors(ctx: Context): string[] {
     if (
       !/<a\s+[^>]*href=["']\{\{unsubscribe\}\}["'][^>]*>\s*Unsubscribe\s*<\/a>/i.test(
         body,
-      )
+      ) && !(ctx.recipe.mode === 'evidence_draft' && /reply\s*[“"']?no thanks/i.test(body))
     )
       errors.push("unsubscribe_required:" + index);
     if (
@@ -412,9 +432,17 @@ export function chooseSignal(candidate: Candidate, recipe: Recipe) {
 export function expectedValues(
   candidate: Candidate,
   recipe: Recipe,
+  city = "Sydney",
 ): Record<string, string> {
   const errors = recipeErrors(recipe);
   if (errors.length) throw new Error(errors.join("; "));
+  if (recipe.mode === "evidence_draft") {
+    const d = candidate.draft;
+    if (!d || !text(d.subject) || !text(d.opener) || d.subject.length > 100 || d.opener.length > 500 || /[{}]/.test(d.subject+d.opener) || /^(re:|fwd:)/i.test(d.subject)) throw new Error("invalid_evidence_draft");
+    if (!text(d.signal_type) || !text(d.offer_connection) || !Array.isArray(d.evidence_kinds) || !d.evidence_kinds.includes("service") || d.evidence_kinds.some(k => !evidenceValue(candidate,k))) throw new Error("draft_evidence_required");
+    return {email: emailKey(candidate.email), first_name: "", company_name: candidate.company,
+      subject: d.subject, opener: d.opener, personalization: d.opener};
+  }
   const facts: Record<string, string> = Object.create(null);
   for (const e of candidate.evidence)
     if (/^[a-z][a-z0-9_]*$/.test(e.kind))
@@ -471,7 +499,7 @@ export function validateWorkerRender(
   ctx: Context,
   rendered: Rendered,
 ): void {
-  const expected = expectedValues(candidate, ctx.recipe);
+  const expected = expectedValues(candidate, ctx.recipe, ctx.city);
   if (
     canonical(rendered.values) !== canonical(expected) ||
     rendered.candidate_id !== candidate.id
@@ -522,14 +550,14 @@ export function prepareBundle(
     const reasons = assessCandidate(candidate, context, ledger);
     const output = outputs.find((o) => o.candidate_id === candidate.id);
     if (
-      seenCompany.has(candidate.company_id) ||
+      (context.recipe.mode !== "evidence_draft" && seenCompany.has(candidate.company_id)) ||
       seenEmail.has(emailKey(candidate.email))
     )
       reasons.push("duplicate_company_or_inbox");
     if (!reasons.length) {
       if (!output) {
         try {
-          expectedValues(candidate, context.recipe);
+          expectedValues(candidate, context.recipe, context.city);
           reasons.push("render_missing");
         } catch (err) {
           reasons.push(err instanceof Error ? err.message : "render_invalid");
@@ -601,6 +629,11 @@ export function instantlyExpected(bundle: Bundle) {
     insert_unsubscribe_header: true,
     daily_limit: bundle.context.settings.daily_limit,
     email_list: bundle.context.settings.email_list,
+    ...(bundle.context.recipe.mode === "evidence_draft" ? {
+      email_gap: bundle.context.settings.email_gap ?? 8,
+      random_wait_max: bundle.context.settings.random_wait_max ?? 5,
+      match_lead_esp: bundle.context.settings.match_lead_esp ?? true,
+    } : {}),
   };
 }
 export type PlatformLead = {
@@ -677,4 +710,20 @@ export function reconcileRecipients(bundle: Bundle, actual: PlatformLead[]) {
       receipts.length > 0 &&
       receipts.every((r) => r.status === "confirmed"),
   };
+}
+
+export function validAustralianTimezone(value: unknown): boolean {
+  if (typeof value !== "string" || !value.startsWith("Australia/")) return false;
+  try { new Intl.DateTimeFormat("en", {timeZone:value}).format(); return true; } catch { return false; }
+}
+export function equivalentTimezone(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (!validAustralianTimezone(a) || !validAustralianTimezone(b)) return false;
+  // Check a full forthcoming year; current-offset equality alone misses DST.
+  for (let day=0; day<=366; day+=7) {
+    const date=new Date(Date.now()+day*86400000);
+    const opts: Intl.DateTimeFormatOptions={year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"};
+    if (new Intl.DateTimeFormat("en-AU",{...opts,timeZone:a}).format(date)!==new Intl.DateTimeFormat("en-AU",{...opts,timeZone:b}).format(date)) return false;
+  }
+  return true;
 }

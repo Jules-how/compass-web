@@ -1,6 +1,6 @@
 # Offers
 
-Current direction: [Ads + booking](installation-booking.md), Compass key `installation-booking`, testing. Start with Sydney residential ducted installations/replacements: Google Search acquisition plus enquiry qualification and booked quote appointments. Existing enquiries are not required. The contract owns scope and targeting. Compass owns operational status, copy, campaigns and results.
+Current direction: [Ads + booking](installation-booking.md), Compass key `installation-booking`, testing. Target established air-conditioning installers across Australia, one city/area at a time. Ducted reverse-cycle is primary; multi-split/multi-head, multiple split-system packages and ordinary single split-system installers qualify. Residential, commercial, mixed HVAC/electrical and plumbing/AC installers are eligible. Independence wording is not required. Google Search acquisition plus enquiry qualification and booked quote appointments; existing enquiries are not required. The contract owns scope and targeting. Compass owns operational status, copy, campaigns and results. This 10 September 2026 targeting supersedes the Sydney residential-only default.
 
 Use `.agents/skills/offer-create/SKILL.md` for offer changes. Jules has approved this direction and retiring conflicting defaults. Prices, tax and individual agreement terms must be explicit; do not inherit the previous guarantee or billing rules.
 

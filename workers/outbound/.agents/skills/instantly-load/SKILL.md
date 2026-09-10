@@ -1,107 +1,79 @@
 ---
 name: instantly-load
 description: >-
-  Load a finished Switchflow cold email list into Instantly as a draft campaign.
-  Use when creating or updating an Instantly campaign, uploading leads, or
-  Jules says load the list into Instantly. Not for list building, openers, or copy.
+  Load a finished Switchflow cold email list into a paused Instantly campaign,
+  configure the reviewed settings and reconcile actual recipients and copy.
+  Use for campaign setup or upload, not list building or opener drafting.
 ---
 
 # Instantly load
 
-Fetch Instantly tool schemas before any campaign create or `get_campaign`. Pull one live campaign in the same motion for senders and tracking only. Do not copy its delays if they break the gap rule.
+Local Mac route: finished CSV upload through Chrome on the campaign Leads tab. Do not use Instantly MCP/REST add-leads, Compass land or push-leads from this Mac; prior local requests returned Cloudflare 1010. This does not prohibit authorised hosted delivery. Do not retry blocked transports during a load.
 
-Do not add leads through Instantly MCP, Instantly REST `/leads/add`, or Compass `land` / `push-leads`. Instantly REST add-leads from this Mac returns Cloudflare 1010. Compass Instantly push uses that same API. Lead upload is Browser Use on the campaign Leads tab.
+Fetch the current tool schema and read the intended campaign/account settings before setup. MCP/API can configure supported campaign fields; use Chrome for settings absent from the callable schema and for CSV upload. Never infer a setting was saved.
 
-## Stops
+## Input and authority
 
-- Openers file exists at `cold-email/openers/out/{trade}/{trade}-{city}-sendable-{YYYYMMDD}.csv`. Every row has email, `opener`, `subject`, a recorded verification result, and fresh Compass eligibility: `outbound_status=uncontacted`, not archived, recontact allowed, no suppression or ICP skip, and membership in the intended cohort. Use the current ledger; older verification results do not override those exclusions. Never invent an email. Do not write Instantly JSON, pipeline, or quarantine files into `openers/out/`. Retain the approved transport artifact and import receipt with the preparation; do not delete raw source or receipt files automatically.
-- Do not activate unless Jules said go. Load means draft. Never click Launch.
-- One city, one campaign. Do not attach this list to another city’s campaign.
+Use the exact recipient/copy artifact Jules reviewed in Compass, wherever its run folder lives. Each email row needs a source-backed published business inbox, current valid/provider-ok verification, fit and current outreach eligibility. Catch-all, unknown, invalid, error and missing results stay out of the normal export.
 
-## Order
+An unsent campaign assignment alone is not previous outreach. Resolve a known competing reservation separately. Check actual sends, suppression and repeated addresses before loading; do not perform a new company-identity audit. Preserve all source rows and skip reasons.
 
-0. Resolve the active offer and cell with `factory_job.py`. For `installation-booking`, use the exact frozen preparation approved in Compass, including its sequence, opener recipe, senders and schedule. If the preparation is missing or stale, finish it first. No historical fill/capture fallback. An old copy confirmation is not approval for a new batch.
-1. Create an empty Instantly lead list if the create flow needs one. Do not upload the CSV onto that list.
-2. Create the campaign in draft with Instantly MCP. PATCH `insert_unsubscribe_header` true. `get_campaign` for delays and copy.
-3. Upload leads with Browser Use while Jules is signed in on local Chrome.
-4. For installation-booking, use preparation reconciliation after upload: it reads the actual paused campaign, compares the entire inbox set and merge values, and marks only confirmed IDs. Do not PATCH the approved sequence after loading or manually mark the cohort. For historical workflows, reconcile actual inboxes before marking only confirmed IDs.
+One city/area and one named offer/copy variant per campaign. An existing active campaign must not be repurposed or paused simply because new targeting docs changed. Create/configure a paused campaign only for an authorised upload. Loading does not authorise activation; launch requires Jules.
 
-Open `https://app.instantly.ai/app/campaign/{id}/leads`. Click Upload CSV. Attach a scratch CSV (absolute path, `/tmp` is fine). Map `email` → Email, `first_name` → First Name, `company_name` → Company Name, `personalization` → Personalization. Map every other column to Custom Variable so `opener`, `companyShort`, `service`, `subject`, `city`, `suburb` land. Duplicates: Campaigns on, Lists off, The Workspace off. Verify leads off (the list is already verified; catch-all rows must stay). Click UPLOAD ALL. Do not also upload to a list.
+## Short handoff
 
-`skip_if_in_campaign` is the Campaigns checkbox. Leave workspace skip off unless Jules asked to dedupe the whole workspace.
+1. Freeze the approved recipient set, subject/opener values, body/follow-up, sender selection and schedule in one preparation/transport artifact.
+2. Create/configure a paused campaign using the reviewed recipe. Read settings and preview rendered messages before reserving/uploading.
+3. Upload the CSV once through Chrome. Map email → Email, first_name → First Name, company_name → Company Name, personalization → Personalization, subject → Custom Variable. Map additional fields only when the frozen sequence references them.
+4. Read back the entire recipient set and every used merge field, plus sequence/settings. Compare exact addresses and values with the artifact, accounting for known harmless HTML/text serialization only.
+5. Reconcile through Compass and mark only confirmed uploads. Report skipped/failed addresses. If interrupted, inspect actual uploaded state before retrying; resume only the missing portion.
+6. Give Jules the campaign URL, imported count and reviewable settings. Activate only after his instruction.
 
-## Delay
+Use the campaign Leads tab: https://app.instantly.ai/app/campaign/{id}/leads . Do not also upload into a separate lead list. A retained CSV absolute path is preferable to repeatedly rebuilt scratch files.
 
-Instantly Wait is `delay` on the email above the Wait box. The MCP line “days before this step” is wrong here.
+Turn off paid Instantly verification at import; Million Verifier already did that work. Do not enable risky sending. Workspace/list/campaign duplicate checkboxes are membership filters, not proof of previous outreach. For a batch already checked against actual history and competing reservations, keep those broad membership skips off so harmless unsent assignments do not silently remove leads. Same-campaign repeated addresses remain an import/reconciliation check.
 
-Every send to the next email is 2 or more days. Put `delay: 2` on every email that has a following email. Last email `delay: 0`.
+## Settings for new reviewed campaigns
 
-Two emails: email 1 delay 2, bump delay 0. Three emails: 2, then 2, then 0.
+Confirmed by Jules on 10 September 2026:
 
-After create, `get_campaign`. If any gap before the last email is under 2, fix it before you say loaded.
+- Text-only for every step: text_only=true (HTML styling off); first-email-only optimisation is insufficient.
+- Attach the selected existing eligible sender inboxes. Re-read limits/status; do not copy a stale pool or add every newly connected inbox.
+- Provider matching on. Current readback field match_lead_esp=true; configure through UI if the callable tool omits it.
+- Gap: email_gap=8 minutes plus random_wait_max=5. Read back both.
+- Use existing per-inbox daily limits. Set the campaign's TOTAL daily cap to the capacity allocated from those accounts, accounting for shared campaigns and applicable ramp limits. Do not interpret the campaign cap as a per-account number. Do not increase account limits or disable ramp-up merely to reach a target.
 
-## Campaign
+Recommended stable defaults, included in the reviewed recipe:
 
-- Name: use the current campaign cell name and active offer. One sequence per campaign. Do not name a new installation-booking campaign fill/capture.
-- Timezone is that city.
-- Weekdays by default. Weekends only when Jules directs that vertical.
-- Reuse the current HVAC sender pool. Do not invent mailboxes.
-- Daily cap sized to the list.
-- `stop_on_reply` on. Open and link tracking off. `text_only` on.
-- Unsubscribe on every email. Header plus a visible body link. Header alone is not enough.
+- City-local weekdays. Use the chosen window; 09:00–18:30 local is the current Sydney reference, not a compulsory national schedule.
+- Stop on reply on. Stop on auto-reply on with out-of-office cases surfaced for a later decision; do not add an untested automatic follow-up branch.
+- Open/link tracking off. Unsubscribe header and a visible unsubscribe option in every email. No promotional links beyond the reviewed copy.
+- Risky-email sending off; retain BounceProtect. Do not pay for another verifier at upload.
+- Follow-ups retain priority; do not starve them with unlimited prioritised new leads. No automatic A/Z winner optimisation during the controlled test.
+- Proposed new-campaign default: first email, then one follow-up after four calendar days, sent within the weekday window. Keep the two-day minimum. Save the actual delay; do not label this four business days. The reviewed recipe can choose a different compliant interval.
 
-`insert_unsubscribe_header` is not on the create schema. After create, PATCH `{"insert_unsubscribe_header": true}`, then `get_campaign`. If that flag is still false, Jules turns on Campaign Options > Insert unsubscribe link header. Do not ship a draft with it off.
+Actual send volume also depends on account availability, other campaigns, provider matching, follow-ups, eligible recipients and time left in the window. Configured capacity is not delivered volume. Do not disable matching to force a throughput number.
 
-## Sequence
+Instantly's UI can expose equivalent city timezone names (e.g. Melbourne for Sydney). Check local calendar/DST behaviour across the scheduled dates; neither blindly reject a label alias nor accept any same-current-offset zone. The old raw-string equality failure needs correcting in the implementation, not another settings loop.
 
-Email 1 starts with `{{personalization}}`. Do not put `{Hi|Hey} {{firstName}},` on the campaign. Named leads already have `Hi {name},` inside personalization. Unnamed leads have a blank `first_name` and personalization that starts at `Saw`.
+## Copy and serialization
 
-The opener CSV may still start `Hi Mark,`. Keep that on named rows. Strip `Hi` / `Hey` / `Hello` from unnamed rows so they start at `Saw`. Never upload `there` or `{shop} team` as a first name.
+Email 1 uses {{subject}} and starts with {{personalization}}, followed by the fixed approved body. Do not add a second campaign greeting when the reviewed opener already contains one. A name is a published relevant person or blank. No invented placeholder person.
 
-Paste the complete approved Compass sequence, including signature and visible unsubscribe link. The frozen subject may be literal or `{{subject}}`. No inferred job counts, guarantees, new claims or historical body substitutions.
+The follow-up uses the fixed reviewed copy and a blank subject when threading is intended. A new campaign must not inherit historical fill/capture or missed-call guarantees. Follow-up delay is stored on the email preceding the Wait box: first step delay ≥2, last step delay 0. Inspect the resulting schedule after setup.
 
-Do not use the killed missed-call body (Framework B: catch and book those calls / 3 jobs on the calendar). Banned 26 Aug and still banned. Do not load this sequence into Instantly `HVAC | Sydney | 300 | Sept26` unless Jules names that campaign.
+Plain-text SEND mode and sequence storage format are different. This workspace previously lost plain text placed before an unsubscribe anchor when Instantly sanitised it. Preserve complete paragraphs using escaped text in minimal div/br markup if the API/editor requires HTML storage, while text_only stays on. Preview the exact rendered first email and follow-up to prove the text survives; do not introduce styling/images or blindly strip transport markup.
 
-Bump is 2+ days later. Omit a first-name greeting: many valid rows have no published person name. Subject is blank (threads as `Re: {{subject}}`). No website or booking link. Do not use `reply no`, “who handles a new enquiry,” freeze language, or a 90 day / refund retainers (plural) line.
+Set insert_unsubscribe_header=true through a supported setting and verify it; the create schema may omit it. The reviewed body retains its visible opt-out: a working unsubscribe link or Jules' approved reply “no thanks” instruction. Do not replace reviewed copy just to satisfy an older link-only checker. Do not add an extra signature if one already exists in the body/account.
 
-Every email ends with Instantly `{{unsubscribe}}` labelled `Unsubscribe`. That is the only link allowed.
+## Completion and implementation boundary
 
-## Leads
+The current Compass preparation machinery still contains old eligibility, template and timezone assumptions. It must accept the new frozen draft/settings contract before calling a broader batch reconciled. Do not repeatedly regenerate valid copy to satisfy obsolete requirements, grant human approval with worker credentials, or manually claim a failed preparation succeeded.
 
-Build a scratch CSV (not under `openers/out/`) with `email`, `first_name`, `company_name`, `opener`, `Opener`, `companyShort`, `service`, `subject`, `personalization` (same line as opener), `city`, `suburb`, `email_status`, `outbound_status`, `is_archived`, `recontact_ok`, `suppression_reason`, `icp_status`, `eligibility_reason`. These status fields are local validation evidence and need not be mapped in Instantly. Instantly `email` is the opener CSV `verified_email` column. Blank any `first_name` that is a brand, slogan, city, or not a person, and rewrite that opener to start at `Saw`. Instantly CSV import keeps one row per email, so a duplicate address in the file is not a second lead.
+For supported installation-booking preparations, reserve after the paused campaign passes pre-upload readback, then consume the generated CSV and reconcile after upload. Existing check_campaign.py may help, but its old policy must be checked before treating it as authoritative. A checker passing proves only what it checks; actual recipient/merge readback is always required.
 
-`first_name` is a real person or blank. No `there`. No `{shop} team`. No brand as a name.
+Done for a load means: paused campaign; reviewed sender pool, schedule, 8+5 timing and provider matching; correct total cap; all-step text-only; reply stopping and unsubscribe; ≥2-day follow-up; exact sequence and merge values; complete recipient reconciliation; matching Compass receipt. Loaded, activated and actually sent remain separate states.
 
-Before upload, say how many catch-all / risky rows are on the file. Instantly create has no `allow_risky_contacts`. Leave Verify leads off on the CSV dialog so catch-all rows stay. If those rows must send, Jules flips the campaign UI toggle.
+## Current settings references
 
-## Done
-
-For installation-booking, reserve the approved preparation only after the paused campaign passes readback, then download its generated CSV. Run the preparation reconciliation endpoint after upload; missing inboxes, extra inboxes and changed variables keep the load incomplete. The worker credentials cannot grant human approval.
-
-For the historical file workflow, dump the `get_campaign` JSON to a file and run `python3 check_campaign.py <file> --timezone <City tz> --leads-csv <upload.csv>` from this skill folder. This checks every row and every email variant. Exit 0 proves settings and rendering only. After upload, read back the actual campaign lead email set, compare it to the CSV, and list every skipped address with its reason. Bind the Instantly campaign ID to the Compass cell and mark only confirmed uploaded lead IDs. Do not say loaded without that upload receipt. If it fails, fix the campaign and rerun. The batch scan below stays as the sound check on top of the gate.
-
-Required:
-
-- [ ] Draft, not live
-- [ ] Each gap before the last email is 2+ days
-- [ ] Timezone is that city
-- [ ] Schedule is weekdays, unless Jules said weekend
-- [ ] Email 1 starts with `{{personalization}}`, not a campaign `Hi {{firstName}},`
-- [ ] `{{personalization}}` / `{{opener}}` and `{{subject}}` on email 1
-- [ ] Bodies, subject, recipe and send settings match the approved current-offer preparation
-- [ ] Every email body has `{{unsubscribe}}` as a visible Unsubscribe link
-- [ ] `insert_unsubscribe_header` is true
-- [ ] Campaign lead count equals the opener file, or skips are listed
-- [ ] Campaign URL given, not live
-
-Batch sound check (scan the opener file and the campaign, not a sample of 3):
-
-- [ ] First names: real person or blank. None are `there`, `{shop} team`, a brand, slogan, or city
-- [ ] Shop names in openers match the row
-- [ ] Suburbs sit on the suburb, not a dummy city
-- [ ] Trade noun is the shop (aircon, HVAC, heating and cooling). Not the appliance
-- [ ] Unnamed openers start with Saw. Named openers may start Hi {name}, then Saw
-- [ ] No invented email, suburb, time, or badge
-- [ ] Catch-all count said out loud if any
-
-Jules
+Verified 10 September 2026: [Campaign options](https://help.instantly.ai/en/articles/6222396-campaign-options), [account and campaign limits](https://help.instantly.ai/en/articles/6248612-account-and-campaign-limits), [provider matching](https://help.instantly.ai/en/articles/7044069-email-service-providers-matching). Recheck capabilities at execution; tool-schema labels have previously misstated the campaign cap and delay placement.

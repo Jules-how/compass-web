@@ -6,7 +6,7 @@ The active Mac working files remain under `/Users/Jules/switchflow-os/`. `source
 
 ## Run from this checkout
 
-Python 3.11 or newer; standard library only. Supply `COMPASS_BASE_URL` and `COMPASS_AGENT_SECRET` through the environment. The usual workspace `.env.local` fallback is available only when files are restored to their original workspace layout. Never commit credentials.
+Python 3.11 or newer. The city pipeline additionally uses the existing `httpx` dependency and `parallel-cli`; the frozen preparation worker uses the standard library. Supply `COMPASS_BASE_URL` and `COMPASS_AGENT_SECRET` through the environment. The usual workspace `.env.local` fallback is available only when files are restored to their original workspace layout. Never commit credentials.
 
 ```sh
 python3 workers/outbound/cold-email/outbound_worker.py --campaign CELL --run RUN
@@ -27,3 +27,5 @@ SWITCHFLOW_WORKSPACE="$PWD/workers/outbound" node --test test/outbound-preparati
 The six vertical files supply compatibility vocabulary used by the existing engine and its regression tests. The selected Compass offer, evidence and frozen campaign ticket govern current installation preparation. Lead exports, research records, verifier receipts and credentials are not source dependencies and stay outside this package.
 
 Thirteen historical filter checks require private local CSVs and explicitly skip when those files are absent. They still run in the original workspace. Twenty synthetic filter checks and the worker, factory, opener and import checks run without private data.
+
+City sourcing/review now uses [PIPELINE.md](cold-email/PIPELINE.md). The tracked pipeline is agent-operated; see its explicit model, connector, human-review and deployment boundaries. Job research, contact exports and paid receipts are deliberately excluded from this source package.

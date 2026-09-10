@@ -111,11 +111,11 @@ test('missing inbox, source facts, unpublished name and pending verification rem
     assert.equal(b.counts.total, 1)
   }
 })
-test('recorded uncertain results retain their actual labels; absence never passes', () => {
+test('only valid verification passes; uncertain results retain their labels', () => {
   for (const status of ['catch_all', 'unknown', 'risky', 'error']) {
     const f = fixture()
     f.candidate.verification.status = status
-    assert.equal(bundle(f).counts.pass, 1)
+    assert.equal(bundle(f).counts.pass, 0)
   }
   const f = fixture()
   f.candidate.verification.checked_at = ''
@@ -278,3 +278,37 @@ test('CSV transports reviewed values, with proper quoting and blank unnamed fiel
   assert.match(csv, /"work@example.test","",""/)
   assert.equal(csv.trimEnd().split('\r\n').length, 2)
 })
+
+
+test('current evidence drafts qualify Perth mixed single-split installers without ownership wording', () => {
+  const f = fixture(); f.context.city='Perth'; f.context.settings.timezone='Australia/Perth';
+  f.context.recipe.mode='evidence_draft';
+  f.candidate.evidence=f.candidate.evidence.filter(e=>!['independent','residential','quote'].includes(e.kind));
+  const service=f.candidate.evidence.find(e=>e.kind==='service'); service.value=service.quote='We install split system air conditioning for homes and businesses.';
+  const area=f.candidate.evidence.find(e=>e.kind==='service_area'); area.value=area.quote='Perth';
+  f.candidate.evidence.push({...area,kind:'operating',value:'Perth',quote:'Perth'});
+  f.candidate.geography={...f.candidate.geography,region:'greater_perth'};
+  f.candidate.identity_reviewed=false;
+  f.candidate.outreach_review={status:'uncontacted',source:'Live provider receipt',checked_at:new Date().toISOString()};
+  f.candidate.draft={subject:'Split installation quotes',opener:'Saw your split-system installation service covers homes and businesses. That gives us a clear installation focus for a search campaign.',signal_type:'basic_relevance',offer_connection:'Installation-intent searches',evidence_kinds:['service']};
+  f.ledger[0].pipeline_campaign_id='another-unsent-assignment';
+  const output=[{candidate_id:f.candidate.id,values:p.expectedValues(f.candidate,f.context.recipe,'Perth')}];
+  const values={...output[0].values,unsubscribe:'[Unsubscribe]'};
+  output[0].steps=f.context.sequence.steps.map(step=>({subject:p.substitute(step.subject,values),body:p.substitute(step.slots.filter(s=>s.key!=='subject' && s.body.trim()).map(s=>s.body.trim()).join('\n\n'),values)}));
+  const root=process.env.SWITCHFLOW_WORKSPACE || path.resolve('workers/outbound');
+  const actual=spawnSync('python3',['-c',`import json,sys;sys.path.insert(0,${JSON.stringify(path.join(root,'cold-email/openers'))});from generate_openers import render_preparation_ticket;print(json.dumps(render_preparation_ticket(json.load(sys.stdin))))`],{input:JSON.stringify({context:f.context,candidates:[f.candidate]}),encoding:'utf8'});
+  assert.equal(actual.status,0,actual.stderr);assert.deepEqual(JSON.parse(actual.stdout),output);
+  const b=p.prepareBundle(f.context,[f.candidate],f.ledger,output);
+  assert.equal(b.counts.pass,1,JSON.stringify(b.records));
+  const replyOptOut=structuredClone(f.context); for(const step of replyOptOut.sequence.steps) step.slots.find(s=>s.key==='spam_act_opt_out').body='Not relevant? Reply “no thanks” and I’ll leave it there.'; assert.ok(!p.contextErrors(replyOptOut).some(e=>e.startsWith('unsubscribe_required')));
+  const wrongZone=structuredClone(f.context);wrongZone.settings.timezone='Australia/Sydney';
+  assert.ok(p.contextErrors(wrongZone).includes('city_timezone_mismatch'));
+  f.ledger[0].outbound_status='contacted';
+  assert.equal(p.prepareBundle(f.context,[f.candidate],f.ledger,output).counts.pass,0);
+});
+
+test('timezone aliases compare the whole coming year',()=>{
+ assert.equal(p.equivalentTimezone('Australia/Sydney','Australia/Melbourne'),true);
+ assert.equal(p.equivalentTimezone('Australia/Sydney','Australia/Brisbane'),false);
+ assert.equal(p.equivalentTimezone('Australia/Perth','Australia/Sydney'),false);
+});

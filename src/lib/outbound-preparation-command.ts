@@ -6,6 +6,7 @@ import type { Rendered } from "./outbound-preparation";
 const id = z.string().min(1).max(180);
 const recipe = z
   .object({
+    mode: z.enum(["template", "evidence_draft"]).optional(),
     subject: z.string().min(1).max(200),
     opener: z.string().min(1).max(500),
     include_name: z.boolean().optional(),
@@ -28,11 +29,14 @@ const recipe = z
   .strict();
 const settings = z
   .object({
-    timezone: z.literal("Australia/Sydney"),
+    timezone: z.string().refine(value => { try { return value.startsWith("Australia/") && !!new Intl.DateTimeFormat("en",{timeZone:value}); } catch { return false; } }),
     email_list: z.array(z.email()).min(1).max(100),
     from: z.string(),
     to: z.string(),
     daily_limit: z.number().int().min(1).max(10000),
+    email_gap: z.number().int().min(1).max(60).optional(),
+    random_wait_max: z.number().int().min(0).max(60).optional(),
+    match_lead_esp: z.boolean().optional(),
   })
   .strict();
 export const preparationCommand = z.discriminatedUnion("action", [
@@ -78,12 +82,14 @@ export const preparationCommand = z.discriminatedUnion("action", [
             .max(30),
           geography_review: z
             .object({
-              region: z.enum(["greater_sydney", "unconfirmed"]),
+              region: z.string().min(1).max(100),
               rationale: z.string().max(1000),
               checked_at: z.string(),
             })
             .strict()
             .optional(),
+          draft: z.object({subject:z.string().min(1).max(100),opener:z.string().min(1).max(500),signal_type:z.string(),offer_connection:z.string(),evidence_kinds:z.array(z.string()).min(1).max(30)}).strict().optional(),
+          outreach_review: z.object({status:z.enum(['uncontacted','contacted','unknown']),source:z.string(),checked_at:z.string()}).strict().optional(),
           identity_reviewed: z.boolean(),
           hold_reason: z.string().max(1000),
           exclude_reason: z.string().max(1000),

@@ -1,46 +1,30 @@
 # Cold email
 
-Current offer: `installation-booking`, owned by `switchflow-offer/installation-booking.md`. Ads plus booking: focused Google Search plus qualification and booked quote appointments for Sydney residential ducted installations/replacements. Compass owns the ledger and campaign copy. Historical trades campaigns keep their identity and outcomes; do not use them as defaults for the new direction. Activate Instantly only when Jules says go.
+Current ICP: [Ads + booking](../switchflow-offer/installation-booking.md), key installation-booking. Jules broadened targeting on 10 September 2026 to established Australian air-conditioning installers. Residential, commercial, mixed electrical/HVAC and plumbing/AC businesses qualify; ordinary single split-system installation qualifies too. Ducted reverse-cycle is the priority. The contract supersedes the old residential-only, Sydney-only and explicit-independence gates.
 
-## Start here
+## Operating path
 
-1. Verify the selected cell belongs to the current `installation-booking` offer. Do not prepare a legacy refill merely because it appears next in an old Wave. `python3 factory_job.py` resolves the next Compass cell (brief `morningWave.activeNext` / `proposedNext`). Jules overrides with `--trade {trade} --city {city}` or `--campaign {id}`. Stdout is the job: cell, copy pointer, Instantly preset, Vortex payload, cohort inventory.
-2. Exit 2: refill. Page the cohort URL it prints and skip Vortex. Inventory is not proof of verification: verify missing results, preserve outreach exclusions, then openers.
-3. Exit 5: research existing unassigned trade inventory first. Preserve companies without email and verify geography, service fit and outreach history before attaching them. No paid scrape.
-4. Exit 0: discovery candidate only after no reusable inventory remains; check budget and actor access before scraping. Run the Vortex payload it prints, then the mill below.
-5. Exit 3: missing/current-offer mismatch. Correct the cell or contract; do not fall back to a retired offer.
+1. Jules selects a city/area. Record boundary, timezone, run budget and stable body variant.
+2. Vortex collects business listings and available website contacts. No pre-scrape deduplication project or mandatory inventory audit.
+3. Reuse returned facts and cached pages. Concurrent HTTP-to-text extraction collects service evidence, contacts and signals together; Parallel Extract handles failed/insufficient pages.
+4. Assess each business once. High fit plus published email goes to Million Verifier through Apify. High fit without a valid email plus a phone goes to the cold-call-fit CSV. Retain unresolved/non-fit rows with reasons.
+5. Use Compass's writing process for a personalised subject and relevant opener from the evidence. Freeze the remaining body and follow-up within the named variant.
+6. Jules reviews exact recipients, openers and counts. One review, not approval rounds for internal stages.
+7. Upload the finished CSV into a paused Instantly campaign via Chrome, configure the reviewed settings, and read back every recipient and merge value. Activate only on Jules' instruction.
 
-## Mill
+Owners: [list building](list-builds/AGENT.md), [subjects/openers](openers/AGENT.md), [stable copy](email-copy/AGENT.md), [Instantly loading](../.agents/skills/instantly-load/SKILL.md).
 
-`list-builds/AGENT.md` owns the walk: filter ICP first, site extract then verify on keepers, `mark_verified_email.py`, Compass `commit` (a gate, never skipped), then `openers/AGENT.md` (`generate_openers.py`, no new `.py` per list). Retain the source discovery rows, evidence, exclusions and output receipts. Filtering does not delete staging or another run’s files.
+## Keep it efficient
 
-## Copy and load
+- Use existing worker/extraction tools. One resumable run folder, one research result per source business row, one reviewed export. Compass owns leads/copy; files retain raw evidence, call list and receipts. No extra platform, agent framework or database.
+- No fuzzy matching, parent-tree investigation or cross-run deduplication phase. Reuse exact cached URLs automatically. Before verification/upload, check repeated email addresses, suppression and actual prior sends once. An unsent campaign assignment is not outreach; resolve known competing reservations separately.
+- Completed batches continue while exceptions wait. One fallback extraction attempt per business; one published alternative email when useful; retry transient failures once. Do not rerun whole cohorts or regenerate acceptable copy.
+- Research only facts needed for fit, contacts or a useful commercial connection. No paid reviews/photos/full Maps details, broad ad research or compulsory ARC/dealer checks.
+- Reuse recent unchanged verification. Valid-only email is the default; catch-all/unknown/error are not valid. Preserve every excluded/pending row.
+- Keep budgets and receipts with the run. Report listings, assessed business rows, fit rows, valid addresses, callable rows and uploads separately. Without identity consolidation, do not call listing counts a census of unique companies.
 
-Copy: the current installation-booking campaign's reviewed Compass sequence. The old fill/capture bodies, breakdown tokens and guarantee are historical, not starting templates. If the current cell has no suitable sequence, prepare and review one against the current contract before upload. Never treat old copy confirmation as approval for a new offer. Personalisation must use published facts and the existing validated mapping/rendering path.
+## Implementation status
 
-Instantly: `.agents/skills/instantly-load/SKILL.md`. Draft only. 2+ day gap before the bump. Before upload, run `check_campaign.py` against the `get_campaign` JSON with `--leads-csv` and the city timezone. After upload, reconcile the actual uploaded email set and skips, then PATCH Compass `sequence_draft` and `mark` only those uploaded IDs `in_instantly`. Settings passing alone does not mean loaded.
+The local city pipeline is implemented in `outbound_pipeline.py` through `outbound_worker.py --pipeline`. Use [PIPELINE.md](PIPELINE.md) for the tested model/connector handoffs, limits and exact restart command. The 10-company Perth proof produced five valid email contacts and five call-list companies. New Compass preparation policy code is tested locally but is not yet deployed; do not claim hosted gates changed. Human review and Instantly import/launch remain separate. Legacy inventory-first and narrow-name filters do not govern this pipeline.
 
-## Do not open on a send
-
-`cold-email/research/`, `offer-create` skill, `icp-offer-research`, other verticals than the cell's trade, `_archive/`, INDEX, playbooks, `future-agents/sales/cold-outbound-research/`, handover files. Research is closed on a send; it still argues killed copy.
-
-## Allowed files on a send
-
-- this file
-- `factory_job.py` stdout
-- `list-builds/AGENT.md` + `filter_leads.py` + `site_extract.py` + `mark_verified_email.py`
-- `openers/AGENT.md` + `generate_openers.py`
-- the current installation-booking campaign copy in Compass
-- `switchflow-offer/installation-booking.md`; historical vertical documents only when explicitly reviewing history
-- `.agents/skills/instantly-load/SKILL.md` + `check_campaign.py`
-- Compass `brief`, `ledger`, `commit`, `mark`, waves HTTP
-
-Creating or remaking an offer is `.agents/skills/offer-create/SKILL.md`, not this file.
-
-## Keep the next wave ready
-
-On each planning run, read Compass brief and waves: resolve replies, check remaining unsent inventory, and maintain the next eligible installation-booking cell. Exclude cancelled cells and retired offers. Reuse each cell's uncontacted ledger before paying for Maps. Check actor access and remaining budget for extraction **and verification** before buying a new batch; a capped verifier means finish cached work and record the block, not buy another scrape.
-
-At the weekly results review, sync outcomes before judging copy. Compare one factor at a time against a named control: same offer, audience, send settings and other copy. Record the hypothesis and candidate in Compass, then delivered, positive replies, screens and installs when available. Opens are not the success metric. Small or immature cohorts remain inconclusive. No automatic winner or campaign activation. Use actual cost per eligible unique inbox and dropped-place count to evaluate tools; the current actors are defaults, not a proven best-in-market claim.
-
-Research enters through a reviewed candidate in Compass and a small change to the production engine or copy. The send path stays short; the weekly review may consult the linked research evidence in `openers/generate_openers.md`.
+Historical data/campaigns keep their identity. A targeting-document update does not authorise campaign changes. Keep at least two days between emails. After authorised execution, sync actual replies, opt-outs, bounces, meetings and outcomes through Compass's API. Compare one named copy change at a time, retaining signal type. Uploads, active status and opens do not prove commercial success.

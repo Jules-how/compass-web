@@ -1,0 +1,18 @@
+{
+  "limit": 10,
+  "timezone": "Australia/Perth",
+  "search_terms": ["air conditioning installation"],
+  "model_provider": "handoff",
+  "model": "openai/gpt-4.1-mini",
+  "http_workers": 12,
+  "model_workers": 6,
+  "company_workers": 12,
+  "fallback_workers": 3,
+  "verification_batch": 50,
+  "discovery_cap_usd": 0.1,
+  "verification_cap_usd": 0.5,
+  "model_cap_usd": 0.5,
+  "followup_delay_days": 4,
+  "body": "REPLACE WITH THE CAMPAIGN BODY TO REVIEW. Include signature and {{unsubscribe}}.",
+  "followup": "REPLACE WITH THE FIXED FOLLOW-UP TO REVIEW."
+}

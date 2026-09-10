@@ -76,6 +76,8 @@ Campaign sequence of record: `GET|PATCH /api/agent/outbound/campaigns/:campaignI
 
 **Operating model:** Compass = workshop · Instantly = mail truck. Activate stays in Instantly. Outbound doctrine is `cold-email/AGENTS.md`.
 
+**Targeting revision, 10 September 2026:** installation-booking now targets established air-conditioning installers across Australia, including commercial/mixed trades and ordinary single split-system installation. Ducted reverse-cycle is primary. Do not enforce the older Sydney/residential/independence requirements or treat unsent campaign membership as actual outreach. Current process is city → Vortex contacts → cached concurrent HTTP research/fallback → fit/contact routing → Million Verifier through Apify → personalised subject/opener → Jules' review → paused CSV import/readback. The new policy does not itself update deployed preparation code; reconcile its eligibility, flexible draft and timezone/settings contracts before execution. No direct lead CRUD or local API add-leads workaround.
+
 Kinds: `offers` | `expressions` | `structures` | `ctas` | `subjects` | `openers` | `templates`.
 
 3. **Sync when data may be stale** (or let Vercel cron do it nightly) — not needed for library CRUD:

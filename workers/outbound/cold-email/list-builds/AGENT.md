@@ -1,80 +1,82 @@
 # List building
 
-The job comes from `cold-email/factory_job.py`, run before anything here. Exit 0 prints the Vortex payload for this cell. Exit 2 means refill: page the cohort URL it prints and skip Maps entirely. Exit 3 means the current cell/contract needs correction. Exit 5 means review existing unassigned inventory (including companies without email); do not scrape. These candidates still require geography, evidence and outreach checks. Jules can still name `--trade {trade} --city {city}` on the gate. Default offer: `switchflow-offer/installation-booking.md`. Never invent an email.
+Requirements revised by Jules on 10 September 2026. [The offer contract](../../switchflow-offer/installation-booking.md) owns ICP and signal definitions. This file owns execution design. The local implementation and tested provider routes are documented in [PIPELINE.md](../PIPELINE.md); check its deployment boundary before using hosted preparation.
 
-```
-factory_job.py (gate: scrape vs refill)
-  → Vortex Maps (place price; only on exit 0)
-  → filter_leads.py
-  → site_extract.py (httpx, then Parallel on failures)
-  → verify published inboxes
-  → mark_verified_email.py
-  → Compass commit (gate: do not openers without it)
-  → generate_openers.py
-  → Instantly draft (fill)
-```
+## 1. City and limits
 
-Do not run Google Ads or Meta Ads scrapers, the Apify website finder, or FindAll. Do not fetch sites before filter. Website contacts and reviews on Vortex are extra events. Leave them off unless Jules pays for them.
+Use the named city/metro or regional area, real boundary, local timezone, current offer, stable body variant and bounded budget. No pre-Vortex deduplication or full-inventory census. Reuse caches opportunistically. factory_job.py may supply compatible cell metadata; its old inventory-first exits do not override this workflow.
 
-## 1. Maps
+Keep a small coverage register: area, search terms, run ID, cap, completed/failed and uncovered districts. Check that Greater City resolves beyond its CBD; use one polygon when necessary. Do not start with an overlapping run for every suburb.
 
-Actor `vortex_data/google-maps`. Use the payload `factory_job.py` prints; do not hand-roll one. One geographic method per run: named `locationQueries` or `customGeolocation`, never both. City stays out of the search term. Terms from `switchflow-offer/verticals/{trade}.md`.
+## 2. Vortex discovery
 
-```json
-{
-  "searchStringsArray": ["<terms from the vertical file>"],
-  "locationQueries": ["Greater {City}, {State}, Australia"],
-  "maxCrawledPlacesPerSearch": 2000,
-  "languages": ["en"],
-  "geoStrictMatch": false,
-  "keepUnverifiedLocations": true,
-  "skipClosedPlaces": true,
-  "skipPlacesNotMatchingSearch": true,
-  "extractContactsFromWebsite": false,
-  "maxReviewsPerPlace": 0
-}
-```
+Actor: vortex_data/google-maps. One geographic method per run: locationQueries or customGeolocation. Keep city out of searchStringsArray. Start with distinct service terms, e.g. air conditioning contractor, air conditioning installation, heating and cooling contractor. The website synonym list is not a list of Maps runs.
 
-Perth is the exception: named `Greater Perth, Western Australia, Australia` geocodes as a 4.8 km CBD polygon, so the gate emits a `customGeolocation` GeoJSON polygon (Two Rocks to Mandurah, coast to Mundaring) instead of `locationQueries`.
+- Enable extractContactsFromWebsite. Retain identity, name/address/suburb, phone, website, categories, available rating/review count, place ID, source URL and run metadata, plus returned emails/extra phones/social links.
+- Retain names or service evidence only when actually returned with usable provenance. Vortex currently documents contacts, not dependable staff names or structured service/offer evidence. Its first email is a candidate, not automatic approval.
+- Leave review text, galleries and full-details add-ons off. Do not pay just to fill a missing review count. Do not use Vortex verification.
+- Read current schema/rates and set maxTotalChargeUsd before a paid run. Preserve no-website/no-email businesses. Skip confirmed closed places.
+- Avoid strict category/name/query filters that silently exclude electrical or plumbing businesses with AC installation.
+- Reuse adequate returned website text; the HTTP pass fills remaining facts without a second paid research exercise.
 
-If `limitPlacesDropped` is not 0, raise the cap and run once more. Do not geoStrict a CBD radius. Do not suburb-loop unless Jules names a hole. Skip off-profile stays on (Google pads with other trades). Jules can say “keep Google padding” to turn that off.
+Consume completed output in bounded batches while the run continues if reliable progress is available. Inspect the final receipt for dropped-place limits, unfinished searches and budget exhaustion. Repair only the affected query/area; no automatic whole-city rerun.
 
-Save every field the place event already returns (name, categories, address, phone, website, rating, review count, hours, owner, `placeId`, pin). Stage in `in/`.
+Extend coverage through uncovered districts or missing service categories. ARC/manufacturer dealer directories are optional gap sources, not compulsory cross-checks or independent-ownership proof. No automatic paid directory run. Record unresolved coverage when a cap or documented low-yield stopping point is reached. Maps/directories cannot prove every operating company has been found.
 
-## 2. Filter
+## 3. Research once
 
-```
-python3 filter_leads.py in/{file}.csv --trade {trade}
-```
+Read cache first. Concurrent HTTP-to-text extraction uses the existing site_extract.py as its starting tool. Parallel Extract is only for blocked, empty, JavaScript-only or insufficient essential content.
 
-Cheap name/trade walk. Report every unsendable row (name, reason, email). Open that CSV. Do not fetch or verify unsendable rows. After site extraction, review strong contradictions between the business and its website (another trade, platform/parking-page inbox, national supplier, builder or renovator rather than the target service). Hold those rows with a reason before verification; a Maps category is not proof when the website contradicts it. Preserve missing/uncertain evidence for review rather than inventing a factual opener.
+Homepage first to find real links; then the relevant installation/service page, contact page if needed, and about/project/offer page only where useful. Up to four pages per business, stopping when fit/contact and sufficient signal evidence are available. Do not assume /contact is the actual URL. Save final URLs and extracted text once.
 
-## 3. Site text
+Proposed initial limits to benchmark: 12 concurrent HTTP requests, at most 2 per domain, 3 Parallel fallback requests and 6 compact model assessments/drafts in flight. Respect provider limits and back off on rate limits. Parallelise across independent companies and stages, while preserving evidence → fit → verification/drafting → review → upload dependencies. No agent per company.
 
-```
-python3 site_extract.py out/{trade}/{trade}-{city}-sendable-{YYYYMM}.csv --trade {trade}
-```
+One targeted Parallel fallback per business for the most useful failed/insufficient page(s), then move unresolved cases aside. Retry a transient error once with backoff. No automatic Firecrawl/search-provider cascade. With no website, an available official public profile/directory page may establish installation fit; a Maps category alone does not.
 
-Homepage, then `/contact` if still no inbox. httpx first. Parallel only when httpx failed. Firecrawl off unless `--firecrawl`. `--resume` reuses cache and does not redo a paid hop. Spec: `site_extract.md`.
+Keyword matching finds passages; interpretation establishes fit. Distinguish ducted reverse-cycle, multi-split/multi-head, multiple split-system package and ordinary single split. Do not mistake gas/evaporative, supply-only or repair-only content for qualifying installation. Commercial/mixed trades qualify; unknown independence is irrelevant.
 
-## 4. Verify
+One assessment returns fit/not_fit/unresolved, evidenced system types/priority, residential/commercial/mixed/unknown customer type, operating/area evidence, contact candidates and selected contact/source, strongest supported signal/quote/URL, and next action. Missing optional details do not block a fit company.
 
-ICP keeper sheet only; deduplicate published addresses and exclude archived, no-recontact, already contacted/suppressed or company-duplicate ledger records before spending. Check actor access and remaining account budget before a new Maps run, leaving room for verification. If unavailable, resume cached work and log the block in Compass. Actor `account56/email-verifier` unless Jules names MillionVerifier. Keep ok, catch-all, unknown, timeout/error. A returned unknown/error is a recorded result; a missing result is pending and must not be promoted. Clear **invalid** only under the current policy. Still none → blank. Do not drop the company.
+## 4. Route and verify
 
-## 5. Mark verified, then Compass
+Prefer a published relevant owner/manager inbox when person and role are tied to it. Otherwise use published sales/quotes/general business contact; info@ and a publicly designated business Gmail address are acceptable. Never infer a name from an email handle or buy owner enrichment by default. Exclude designer, supplier, recruitment, privacy and irrelevant support inboxes.
 
-```
-python3 mark_verified_email.py out/{trade}/{trade}-{city}-sendable-{YYYYMM}.csv --results-json /tmp/verifier-results.json
-```
+Before verification, make one batch check for repeated addresses, opt-outs/suppression and actual outreach. No fuzzy company merging or parent investigation. An assignment is not a send. A known competing reservation is an administrative issue, not failed ICP. Preserve original rows and skips; never reset history.
 
-Use the actor dataset with actual `email` and `status`; results join by address. Pending addresses stay in `published_email`, with `verified_email` blank; exit 2 means verification remains incomplete. Existing column names or quality labels alone do not prove verification. Invalid rows stay blank. Then Compass `POST /api/agent/leads` (`commit`) for rows with company + `verified_email`. Record every domain/company skip and its existing lead ID. Preserve previous outreach states; never reset them to uncontacted. Reconcile input unique inboxes = committed + explicit skips + failures. Do not wait for Instantly. After Instantly load, `mark` `in_instantly`.
+Use **Million Verifier through Apify**, actor account56/email-verifier (confirmed from the previous run and current actor documentation). Check its current schema before execution. No Vortex or substitute verification. Batch 50–100 eligible new addresses where practical; do not wait for the whole city. Reuse a prior result for the same unchanged address within a documented freshness window. Proposed default: 30 days, rechecking when source/delivery evidence changes; this is an operating default, not a vendor guarantee.
 
-Then openers. Instantly is always fill. Activate only when Jules says go.
+- Valid/provider ok → email candidate, subject to current eligibility and review.
+- Catch-all, unknown, invalid, disposable, error or missing → not a valid email lead. Missing is pending; preserve exact results. A suggested typo correction is not a published email and must not be silently adopted.
+- Try at most one already published alternative inbox for an otherwise good prospect.
+- High fit + no valid email + published phone → cold-call-fit CSV. Distinguish no_email, invalid, catch_all, unknown and verification_error. A transient verification failure may also remain retryable.
+- High fit with neither usable email nor phone → unresolved contact. Non-fit and incomplete-evidence rows remain in the register.
 
-Do not leave CSVs at `list-builds/` top. `filter_leads.py` retains staging, source rows and sidecar receipts. Retention cleanup is a separate explicit operation.
+Call CSV: company, area, phone, website, system types/priority, fit evidence, strongest signal/source, published contact name if known, email-route reason and outreach restrictions. This is a fit list, not calling permission; no automatic calls, SMS or call-task system.
 
-## Other tool paths (only if Jules names them)
+## 5. Compass and writing
 
-- **Free Maps:** browser-use into Jules' Google account. Then filter onward.
-- **Origami:** archived. [_archive/origami.md](_archive/origami.md).
-- **Apify finder:** archived for this offer.
+Compass owns the lead ledger and reviewed copy. Use its agent API/MCP, never direct Supabase CRUD. Existing commit requires company/email; no-email businesses stay in the local register/call CSV. Use supported existing-record joins; do not invent an email to create a record. Preserve status and report administrative skips separately.
+
+As valid contacts finish, use their compact cached evidence for [subject/opener drafting](../openers/AGENT.md). Produce one version, check it and retry only a failed field once. Move review-ready batches of 25–50 onward without waiting for exceptions. Freeze the approved export; never rebuild it from a differently sorted spreadsheet.
+
+One run folder under cold-email/list-builds/out/hvac/: raw data/receipts, page cache, resumable register, email-review CSV, cold-call-fit CSV and unresolved rows. Record groups: source ID/identity; fit/evidence; contact/source; verifier/time; signal/connection; subject/opener/body variant; stage/reason; import result. Reuse existing fields/files; no new database or separate sheet for every stage.
+
+Report raw listings → assessed source business rows → fit rows → candidate inboxes → distinct addresses checked → valid addresses → reviewed rows → uploaded inboxes, plus callable/unresolved counts. Explain skips in the correct unit. Without identity consolidation, source rows and inboxes are not unique-company counts.
+
+## 6. Prove before scale
+
+After the necessary code changes, test 10 representative cached businesses covering ducted, multi-head, multiple-unit, single split, commercial, mixed trades, no-email, failed-page and non-fit cases (cases may overlap). Exercise a real fallback/verifier path only within an authorised cap; otherwise reuse valid results. All rows must route with evidence, supported copy and an unchanged stable body. After Jules' review, prove one paused CSV import against full readback. Rerunning completed work must not repeat fetches, verification or uploads.
+
+Measure elapsed time, fallbacks, tokens, charges and accepted contacts. Proposed faster benchmark: 100 cached businesses in 5–10 minutes of automated processing; ordinary fresh websites in 10–20 minutes. Record discovery, verifier queue, human review and upload times separately rather than hiding them. These are unproven targets, not measured end-to-end throughput or guaranteed valid contacts. The 10-company test must establish a realistic total before scaling; adjust only from measured bottlenecks.
+
+Remove: pre-discovery identity reconciliation, inventory-exhaustion gates, independence research, compulsory directory checks, paid reviews/photos, catch-all sending, copy regeneration, scripts per list and blocked local API imports. Retain evidence, bounded verification, one human review and full paused-import readback.
+
+## Cost controls and implementation order
+
+Current public pricing checked 10 September 2026: Vortex's undiscounted base is US$1/1,000 places, plus US$1.50/1,000 places where the contact add-on returns contacts, plus the small start fee. Thus 1,000 places with contact enrichment on every row is about US$2.50 before start fees. This is not 1,000 qualifying contacts. Million Verifier's published price is US$1/1,000 decisive results. Parallel/model usage and subscriptions are separate; report actual receipts and currency, not a fabricated all-in total. No new subscription is proposed.
+
+Keep one authorised total cap with reserved verification/fallback headroom. The earlier A$25 approval was for the Sydney task; do not silently renew it for every city. A proposed 10-company proof can use an A$2 incremental paid-tool cap, subject to remaining authority/headroom, with no paid discovery if cached businesses suffice. Extra model billing must be included if applicable. A cap is permission to stop, not a claim that all work will fit it.
+
+Implement in this order: (1) remove obsolete ICP/history/timezone gates and align valid-only status handling; (2) extend the existing fetcher/worker to cache a compact evidence packet and resume bounded concurrent stages; (3) add evidence-constrained subject/opener drafting while freezing the rest of the reviewed copy; (4) prove the minimal CSV mapping, settings and exact paused readback with 10 companies. Do not start with a new dashboard, scheduler, orchestrator or data platform. Do not change an existing live campaign to perform the test.
+
+Sources: [Vortex capabilities](https://apify.com/vortex_data/google-maps), [input schema](https://apify.com/vortex_data/google-maps/input-schema), [pricing](https://apify.com/vortex_data/google-maps/pricing), [Million Verifier actor](https://apify.com/account56/email-verifier). These vendor capabilities and prices must be checked at execution.
