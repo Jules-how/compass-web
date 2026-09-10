@@ -57,16 +57,8 @@ export function LeadsPanel() {
     staleMs: 30_000
   })
 
-  // Keep previous list data so the table is never unmounted during filter changes
-  const [cachedData, setCachedData] = useState<ListPayload | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (list.data) {
-      setCachedData(list.data)
-    }
-  }, [list.data])
 
   useEffect(() => {
     if (!list.data) return
@@ -115,11 +107,11 @@ export function LeadsPanel() {
     }
   }
 
-  const activeData = list.data || cachedData
+  const activeData = list.data
 
   if (list.error && !activeData) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 shadow-soft">
+      <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 shadow-soft">
         {list.error}{' '}
         <button type="button" className="underline" onClick={() => void reloadList(true)}>
           Retry leads
@@ -141,8 +133,8 @@ export function LeadsPanel() {
   const discoveredVerticals = (facets.data?.verticals ?? []).map((v) => v.value)
 
   return (
-    <div className="folio-record-surface space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+    <div className="folio-record-surface crm-workspace">
+      <div className="crm-record-summary">
         <div className="flex items-center gap-3">
           <p className="text-sm text-neutral-500">
             {total.toLocaleString()} {filters.bucket === 'archived' ? 'archived lead' : 'lead'}{total === 1 ? '' : 's'}
@@ -150,11 +142,11 @@ export function LeadsPanel() {
               ? ` matching filters · ${summaryCounts.total.toLocaleString()} active total`
               : ''}
           </p>
-          {list.loading ? <span className="text-xs font-medium text-amber-600 animate-pulse">Updating…</span> : null}
+          {list.refreshing ? <span role="status" className="text-xs text-neutral-500">Updating…</span> : null}
         </div>
         <div className="flex items-center gap-2">
           {syncMessage ? (
-            <span className="text-xs font-medium text-emerald-600">{syncMessage}</span>
+            <span role="status" className="text-xs text-neutral-600">{syncMessage}</span>
           ) : null}
           <button
             type="button"
@@ -167,6 +159,8 @@ export function LeadsPanel() {
           </button>
         </div>
       </div>
+      {list.error ? <p role="alert" className="crm-data-notice">Could not refresh records. Showing the last result for these filters. {list.error} <button type="button" onClick={() => void reloadList(true)}>Retry</button></p> : null}
+      {summary.error || facets.error || crmLists.error ? <p role="status" className="crm-data-notice">Some counts or saved lists could not be refreshed. <button type="button" onClick={reload}>Retry</button></p> : null}
       <LeadTable
         leads={leads}
         filters={filters}

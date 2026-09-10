@@ -3,7 +3,7 @@
 import { workFetch } from '@/lib/workspace-change'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type {
   CompassBusinessFunction,
   CompassProjectDependency,
@@ -28,6 +28,7 @@ import {
 } from '@/lib/project-pm'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import TaskCreate from '@/components/TaskCreate'
+import TaskDetailPanel from '@/components/TaskDetailPanel'
 import { ModalFrame } from '@/components/ui/ModalFrame'
 
 type TabKey = 'overview' | 'activity' | 'issues'
@@ -89,6 +90,7 @@ export function ProjectDetailPanel({
   const [tab, setTab] = useState<TabKey>('overview')
   const [saving, setSaving] = useState(false)
   const [creatingTask, setCreatingTask] = useState(false)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
   const [editName, setEditName] = useState('')
@@ -106,6 +108,14 @@ export function ProjectDetailPanel({
   const [updateBody, setUpdateBody] = useState('')
   const [updateHealth, setUpdateHealth] = useState<ProjectHealth>('on_track')
   const [allProjects, setAllProjects] = useState<CompassProjectWithStats[]>(projectsProp ?? [])
+  const projectsPropRef = useRef(projectsProp)
+  const activeProjectId = useRef(projectId)
+  const loadGeneration = useRef(0)
+
+  useEffect(() => {
+    projectsPropRef.current = projectsProp
+    if (projectsProp) setAllProjects(projectsProp)
+  }, [projectsProp])
 
   const applyDetail = useCallback((body: ProjectDetailPayload) => {
     setData(body)
@@ -132,49 +142,51 @@ export function ProjectDetailPanel({
   }, [])
 
   const load = useCallback(async () => {
+    if (activeProjectId.current !== projectId) return
+    const generation = ++loadGeneration.current
     setError(null)
     try {
       const detailPromise = workFetch(`/api/projects/${projectId}`, {
-        headers: { Accept: 'application/json' }
+        headers: { Accept: 'application/json' },
+        cache: 'no-store'
       })
-      const listPromise = projectsProp
+      const listPromise = projectsPropRef.current
         ? null
-        : workFetch('/api/projects', { headers: { Accept: 'application/json' } })
+        : workFetch('/api/projects', { headers: { Accept: 'application/json' }, cache: 'no-store' })
 
       const detailRes = await detailPromise
       if (detailRes.status === 404) throw new Error('Project not found')
       if (!detailRes.ok) throw new Error(`Failed to load project (${detailRes.status})`)
       const body = (await detailRes.json()) as ProjectDetailPayload
+      if (generation !== loadGeneration.current) return
       applyDetail(body)
 
-      if (projectsProp) {
-        setAllProjects(projectsProp)
+      if (projectsPropRef.current) {
+        setAllProjects(projectsPropRef.current)
       } else if (listPromise) {
         const listRes = await listPromise
         if (listRes.ok) {
           const listBody = (await listRes.json()) as { projects: CompassProjectWithStats[] }
-          setAllProjects(listBody.projects ?? [])
+          if (generation === loadGeneration.current) setAllProjects(listBody.projects ?? [])
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      if (generation === loadGeneration.current) setError(err instanceof Error ? err.message : String(err))
     }
-  }, [applyDetail, projectId, projectsProp])
+  }, [applyDetail, projectId])
 
   useEffect(() => {
+    activeProjectId.current = projectId
     setData(null)
     setTab('overview')
     setCreatingTask(false)
+    setSelectedTaskId(null)
+    setSaving(false)
     setSaveMessage(null)
     setUpdateBody('')
     void load()
-  }, [load])
-
-  useEffect(() => {
-    if (projectsProp) setAllProjects(projectsProp)
-  }, [projectsProp])
-
-
+    return () => { loadGeneration.current += 1 }
+  }, [projectId, load])
 
   async function notifyChanged() {
     await onChanged?.()
@@ -247,13 +259,14 @@ export function ProjectDetailPanel({
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
+      if (activeProjectId.current !== projectId) return
       setSaveMessage('Saved')
       await load()
       await notifyChanged()
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      if (activeProjectId.current === projectId) setError(err instanceof Error ? err.message : String(err))
     } finally {
-      setSaving(false)
+      if (activeProjectId.current === projectId) setSaving(false)
     }
   }
 
@@ -275,21 +288,22 @@ export function ProjectDetailPanel({
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `Request failed (${res.status})`)
       }
+      if (activeProjectId.current !== projectId) return
       setUpdateBody('')
       setTab('activity')
       await load()
       await notifyChanged()
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      if (activeProjectId.current === projectId) setError(err instanceof Error ? err.message : String(err))
     } finally {
-      setSaving(false)
+      if (activeProjectId.current === projectId) setSaving(false)
     }
   }
 
   function wrap(content: React.ReactNode) {
     if (!isModal) return content
     return (
-      <ModalFrame open onClose={() => onClose?.()} label="Project details" motion="dialog" overlayClassName="planning-dialog-overlay" contentClassName="relative mx-auto w-full max-w-5xl rounded-xl border border-stone-200 bg-white shadow-soft outline-none">
+      <ModalFrame open onClose={() => onClose?.()} label="Project details" motion="dialog" overlayClassName="planning-dialog-overlay" contentClassName="project-detail-dialog relative mx-auto w-full max-w-6xl rounded-xl border border-neutral-200 bg-white shadow-soft outline-none">
         {content}
       </ModalFrame>
     )
@@ -311,7 +325,7 @@ export function ProjectDetailPanel({
               Close
             </button>
           ) : (
-            <Link href="/projects" className="text-sm text-sf-orange-dark underline">
+            <Link href="/projects" className="text-sm text-[#5753bf] underline">
               Back to projects
             </Link>
           )}
@@ -337,18 +351,19 @@ export function ProjectDetailPanel({
     .filter(Boolean)
 
   const tabs = (
-    <div className="compass-seg text-sm">
+    <div className="projects-view-switch text-sm" role="group" aria-label="Project sections">
       {(
         [
           ['overview', 'Overview'],
-          ['activity', `Activity (${updates.length})`],
-          ['issues', `Issues (${data.tasks.length})`]
+          ['issues', `Tasks (${data.tasks.length})`],
+          ['activity', `Activity (${updates.length})`]
         ] as const
       ).map(([key, label]) => (
         <button
           key={key}
           type="button"
           onClick={() => setTab(key)}
+          aria-pressed={tab === key}
           className={`compass-seg-btn ${tab === key ? 'compass-seg-btn-active' : ''}`}
         >
           {label}
@@ -358,8 +373,8 @@ export function ProjectDetailPanel({
   )
 
   return wrap(
-    <div className={isModal ? 'max-h-[min(92vh,920px)] overflow-y-auto p-5' : 'space-y-5'}>
-      <div className={`flex flex-wrap items-center justify-between gap-3 ${isModal ? 'mb-5' : ''}`}>
+    <div className={`project-detail-workspace ${isModal ? 'max-h-[92dvh] overflow-y-auto p-6' : 'space-y-5'}`}>
+      <div className={`project-detail-header flex flex-wrap items-center justify-between gap-3 ${isModal ? 'mb-5' : ''}`}>
         {isModal ? (
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
@@ -367,7 +382,7 @@ export function ProjectDetailPanel({
             </p>
             <h2
               id="project-detail-title"
-              className="truncate font-display text-lg font-semibold text-neutral-900"
+              className="break-words text-lg font-semibold text-neutral-900"
             >
               {project.name}
             </h2>
@@ -395,7 +410,7 @@ export function ProjectDetailPanel({
         </div>
       </div>
 
-      {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
+      {error ? <p role="alert" className="mb-4 text-sm text-red-600">{error}</p> : null}
 
       <div className="space-y-5">
       {tab === 'overview' ? (
@@ -403,12 +418,15 @@ export function ProjectDetailPanel({
           <section className="compass-panel space-y-5 p-5">
             <form onSubmit={saveOverview} className="space-y-4">
               <input
+                aria-label="Project name"
+                required
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 font-display text-xl font-semibold"
+                className="project-detail-name w-full rounded-md border border-neutral-200 px-3 py-2 text-xl font-semibold"
                 disabled={saving}
               />
               <input
+                aria-label="Project summary"
                 value={editSummary}
                 onChange={(e) => setEditSummary(e.target.value)}
                 placeholder="Short summary"
@@ -416,6 +434,7 @@ export function ProjectDetailPanel({
                 disabled={saving}
               />
               <textarea
+                aria-label="Project overview and notes"
                 value={editNotes}
                 onChange={(e) => setEditNotes(e.target.value)}
                 rows={7}
@@ -435,7 +454,7 @@ export function ProjectDetailPanel({
                         { title: '', description: '', target_date: '', completed: false }
                       ])
                     }
-                    className="text-xs font-medium text-sf-orange-dark"
+                    className="text-xs font-medium text-[#5753bf]"
                   >
                     + Milestone
                   </button>
@@ -451,6 +470,7 @@ export function ProjectDetailPanel({
                       <div className="flex items-start gap-2">
                         <input
                           type="checkbox"
+                          aria-label={`Complete milestone ${index + 1}`}
                           checked={milestone.completed}
                           onChange={(e) =>
                             setMilestones((rows) =>
@@ -472,6 +492,7 @@ export function ProjectDetailPanel({
                                 )
                               )
                             }
+                            aria-label={`Milestone ${index + 1} title`}
                             placeholder="Milestone title"
                             className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
                           />
@@ -485,12 +506,14 @@ export function ProjectDetailPanel({
                                 )
                               )
                             }
+                            aria-label={`Milestone ${index + 1} description`}
                             placeholder="Description"
                             className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
                           />
                           <div className="flex gap-2">
                             <input
                               type="date"
+                              aria-label={`Milestone ${index + 1} date`}
                               value={milestone.target_date}
                               onChange={(e) =>
                                 setMilestones((rows) =>
@@ -526,13 +549,14 @@ export function ProjectDetailPanel({
                 >
                   {saving ? 'Saving…' : 'Save changes'}
                 </button>
-                {saveMessage ? <span className="text-sm text-emerald-600">{saveMessage}</span> : null}
+                {saveMessage ? <span role="status" className="text-sm text-emerald-700">{saveMessage}</span> : null}
               </div>
             </form>
 
             <form onSubmit={postUpdate} className="border-t border-stone-100 pt-4">
               <h3 className="mb-2 text-sm font-medium text-neutral-800">Project update</h3>
               <textarea
+                aria-label="Project update"
                 value={updateBody}
                 onChange={(e) => setUpdateBody(e.target.value)}
                 rows={3}
@@ -542,6 +566,7 @@ export function ProjectDetailPanel({
               />
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <select
+                  aria-label="Project update health"
                   value={updateHealth}
                   onChange={(e) => setUpdateHealth(e.target.value as ProjectHealth)}
                   className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
@@ -572,7 +597,7 @@ export function ProjectDetailPanel({
               <div className="mt-2 flex items-center gap-3">
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-stone-100">
                   <div
-                    className="h-full rounded-full bg-sf-orange"
+                    className="h-full rounded-full bg-[#6965db]"
                     style={{ width: `${project.stats.percentComplete}%` }}
                   />
                 </div>
@@ -581,7 +606,7 @@ export function ProjectDetailPanel({
                 </span>
               </div>
               <p className="mt-2 text-xs text-neutral-500">
-                {project.stats.completedCount} of {project.stats.issueCount} issues complete
+                {project.stats.completedCount} of {project.stats.issueCount} tasks complete
               </p>
             </div>
 
@@ -742,7 +767,7 @@ export function ProjectDetailPanel({
               }}
               className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-stone-50"
             >
-              + New issue
+              + New task
             </button>
           </aside>
         </div>
@@ -779,14 +804,14 @@ export function ProjectDetailPanel({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-neutral-500">
-              {data.tasks.length} issue{data.tasks.length === 1 ? '' : 's'} in this project
+              {data.tasks.length} task{data.tasks.length === 1 ? '' : 's'} in this project
             </p>
             <button
               type="button"
               onClick={() => setCreatingTask((value) => !value)}
               className="compass-btn-primary"
             >
-              {creatingTask ? 'Cancel' : 'New issue'}
+              {creatingTask ? 'Cancel' : 'New task'}
             </button>
           </div>
 
@@ -806,7 +831,7 @@ export function ProjectDetailPanel({
 
           {issuesByStatus.length === 0 ? (
             <div className="compass-panel px-4 py-10 text-center text-sm text-neutral-500">
-              No issues in this project yet.
+              No tasks in this project yet.
             </div>
           ) : (
             issuesByStatus.map((group) => (
@@ -818,9 +843,9 @@ export function ProjectDetailPanel({
                   {group.items.map((task) => (
                     <li key={task.id} className="flex items-center justify-between gap-3 px-4 py-3">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-neutral-900">
+                        <button type="button" onClick={() => setSelectedTaskId(task.id)} className="text-left text-sm font-medium text-neutral-900 hover:text-[#5753bf]">
                           {task.title}
-                        </div>
+                        </button>
                         <div className="mt-0.5 text-xs text-neutral-500">
                           {STATUS_LABEL[task.status] ?? task.status}
                           {task.task_type ? ` · ${task.task_type}` : ''}
@@ -829,12 +854,12 @@ export function ProjectDetailPanel({
                           {task.parent_task_id ? ' · subtask' : ''}
                         </div>
                       </div>
-                      <Link
-                        href="/tasks"
-                        className="shrink-0 text-xs font-medium text-sf-orange-dark hover:underline"
+                      <button
+                        type="button" onClick={() => setSelectedTaskId(task.id)}
+                        className="shrink-0 text-xs font-medium text-[#5753bf] hover:underline"
                       >
-                        Open in Tasks
-                      </Link>
+                        Open task
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -844,6 +869,11 @@ export function ProjectDetailPanel({
         </section>
       ) : null}
       </div>
+      {selectedTaskId && data.tasks.find(task => task.id === selectedTaskId) ? (
+        <TaskDetailPanel task={data.tasks.find(task => task.id === selectedTaskId)!}
+          projectsById={projectsById} businessFunctionsById={businessFunctionsById}
+          onClose={() => setSelectedTaskId(null)} onChanged={async () => { await load(); await notifyChanged() }} />
+      ) : null}
     </div>
   )
 }

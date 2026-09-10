@@ -15,6 +15,8 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  Download,
+  PanelLeft,
   FileText,
   Plus,
   Search,
@@ -69,7 +71,10 @@ function newPage(kind: Kind): PlanningRow {
   };
 }
 
-export function PlanningBoard() {
+export function PlanningBoard({ documents = false }: { documents?: boolean }) {
+  const activeKey = documents ? "compass.documents.active" : "compass.notebook.active";
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [sort, setSort] = useState("updated");
   const router = useRouter();
   const [rows, setRows] = useState<PlanningRow[]>([]);
   const [kind, setKind] = useState<Kind>("note");
@@ -106,10 +111,10 @@ export function PlanningBoard() {
         let restored: PlanningRow | undefined;
         try {
           const last = JSON.parse(
-            localStorage.getItem("compass.notebook.active") || "null",
+            localStorage.getItem(activeKey) || "null",
           );
           if (last?.id) {
-            restored = all.find((r) => r.id === last.id);
+            restored = all.find((r) => r.id === last.id && (!documents || r.kind === "note"));
             if (!restored) {
               const draft = JSON.parse(
                 localStorage.getItem(`compass.notebook.draft.${last.id}`) ||
@@ -118,7 +123,7 @@ export function PlanningBoard() {
               if (
                 draft?.data &&
                 draft.revision === 0 &&
-                ["note", "goal"].includes(last.kind)
+                (documents ? ["note"] : ["note", "goal"]).includes(last.kind)
               )
                 restored = {
                   ...newPage(last.kind),
@@ -144,7 +149,7 @@ export function PlanningBoard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeKey, documents]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -152,7 +157,7 @@ export function PlanningBoard() {
     if (selected)
       try {
         localStorage.setItem(
-          "compass.notebook.active",
+          activeKey,
           JSON.stringify({
             id: selected.id,
             kind: selected.kind,
@@ -162,7 +167,7 @@ export function PlanningBoard() {
       } catch {
         /* optional navigation memory */
       }
-  }, [selected]);
+  }, [selected, activeKey]);
   const saved = useCallback((row: PlanningRow) => {
     setRows((current) =>
       [row, ...current.filter((r) => r.id !== row.id)].filter(
@@ -174,7 +179,7 @@ export function PlanningBoard() {
     if (switching) return;
     setSwitching(true);
     try {
-      if (!editor.current || (await editor.current.flush())) action();
+      if (!editor.current || (await editor.current.flush())) { action(); setLibraryOpen(false); }
     } finally {
       setSwitching(false);
     }
@@ -185,11 +190,11 @@ export function PlanningBoard() {
       `${row.data.title} ${row.data.body ?? row.data.notes ?? ""}`
         .toLowerCase()
         .includes(query.toLowerCase()),
-  );
+  ).sort((a, b) => sort === "title" ? String(a.data.title).localeCompare(String(b.data.title)) : b.updatedAt.localeCompare(a.updatedAt));
   const goals = rows.filter((row) => row.kind === "goal");
   return (
-    <div className="planning-workspace notebook-workspace">
-      <header className="planning-heading">
+    <div className={`planning-workspace notebook-workspace ${documents ? "documents-workspace" : ""} ${libraryOpen ? "is-library-open" : ""}`}>
+      {documents ? <header className="documents-heading"><div><button type="button" className="documents-library-toggle" aria-label="Show document library" aria-expanded={libraryOpen} aria-controls="documents-library" onClick={() => setLibraryOpen(!libraryOpen)}><PanelLeft size={18} aria-hidden="true" /></button><FileText size={18} aria-hidden="true" /><h1>Documents</h1><span>{rows.filter((r) => r.kind === "note").length}</span></div><button className="compass-btn-primary" disabled={switching || loading} onClick={() => void move(() => setSelected(newPage("note")))}><Plus size={15} aria-hidden="true" /> New document</button></header> : <header className="planning-heading">
         <div>
           <p className="compass-section-label">Your thinking space</p>
           <h1 className="compass-page-title">Goals & notes</h1>
@@ -213,17 +218,17 @@ export function PlanningBoard() {
             Pathfinder <ArrowUpRight size={15} aria-hidden="true" />
           </button>
         </div>
-      </header>
+      </header>}
       {error && (
         <p role="alert" className="planning-error">
           {error} <button onClick={() => void load()}>Try again</button>
         </p>
       )}
       <div className="notebook-layout" aria-busy={loading || switching}>
-        <aside className="notebook-index" aria-label="Notebook pages">
+        <aside id={documents ? "documents-library" : undefined} className="notebook-index" aria-label={documents ? "Document library" : "Notebook pages"}>
           <div className="notebook-index-heading">
             <BookOpen size={17} aria-hidden="true" />
-            <span>Your notebook</span>
+            <span>{documents ? "All documents" : "Your notebook"}</span>
             <button
               aria-label={`New ${kind === "note" ? "page" : "goal"}`}
               onClick={() => void move(() => setSelected(newPage(kind)))}
@@ -232,7 +237,7 @@ export function PlanningBoard() {
               <Plus size={18} aria-hidden="true" />
             </button>
           </div>
-          <div className="notebook-folders" role="group" aria-label="Page type">
+          {!documents && <div className="notebook-folders" role="group" aria-label="Page type">
             {(["note", "goal"] as const).map((k) => (
               <button
                 key={k}
@@ -250,19 +255,20 @@ export function PlanningBoard() {
                 <span>{rows.filter((r) => r.kind === k).length}</span>
               </button>
             ))}
-          </div>
+          </div>}
           <label className="notebook-search">
             <Search size={14} aria-hidden="true" />
             <input
-              aria-label="Search notebook"
+              aria-label={documents ? "Search documents" : "Search notebook"}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find a page…"
             />
           </label>
+          {documents && <label className="documents-sort"><span>Sort by</span><select value={sort} onChange={(e) => setSort(e.target.value)}><option value="updated">Last edited</option><option value="title">Name</option></select></label>}
           <p className="notebook-index-caption">
             {kind === "note"
-              ? "Pages & thoughts"
+              ? documents ? "Pages" : "Pages & thoughts"
               : "What you’re working towards"}
           </p>
           <ul className="notebook-page-list">
@@ -279,7 +285,7 @@ export function PlanningBoard() {
                     <Target size={16} aria-hidden="true" />
                   )}
                   <span>
-                    <strong>{row.data.title}</strong>
+                    <strong>{row.data.title || "Untitled"}</strong>
                     <small>
                       {kind === "note"
                         ? notebookDate(row.data.date || row.createdAt)
@@ -309,17 +315,14 @@ export function PlanningBoard() {
             <Plus size={15} aria-hidden="true" />
             {kind === "note" ? "New page" : "New goal"}
           </button>
-          <p className="notebook-index-foot">
-            Think on the page.
-            <br />
-            Connect it in Pathfinder.
-          </p>
+          <p className="notebook-index-foot">{documents ? "Your notes and decisions, in one place." : <>Think on the page.<br />Connect it in Pathfinder.</>}</p>
         </aside>
         {selected ? (
           <NotebookDocument
             key={selected.id}
             ref={editor}
             row={selected}
+            documents={documents}
             goals={goals}
             onSaved={saved}
             onArchived={() => setSelected(newPage(kind))}
@@ -341,17 +344,18 @@ export function PlanningBoard() {
   );
 }
 
-const NotebookDocument = forwardRef<
+export const NotebookDocument = forwardRef<
   DocumentHandle,
   {
     row: PlanningRow;
+    documents?: boolean;
     goals: PlanningRow[];
     onSaved: (row: PlanningRow) => void;
     onArchived: () => void;
     onPathfinder: (id: string) => void;
   }
 >(function NotebookDocument(
-  { row, goals, onSaved, onArchived, onPathfinder },
+  { row, goals, onSaved, onArchived, onPathfinder, documents = false },
   ref,
 ) {
   const [form, setForm] = useState(row.data);
@@ -533,6 +537,12 @@ const NotebookDocument = forwardRef<
     },
     [],
   );
+  function downloadDraft() {
+    const text = `# ${String(current.current.title || "Untitled")}\n\n${String(current.current[note ? "body" : "notes"] || "")}\n${current.current.links ? `\n${current.current.links}\n` : ""}`;
+    const url = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+    const a = document.createElement("a"); a.href = url; a.download = `${String(current.current.title || "Untitled").replace(/[^a-z0-9 _-]/gi, "").slice(0, 80)}.md`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   async function archive() {
     if (!(await flush())) return;
     change("archived", true);
@@ -558,7 +568,7 @@ const NotebookDocument = forwardRef<
     </label>
   );
   return (
-    <article className="notebook-paper">
+    <article className={`notebook-paper ${documents ? "documents-paper" : ""}`}>
       <div className="notebook-paper-bar">
         <span>
           <CalendarDays size={14} aria-hidden="true" />
@@ -570,6 +580,7 @@ const NotebookDocument = forwardRef<
           )}
           {status}
         </span>
+        {documents && <button type="button" className="documents-download" onClick={downloadDraft} aria-label="Download document as Markdown" title="Download Markdown"><Download size={15} aria-hidden="true" /></button>}
       </div>
       <form
         onSubmit={(e) => {
@@ -577,7 +588,7 @@ const NotebookDocument = forwardRef<
           void flush();
         }}
       >
-        <div className="notebook-document-top">
+        {!documents && <div className="notebook-document-top">
           <span className="notebook-document-icon">
             {note ? (
               <FileText size={24} aria-hidden="true" />
@@ -588,7 +599,7 @@ const NotebookDocument = forwardRef<
           <span className="compass-section-label">
             {note ? "Room to think" : "An intention, made clear"}
           </span>
-        </div>
+        </div>}
         <textarea
           ref={titleRef}
           className="notebook-title"
@@ -758,6 +769,7 @@ const NotebookDocument = forwardRef<
             <button type="button" disabled={busy} onClick={() => void flush()}>
               Retry save
             </button>
+            <button type="button" onClick={downloadDraft}>Download draft</button>
             {conflict.current && (
               <button
                 type="button"
@@ -784,7 +796,7 @@ const NotebookDocument = forwardRef<
             maxLength={note ? 20000 : 4000}
             placeholder={
               note
-                ? "What’s on your mind? Start anywhere. Use / for ideas."
+                ? "Start writing, or type / for commands…"
                 : "Why does this matter? What will move you closer?"
             }
           />

@@ -4,17 +4,21 @@ import Link from 'next/link'
 import { useState } from 'react'
 import {
   ArrowUpRight,
+  BarChart3,
   BriefcaseBusiness,
   CalendarDays,
   CheckCheck,
   ChevronDown,
   Compass,
   FolderOpen,
+  FileText,
   Home,
   Inbox,
   Layers,
   Menu,
   NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
   Send,
   Settings,
   Users,
@@ -31,15 +35,19 @@ const day = [
   { href: '/tasks', label: 'Tasks', icon: CheckCheck },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays },
 ]
+const workspace = [
+  { href: '/projects', label: 'Projects', icon: FolderOpen },
+  { href: '/documents', label: 'Documents', icon: FileText },
+  { href: '/planning', label: 'Planning', icon: NotebookPen },
+  { href: '/reports', label: 'Reports', icon: BarChart3 },
+]
 const work = [
   { href: '/sales/outbound', label: 'Outbound', icon: Send },
   { href: '/leads', label: 'CRM', icon: Users },
   { href: '/clients', label: 'Clients', icon: BriefcaseBusiness },
   { href: '/operations/installs', label: 'Installs', icon: Layers },
-  { href: '/planning', label: 'Planning', icon: NotebookPen },
 ]
 const more = [
-  { href: '/projects', label: 'Projects' },
   { href: '/functions', label: 'Functions' },
   { href: '/sales', label: 'Sales overview' },
   { href: '/sales/offers', label: 'Offers & tests' },
@@ -53,7 +61,7 @@ export function FolioBrand() {
   return (
     <Link className="folio-brand" href="/home">
       <Compass aria-hidden="true" strokeWidth={1.3} />
-      compass
+      <span>Switchflow</span>
     </Link>
   )
 }
@@ -82,7 +90,8 @@ export function FolioNavigation({
             return
           e.preventDefault()
           onNavigate?.()
-          nav?.navigate(item.href)
+          if (nav) nav.navigate(item.href)
+          else window.location.assign(item.href)
         }}
       >
         <Icon size={16} strokeWidth={1.5} aria-hidden="true" />
@@ -101,6 +110,10 @@ export function FolioNavigation({
       </div>
       <div>
         <p className="folio-caption">Workspaces</p>
+        {workspace.map(link)}
+      </div>
+      <div>
+        <p className="folio-caption">Business</p>
         {work.map(link)}
       </div>
       <details className="folio-more">
@@ -117,7 +130,7 @@ export function FolioNavigation({
 }
 export function FolioSidebar({ role }: { role: PortalRole }) {
   return (
-    <aside className="folio-sidebar">
+    <aside id="compass-sidebar" className="folio-sidebar" aria-label="Workspace navigation">
       <FolioBrand />
       <FolioNavigation role={role} />
       <div className="folio-signout">
@@ -126,26 +139,36 @@ export function FolioSidebar({ role }: { role: PortalRole }) {
     </aside>
   )
 }
-export function FolioTopbar({ role }: { role: PortalRole }) {
+export function FolioTopbar({ role, sidebarCollapsed = false, onToggleSidebar }: { role: PortalRole; sidebarCollapsed?: boolean; onToggleSidebar?: () => void }) {
   const [open, setOpen] = useState(false)
   const path = useConsoleViewPath(),
     nav = useConsoleNav()
   const title =
-    [...day, ...work, ...more, { href: '/settings', label: 'Settings' }]
+    [...day, ...workspace, ...work, ...more, { href: '/settings', label: 'Settings' }]
       .filter((i) => path === i.href || path.startsWith(i.href + '/'))
       .sort((a, b) => b.href.length - a.href.length)[0]?.label ?? 'Workspace'
   return (
     <>
       <header className="folio-topbar">
-        <div className="folio-breadcrumb">
-          Switchflow <span>/</span> {title}
+        <div className="folio-topbar-context">
+          <button
+            type="button"
+            className="folio-icon-button folio-sidebar-toggle"
+            aria-label={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+            aria-expanded={!sidebarCollapsed}
+            aria-controls="compass-sidebar"
+            onClick={onToggleSidebar}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen size={16} aria-hidden="true" /> : <PanelLeftClose size={16} aria-hidden="true" />}
+          </button>
+          <div className="folio-breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong>{title}</strong></div>
         </div>
         <div className="folio-mobile-brand">
           <FolioBrand />
         </div>
         <button
           type="button"
-          className="folio-icon-button"
+          className="folio-icon-button folio-navigation-trigger"
           aria-label="Open workspace navigation"
           aria-haspopup="dialog"
           onClick={() => setOpen(true)}

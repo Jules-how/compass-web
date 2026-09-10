@@ -93,6 +93,9 @@ export function KanbanBoard({
       return
     }
     if (!payload?.task?.id || !payload.sourceColumnId) return
+    const source = columns.find(column => column.id === payload.sourceColumnId)
+    const sourceTask = source?.tasks.find(task => task.id === payload.task.id)
+    if (!sourceTask || sourceTask.draggable === false || !columns.some(column => column.id === targetColumnId)) return
     if (payload.sourceColumnId === targetColumnId) return
     onMove?.(payload.task.id, payload.sourceColumnId, targetColumnId)
   }
@@ -105,7 +108,7 @@ export function KanbanBoard({
           data-column-id={column.id}
           className={cn(
             'folio-kanban-column',
-            dropTarget === column.id && 'ring-2 ring-[#e85d2a]/40'
+            dropTarget === column.id && 'ring-2 ring-[#6965db]/40'
           )}
           onDragOver={(event) => handleDragOver(event, column.id)}
           onDragLeave={() => setDropTarget((current) => (current === column.id ? null : current))}
@@ -119,10 +122,10 @@ export function KanbanBoard({
                   style={{ backgroundColor: column.color || '#d6d3d1' }}
                   aria-hidden
                 />
-                <h3 className="text-[13px] font-semibold text-neutral-900">{column.title}</h3>
-                <Badge variant="secondary" size="sm">
+                <h3 className="text-[14px] font-medium text-neutral-900">{column.title}</h3>
+                <span className="folio-kanban-count">
                   {column.tasks.length}
-                </Badge>
+                </span>
               </div>
               {column.hint ? <p className="mt-1 text-[11px] text-neutral-400">{column.hint}</p> : null}
             </div>
@@ -153,11 +156,12 @@ export function KanbanBoard({
                   )}
                   draggable={Boolean(onMove) && task.draggable !== false}
                   onDragStart={(event) => handleDragStart(event, task, column.id)}
+                  onDragEnd={() => setDropTarget(null)}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h4 className="min-w-0 text-[13px] font-semibold leading-snug text-neutral-900">
+                    <h4 className="min-w-0 text-[14px] font-medium leading-snug text-neutral-900">
                       {task.href ? (
-                        <Link href={task.href} title={task.title} className="line-clamp-2 break-words hover:text-[#c2410c] hover:underline">
+                        <Link href={task.href} title={task.title} className="break-words hover:text-[#5753bf]">
                           {task.title}
                         </Link>
                       ) : onTaskClick ? (
@@ -165,12 +169,12 @@ export function KanbanBoard({
                           type="button"
                           onClick={() => onTaskClick(task.id, column.id)}
                           title={task.title}
-                          className="line-clamp-2 break-words text-left hover:text-[#c2410c] hover:underline"
+                          className="break-words text-left hover:text-[#5753bf]"
                         >
                           {task.title}
                         </button>
                       ) : (
-                        <span className="line-clamp-2 break-words" title={task.title}>{task.title}</span>
+                        <span className="break-words" title={task.title}>{task.title}</span>
                       )}
                     </h4>
                     {task.draggable === false || !onMove ? null : (
@@ -213,7 +217,7 @@ export function KanbanBoard({
                     <div className="mt-3 flex flex-wrap items-center gap-3 text-neutral-500">
                       {task.dueDate ? (
                         <div className="flex items-center gap-1">
-                          <Calendar className="size-3.5" />
+                          <Calendar className="size-3.5" aria-hidden />
                           <span className="text-[11px] font-medium tabular-nums">{task.dueDate}</span>
                         </div>
                       ) : null}
@@ -235,7 +239,7 @@ export function KanbanBoard({
                           target="_blank"
                           rel="noreferrer"
                           onClick={(event) => event.stopPropagation()}
-                          className="flex items-center gap-0.5 text-[11px] font-medium text-[#c2410c] hover:underline"
+                          className="flex items-center gap-0.5 text-[12px] font-medium text-[#5753bf] hover:underline"
                         >
                           {task.externalLabel || 'Instantly'}
                           <ArrowUpRight className="size-3" />
@@ -256,7 +260,7 @@ export function KanbanBoard({
                             onMove(task.id, column.id, event.target.value)
                           }
                         }}
-                        className="min-h-9 min-w-0 flex-1 rounded-xl border border-stone-200 bg-white px-2 py-1.5 text-xs"
+                        className="min-h-8 min-w-0 flex-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs"
                       >
                         {columns.map((target) => <option key={target.id} value={target.id}>{target.title}</option>)}
                       </select>

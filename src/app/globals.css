@@ -3,10 +3,8 @@
 @tailwind utilities;
 
 /*
-  Compass UI tokens — LOCKED aesthetic.
-  Soft depth (--compass-shadow*), warm wash, rounded panels, and muted orange accent
-  are intentional. Do not flatten, retheme, or retune radii/shadows unless explicitly asked.
-  See .cursor/rules/compass-ui-lock.mdc and AGENTS.md.
+  Base tokens for public and standalone surfaces. The signed-in operator console
+  overrides these through folio.css and workspace.css; see docs/design/WORKSPACE.md.
 */
 :root {
   color-scheme: light;

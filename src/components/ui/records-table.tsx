@@ -121,7 +121,7 @@ function Checkbox({
 }) {
   return (
     <label className="records-checkbox" title={label}>
-      <input type="checkbox" checked={checked} onChange={onChange} aria-label={label} />
+      <input type="checkbox" ref={(input) => { if (input) input.indeterminate = mixed }} checked={checked} onChange={onChange} aria-label={label} />
       <span className={`records-checkbox-box ${checked || mixed ? 'is-active' : ''}`}>
         {mixed ? (
           <Minus size={12} strokeWidth={2.4} />
@@ -177,7 +177,14 @@ function ResizeHandle({
   return (
     <button
       type="button"
-      aria-label="Resize column"
+      aria-label={`Resize ${LEAD_COLUMN_DEFS.find((column) => column.id === columnId)?.label || columnId} column. Use left and right arrows.`}
+      onKeyDown={(event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+        event.preventDefault()
+        event.stopPropagation()
+        const width = event.currentTarget.parentElement?.getBoundingClientRect().width ?? 140
+        onResize(columnId, Math.min(MAX_LEAD_COLUMN_WIDTH, Math.max(MIN_LEAD_COLUMN_WIDTH, Math.round(width + (event.key === 'ArrowRight' ? 16 : -16)))))
+      }}
       className="records-resize"
       onMouseDown={(event) => {
         event.preventDefault()
@@ -269,7 +276,8 @@ export default function RecordsTable({
         tabIndex={0}
         aria-label={`${entityLabel} table. Scroll horizontally and vertically to view all columns and records.`}
       >
-        <table className="records-table" style={{ width: minWidth, minWidth, tableLayout: 'fixed' }}>
+        <table className="records-table" style={{ width: '100%', minWidth, tableLayout: 'fixed' }}>
+          <caption className="sr-only">{entityLabel}. Column sorting applies to this page of records.</caption>
           <colgroup>
             <col style={{ width: 84 }} />
             {columns.map((id) => (
@@ -278,7 +286,7 @@ export default function RecordsTable({
           </colgroup>
           <thead>
             <tr>
-              <th className="records-header-cell records-sticky-cell records-index-head">
+              <th scope="col" className="records-header-cell records-sticky-cell records-index-head">
                 <div className="records-company-header">
                   <Checkbox
                     checked={allSelected}
@@ -295,6 +303,7 @@ export default function RecordsTable({
                 return (
                   <th
                     key={id}
+                    scope="col"
                     className={`records-header-cell records-resizable ${id === 'company' ? 'records-identity' : ''}`}
                     aria-sort={active ? (sort.dir === 1 ? 'ascending' : 'descending') : undefined}
                     draggable={Boolean(onColumnsChange)}
@@ -327,6 +336,7 @@ export default function RecordsTable({
                     <button
                       type="button"
                       className="records-header-button min-w-0 flex-1"
+                      title="Sort this page"
                       onClick={() =>
                         setSort((current) =>
                           current.key === id
@@ -401,7 +411,7 @@ export default function RecordsTable({
                             column === 'lead_facts' ? 'records-cell-facts' : ''
                           }`}
                         >
-                          {column === 'opener' && onOpenerChange ? (
+                          {column === 'company' && onRowActivate ? <button type="button" className="crm-open-record" aria-label={`Open ${cell.text}`} onClick={(event) => { event.stopPropagation(); onRowActivate(lead.id) }}>{cell.text}</button> : column === 'opener' && onOpenerChange ? (
                             <OpenerCell
                               leadId={lead.id}
                               value={lead.opener ?? ''}
@@ -444,6 +454,7 @@ function OpenerCell({
     <textarea
       value={text}
       rows={2}
+      aria-label="Personalised first line"
       placeholder="Personalised first line"
       className="records-opener-input"
       onClick={(event) => event.stopPropagation()}

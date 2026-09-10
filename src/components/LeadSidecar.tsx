@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { LeadContact } from '@/lib/types'
 import { formatLeadFactsDetail, parseLeadFacts } from '@/lib/lead-facts'
 import { humanizeEmailOrigin, humanizeIcpStatus } from '@/lib/lead-icp'
@@ -51,21 +51,22 @@ export function LeadSidecar({
   lead: LeadContact
   onClose: () => void
 }) {
-  const title = lead.name || lead.email || 'Untitled'
+  const title = lead.company || lead.name || lead.email || 'Untitled'
+  const [section, setSection] = useState<'record' | 'outreach' | 'research'>('record')
 
   return (
-    <aside className="flex h-full w-full max-w-[400px] shrink-0 flex-col border-l border-neutral-200 bg-white">
+    <aside className="crm-record-detail">
       <div className="flex items-start gap-3 border-b border-neutral-200 px-4 py-3">
         <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[12px] font-semibold text-neutral-700">
-          {initials(lead.name, lead.email)}
+          {initials(lead.company || lead.name, lead.email)}
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-[15px] font-semibold tracking-tight text-neutral-900">
+          <h2 className="text-[18px] font-semibold tracking-tight text-neutral-900">
             {title}
           </h2>
           <p className="mt-0.5 text-[12px] text-neutral-500">
             {humanizeStatus(lead.outbound_status)}
-            {lead.company ? ` · ${lead.company}` : ''}
+            {lead.name && lead.company ? ` · ${lead.name}` : ''}
           </p>
         </div>
         <button
@@ -80,8 +81,14 @@ export function LeadSidecar({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        <RhythmLeadPanel key={lead.id} leadId={lead.id} onSaved={() => window.dispatchEvent(new Event('outbound-rhythm-changed'))} />
+      <div className="crm-detail-tabs" role="group" aria-label="Record section">
+        {(['record', 'outreach', 'research'] as const).map((value) => <button key={value} type="button" aria-pressed={section === value} onClick={() => setSection(value)}>{value === 'record' ? 'Overview' : value === 'outreach' ? 'Outreach & actions' : 'Research'}</button>)}
+      </div>
+      <div className="crm-detail-body">
+        <section hidden={section !== 'outreach'} aria-label="Outreach and actions">
+          <RhythmLeadPanel key={lead.id} leadId={lead.id} onSaved={() => window.dispatchEvent(new Event('outbound-rhythm-changed'))} />
+        </section>
+        <section hidden={section !== 'record'} aria-label="Record overview">
         <h3 className="mb-1 mt-5 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
           Record details
         </h3>
@@ -93,7 +100,8 @@ export function LeadSidecar({
               </a>
             ) : null}
           </Field>
-          <Field label="Phone">{lead.phone}</Field>
+          <Field label="Phone">{lead.phone ? <a href={`tel:${lead.phone}`} className="text-[#3b6ef5] hover:underline">{lead.phone}</a> : null}</Field>
+          <Field label="Website">{lead.website ? <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer" className="text-[#3b6ef5] hover:underline">{lead.website}</a> : null}</Field>
           <Field label="Company">{lead.company}</Field>
           <Field label="Job title">{lead.role}</Field>
           <Field label="Location">
@@ -118,15 +126,19 @@ export function LeadSidecar({
           <Field label="Campaign">{lead.instantly_campaign_name || lead.instantly_campaign}</Field>
           <Field label="Last outbound">{formatWhen(lead.last_outbound_at)}</Field>
           <Field label="Updated">{formatWhen(lead.updated_at || lead.mirrored_at)}</Field>
+          <Field label="Suppression">{lead.suppression_reason || (lead.outbound_status === 'suppressed' ? 'Suppressed' : 'No suppression recorded')}</Field>
+          <Field label="Recontact">{lead.recontact_ok == null ? 'Not recorded' : lead.recontact_ok ? 'Allowed' : 'Do not recontact'}</Field>
         </dl>
 
         <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
           Recontact
         </h3>
         <LeadRecontactPanel lead={lead} />
+        </section>
+        <section hidden={section !== 'research'} aria-label="Contact research">
 
         <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-          Demand
+          Business fit
         </h3>
         <dl>
           <Field label="ICP">{humanizeIcpStatus(lead.icp_status) || '—'}</Field>
@@ -140,18 +152,18 @@ export function LeadSidecar({
         </dl>
 
         <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-          Leak
+          Enquiry handling signal
         </h3>
         {lead.capture_crack?.trim() ? (
           <p className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-[13px] leading-relaxed text-neutral-800">
             {lead.capture_crack.trim()}
           </p>
         ) : (
-          <p className="text-[13px] text-neutral-400">No capture crack yet.</p>
+          <p className="text-[13px] text-neutral-400">No enquiry handling signal recorded.</p>
         )}
 
         <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-          Compliance
+          Contact evidence
         </h3>
         <dl>
           <Field label="Email origin">{humanizeEmailOrigin(lead.email_origin) || '—'}</Field>
@@ -173,6 +185,7 @@ export function LeadSidecar({
           Research facts
         </h3>
         <FactsList lead={lead} />
+        </section>
       </div>
     </aside>
   )
