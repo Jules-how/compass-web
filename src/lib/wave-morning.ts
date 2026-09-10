@@ -144,6 +144,13 @@ export type MorningSendingCard = {
 }
 
 export type MorningWavePayload = {
+  reviewState?: 'current' | 'stale' | 'unreviewed' | 'missing'
+  briefDate?: string | null
+  briefRevision?: number
+  reviewedAt?: string | null
+  publisher?: string | null
+  runId?: string | null
+  metricsUpdatedAt?: string | null
   sydneyDate: string
   briefStatus: ReturnType<typeof resolveHomeNext>['briefStatus']
   landUnlocked: boolean

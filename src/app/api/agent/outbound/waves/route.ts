@@ -1,16 +1,10 @@
 import { requireAgentAuth } from '@/lib/agent-auth'
 import { getPortalAdminClient } from '@/lib/portal-admin'
 import { portalJson, readBoundedJson } from '@/lib/portal-http'
-import {
-  dateOnlyInZone,
-  defaultGoLiveAt,
-  normalizeWaveLane,
-  parseGoLiveAt
-} from '@/lib/campaigns'
-import { insertPipelineCampaign, listPipelineCampaigns } from '@/lib/campaigns-server'
-import { mergeWaveBriefPayload } from '@/lib/wave-desk-persist'
-import { parseHomeSetupScan } from '@/lib/home-setup'
-import { upsertDailySetupTasks } from '@/lib/home-setup-server'
+import { listPipelineCampaigns } from '@/lib/campaigns-server'
+import { parseHomeSetupScan, dailySetupNoteMarker, composeDailySetupNotes } from '@/lib/home-setup'
+import { readWaveDecision, WAVE_PUBLISHER } from '@/lib/wave-publication'
+import { z } from 'zod'
 import {
   InstantlyApiError,
   loadOutboundBoardFromInstantly,
@@ -20,21 +14,13 @@ import {
 import { loadLeadSummaryCounts } from '@/lib/lead-search'
 import {
   groupCampaignsByWave,
-  mondayOfSydneyWeek,
   normalizeWaveActionKind,
-  normalizeWaveActionSource,
-  normalizeWaveActionStatus,
   suggestWaveMoves,
   sydneyDateOnly,
   upcomingSendForecast,
   type WaveAction,
   type WaveBrief
 } from '@/lib/wave-desk'
-import {
-  briefAllowsNextOverwrite,
-  clipNextIds
-} from '@/lib/wave-morning'
-
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -68,7 +54,7 @@ export async function GET(request: Request) {
         .limit(80),
       admin
         .from('compass_wave_briefs')
-        .select('id,generated_at,recommendation,scan,created_at')
+        .select('id,generated_at,recommendation,scan,created_at,revision,reviewed_at,publisher,run_id,decision_revision,metrics,metrics_updated_at,next_campaign_ids,next_status,resolved_at')
         .order('generated_at', { ascending: false })
         .limit(14)
     ])
@@ -87,6 +73,7 @@ export async function GET(request: Request) {
       ok: true,
       generatedAt: new Date().toISOString(),
       sydneyDate: sydneyDateOnly(),
+      publication: { publisher: WAVE_PUBLISHER, decisionNoteId: 'planning.note.458e8ef0-80cc-5405-aa5c-eb804faf70b0', decisionRevision: (await readWaveDecision()).revision },
       columns: {
         recommended: grouped.recommended.map(compactCampaign),
         next: grouped.next.map(compactCampaign),
@@ -112,7 +99,7 @@ export async function GET(request: Request) {
       },
       suggestions,
       actions: (actionsRes.data ?? []) as WaveAction[],
-      briefs: (briefsRes.data ?? []) as WaveBrief[]
+      briefs: (briefsRes.data ?? []).map(row => ({ ...row, scan: { ...row.scan, ...row.metrics } })) as WaveBrief[]
     })
   } catch (err) {
     console.error('[agent/outbound/waves]', err instanceof Error ? err.message : err)
@@ -155,171 +142,60 @@ function compactCampaign(row: {
 export async function POST(request: Request) {
   const authError = requireAgentAuth(request)
   if (authError) return authError
-
-  let body: {
-    recommendation?: string
-    scan?: Record<string, unknown>
-    actions?: Array<{
-      title?: string
-      kind?: string
-      detail?: string
-      source?: string
-      status?: string
-      week_start?: string | null
-      campaign_id?: string | null
-    }>
-    next_campaign_ids?: string[]
-    recommend?: Array<{
-      name?: string
-      rationale?: string
-      list_size?: number
-      offer_key?: string
-      copy_strategy?: string
-      approach?: string
-      testing_variable?: string
-      vertical_tags?: string[]
-      location_tags?: string[]
-      go_live_at?: string | null
-      wave_lane?: string
-      instantly_campaign_id?: string | null
-    }>
-  } = {}
   try {
-    body = (await readBoundedJson(request, 64 * 1024)) as typeof body
-  } catch {
-    return portalJson({ error: 'invalid_json' }, { status: 400 })
-  }
-
-  try {
-    const admin = getPortalAdminClient()
-    const stamp = new Date().toISOString()
+    const body = publicationSchema.parse(await readBoundedJson(request, 64 * 1024))
     const day = sydneyDateOnly()
-    const createdCampaigns: Array<{ id: string; name: string }> = []
-    const createdActions: Array<{ id: string; title: string }> = []
-    const createdTasks: Array<{ id: string; title: string }> = []
-    let mergedScan: Record<string, unknown> | null = null
-    let mergedRecommendation: string | null = null
-
-    const { data: existingBrief } = await admin
-      .from('compass_wave_briefs')
-      .select('recommendation,scan,created_at,next_campaign_ids,next_status')
-      .eq('id', day)
-      .maybeSingle()
-    mergedRecommendation = existingBrief?.recommendation ?? null
-
-    if (body.recommendation?.trim() || body.scan || body.next_campaign_ids) {
-      const merged = mergeWaveBriefPayload(existingBrief, {
-        recommendation: body.recommendation,
-        scan: body.scan
-      })
-      mergedScan = merged.scan
-      mergedRecommendation = merged.recommendation
-      const canOverwrite = briefAllowsNextOverwrite(existingBrief?.next_status)
-      const nextIds = canOverwrite
-        ? clipNextIds(body.next_campaign_ids ?? existingBrief?.next_campaign_ids)
-        : clipNextIds(existingBrief?.next_campaign_ids)
-      const { error } = await admin.from('compass_wave_briefs').upsert({
-        id: day,
-        generated_at: stamp,
-        recommendation: merged.recommendation,
-        scan: merged.scan,
-        created_at: merged.created_at ?? stamp,
-        next_campaign_ids: nextIds,
-        next_status: canOverwrite ? 'proposed' : existingBrief?.next_status || 'proposed'
-      })
-      if (error) throw new Error(error.message)
-
-      const setup = parseHomeSetupScan(merged.scan)
-      if (setup.julesLed.length > 0) {
-        createdTasks.push(...(await upsertDailySetupTasks(admin, day, setup.julesLed)))
-      }
+    if (body.day !== day) return portalJson({ error: 'Publish only for the current Sydney day.' }, { status: 409 })
+    const source = await readWaveDecision()
+    if (source.revision !== body.decisionRevision) {
+      return portalJson({ error: 'Decisions changed. Read the current decision note before publishing.' }, { status: 409 })
     }
-
-    for (const action of body.actions ?? []) {
-      const title = action.title?.trim()
-      if (!title) continue
-      const row = {
-        id: `wave-act-${crypto.randomUUID()}`,
-        title,
-        kind: normalizeWaveActionKind(action.kind),
-        detail: action.detail?.trim() || null,
-        source: normalizeWaveActionSource(action.source),
-        status: normalizeWaveActionStatus(action.status),
-        week_start: action.week_start || mondayOfSydneyWeek(),
-        campaign_id: action.campaign_id?.trim() || null,
-        created_at: stamp,
-        updated_at: stamp
-      }
-      const { error } = await admin.from('compass_wave_actions').insert(row)
-      if (error) throw new Error(error.message)
-      createdActions.push({ id: row.id, title: row.title })
+    const setup = parseHomeSetupScan(body.scan)
+    const payload = {
+      publisher: body.publisher, runId: body.runId, decisionRevision: body.decisionRevision,
+      recommendation: body.recommendation,
+      // Editorial fields are replaced together; never retain yesterday's writeup under new advice.
+      scan: body.scan,
+      next_campaign_ids: body.next_campaign_ids,
+      actions: body.actions.map(action => ({
+        title: action.title, kind: normalizeWaveActionKind(action.kind),
+        detail: action.detail ?? null, campaign_id: action.campaign_id ?? null
+      })),
+      tasks: setup.julesLed.map(item => ({
+        title: item.title, marker: dailySetupNoteMarker(day, item.title),
+        notes: composeDailySetupNotes(day, item.title, item.detail), task_type: item.taskType ?? 'THINK'
+      }))
     }
-
-    const existingCampaigns = await listPipelineCampaigns(admin)
-    for (const rec of body.recommend ?? []) {
-      const name = rec.name?.trim()
-      if (!name) continue
-      const instantlyId = rec.instantly_campaign_id?.trim() || null
-      if (instantlyId) {
-        const bound = existingCampaigns.find((row) => row.instantly_campaign_id === instantlyId)
-        if (bound) {
-          createdCampaigns.push({ id: bound.id, name: bound.name })
-          continue
-        }
-      }
-      const lane = normalizeWaveLane(rec.wave_lane) || 'recommended'
-      const parsed = parseGoLiveAt(rec.go_live_at || defaultGoLiveAt())
-      const goLive = parsed.ok && parsed.iso ? parsed.iso : defaultGoLiveAt()
-      const created = await insertPipelineCampaign(admin, {
-        name,
-        status: lane === 'live' ? 'active' : 'planned',
-        go_live_at: goLive,
-        start_date: dateOnlyInZone(goLive),
-        offer_key: rec.offer_key === undefined ? 'booked-jobs-system' : rec.offer_key.trim() || null,
-        instantly_campaign_id: instantlyId,
-        vertical_tags: rec.vertical_tags,
-        location_tags: rec.location_tags,
-        wave_lane: lane,
-        wave_rationale: rec.rationale,
-        wave_list_size: rec.list_size ?? 150,
-        wave_copy_strategy: rec.copy_strategy,
-        wave_approach: rec.approach,
-        testing_variable: rec.testing_variable,
-        summary: rec.rationale || null
-      })
-      createdCampaigns.push({ id: created.id, name: created.name })
-      existingCampaigns.push(created)
-    }
-
-    if (
-      briefAllowsNextOverwrite(existingBrief?.next_status) &&
-      !body.next_campaign_ids &&
-      createdCampaigns.length > 0
-    ) {
-      const filled = clipNextIds([
-        ...(existingBrief?.next_campaign_ids ?? []),
-        ...createdCampaigns.map((row) => row.id)
-      ])
-      const { error: fillError } = await admin.from('compass_wave_briefs').upsert({
-        id: day,
-        generated_at: stamp,
-        recommendation: mergedRecommendation ?? body.recommendation?.trim() ?? null,
-        scan: mergedScan ?? existingBrief?.scan ?? body.scan ?? {},
-        next_campaign_ids: filled,
-        next_status: 'proposed'
-      })
-      if (fillError) throw new Error(fillError.message)
-    }
-
-    return portalJson({
-      ok: true,
-      briefId: body.recommendation?.trim() || body.scan ? day : null,
-      campaigns: createdCampaigns,
-      actions: createdActions,
-      tasks: createdTasks
+    const { data, error } = await getPortalAdminClient().rpc('compass_publish_wave_brief', {
+      p_day: day, p_expected_revision: body.expectedRevision, p_decision_value: source.value, p_payload: payload
     })
+    if (error) {
+      if (error.code === '40001') return portalJson({ error: error.message }, { status: 409 })
+      throw new Error('Brief publication failed. No partial brief or actions were saved.')
+    }
+    console.info('[wave-publication]', JSON.stringify({ day, publisher: body.publisher, runId: body.runId, decisionRevision: source.revision, revision: data.revision, replayed: data.replayed }))
+    return portalJson(data)
   } catch (err) {
-    console.error('[agent/outbound/waves POST]', err instanceof Error ? err.message : err)
-    return portalJson({ error: 'waves_write_failed' }, { status: 500 })
+    if (err instanceof z.ZodError) {
+      console.warn('[wave-publication rejected]', JSON.stringify({ reason: 'publication_contract_required' }))
+      return portalJson({ error: 'A current decision revision, expected brief revision, publisher, day and unique runId are required. Campaign creation uses the campaign API.', issues: err.issues.map(x => ({ path: x.path.join('.'), message: x.message })) }, { status: 400 })
+    }
+    console.error('[wave-publication failed]', err instanceof Error ? err.message : 'unknown')
+    return portalJson({ error: 'Brief publication is unavailable. Reload and retry.' }, { status: 503 })
   }
 }
+
+const publicationSchema = z.object({
+  day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  publisher: z.literal(WAVE_PUBLISHER),
+  runId: z.string().regex(/^[a-zA-Z0-9._:-]{8,160}$/),
+  decisionRevision: z.number().int().positive(),
+  expectedRevision: z.number().int().nonnegative(),
+  recommendation: z.string().trim().min(1).max(12000),
+  scan: z.object({
+    writeup: z.string().max(40000).optional(), homeBlurb: z.string().max(2000).optional(),
+    julesLed: z.array(z.object({ title: z.string().trim().min(1).max(300), detail: z.string().max(3000).optional(), task_type: z.string().optional() })).max(20).optional()
+  }).strict().default({}),
+  next_campaign_ids: z.array(z.string().min(1)).max(2).default([]),
+  actions: z.array(z.object({ title: z.string().trim().min(1).max(300), kind: z.string().optional(), detail: z.string().max(3000).optional(), campaign_id: z.string().min(1).optional() }).strict()).max(30).default([])
+}).strict()

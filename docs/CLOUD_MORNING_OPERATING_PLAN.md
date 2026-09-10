@@ -75,3 +75,10 @@ Retain the existing five-weekday pilot and 8 am Australia/Sydney schedule unless
 - [ ] First unattended scheduled run reviewed. Manual rehearsal is not an unattended run.
 
 Sources: [OpenAI scheduled tasks](https://learn.chatgpt.com/docs/automations), [Vercel cron limits](https://vercel.com/docs/cron-jobs/usage-and-pricing), live Compass API checks and [cloud access test](https://chatgpt.com/c/6aa10614-fbb8-83ec-90d6-e9a34f8fff06). These define an achievable operating outcome, not a guarantee that every future integration or failure has been tested.
+
+
+## Brief publishing contract — 10 September 2026
+
+Read [WAVE_BRIEF_PUBLICATION.md](WAVE_BRIEF_PUBLICATION.md) before writing Home.
+Use the designated publisher, current source and brief revisions, and a stable run ID.
+A manual correction is not a scheduled pilot day. Historical briefs are evidence, not current instructions.

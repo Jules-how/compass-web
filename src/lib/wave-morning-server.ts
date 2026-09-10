@@ -1,3 +1,4 @@
+import { readWaveDecision, waveReviewState } from '@/lib/wave-publication'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { listPipelineCampaigns } from '@/lib/campaigns-server'
@@ -70,17 +71,17 @@ export async function loadMorningWavePayload(
       })
     : Promise.resolve(EMPTY_BOARD)
 
-  const [board, campaigns, todayRes, acceptedRes, runsRes, leverageRes] = await Promise.all([
+  const [board, campaigns, todayRes, acceptedRes, runsRes, leverageRes, decision] = await Promise.all([
     instantlyBoardPromise,
     listPipelineCampaigns(supabase),
     supabase
       .from('compass_wave_briefs')
-      .select('id,next_campaign_ids,next_status,recommendation,scan,generated_at')
+      .select('id,next_campaign_ids,next_status,recommendation,scan,generated_at,revision,reviewed_at,publisher,run_id,decision_revision,metrics_updated_at')
       .eq('id', day)
       .maybeSingle(),
     supabase
       .from('compass_wave_briefs')
-      .select('id,next_campaign_ids,next_status,recommendation,generated_at')
+      .select('id,next_campaign_ids,next_status,recommendation,generated_at,revision,reviewed_at,publisher,run_id,decision_revision')
       .eq('next_status', 'accepted')
       .neq('id', day)
       .order('generated_at', { ascending: false })
@@ -97,9 +98,13 @@ export async function loadMorningWavePayload(
       .eq('source', DAILY_SETUP_TASK_SOURCE)
       .is('parent_task_id', null)
       .order('created_at', { ascending: false })
-      .limit(40)
+      .limit(40),
+    readWaveDecision(supabase)
   ])
 
+  if (todayRes.error || acceptedRes.error) throw new Error('Unable to read the current brief.')
+  const displayedBrief = todayRes.data?.recommendation ? todayRes.data : acceptedRes.data
+  const reviewState = waveReviewState(displayedBrief, day, decision.revision)
   const byId = new Map(campaigns.map((row) => [row.id, row]))
   const instantlyById = new Map([...board.live, ...(board.history ?? [])].map((row) => [row.id, row]))
   const liveLane = campaigns.filter((row) => (row.wave_lane || '') === 'live' || row.status === 'active')
@@ -177,7 +182,14 @@ export async function loadMorningWavePayload(
   return {
     sydneyDate: day,
     briefStatus: resolved.briefStatus,
-    landUnlocked: resolved.landUnlocked,
+    reviewState,
+    briefDate: displayedBrief?.id ?? null,
+    briefRevision: displayedBrief?.revision ?? 0,
+    reviewedAt: displayedBrief?.reviewed_at ?? null,
+    publisher: displayedBrief?.publisher ?? null,
+    runId: displayedBrief?.run_id ?? null,
+    metricsUpdatedAt: todayRes.data?.metrics_updated_at ?? null,
+    landUnlocked: reviewState === 'current' && resolved.landUnlocked,
     recommendation: todayRes.data?.recommendation ?? acceptedRes.data?.recommendation ?? null,
     homeBlurb: setup.homeBlurb,
     writeup: setup.writeup,

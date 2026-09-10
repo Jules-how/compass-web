@@ -1,5 +1,7 @@
 'use client'
 
+import { waveReviewLabel } from '@/lib/wave-review-label'
+
 import Link from 'next/link'
 import { useState } from 'react'
 import {
@@ -86,7 +88,7 @@ export function FolioHome({
       const res = await workFetch('/api/home/wave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, revision: wave?.briefRevision }),
       })
       const body = await res.json()
       if (!res.ok)
@@ -229,7 +231,9 @@ export function FolioHome({
                   className={`folio-status ${wave?.briefStatus === 'proposed' ? 'folio-status-pending' : ''}`}
                 >
                   {folder === 'today'
-                    ? wave?.briefStatus === 'proposed'
+                    ? wave?.reviewState !== 'current'
+                      ? 'Review needed'
+                      : wave?.briefStatus === 'proposed'
                       ? 'Review needed'
                       : wave?.briefStatus === 'accepted'
                         ? 'Accepted'
@@ -250,6 +254,7 @@ export function FolioHome({
               {folder === 'today' ? (
                 <>
                   <section className="folio-brief">
+                    <p className="folio-small">{waveReviewLabel(wave)}</p>
                     <p className="folio-caption">
                       {wave?.briefStatus === 'proposed'
                         ? 'Your next decision'
@@ -543,8 +548,10 @@ export function FolioHome({
       <FolioDialog
         open={briefOpen}
         onClose={() => setBriefOpen(false)}
-        title="Today’s brief"
+        title={wave?.briefDate && wave.briefDate !== wave.sydneyDate ? `Brief · ${wave.briefDate}` : 'Today’s brief'}
       >
+        <p className="folio-small">{waveReviewLabel(wave)}</p>
+        {wave?.runId ? <details className="folio-small"><summary>Review source</summary><p>{wave.publisher} · {wave.runId}</p></details> : null}
         <p className="folio-dialog-copy">
           {wave?.writeup ||
             wave?.recommendation ||
@@ -572,7 +579,7 @@ export function FolioHome({
           </div>
         ) : null}
         {actionError ? <FolioNotice error>{actionError}</FolioNotice> : null}
-        {wave?.briefStatus === 'proposed' ? (
+        {wave?.briefStatus === 'proposed' && wave.reviewState === 'current' ? (
           <>
             <div className="folio-dialog-actions">
               <button
@@ -597,7 +604,7 @@ export function FolioHome({
           </>
         ) : (
           <span className="folio-status">
-            {wave?.briefStatus ?? 'No brief'}
+            {wave?.reviewState === 'current' ? wave.briefStatus : 'Current review needed'}
           </span>
         )}
       </FolioDialog>
@@ -607,6 +614,8 @@ export function FolioHome({
         title={selected?.title ?? 'Task'}
       >
         <span className="folio-status">{selected?.status}</span>
+        <p className="folio-small">{waveReviewLabel(wave)}</p>
+        {wave?.runId ? <details className="folio-small"><summary>Review source</summary><p>{wave.publisher} · {wave.runId}</p></details> : null}
         <p className="folio-dialog-copy">
           {homeTaskNotes(selected?.notes) || 'No additional notes.'}
         </p>

@@ -46,21 +46,14 @@ export async function persistDailyWaveScan(
 ): Promise<void> {
   if (!instantly) return
   const day = sydneyDateOnly()
-  const { data: existing } = await supabase
-    .from('compass_wave_briefs')
-    .select('recommendation,scan')
-    .eq('id', day)
-    .maybeSingle()
-  const { error } = await supabase.from('compass_wave_briefs').upsert({
-    id: day,
-    generated_at: new Date().toISOString(),
-    recommendation: existing?.recommendation ?? null,
-    scan: mergeScanRecords(existing?.scan, {
+  const { error } = await supabase.rpc('compass_update_wave_metrics', {
+    p_day: day,
+    p_metrics: {
       emailsSentToday: instantly.emailsSentToday ?? 0,
       repliesWaiting: instantly.repliesWaiting ?? 0,
       replyRate: instantly.replyRate ?? 0,
       campaigns: (instantly.campaigns ?? []).slice(0, 20)
-    })
+    }
   })
   if (error) throw new Error(error.message)
 }

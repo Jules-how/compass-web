@@ -16,7 +16,7 @@ export const WAVE_ACTION_KINDS = [
 ] as const
 export type WaveActionKind = (typeof WAVE_ACTION_KINDS)[number]
 
-export const WAVE_ACTION_STATUSES = ['queued', 'doing', 'done'] as const
+export const WAVE_ACTION_STATUSES = ['queued', 'doing', 'done', 'cancelled'] as const
 export type WaveActionStatus = (typeof WAVE_ACTION_STATUSES)[number]
 
 export const WAVE_ACTION_SOURCES = ['agent', 'jules'] as const

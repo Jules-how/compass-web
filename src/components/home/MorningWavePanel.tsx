@@ -1,5 +1,7 @@
 'use client'
 
+import { waveReviewLabel } from '@/lib/wave-review-label'
+
 import { workFetch } from '@/lib/workspace-change'
 
 import Link from 'next/link'
@@ -201,11 +203,12 @@ function BriefDialog({
             </div>
           ) : null}
 
+          <p className="mb-3 text-sm text-neutral-600">{waveReviewLabel(wave)}</p>
           <div className="max-h-[50vh] overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">
             {writeup || 'No writeup from this morning’s run yet.'}
           </div>
 
-          {wave.briefStatus === 'proposed' ? (
+          {wave.briefStatus === 'proposed' && wave.reviewState === 'current' ? (
             <div className="mt-4 flex flex-wrap gap-2 border-t border-stone-100 pt-4">
               <button type="button" disabled={busy} onClick={onAccept} className="compass-btn-primary">
                 Accept brief
@@ -393,7 +396,7 @@ export function MorningWavePanel({
       const res = await workFetch('/api/home/wave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ action, revision: wave?.briefRevision })
       })
       const body = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) throw new Error(body.error ?? `Failed (${res.status})`)
@@ -484,8 +487,9 @@ export function MorningWavePanel({
               className="w-full text-left text-sm text-amber-950 hover:underline"
             >
               {cardLine}
+              <span className="block text-xs">{waveReviewLabel(wave)}</span>
             </button>
-            {wave.briefStatus === 'proposed' ? (
+            {wave.briefStatus === 'proposed' && wave.reviewState === 'current' ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -518,6 +522,7 @@ export function MorningWavePanel({
               className="text-left text-sm font-medium text-neutral-800 hover:underline"
             >
               {cardLine}
+              <span className="block text-xs">{waveReviewLabel(wave)}</span>
             </button>
             <NextStrip rows={wave.activeNext} />
           </div>

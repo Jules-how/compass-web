@@ -72,7 +72,7 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/expressions/<id>" \
   -d '{"notes":"..."}'
 ```
 
-Campaign sequence of record: `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Outbound doctrine is `cold-email/AGENTS.md`. The single active offer is ads plus booking, stable key `installation-booking`, contract `switchflow-offer/installation-booking.md`. Earlier booked-jobs/fill-capture examples below are historical; never use them as defaults for new work. Compass desk if Jules has a row. `GET /api/agent/offers/desk` includes `cells`: one Instantly campaign per `offer_key` × first `vertical_tags` × first `location_tags`. City lives in `location_tags`, not the campaign name. One `testing_variable` per cell. Create missing cells with `POST /api/agent/offers/cells` `{ offer_key, verticals, cities, testing_variable, clone_campaign_id?, sample_size_target?, hypothesis? }`. A campaign with the vertical and no city is tagged, not duplicated. Clone copies sequence so only the named variable changes. Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact readiness `wave` is on `GET /api/agent/campaigns`. `GET /api/agent/brief` includes `morningWave` (sending, two next, `landUnlocked`). Do not land live remaining while `landUnlocked` is false. Write today’s next with `POST /api/agent/outbound/waves` `{ next_campaign_ids }`. Tools/templates: `GET /api/agent/outbound/pathway`. Log runs: `POST /api/agent/outbound/pathway/runs`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. First line goes in `personalization` and `custom_variables.opener`.
+Campaign sequence of record: `GET|PATCH /api/agent/outbound/campaigns/:campaignId/copy` (`full=1` for `sequence_draft`). Outbound doctrine is `cold-email/AGENTS.md`. The single active offer is ads plus booking, stable key `installation-booking`, contract `switchflow-offer/installation-booking.md`. Earlier booked-jobs/fill-capture examples below are historical; never use them as defaults for new work. Compass desk if Jules has a row. `GET /api/agent/offers/desk` includes `cells`: one Instantly campaign per `offer_key` × first `vertical_tags` × first `location_tags`. City lives in `location_tags`, not the campaign name. One `testing_variable` per cell. Create missing cells with `POST /api/agent/offers/cells` `{ offer_key, verticals, cities, testing_variable, clone_campaign_id?, sample_size_target?, hypothesis? }`. A campaign with the vertical and no city is tagged, not duplicated. Clone copies sequence so only the named variable changes. Wave fields: `opener_reviewed_at`, `copy_confirmed_at`. Compact readiness `wave` is on `GET /api/agent/campaigns`. `GET /api/agent/brief` includes `morningWave` (sending, two next, `landUnlocked`). Do not land live remaining while `landUnlocked` is false. Publish today’s proposed next using the full revision-checked contract in `docs/WAVE_BRIEF_PUBLICATION.md`. Tools/templates: `GET /api/agent/outbound/pathway`. Log runs: `POST /api/agent/outbound/pathway/runs`. Thin rows are not missing openers. Changing sequence copy clears `copy_confirmed_at`. First line goes in `personalization` and `custom_variables.opener`.
 
 **Operating model:** Compass = workshop · Instantly = mail truck. Activate stays in Instantly. Outbound doctrine is `cold-email/AGENTS.md`.
 
@@ -186,38 +186,18 @@ curl -sS -X PATCH "$COMPASS_BASE_URL/api/agent/outbound/campaigns/<id>/copy" \
 
 Vercel hits `GET /api/cron/daily-sync` once per day (`vercel.json`). Auth with `CRON_SECRET` or `COMPASS_AGENT_SECRET`. Agents should **not** re-sync the world on every turn if `brief.lastSyncAt` is fresh.
 
-## 8am Waves scan
+## Morning brief publication
 
-Compass Waves is the shared outbound desk. Instantly activate stays in Instantly.
-
-1. `GET /api/agent/outbound/waves` after Instantly glance is fresh (`POST /api/agent/sync` with `instantly` if `brief.lastSyncAt` is stale).
-2. Read `suggestions`, live reply rates, remaining volume, and `outlook.recontactReady`.
-3. Recommend one morning move. Examples:
-   - ≥5% replies and few leads left → scrape / filter / openers / `push-leads` into that campaign (paused until Jules launches).
-   - under 1% replies after 100 sends → propose pause and inspect inboxes before rewriting copy.
-   - 0 replies at 1,000 sends → kill / overhaul offer. Do not load more of the same.
-4. Persist the call with `POST /api/agent/outbound/waves`:
-   - `recommendation`: one or two sentences for the Home yellow card (Switchflow plus Waves)
-   - `scan.writeup`: the full Daily Setup synthesis (day / outbound / delivery, AI vs Jules). Home opens this in a popup.
-   - `scan.julesLed`: Jules-led items only (`[{ title, detail, task_type }]`). Creates Compass tasks (`source: daily-setup`, due today). Home right rail shows unread ones until Jules opens them.
-   - `recommend` cards (lane `recommended`: rationale, list_size, offer, copy_strategy, approach)
-   - `actions` on the outlook (volume, copy, city, inboxes, …)
-   Do not invent Jules-led busywork. Empty `julesLed` is fine on a wait morning.
-5. Manual Jules adds land in **Next campaigns**. Recommended column is agent-only until Jules moves a card.
-
-Do not invent emails. Do not activate Instantly. Write the brief even when the recommendation is “wait.”
-
-```bash
-curl -sS "$COMPASS_BASE_URL/api/agent/outbound/waves" \
-  -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
-
-curl -sS -X POST "$COMPASS_BASE_URL/api/agent/outbound/waves" \
-  -H "Authorization: Bearer $COMPASS_AGENT_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"recommendation":"Wait on land. Lists are empty. Confirm locksmith copy if you have ten minutes.","scan":{"writeup":"Outbound: locksmith 3.1 percent, roofing 1.1 percent, both exhausted. No 5 percent top-up. Delivery: none due. Jules-led: confirm locksmith copy.","julesLed":[{"title":"Confirm locksmith copy","detail":"Sequence is live. Tick copy if the Instantly body still matches Compass.","task_type":"SELL"}]},"recommend":[{"name":"Roofing Sydney top-up","rationale":"Live wave is converting. Keep the same copy.","list_size":150,"offer_key":"booked-jobs-system","copy_strategy":"35-word Fill and Capture","approach":"Maps scrape, filter_leads, generate_openers, push-leads paused","vertical_tags":["roofing"],"location_tags":["Sydney"]}],"actions":[{"title":"Top up Sydney roofing","kind":"volume","detail":"150 sendable, same sequence"}]}'
-```
-
-Wave memory lives in Compass (`compass_wave_briefs`, `compass_wave_actions`, campaign `wave_*` fields). Do not copy those facts into a second markdown store.
+Follow `docs/WAVE_BRIEF_PUBLICATION.md` in compass-web for the current write contract.
+Read current decisions and the latest day handover before composing. One publisher:
+`compass-morning-pilot`. Every publication requires Sydney day, stable runId,
+decisionRevision, expectedRevision and a complete current recommendation/scan.
+Read these values live; do not reuse old brief instructions as today's plan.
+Legacy recommendation-only, scan-only and `recommend` writes are rejected.
+Create campaign records separately, then explicitly reference their IDs.
+Metrics refresh is separate and does not review advice. Retry uncertain writes
+with the identical payload/runId; re-read and reconcile conflicts before a new run.
+Never activate campaigns. Keep tasks open for Jules to confirm.
 
 ## Mental model
 

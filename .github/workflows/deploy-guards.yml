@@ -33,7 +33,7 @@ jobs:
       - run: node --test test/outbound-preparation*.test.mjs test/outbound-workshop.test.mjs
         env:
           SWITCHFLOW_WORKSPACE: ${{ github.workspace }}/workers/outbound
-      - run: node --test --test-concurrency=2 test/delivery-engine.test.mjs test/delivery-route-access.test.mjs test/lead-lists.test.mjs test/campaign-workspace.test.mjs test/service-role-boundary.test.mjs
+      - run: node --test --test-concurrency=2 test/delivery-engine.test.mjs test/delivery-route-access.test.mjs test/lead-lists.test.mjs test/campaign-workspace.test.mjs test/service-role-boundary.test.mjs test/wave-publication.test.mjs
       - name: Production build
         env:
           # Build-time placeholders so Next can compile without real secrets.
