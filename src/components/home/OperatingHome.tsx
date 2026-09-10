@@ -474,7 +474,7 @@ export function OperatingHome() {
                       {c.preparations
                         .map(
                           (p: any) =>
-                            `${p.data.lead_ids.length} ${p.data.status}`,
+                            `${p.data.lead_ids.length} ${p.data.purpose === "first_contact" ? "new contacts" : p.data.purpose === "followup_recovery" ? "follow-ups" : "recipients"} ${p.data.status}`,
                         )
                         .join(" · ") || "No preparation receipt registered"}
                     </p>
