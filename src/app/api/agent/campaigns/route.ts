@@ -6,13 +6,25 @@ import {
   summarizeLeadsByCampaign
 } from '@/lib/campaign-wave'
 import { getPortalAdminClient } from '@/lib/portal-admin'
-import { portalJson } from '@/lib/portal-http'
+import { portalJson, readBoundedJson } from '@/lib/portal-http'
+import { reconcileProviderCampaign } from '@/lib/campaign-reconcile'
 import { loadCohortLeadRowsForCampaigns } from '@/lib/lead-lists'
 import { loadSyncSnapshot } from '@/lib/sync-snapshots'
 import type { ColdEmailGlance } from '@/lib/home-demo-data'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+export async function POST(request: Request) {
+  const denied=requireAgentAuth(request)
+  if(denied) return denied
+  try {
+    return portalJson(await reconcileProviderCampaign(getPortalAdminClient(),await readBoundedJson(request,16000)))
+  } catch(error) {
+    const message=error instanceof Error?error.message:'reconcile_failed'
+    return portalJson({error:message},{status:/conflict/.test(message)?409:400})
+  }
+}
 
 /**
  * Pipeline campaigns + cached Instantly campaign glance for agents.

@@ -60,6 +60,15 @@ remain existing planning records, with their original target and commitment stat
 
 ## Source and preparation records
 
+When a campaign was created directly in Instantly, first reconcile its identity
+with `POST /api/agent/campaigns`: `provider_id`, `offer_key`, `vertical_tags`,
+`location_tags`, and the exact `source` authorising/identifying that campaign.
+The endpoint reads Instantly, reuses an existing binding or creates one stable
+Compass record. It never changes provider copy, sends or activates. An offer or
+binding conflict is held for review. Then refresh operating facts and attach the
+exact loaded/prepared receipt to the returned Compass campaign ID. Lead flags or
+a prose handover alone do not register a campaign in the operating view.
+
 Use `action: record`, `request_id`, `id`, `kind`, current `revision` (zero only for
 new records), and `data`. IDs start with their kind followed by a colon.
 
@@ -86,6 +95,11 @@ changes for review, using the existing day handover for concise reasoning. Keep
 blocked and incomplete source coverage visible. Do not manufacture capacity,
 contact outcomes, numerical goals or external authority. Remain quiet when nothing
 material changes; surface a real interruption, failed source or ready decision.
+
+Append handover narrative to the note's `body`, not its `links` field. The latter
+is a short link field and long prose is truncated. Re-read after saving and check
+the complete appended text. Keep bodies below 20,000 characters and rotate dated
+working notes when needed, preserving a link to the previous note.
 
 Hosted daily sync prepares the next daily projection and reconciles provider state.
 Home refreshes stale Instantly evidence while open. Desktop source review is a
