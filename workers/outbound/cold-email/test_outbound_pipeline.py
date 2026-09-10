@@ -45,7 +45,7 @@ class PipelineTests(unittest.TestCase):
     def test_writing_retry_only_includes_rejected_recipient(self):
         with tempfile.TemporaryDirectory() as d,patch('outbound_pipeline.config_secrets',return_value={}):
             p=Pipeline({**self.config(),'model_provider':'parallel'},d)
-            rows=[{'source_id':str(i),'company':'Installer '+str(i),'route':'email_review','assessment':{'signal_type':'basic_relevance','customer_type':'mixed','facts':[{'kind':k,'quote':'We install split systems.'} for k in ['service','signal']]}} for i in range(2)]
+            rows=[{'source_id':str(i),'company':'Installer '+str(i),'route':'email_review','sources':[{'url':'https://example.org/install','text':'We supply and install split systems for homes and businesses in Perth.'}],'assessment':{'signal_type':'basic_relevance','customer_type':'mixed','facts':[{'kind':k,'quote':'We install split systems.'} for k in ['service','signal']]}} for i in range(2)]
             sizes=[]
             def reply(url,key,payload,**kwargs):
                 items=json.loads(payload['messages'][1]['content']);sizes.append(len(items))
@@ -77,10 +77,10 @@ class PipelineTests(unittest.TestCase):
             def research(self,row,i):
                 self.first_research=min(getattr(self,'first_research',float('inf')),time.monotonic())
                 time.sleep(.02)
-                return {'source_id':str(i),'company':str(i),'phone':'0899999999','sources':[]}
+                return {'source_id':str(i),'company':str(i),'phone':'0899999999','sources':[{'url':'https://example.org/install','text':'We supply and install split systems for homes and businesses in Perth.'}]}
             def assess(self,p):
                 i=int(p['source_id']);time.sleep(.02)
-                return {'status':'assessed','assessment':{'fit':'not_fit' if i==3 else 'fit','selected_email':f'a{i}@example.org' if i<2 else '', 'subject':'Subject','opener':'Observed service'}}
+                return {'status':'assessed','assessment':{'fit':'not_fit' if i==3 else 'fit','selected_email':f'a{i}@example.org' if i<2 else '', 'subject':'Split installation','opener':'Your split system installation service'}}
             def eligibility(self,emails):
                 for e in emails:self.history_cache[e]={'status':'uncontacted','checked_at':now()}
             def verify(self,emails):

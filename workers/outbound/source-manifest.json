@@ -17,12 +17,12 @@
     "cold-email/openers/AGENT.md": "3e313338063cd2f4596ea90dde0d73cefcb4a0d8a3e45f7a5e9cc36a9e2b189f",
     "cold-email/openers/generate_openers.py": "5d62fe47ff750ddb83a9270cf225caa26a8400edc6b298cde206b545ef5f9d72",
     "cold-email/openers/test_generate_openers.py": "566413bf9e0dfafb3cbb28f2a6d310897619a5d023a83917bd2465bc5f386614",
-    "cold-email/outbound_pipeline.py": "3924a1c93c52d42d2ec7b28888d92e2481358ca2675525ac5da9fb17f1c506a5",
+    "cold-email/outbound_pipeline.py": "b596f96ac0ae7ba70ffa22318bad0e8b56ef13593f9485312c3321f30c36fffd",
     "cold-email/outbound_worker.py": "826a7c026805542b2d5fb2c8d2519aa707891cc7d9614075001e2da4f536cf9e",
     "cold-email/pipeline-config.example.json": "807bcaab3c2b1dff2b1fc52a4787edf63f3b6ef8c9f51951d16adaba185c27e9",
     "cold-email/sheet_map.py": "298c20860eda82f32838c1050cf0e45f980941f152e66de0cbe6530866ec3b04",
     "cold-email/test_factory_job.py": "af3248f809fcd6b2524f0d21025ca781082c31b8291d151cc1a849a81802f710",
-    "cold-email/test_outbound_pipeline.py": "7a7df10ae168c54695939d2449b12752f21a03bba6a147afbdf8fe9c731b14d5",
+    "cold-email/test_outbound_pipeline.py": "608cc56556c4b5960d0d67e2d60c090458379f7a660a1d525b1d86b413a9920a",
     "cold-email/test_outbound_worker.py": "00a4b05e897bfaf1389ded8734191b147db112bd92eb8051f0565649847f9303",
     "cold-email/vertical_spec.py": "9a537c55541bf3ff279346fef010c2fd5e95d3a376c5559131694460677b0ee2",
     "switchflow-offer/AGENTS.md": "06563e19799c6e3f7d4a1e2cf91fd012ba9d3d00eaf5666b759964f9c41246aa",
@@ -34,6 +34,12 @@
     "switchflow-offer/verticals/plumbing.md": "2dcbd1810dd6b82116150c923bee72c50cedd64ffd85de690455311fbd026282",
     "switchflow-offer/verticals/roofing.md": "6b3e4c03fbf6efcb1ce4a3caed2c96721648ada9de040aa169cca45fa0e9b850",
     "cold-email/rhythm_handoff.py": "a14a3530058c3cb788b7e7c8f27612895f1294603bbb2073ad3ade86d090bb59",
-    ".agents/skills/compass-agent/SKILL.md": "e37130d22b14e8af262ecb7c426b5054fbace4ed6348abb2e3038dfc700d5a12"
+    ".agents/skills/compass-agent/SKILL.md": "e37130d22b14e8af262ecb7c426b5054fbace4ed6348abb2e3038dfc700d5a12",
+    "cold-email/signal_evidence.py": "f0c8434e485f3fd82947c4bf0a266424d70c6fb64c9be9d3272995b106494062",
+    "cold-email/test_signal_evidence.py": "a5203dbcd32deb513c9cee3f1bfb36112c0797290b78e96afae103238882683a",
+    "cold-email/copy_grounding.py": "839f104b4254fe2f473417952a9d49681ce7b1999d8337977e5388e823f44b3f",
+    "cold-email/test_copy_grounding.py": "dc8a413995b852ec390dc41bfa93f865bcc8994c0833c0fe639bc3c5561b43e3",
+    "cold-email/review_handoff.py": "e74c813c9e576eb8f3293d802b423f9540f6e871f6fbad4571fb5e5927046e88",
+    "cold-email/test_review_handoff.py": "10684a8b3be86032b73ed9f2e00c226f8e0599f10f8dc7679151aeacf9b1cfd1"
   }
 }
