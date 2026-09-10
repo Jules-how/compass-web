@@ -54,7 +54,7 @@ export async function GET(request: Request) {
         .limit(80),
       admin
         .from('compass_wave_briefs')
-        .select('id,generated_at,recommendation,scan,created_at,revision,reviewed_at,publisher,run_id,decision_revision,metrics,metrics_updated_at')
+        .select('id,generated_at,recommendation,scan,created_at,revision,reviewed_at,publisher,run_id,decision_revision,metrics,metrics_updated_at,next_campaign_ids,next_status,resolved_at')
         .order('generated_at', { ascending: false })
         .limit(14)
     ])
