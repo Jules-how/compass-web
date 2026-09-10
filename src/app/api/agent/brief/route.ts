@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     const fresh = request.headers.get('x-compass-fresh') === '1'
     if (!fresh) {
       const cached = await loadSyncSnapshot(admin, 'daily_brief')
-      if (cached?.payload && typeof cached.payload === 'object' && (cached.payload as {schemaVersion?:number}).schemaVersion === 2 && Date.now() - Date.parse(cached.syncedAt) < 30 * 60 * 1000) {
+      if (cached?.payload && typeof cached.payload === 'object' && (cached.payload as {schemaVersion?:number}).schemaVersion === 3 && Date.now() - Date.parse(cached.syncedAt) < 60 * 1000) {
         return portalJson({
           ok: true,
           cached: true,

@@ -57,6 +57,9 @@ test('search, commit, ledger, and export tools', () => {
     [
       'pathfinder',
       'pathfinder.review',
+      'outbound.overview',
+      'operating',
+      'operating.write',
       'brief',
       'campaigns',
       'leads',
@@ -182,7 +185,7 @@ test('copy patch sends Prefer minimal', async () => {
 
 test('rpc tools/list', async () => {
   const res = await handleRpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, { cfg, fetchImpl: mockFetch({}) })
-  assert.equal(res.result.tools.length, 13)
+  assert.equal(res.result.tools.length, 16)
 })
 
 test('leads.search hits unified GET', async () => {
@@ -263,3 +266,16 @@ test('commit posts rows', async () => {
     on_conflict: 'email'
   })
 })
+
+
+test('outbound overview and operating tools route through shared source contract', async () => {
+  const capture = {};
+  await callTool('outbound.overview', { fresh: true }, { cfg, fetchImpl: mockFetch(capture) });
+  assert.match(capture.url, /api\/agent\/outbound\/overview$/);
+  assert.equal(capture.headers['x-compass-fresh'], '1');
+  await callTool('operating', { day: '2026-09-11' }, { cfg, fetchImpl: mockFetch(capture) });
+  assert.match(capture.url, /day=2026-09-11/);
+  const command = { action: 'record', id: 'capture:fixture', request_id: 'fixture', revision: 0, kind: 'capture', data: { body: 'Exact source text' } };
+  await callTool('operating.write', { command }, { cfg, fetchImpl: mockFetch(capture) });
+  assert.deepEqual(JSON.parse(capture.body), command);
+});

@@ -124,7 +124,7 @@ test("waves UI and agent route exist", () => {
   assert.match(read("src/app/api/campaigns/route.ts"), /listPipelineCampaigns/);
   assert.match(
     read("src/lib/outbound-desk.ts"),
-    /DEFAULT_OUTBOUND_DESK: OutboundDeskId = [\"']notebook[\"']/,
+    /DEFAULT_OUTBOUND_DESK: OutboundDeskId = [\"']overview[\"']/,
   );
 });
 

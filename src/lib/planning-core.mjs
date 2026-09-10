@@ -57,6 +57,7 @@ export function validatePlanning(kind, input) {
     return {
       ...base,
       period,
+      domain: input.domain === "personal" ? "personal" : "business",
       measurementType: qualitative ? "qualitative" : "quantitative",
       direction,
       criteria: text(input.criteria, 4000),

@@ -120,8 +120,8 @@ test('offer wave decision desk badges follow send and reply thresholds', () => {
 
 test('live outbound desk switcher offers waves, calendar, and timeline', () => {
   const desk = read('src/lib/outbound-desk.ts')
-  assert.match(desk, /OUTBOUND_DESK_STORAGE_KEY = 'compass.outbound.desk.v3'/)
-  assert.match(desk, /DEFAULT_OUTBOUND_DESK: OutboundDeskId = 'waves'/)
+  assert.match(desk, /OUTBOUND_DESK_STORAGE_KEY = [\"']compass.outbound.desk.v5[\"']/)
+  assert.match(desk, /DEFAULT_OUTBOUND_DESK: OutboundDeskId = [\"']overview[\"']/)
   assert.match(desk, /waves/)
   assert.match(desk, /calendar/)
   assert.match(desk, /timeline/)

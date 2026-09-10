@@ -17,6 +17,8 @@ export type TaskStatus = (typeof TASK_STATUSES)[number]
 export type TaskType = (typeof TASK_TYPES)[number]
 
 export interface CompassTask {
+  operating_context?: import('@/lib/operating-core').WorkContext
+  operating_key?: string | null
   lead_id?: string | null
   outreach_channel?: string | null
   outreach_timezone?: string | null
@@ -44,6 +46,8 @@ export interface CompassTask {
 }
 
 export interface CompassProject {
+  operating_context?: import('@/lib/operating-core').WorkContext
+  operating_key?: string | null
   id: string
   name: string
   business_function_id: string | null

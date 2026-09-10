@@ -1,8 +1,8 @@
 export const TASK_LIST_COLUMNS =
-  'lead_id,outreach_channel,outreach_timezone,outreach_state,source,id,title,status,priority,due,project_id,parent_task_id,business_function_id,task_type,notes,execution_level,created_at,updated_at'
+  'operating_context,operating_key,lead_id,outreach_channel,outreach_timezone,outreach_state,source,id,title,status,priority,due,project_id,parent_task_id,business_function_id,task_type,notes,execution_level,created_at,updated_at'
 
 export const PROJECT_LIST_COLUMNS =
-  'id,name,business_function_id,client_id,status,priority,health,start_date,target_date,labels,summary,updated_at,created_at,mirrored_at,source,notes,external_id'
+  'operating_context,operating_key,id,name,business_function_id,client_id,status,priority,health,start_date,target_date,labels,summary,updated_at,created_at,mirrored_at,source,notes,external_id'
 
 /** Core CRM columns from migration 0029 (always expected). */
 export const CLIENT_LIST_COLUMNS_CORE =

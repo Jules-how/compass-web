@@ -24,6 +24,7 @@ import { generateDailyDigest } from '@/lib/evidence-poller'
 import { syncReactivationLists, type ReactivationSyncResult } from '@/lib/reactivation-runtime'
 import { recomputeComponentStats } from '@/lib/component-stats'
 import { persistDailyWaveScan } from '@/lib/wave-desk-persist'
+import { refreshOperatingCampaigns, prepareOperatingDay } from '@/lib/operating-server'
 
 export type AgentSyncSource = 'ads' | 'instantly' | 'instantly_leads' | 'qbo' | 'evidence' | 'reactivation'
 
@@ -133,6 +134,7 @@ export async function syncInstantlyGlance(
       fetchInstantlyCampaignAnalytics(apiKey)
     ])
     await upsertSyncSnapshot(supabase, 'instantly_cold_email', glance, 'live')
+    await refreshOperatingCampaigns(supabase)
     return {
       result: {
         ok: true,
@@ -238,6 +240,7 @@ export async function runAgentSync(
   }
 
   if (options?.includeBrief !== false) {
+    await prepareOperatingDay()
     result.brief = await buildAgentBrief(supabase)
     await upsertSyncSnapshot(supabase, 'daily_brief', result.brief, 'live')
     if (sources.includes('instantly')) {

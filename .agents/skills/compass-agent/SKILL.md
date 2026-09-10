@@ -36,6 +36,18 @@ curl -sS "$COMPASS_BASE_URL/api/agent/leads/ledger?vertical=broker" \
   -H "Authorization: Bearer $COMPASS_AGENT_SECRET"
 ```
 
+## Operating work and source evidence
+
+Read `GET /api/agent/operating` for the current queue, contextual tasks/projects,
+goals, prepared work and source coverage. Read `GET /api/agent/outbound/overview`
+for shared campaign/activity evidence. Use `POST /api/agent/operating` to finish
+work with a stable, revision-checked receipt and explicit source; see
+`compass-web/docs/OPERATING_WRITEBACK.md` in the workspace. Record inferred work
+as a proposal and completion evidence as awaiting confirmation. These reads
+supersede historical campaign-name or morning-wave guesses about the next action.
+Lead cohort projections retain `lead_facts`; read published evidence before using
+it in personalisation, and never treat a thin projection as missing research.
+
 ## API recipes
 
 Choose the endpoint needed for the request. These examples are not a mandatory daily sequence or authorisation to sync, write, or activate anything.

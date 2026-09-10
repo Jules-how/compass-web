@@ -1,0 +1,153 @@
+.operating-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.operating-toolbar label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+.operating-toolbar input,
+.operating-toolbar select,
+.operating-field input:not([type="checkbox"]),
+.operating-field textarea {
+  background: var(--folio-paper, #fffefa);
+  border: 1px solid #d9d6d0;
+  border-radius: 7px;
+  padding: 8px;
+  color: #242424;
+}
+.operating-next {
+  padding: 24px 0 32px;
+}
+.operating-next h2 {
+  font-family: var(--font-folio-editorial), serif;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.18;
+  max-width: 800px;
+}
+.operating-next > p {
+  margin: 14px 0;
+  line-height: 1.65;
+}
+.operating-section {
+  padding: 22px 0;
+  border-top: 1px solid #e8e6e3;
+}
+.operating-section h2,
+.operating-aside h2 {
+  font-family: var(--font-folio-editorial), serif;
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+.operating-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.operating-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-top: 1px solid #e8e6e3;
+  padding: 15px 0;
+}
+.operating-row button {
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+.operating-row span,
+.operating-row small {
+  display: block;
+}
+.operating-row small {
+  color: #68665f;
+  line-height: 1.5;
+  margin-top: 5px;
+}
+.operating-row button:hover > span {
+  text-decoration: underline;
+}
+.operating-aside > section {
+  margin-bottom: 32px;
+}
+.operating-aside p {
+  font-size: 13px;
+  line-height: 1.65;
+}
+.operating-campaign {
+  padding: 16px 0;
+  border-top: 1px solid #dedad2;
+}
+.operating-campaign > a {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 6px;
+}
+.operating-campaign strong {
+  font-size: 13px;
+  display: block;
+}
+.operating-campaign small {
+  font-size: 11px;
+  color: #68665f;
+}
+.operating-goals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin: 24px 0;
+}
+.operating-goals section {
+  padding: 16px;
+  border: 1px solid #e8e6e3;
+  border-radius: 8px;
+}
+.operating-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+.operating-home details {
+  margin: 12px 0;
+}
+.operating-home summary {
+  cursor: pointer;
+  font-size: 13px;
+}
+.operating-home button:focus-visible,
+.operating-home a:focus-visible,
+.operating-home input:focus-visible,
+.operating-home textarea:focus-visible,
+.operating-home select:focus-visible,
+.operating-home summary:focus-visible {
+  outline: 2px solid #c94a1f;
+  outline-offset: 4px;
+}
+.operating-home .folio-dialog-copy {
+  white-space: pre-wrap;
+}
+@media (max-width: 650px) {
+  .operating-toolbar {
+    gap: 12px;
+  }
+  .operating-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .operating-home .folio-page-heading {
+    align-items: flex-start;
+    gap: 16px;
+    flex-direction: column;
+  }
+  .operating-home .folio-actions {
+    flex-wrap: wrap;
+  }
+}

@@ -122,6 +122,7 @@ export function GoalForm({
             </select>
           </label>
           {field("owner", "Owner", "text", true)}
+          <label className="text-sm">Area<select className="compass-input mt-1 w-full" value={form.domain || "business"} onChange={e => set("domain", e.target.value)}><option value="business">Business</option><option value="personal">Personal</option></select></label>
           {field("due", "Chosen target date", "date", committed)}
           <label className="text-sm">
             Horizon

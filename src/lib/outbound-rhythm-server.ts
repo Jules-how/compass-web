@@ -127,6 +127,9 @@ export async function loadRhythm(db: SupabaseClient, params: URLSearchParams) {
   const preference = prefs[0];
   const target =
     Number(preference?.call_target ?? 10) * Number(preference?.ready_days ?? 2);
+  const due = open.filter(
+    (t) => t.outreach_state === "accepted" && t.due && new Date(t.due) <= now,
+  );
   const ready = selected.filter(
     (l) =>
       !open.some(
@@ -142,9 +145,6 @@ export async function loadRhythm(db: SupabaseClient, params: URLSearchParams) {
       !l.is_archived &&
       !restrictionReason(l, "call") &&
       l.rhythm_timezone,
-  );
-  const due = open.filter(
-    (t) => t.outreach_state === "accepted" && t.due && new Date(t.due) <= now,
   );
   const unresolved = open.filter((t) => t.outreach_state === "unresolved");
   const replies = selected.filter(

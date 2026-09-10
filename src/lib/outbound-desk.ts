@@ -1,4 +1,5 @@
 export const OUTBOUND_DESK_IDS = [
+  "overview",
   "notebook",
   "waves",
   "calendar",
@@ -7,9 +8,9 @@ export const OUTBOUND_DESK_IDS = [
 
 export type OutboundDeskId = (typeof OUTBOUND_DESK_IDS)[number];
 
-export const OUTBOUND_DESK_STORAGE_KEY = "compass.outbound.desk.v4";
+export const OUTBOUND_DESK_STORAGE_KEY = "compass.outbound.desk.v5";
 
-export const DEFAULT_OUTBOUND_DESK: OutboundDeskId = "notebook";
+export const DEFAULT_OUTBOUND_DESK: OutboundDeskId = "overview";
 
 const LEGACY_DESKS = new Set(["pathways", "cassette", "runway", "factory"]);
 

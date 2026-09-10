@@ -36,7 +36,7 @@ export async function workFetch(input: RequestInfo | URL, init?: RequestInit) {
   if (
     response.ok &&
     !["GET", "HEAD"].includes(method) &&
-    /\/api\/(tasks|projects|planning|pathfinder)(\/|\?|$)/.test(path)
+    /\/api\/(tasks|projects|planning|pathfinder|operating)(\/|\?|$)/.test(path)
   )
     notifyWorkChanged();
   return response;

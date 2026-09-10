@@ -1,3 +1,4 @@
+import { loadOperatingDay } from '@/lib/operating-server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { loadHomeGlance } from '@/lib/ad-sync'
@@ -73,6 +74,7 @@ export type AgentBrief = {
   morningWave: MorningWavePayload | null
   /** One-line operator hint for agents — keep prompts short. */
   hint: string
+  operating?: { next: unknown; alternatives: unknown[]; proposals: number; waiting: number; sources: unknown[]; endpoint: string; outboundEndpoint: string }
   schemaVersion: number
 }
 
@@ -171,6 +173,7 @@ async function countExact(
  */
 export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBrief> {
   const generatedAt = new Date().toISOString()
+  const operating = await loadOperatingDay()
 
   const [adsGlance, instantlySnap, lastSync, pipelineRows, activeCount, focusCampaigns, lastBatch, total, replied, interested, meetingBooked, inInstantly, needsReview] =
     await Promise.all([
@@ -225,7 +228,7 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
   const pipeline = (pipelineRows.data ?? []).map((row) => ({
     id: String(row.id),
     name: String(row.name),
-    status: String(row.status ?? 'planned'),
+    status: operating.campaigns.find((c:any)=>c.id===row.id)?.provider?.status || String(row.status ?? 'planned'),
     health: String(row.health ?? 'no_updates'),
     instantlyCampaignId: row.instantly_campaign_id ? String(row.instantly_campaign_id) : null
   }))
@@ -240,7 +243,7 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
 
   const lastImportAt =
     lastBatch.data?.[0]?.created_at != null ? String(lastBatch.data[0].created_at) : null
-  const focus = pickFocusCampaign(
+  let focus = pickFocusCampaign(
     (focusCampaigns.data ?? []).map((row) => ({
       id: String(row.id),
       name: String(row.name ?? ''),
@@ -250,6 +253,13 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
       location_tags: Array.isArray(row.location_tags) ? row.location_tags.map(String) : []
     }))
   )
+
+  const preferredId = operating.queue.find(t=>t.operating_context?.campaign_id)?.operating_context?.campaign_id || operating.preparations.find((p:any)=>p.data.status==='prepared')?.data.campaign_id
+  if(preferredId){
+    const preferred = await supabase.from('compass_pipeline_campaigns').select('id,name,status,priority,vertical_tags,location_tags').eq('id',preferredId).maybeSingle()
+    if(preferred.error) throw new Error('Current targeting unavailable')
+    focus=preferred.data as WaveCampaignPick | null
+  } else { focus=null }
 
   let waveLeads: WaveLeadPick[] = []
   if (focus) {
@@ -297,13 +307,11 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
   const morningWave = await loadMorningWavePayload(supabase, cold?.repliesWaiting ?? 0).catch(
     () => null
   )
-  if (morningWave && !morningWave.landUnlocked) {
-    hintParts.unshift('Home brief not accepted — do not land live remaining')
-  }
 
   return {
     generatedAt,
-    schemaVersion: 2,
+    schemaVersion: 3,
+    operating: {next:operating.queue[0] || null,alternatives:operating.queue.slice(1,4),proposals:operating.proposals.length,waiting:operating.waiting.length,sources:operating.sources.map(s=>({name:s.data.name,status:s.data.status,checkedAt:s.data.checked_at})),endpoint:'/api/agent/operating',outboundEndpoint:'/api/agent/outbound/overview'},
     lastSyncAt: lastSync?.payload?.ranAt || lastSync?.syncedAt || null,
     ads: {
       source: adsGlance.source,
@@ -333,11 +341,11 @@ export async function buildAgentBrief(supabase: SupabaseClient): Promise<AgentBr
       needsReview
     },
     pipeline: {
-      activeCampaigns: activeCount.error ? 0 : activeCount.count ?? 0,
+      activeCampaigns: operating.campaigns.filter((c:any)=>c.provider?.status==='active').length,
       campaigns: pipeline
     },
     currentWave,
     morningWave,
-    hint: hintParts.join(' · ')
+    hint: operating.queue[0] ? `Next: ${operating.queue[0].title}. Read /api/agent/operating for context and readiness.` : 'No ready work. Review proposals and source coverage at /api/agent/operating.'
   }
 }

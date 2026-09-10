@@ -28,6 +28,21 @@ export const TOOLS = [
     },additionalProperties:false}
   },
   {
+    name: 'outbound.overview',
+    description: 'Shared Outbound screen truth: observed campaign status with freshness, preparation, recorded yesterday/today activity and source-backed next-action proposals. Use this for what is live and what to do next. Refresh never sends or activates.',
+    inputSchema: { type: 'object', properties: { fresh: { type: 'boolean' } }, additionalProperties: false }
+  },
+  {
+    name: 'operating',
+    description: 'Read the shared operating day, accepted order, alternatives, contextual tasks, goals, preparations and source coverage.',
+    inputSchema: { type: 'object', properties: { day: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } }, additionalProperties: false }
+  },
+  {
+    name: 'operating.write',
+    description: 'Idempotent revision-checked contextual task/project and source/preparation/capture writeback. Pass the full operating command. Agents cannot complete tasks, accept a day or change accepted dates. Inferred work remains proposed.',
+    inputSchema: { type: 'object', required: ['command'], properties: { command: { type: 'object', additionalProperties: true } }, additionalProperties: false }
+  },
+  {
     name: 'brief',
     description:
       'Compact daily brief plus currentWave (trade, cluster, remaining). Cached unless fresh=true. Start here. Live targeting is Compass, not markdown.',
@@ -323,6 +338,19 @@ export async function callTool(name, args = {}, { cfg, fetchImpl }) {
     case 'pathfinder.review': {
       const r=await compassFetch(cfg,{method:'POST',path:'/api/agent/pathfinder',body:{...args,action:'review'},fetchImpl});
       return r.status>=400?toolError(JSON.stringify(r.json)):toolOk(r.json);
+    }
+    case 'outbound.overview': {
+      const r = await compassFetch(cfg, { method: 'GET', path: '/api/agent/outbound/overview', headers: args.fresh === true ? { 'x-compass-fresh': '1' } : {}, fetchImpl });
+      return r.status >= 400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);
+    }
+    case 'operating': {
+      const r = await compassFetch(cfg, { method: 'GET', path: '/api/agent/operating' + (args.day ? '?day=' + encodeURIComponent(args.day) : ''), fetchImpl });
+      return r.status >= 400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);
+    }
+    case 'operating.write': {
+      if (!args.command || typeof args.command !== 'object' || Array.isArray(args.command)) return toolError('command must be an object');
+      const r = await compassFetch(cfg, { method: 'POST', path: '/api/agent/operating', body: args.command, fetchImpl });
+      return r.status >= 400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);
     }
     case 'brief': {
       const r = await compassFetch(cfg, {

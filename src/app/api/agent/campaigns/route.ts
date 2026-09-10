@@ -39,6 +39,8 @@ export async function GET(request: Request) {
     }
 
     const rows = pipeline.data ?? []
+    const evidence = await admin.from('compass_operating_records').select('id,kind,data,updated_at').in('kind',['campaign','preparation']).limit(500)
+    if(evidence.error) throw new Error('Campaign evidence unavailable')
     const ids = rows.map((row) => row.id)
     let leadSummaries: ReturnType<typeof summarizeLeadsByCampaign> = {}
     const listIdsByCampaign = new Map<string, string[]>()
@@ -90,6 +92,9 @@ export async function GET(request: Request) {
           id: row.id,
           name: row.name,
           status: row.status,
+          planningStatus: row.status,
+          provider: evidence.data?.find(r=>r.id===`campaign:${row.id}`)?.data ?? null,
+          preparations: evidence.data?.filter(r=>r.kind==='preparation' && r.data.campaign_id===row.id).map(r=>({id:r.id,status:r.data.status,count:r.data.lead_ids?.length??null,source:r.data.source,url:r.data.url})) ?? [],
           health: row.health,
           priority: row.priority,
           summary: row.summary,
