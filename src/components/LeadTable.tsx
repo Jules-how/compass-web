@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type {
   LeadContact,
   LeadListFilters,
@@ -31,7 +31,9 @@ import {
 import { computeRecontactEligibility } from '@/lib/recontact-eligibility'
 import { parseLeadBucket, type LeadBucket } from '@/lib/lead-buckets'
 import { LeadSidecar } from '@/components/LeadSidecar'
-import { useLeadGridColumns } from '@/components/LeadColumnPicker'
+import { LeadColumnPicker, useLeadGridColumns } from '@/components/LeadColumnPicker'
+import { ModalFrame } from '@/components/ui/ModalFrame'
+import { Search, SlidersHorizontal, Download, X } from 'lucide-react'
 import RecordsTable from '@/components/ui/records-table'
 import { useUndo } from '@/components/UndoProvider'
 import type { LeadColumnPreset } from '@/lib/lead-columns'
@@ -106,24 +108,34 @@ export default function LeadTable({
   const [newListName, setNewListName] = useState('')
   const [savedSegments, setSavedSegments] = useState<SavedLeadSegment[]>([])
   const [segmentName, setSegmentName] = useState('')
-  const [filtersOpen, setFiltersOpen] = useState(() =>
-    leadFiltersNeedExactCount(filters),
-  )
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const filterPanelId = useId()
   const grid = useLeadGridColumns(columnPreset, leads)
   const undo = useUndo()
 
   const embed = variant === 'embed'
+  const activeFilters = Object.entries(filters).filter(([key, value]) => key !== 'bucket' && value != null && value !== '')
+  const filterLabels: Record<string, string> = { q: 'Search', outbound_status: 'Status', sync_state: 'Sync', completeness: 'Contact details', list_id: 'List', pipeline_campaign_id: 'Campaign', cohort_campaign_id: 'Campaign cohort', instantly_campaign_id: 'Instantly campaign', icp_status: 'Fit', recontact_ok: 'Recontact allowed', recontact_ready: 'Recontact ready', suppressed: 'Suppressed', unverified_only: 'Unverified only', after_hours: 'After hours', min_reviews: 'Min. reviews' }
+  function removeFilter(key: string) {
+    const next = { ...filters }
+    delete next[key as keyof LeadListFilters]
+    onNavigate(next, 1)
+  }
   const bucket: LeadBucket = parseLeadBucket(filters.bucket) ?? 'leads'
   const selectedLead = useMemo(
     () => leads.find((l) => l.id === selectedId) ?? null,
     [leads, selectedId],
   )
 
+  // A new callback identity must not clear a record selection. The reset is
+  // driven by filters, while its notification uses the latest committed callback.
+  const onLeadSelectRef = useRef(onLeadSelect)
+  useEffect(() => { onLeadSelectRef.current = onLeadSelect }, [onLeadSelect])
   useEffect(() => {
     setDraftFilters(filters)
     setSelected(new Set())
     setSelectedId(null)
-    onLeadSelect?.(null)
+    onLeadSelectRef.current?.(null)
   }, [filters])
 
   useEffect(() => {
@@ -151,12 +163,9 @@ export default function LeadTable({
   }
 
   function patchFilters(patch: Partial<LeadListFilters>) {
-    setDraftFilters((f) => {
-      const next = withBucket({ ...f, ...patch })
-      // Selects apply immediately so filter chips match the table (Attio-style).
-      onNavigate(next, 1)
-      return next
-    })
+    const next = withBucket({ ...draftFilters, ...patch })
+    setDraftFilters(next)
+    onNavigate(next, 1)
   }
 
   function resetFilters() {
@@ -453,16 +462,20 @@ export default function LeadTable({
       createdAt: new Date().toISOString(),
     }
     const merged = [next, ...savedSegments].slice(0, 20)
-    persistSegments(merged)
-    setSavedSegments(merged)
-    setSegmentName('')
-    setBulkNote(`Saved segment “${name}”.`)
+    try {
+      persistSegments(merged)
+      setSavedSegments(merged)
+      setSegmentName('')
+      setBulkNote(`Saved segment “${name}” in this browser.`)
+    } catch {
+      setBulkNote('This browser could not save the segment. Your filters are still applied.')
+    }
   }
 
   function deleteSegment(id: string) {
     const merged = savedSegments.filter((s) => s.id !== id)
-    persistSegments(merged)
-    setSavedSegments(merged)
+    try { persistSegments(merged); setSavedSegments(merged) }
+    catch { setBulkNote('This browser could not remove the saved segment. Try again.') }
   }
 
   const summaryChips: Array<{
@@ -548,7 +561,7 @@ export default function LeadTable({
   }
 
   return (
-    <div className={embed ? 'flex h-full min-h-0 gap-3' : 'flex gap-5'}>
+    <div className={embed ? 'crm-records-layout crm-records-embed flex h-full min-h-0 gap-3' : 'crm-records-layout'}>
       <div
         className={
           embed
@@ -557,10 +570,11 @@ export default function LeadTable({
         }
       >
         <div className="crm-operating-toolbar flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center rounded-xl bg-stone-100/90 p-0.5 shadow-soft">
+          <div className="crm-bucket-tabs" role="group" aria-label="Record collection">
             <button
               type="button"
               onClick={() => switchBucket('leads')}
+              aria-pressed={bucket === 'leads'}
               className={`rounded-[10px] px-3 py-1.5 text-sm font-medium transition ${
                 bucket === 'leads'
                   ? 'bg-white text-neutral-900 shadow-soft'
@@ -572,6 +586,7 @@ export default function LeadTable({
             <button
               type="button"
               onClick={() => switchBucket('prospects')}
+              aria-pressed={bucket === 'prospects'}
               className={`rounded-[10px] px-3 py-1.5 text-sm font-medium transition ${
                 bucket === 'prospects'
                   ? 'bg-white text-neutral-900 shadow-soft'
@@ -583,6 +598,7 @@ export default function LeadTable({
             <button
               type="button"
               onClick={() => switchBucket('archived')}
+              aria-pressed={bucket === 'archived'}
               className={`inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium transition ${
                 bucket === 'archived'
                   ? 'bg-white text-neutral-900 shadow-soft'
@@ -600,11 +616,12 @@ export default function LeadTable({
           {columnPreset === 'crm' ? (
             <select className="compass-input crm-view-select" aria-label="CRM column view" value={grid.view}
               onChange={(event) => grid.setView(event.target.value as 'operating' | 'legacy')}>
-              <option value="operating">Operating view</option>
-              <option value="legacy">Legacy / custom view</option>
+              <option value="operating">Contact overview</option>
+              <option value="legacy">Research & outreach</option>
             </select>
           ) : null}
-          <input
+          <div className="crm-record-search"><Search size={16} aria-hidden="true" /><input
+            aria-label="Search records"
             type="search"
             placeholder="Name, email, company, or phone"
             value={draftFilters.q ?? ''}
@@ -614,8 +631,8 @@ export default function LeadTable({
             onKeyDown={(e) => {
               if (e.key === 'Enter') applyFilters()
             }}
-            className="min-w-[12rem] flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm focus:border-sf-orange focus:outline-none"
-          />
+            className="crm-search-input"
+          /><button type="button" onClick={() => applyFilters()} aria-label="Run record search">Search</button></div>
           {embed ? (
             <>
               <FilterSelect
@@ -671,70 +688,53 @@ export default function LeadTable({
                 ]}
                 className="w-40"
               />
-              <button
-                type="button"
-                onClick={() => applyFilters()}
-                className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-neutral-700 hover:bg-stone-50"
-              >
-                Search
-              </button>
             </>
           ) : (
             <>
               <button
                 type="button"
                 onClick={() => setFiltersOpen((open) => !open)}
+                aria-expanded={filtersOpen}
+                aria-controls={filterPanelId}
                 className={`rounded-xl border px-3 py-2 text-sm font-medium ${
                   filtersOpen || leadFiltersNeedExactCount(filters)
                     ? 'border-sf-orange/40 bg-orange-50 text-neutral-900'
                     : 'border-stone-200 bg-white text-neutral-700 hover:bg-stone-50'
                 }`}
               >
-                Filters
+                <SlidersHorizontal size={14} aria-hidden="true" /> Filters{activeFilters.length ? ` (${activeFilters.length})` : ''}
               </button>
+              <LeadColumnPicker phoneSparse={false} visible={grid.visible} onChange={grid.setVisible} preset={columnPreset} occupied={grid.occupied} />
               <button
                 type="button"
                 onClick={() => void handleExport(false)}
                 disabled={exporting || total === 0}
                 className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-stone-50 disabled:opacity-60"
               >
-                {exporting ? 'Exporting…' : 'Export CSV'}
+                <Download size={14} aria-hidden="true" /> {exporting ? 'Exporting…' : 'Export CSV'}
               </button>
             </>
           )}
         </div>
 
-        {summary && !embed ? (
-          <div className="crm-status-filters flex gap-1.5 overflow-x-auto pb-0.5" aria-label="Common status filters">
-            {summaryChips.map((chip) => {
-              const active = chipActive(chip.filters)
-              return (
-                <button
-                  key={chip.key}
-                  type="button"
-                  onClick={() => onNavigate(withBucket(chip.filters), 1)}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[12px] transition ${
-                    active
-                      ? 'border-sf-orange/40 bg-orange-50 text-neutral-900 shadow-soft'
-                      : 'border-stone-200/70 bg-white text-neutral-600 shadow-soft hover:border-stone-300 hover:bg-stone-50'
-                  }`}
-                >
-                  <span className="font-semibold tabular-nums text-neutral-900">
-                    {chip.count.toLocaleString()}
-                  </span>
-                  <span className="font-medium text-neutral-500">
-                    {chip.label}
-                  </span>
-                </button>
-              )
+        {!embed && activeFilters.length > 0 ? (
+          <div className="crm-active-filters" aria-label="Current filters">
+            {activeFilters.map(([key, value]) => {
+              const label = filterLabels[key] || key.replaceAll('_', ' ')
+              const displayValue = key === 'list_id' ? crmLists.find((list) => list.id === value)?.name || value : String(value).replaceAll('_', ' ')
+              return <button key={key} type="button" onClick={() => removeFilter(key)} aria-label={`Remove ${label}: ${displayValue}`}>
+                <span>{label}: <strong>{displayValue}</strong></span><X size={12} aria-hidden="true" />
+              </button>
             })}
+            <button type="button" onClick={resetFilters}>Clear all</button>
           </div>
         ) : null}
+        {exportNote ? <p role="status" className="crm-data-notice">{exportNote}</p> : null}
 
         {/* CRM lists */}
         {!embed ? (
           <details className="folio-crm-lists">
-            <summary>Lists & segments</summary>
+            <summary>Lists & saved views</summary>
             <div>
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
@@ -796,7 +796,8 @@ export default function LeadTable({
         ) : null}
 
         {!embed && filtersOpen ? (
-          <div className="rounded-2xl border border-stone-200/70 bg-white p-4 shadow-soft">
+          <div id={filterPanelId} className="crm-filter-panel">
+            {summary ? <div className="crm-quick-filters" aria-label="Quick filters">{summaryChips.map((chip) => <button key={chip.key} type="button" aria-pressed={chipActive(chip.filters)} onClick={() => onNavigate(withBucket(chip.filters), 1)}>{chip.label} <span>{chip.count.toLocaleString()}</span></button>)}<p>Counts cover all active records. Selecting a quick filter replaces other filters.</p></div> : null}
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
                 Segments
@@ -1030,7 +1031,7 @@ export default function LeadTable({
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <FilterSelect
-                label=""
+                label="Suppression"
                 hideLabel
                 value={draftFilters.suppressed ?? ''}
                 onChange={(v) =>
@@ -1045,7 +1046,7 @@ export default function LeadTable({
                 className="w-auto min-w-[160px]"
               />
               <FilterSelect
-                label=""
+                label="Recontact permission"
                 hideLabel
                 value={draftFilters.recontact_ok ?? ''}
                 onChange={(v) =>
@@ -1060,7 +1061,7 @@ export default function LeadTable({
                 className="w-auto min-w-[160px]"
               />
               <FilterSelect
-                label=""
+                label="Recontact readiness"
                 hideLabel
                 value={draftFilters.recontact_ready ?? ''}
                 onChange={(v) =>
@@ -1139,6 +1140,7 @@ export default function LeadTable({
               Unsuppress
             </button>
             <select
+              aria-label="Stage for selected records"
               value={bulkStatus}
               onChange={(e) => setBulkStatus(e.target.value)}
               className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs"
@@ -1159,6 +1161,7 @@ export default function LeadTable({
             </button>
             <input
               type="text"
+              aria-label="Tag for selected records"
               placeholder="Tag"
               value={bulkTag}
               onChange={(e) => setBulkTag(e.target.value)}
@@ -1173,6 +1176,7 @@ export default function LeadTable({
               Add tag
             </button>
             <select
+              aria-label="List for selected records"
               value={bulkListId || filters.list_id || ''}
               onChange={(e) => setBulkListId(e.target.value)}
               className="rounded-xl border border-stone-200 bg-white px-2.5 py-1 text-xs"
@@ -1216,14 +1220,14 @@ export default function LeadTable({
               Clear
             </button>
             {bulkNote && (
-              <span className="w-full text-xs text-neutral-600">
+              <span role="status" className="w-full text-xs text-neutral-600">
                 {bulkNote}
               </span>
             )}
           </div>
         )}
         {bulkNote && selected.size === 0 && (
-          <p className="text-xs text-neutral-500">{bulkNote}</p>
+          <p role="status" className="text-xs text-neutral-500">{bulkNote}</p>
         )}
 
         {!embed ? (
@@ -1318,7 +1322,7 @@ export default function LeadTable({
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between pt-0.5 text-xs text-neutral-500">
+        <div className="crm-pagination">
           <span>
             Showing {totalShown === 0 ? 0 : (page - 1) * pageSize + 1}–
             {totalShown} of {total.toLocaleString()}{' '}
@@ -1353,21 +1357,14 @@ export default function LeadTable({
         </div>
       </div>
 
-      {selectedLead ? (
-        <div
-          className={
-            embed
-              ? 'h-full w-[min(100%,320px)] shrink-0 overflow-hidden rounded-xl border border-stone-200/70 bg-white'
-              : 'sticky top-4 h-[min(80vh,720px)] w-full max-w-[400px] shrink-0 overflow-hidden rounded-2xl border border-stone-200/70 bg-white shadow-soft'
-          }
-        >
-          <LeadSidecar
-            lead={selectedLead}
-            onClose={() => {
-              setSelectedId(null)
-            }}
-          />
+      {selectedLead ? embed ? (
+        <div className="crm-embedded-detail">
+          <LeadSidecar key={selectedLead.id} lead={selectedLead} onClose={() => { setSelectedId(null); onLeadSelect?.(null) }} />
         </div>
+      ) : (
+        <ModalFrame open label="Contact record" onClose={() => { setSelectedId(null); onLeadSelect?.(null) }} overlayClassName="crm-detail-overlay" contentClassName="crm-detail-sheet" motion="sheet">
+          <LeadSidecar key={selectedLead.id} lead={selectedLead} onClose={() => { setSelectedId(null); onLeadSelect?.(null) }} />
+        </ModalFrame>
       ) : null}
     </div>
   )

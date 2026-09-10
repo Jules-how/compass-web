@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { createContext, useContext, useEffect } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { ConsoleHomeInboxKeepAlive } from '@/components/ConsoleHomeInboxKeepAlive'
 import {
   ConsoleNavProvider,
@@ -73,6 +73,18 @@ function OperatorConsoleLayoutInner({
 }) {
   const router = useRouter()
   const operator = isOperatorRole(role)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  useEffect(() => {
+    try { setSidebarCollapsed(localStorage.getItem('compass.sidebar.collapsed') === 'true') } catch { /* Storage is optional. */ }
+  }, [])
+
+  function toggleSidebar() {
+    setSidebarCollapsed((current) => {
+      try { localStorage.setItem('compass.sidebar.collapsed', String(!current)) } catch { /* Storage is optional. */ }
+      return !current
+    })
+  }
 
   useEffect(() => {
     if (!operator) return
@@ -103,7 +115,7 @@ function OperatorConsoleLayoutInner({
 
   return (
     <ConsoleChromeContext.Provider value={true}>
-      <div className="compass-shell folio-shell">
+      <div className="compass-shell folio-shell" data-sidebar-collapsed={sidebarCollapsed}>
         <a
           href="#compass-main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[110] focus:rounded-xl focus:bg-white focus:px-3.5 focus:py-2 focus:text-sm focus:font-medium focus:text-neutral-900 focus:shadow-soft"
@@ -112,7 +124,7 @@ function OperatorConsoleLayoutInner({
         </a>
         <FolioSidebar role={role} />
         <div className="folio-workspace">
-          <FolioTopbar role={role} />
+          <FolioTopbar role={role} sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
           <ConsoleMain>{children}</ConsoleMain>
         </div>
       </div>
@@ -184,12 +196,13 @@ function PageMain({
       data-width={width}
       className={`folio-page mx-auto w-full ${WIDTH[width]} ${compact ? 'folio-page-compact' : ''}`}
     >
-      {(title || actions) && (
+      {compact && title ? <h1 className="sr-only">{title}</h1> : null}
+      {((title && !compact) || actions) && (
         <header
           className={`flex flex-wrap items-center justify-between gap-3 ${compact ? 'mb-2' : 'mb-7 items-end gap-4'}`}
         >
           <div className="min-w-0">
-            {title ? (
+            {title && !compact ? (
               <h1
                 className={
                   compact ? 'compass-page-title-compact' : 'compass-page-title'

@@ -1,15 +1,15 @@
 ---
-description: Compass design identity and the scope of requested UI changes
+description: Compass workspace design identity and the scope of requested UI changes
 globs: src/**/*.tsx, src/**/*.css, tailwind.config.*
 alwaysApply: false
 ---
 
 # Compass UI guidance
 
-The selected identity uses Compass cream-and-orange colours with Folio layouts: a cream desk, warm paper documents, orange actions, DM Sans controls and Newsreader narrative headings. Jules restored this palette on 9 September 2026. For incidental changes, reuse `src/app/folio.css` and `src/components/folio/`. The design contract is `docs/design/FOLIO.md`. Keep the restored colours and existing editorial typography; the earlier lilac-and-plum palette is superseded.
+Jules selected Linear as the visual foundation across Compass and authorised implementation on 10 September 2026. Use a near-white working area, quiet grey navigation, consistent sans-serif typography, restrained violet-blue actions, broad operational views and comfortable writing measures. The previous cream/orange editorial direction is superseded for the operator console.
 
-A request to improve UI or UX authorises relevant changes to hierarchy, spacing, layout, feedback, and interaction within the requested surface. Make the result meaningfully better and explain the evidence. It does not require preserving a demonstrated usability problem. Change the broader brand, theme, or navigation model only when that is within the requested scope.
+Current design contract: `docs/design/WORKSPACE.md`. Shared owners: `src/app/folio.css` compatibility tokens/styles, `src/app/workspace.css` shared sizing and hierarchy, `src/components/OperatorShell.tsx` and `src/components/folio/FolioChrome.tsx`. Page-specific workspace styles extend these owners. Keep existing data, auth, caching and persistence contracts unless the request includes their behaviour.
 
-For a review, recommend valuable changes even if implementation is a separate task. Separate verified defects from design proposals. Do not treat a checklist or a tool's preferred style as the verdict.
+A request to improve UI or UX authorises relevant changes to hierarchy, spacing, layout, feedback and interaction within the requested surface. Make the result meaningfully better and explain the evidence. It does not require preserving a demonstrated usability problem. Separate verified defects from design proposals; a framework is not the verdict.
 
-Inspect current sources when needed: `src/app/globals.css`, `tailwind.config.ts`, `src/components/ui/card.tsx`, `src/components/ui/sidebar.tsx`, `src/components/OperatorShell.tsx`, and `src/components/NavLinks.tsx`. Use their actual values rather than an old prose snapshot.
+Use actual current source values and rendered evidence. Keep keyboard operation, visible errors, narrow-screen scrolling and draft safety intact. A completed build or a mockup alone is not evidence that the deployed interface works.
