@@ -129,7 +129,11 @@ export async function loadRhythm(db: SupabaseClient, params: URLSearchParams) {
     Number(preference?.call_target ?? 10) * Number(preference?.ready_days ?? 2);
   const ready = selected.filter(
     (l) =>
-      !open.some((t) => t.lead_id === l.id) &&
+      !open.some(
+        (t) =>
+          t.lead_id === l.id &&
+          (due.some((d) => d.id === t.id) || t.outreach_state === "unresolved"),
+      ) &&
       !l.rhythm_last_interaction_at &&
       l.rhythm_disposition !== "closed" &&
       !l.last_outbound_at &&
@@ -148,7 +152,11 @@ export async function loadRhythm(db: SupabaseClient, params: URLSearchParams) {
       ["replied", "interested", "replied_positive"].includes(
         l.outbound_status || "",
       ) &&
-      !open.some((t) => t.lead_id === l.id) &&
+      !open.some(
+        (t) =>
+          t.lead_id === l.id &&
+          (due.some((d) => d.id === t.id) || t.outreach_state === "unresolved"),
+      ) &&
       (!l.rhythm_last_interaction_at ||
         new Date(l.rhythm_last_interaction_at) <
           new Date(

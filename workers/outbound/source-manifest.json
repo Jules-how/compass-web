@@ -6,7 +6,7 @@
     ".agents/skills/instantly-load/history/2026-09-09-before-preparation.md": "1351b8a8b5ca63400d3b43a55f1fcf5769440ed5131eb4763e13d0f799e5d230",
     ".agents/skills/instantly-load/test_check_campaign.py": "5087763e2d99e629509ae2fc1c32beb7829927fe9ccb447ceae9441d2e5f0405",
     "cold-email/AGENTS.md": "18eb4d64cba61f21571f07bd3d29973421176e3e55ba9c38078c93806bc9475f",
-    "cold-email/PIPELINE.md": "980369109324e2f3e1a9ae031861cc4a05b30d3bc52ca448d93b5a81ababd9af",
+    "cold-email/PIPELINE.md": "63f118788edcaab5ad2f6852117457ddc5388296b2c20d88cdcf375ca47e936e",
     "cold-email/email-copy/AGENT.md": "22a555a07c8b8eeb07ad6fe88a46717d7ccec6765763862c0ea16f680241d1bd",
     "cold-email/factory_job.py": "80b28b43c6cf9c1d88160958390759023343b2b3dc4d6ab8849e38d157d0dfa2",
     "cold-email/list-builds/AGENT.md": "7185f43ebdce31663ad772bb58f78e2be19b7e6d5a2876d3b79f8e7cb589dd14",
@@ -32,6 +32,8 @@
     "switchflow-offer/verticals/locksmith.md": "b752a5cccb4ee1361c70ef7007ae0f6daade5682d01063c5ce5ed3c4f215e9f3",
     "switchflow-offer/verticals/pest.md": "fddbdb518e182d065619cb44dcf862e9ba68eded2aad4deec5a92b97d6defec8",
     "switchflow-offer/verticals/plumbing.md": "2dcbd1810dd6b82116150c923bee72c50cedd64ffd85de690455311fbd026282",
-    "switchflow-offer/verticals/roofing.md": "6b3e4c03fbf6efcb1ce4a3caed2c96721648ada9de040aa169cca45fa0e9b850"
+    "switchflow-offer/verticals/roofing.md": "6b3e4c03fbf6efcb1ce4a3caed2c96721648ada9de040aa169cca45fa0e9b850",
+    "cold-email/rhythm_handoff.py": "a14a3530058c3cb788b7e7c8f27612895f1294603bbb2073ad3ade86d090bb59",
+    ".agents/skills/compass-agent/SKILL.md": "e37130d22b14e8af262ecb7c426b5054fbace4ed6348abb2e3038dfc700d5a12"
   }
 }

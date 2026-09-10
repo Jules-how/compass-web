@@ -175,6 +175,8 @@ export function RhythmLeadPanel({
   const { lead, tasks, touches } = data;
   const open = tasks.filter(isOpen);
   async function save() {
+    setNotice("");
+    setError("");
     try {
       const next =
         disposition === "schedule" || edit
@@ -276,6 +278,23 @@ export function RhythmLeadPanel({
           </p>
         )}
       </div>
+      {lead.rhythm_selected_at && !open.length && (
+        <button
+          className={button}
+          disabled={busy}
+          onClick={() =>
+            send({
+              operation: "select",
+              lead_id: leadId,
+              revision: lead.rhythm_revision,
+              selected: false,
+              timezone: lead.rhythm_timezone || zone || "Australia/Sydney",
+            })
+          }
+        >
+          Remove from my outreach queue
+        </button>
+      )}
       {!lead.rhythm_selected_at && (
         <div className="space-y-2">
           <label className="block text-sm">

@@ -25,6 +25,12 @@ async function database() {
       "utf8",
     ),
   );
+  await db.exec(
+    await readFile(
+      "supabase/migrations/20260910084156_outbound_planning_is_not_contact.sql",
+      "utf8",
+    ),
+  );
   return db;
 }
 const capture = (revision, id) => ({
@@ -187,6 +193,23 @@ test("provider replies replay once and older sends cannot undo reply or advance 
         .recontact_ok,
       0,
     );
+  } finally {
+    await db.close();
+  }
+});
+
+test("planning a callback does not fabricate an interaction", async () => {
+  const db = await database();
+  try {
+    await db.exec("SET test.operator='true'");
+    await save(db, { ...capture(0, "planned"), outcome: "next_step" });
+    const lead = (
+      await db.query(
+        "select last_outbound_at,rhythm_last_interaction_at from lead_contacts",
+      )
+    ).rows[0];
+    assert.equal(lead.last_outbound_at, null);
+    assert.equal(lead.rhythm_last_interaction_at, null);
   } finally {
     await db.close();
   }

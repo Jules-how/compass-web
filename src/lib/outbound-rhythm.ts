@@ -266,7 +266,10 @@ export function callWindow(zone: string | null, now = new Date()) {
 }
 export function weeklyOutcomes(touches: RhythmTouch[]) {
   const calls = touches.filter(
-    (x) => x.channel === "call" && x.direction === "outbound",
+    (x) =>
+      x.channel === "call" &&
+      x.direction === "outbound" &&
+      x.outcome !== "next_step",
   );
   return {
     callAttempts: calls.length,
