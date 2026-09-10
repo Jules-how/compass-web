@@ -17,7 +17,7 @@
     "cold-email/openers/AGENT.md": "57a7541ff99597104696cff3e08e5770e16dbfc7cc8f403027aeb2116d93ff89",
     "cold-email/openers/generate_openers.py": "5d62fe47ff750ddb83a9270cf225caa26a8400edc6b298cde206b545ef5f9d72",
     "cold-email/openers/test_generate_openers.py": "566413bf9e0dfafb3cbb28f2a6d310897619a5d023a83917bd2465bc5f386614",
-    "cold-email/outbound_pipeline.py": "46aba364e7992f166646359dace8a9c0e818c1b34fd7bad6147831d192cb8c30",
+    "cold-email/outbound_pipeline.py": "cb7d8f0b9f7f818160abc7dfe05afbd8f4fae5f5edae4e49692db7c3aac02121",
     "cold-email/outbound_worker.py": "826a7c026805542b2d5fb2c8d2519aa707891cc7d9614075001e2da4f536cf9e",
     "cold-email/pipeline-config.example.json": "d59cd910c2bd13c15f26640487aec6cf7765b99d095166caa5395617c53ecd55",
     "cold-email/sheet_map.py": "298c20860eda82f32838c1050cf0e45f980941f152e66de0cbe6530866ec3b04",

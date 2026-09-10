@@ -632,6 +632,11 @@ class Pipeline:
         loaded_emails={x['email'] for x in loaded.get('receipts',[]) if x.get('status')=='confirmed'} if loaded.get('complete') else set()
         for r in results:
             if r['email'] in loaded_emails:r.update(route='already_loaded',hold_reason='Confirmed in the first five-contact paused campaign; not another new recipient')
+        ledger=read(self.out/'compass-reconciliation.json',{})
+        missing={x['email'] for x in ledger.get('review_draft_issues',[]) if x.get('issue')=='ledger_match_count'}
+        for r in results:
+            if r['route']=='email_review' and r['email'] in missing:
+                r.update(route='ledger_hold',hold_reason='Qualified and verified; Compass commit rejected the company identity. Retain for ledger resolution.')
         self.finish_drafts(results)
         self.export(results);self.m.event('pipeline_finished',elapsed_s=round(time.monotonic()-started,3),peak_concurrency=self.m.peak)
         self.summarize(results);return results
