@@ -58,6 +58,22 @@ export function FolioHome({
   const [folder, setFolder] = useState<'today' | 'waiting' | 'captured'>(
     'today',
   )
+  const [snapshotBusy, setSnapshotBusy] = useState(false)
+  const [snapshotError, setSnapshotError] = useState<string | null>(null)
+  async function refreshOutboundSnapshot() {
+    setSnapshotBusy(true)
+    setSnapshotError(null)
+    try {
+      const response = await fetch('/api/operator/outbound/snapshot', { method: 'POST' })
+      const result = await response.json()
+      if (!response.ok || !result.ok) throw new Error(result.error || 'Unable to refresh Instantly')
+      await onReload()
+    } catch (error) {
+      setSnapshotError(error instanceof Error ? error.message : 'Unable to refresh Instantly')
+    } finally {
+      setSnapshotBusy(false)
+    }
+  }
   const [briefOpen, setBriefOpen] = useState(false),
     [selected, setSelected] = useState<CompassTask | null>(null)
   const [busy, setBusy] = useState(false),
@@ -491,12 +507,15 @@ export function FolioHome({
               <h2>Outbound snapshot</h2>
               <button
                 className="folio-icon-button"
-                aria-label="Refresh Home"
-                onClick={() => void onReload()}
+                aria-label="Refresh outbound snapshot from Instantly"
+                disabled={snapshotBusy}
+                onClick={() => void refreshOutboundSnapshot()}
               >
                 <RefreshCw size={15} />
               </button>
             </div>
+            {snapshotBusy && <p role="status">Refreshing Instantly…</p>}
+            {snapshotError && <p role="alert">{snapshotError}. Showing the last saved snapshot.</p>}
             <dl className="folio-metrics">
               <div>
                 <dt>Sent in snapshot day</dt>

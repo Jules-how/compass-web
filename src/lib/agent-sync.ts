@@ -113,7 +113,7 @@ async function syncAllAdAccounts(supabase: SupabaseClient): Promise<NonNullable<
   }
 }
 
-async function syncInstantlyGlance(
+export async function syncInstantlyGlance(
   supabase: SupabaseClient
 ): Promise<{
   result: NonNullable<AgentSyncResult['instantly']>
