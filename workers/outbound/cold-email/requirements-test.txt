@@ -1,0 +1,2 @@
+# site_extract is imported by the companion regression tests.
+httpx[http2]==0.28.1

@@ -53,6 +53,7 @@ Compass-Web is a Next.js App Router + React app using hosted Supabase. Check `pa
 ### Tests / lint / build
 - `npm run lint`, `npm run typecheck`, and `npm run build` should pass.
 - Before pushing `main`: run `npm run verify` (deploy guards + typecheck). Guards catch the two Vercel footguns that kept red-deploying: illegal `route.ts` helper exports, and `@/` imports that only resolve to **untracked** local files (local build can pass; Vercel cannot see them).
+- Production uses one shared alias. Fetch current `origin/main` before release, preserve other merged work, and push the integrated source before publishing. A successful deployment from an older checkout can remove another task's routes. Verify the public alias and required APIs after the final release, not only an immutable deployment URL.
 - GitHub Action `.github/workflows/deploy-guards.yml` runs verify + production build on push/PR.
 - Prefer operator-console / project-management tests in `test/` for this repo mirror.
 

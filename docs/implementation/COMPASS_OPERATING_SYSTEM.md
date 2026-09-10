@@ -155,3 +155,15 @@ Final production: b6f063d, deployment dpl_BCXjxf6NJxY3h4KDvsvDBfyrbFcs.
 Unauthenticated agent read returns401; unsigned operator mutation returns403.
 Lean queue omits draft bodies; authenticated single-record read retains all21
 Perth recipient records and42 messages. Final provider/overview parity passed.
+
+## Concurrent release reconciliation
+
+A separate approved workspace redesign (#89, 39ede01) replaced the public alias
+with a build that lacked the new operating routes. The signed-in final check
+caught HTML responses where the queue expected JSON. Merged both workstreams,
+kept the new workspace design, and pushed integrated main 7514599 before publishing.
+Ninety-seven combined operating/history/workspace regressions pass. The shared
+release rule now requires fetching current main and verifying the public alias.
+This merged release supersedes the earlier b6f063d deployment evidence.
+The 11 September working handover is planning.note.56a5d45a-c362-00f3-9741-7e8c9d3c454e;
+it links the preserved 10 September history rather than overflowing that note.

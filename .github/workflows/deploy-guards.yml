@@ -24,6 +24,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Install outbound test dependencies
+        run: python3 -m pip install -r workers/outbound/cold-email/requirements-test.txt
       - name: Outbound companion regressions
         run: |
           python3 -m unittest discover -s workers/outbound/cold-email -p 'test_*.py'
