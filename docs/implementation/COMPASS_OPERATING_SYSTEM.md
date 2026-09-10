@@ -151,10 +151,10 @@ source review. No campaign launched, email sent, budget changed or business task
 closed during this implementation. Existing launch/schedule/completion authority
 is preserved.
 
-Final production: b6f063d, deployment dpl_BCXjxf6NJxY3h4KDvsvDBfyrbFcs.
-Unauthenticated agent read returns401; unsigned operator mutation returns403.
-Lean queue omits draft bodies; authenticated single-record read retains all21
-Perth recipient records and42 messages. Final provider/overview parity passed.
+Earlier operating release: b6f063d, deployment dpl_BCXjxf6NJxY3h4KDvsvDBfyrbFcs.
+Unauthenticated agent read returns 401; unsigned operator mutation returns 403.
+Lean queue omits draft bodies; authenticated single-record read retains all 21
+Perth recipient records and 42 messages. Provider/overview parity passed.
 
 ## Concurrent release reconciliation
 
@@ -167,3 +167,14 @@ release rule now requires fetching current main and verifying the public alias.
 This merged release supersedes the earlier b6f063d deployment evidence.
 The 11 September working handover is planning.note.56a5d45a-c362-00f3-9741-7e8c9d3c454e;
 it links the preserved 10 September history rather than overflowing that note.
+
+The combined workspace was then verified at desktop and 390 CSS pixels, including
+the exact 21-recipient/42-message review and linked weekly goals. Home labels new
+contacts and follow-ups explicitly. Privileged preparation reads use the explicit
+operator API namespace, with the signed-in operator gate unchanged. The service-role
+inventory covers the new operating routes and the previously added rhythm/snapshot
+routes; the general customer-route prohibition remains in force. CI now installs the
+outbound companion's HTTP dependency before its Python regression tests.
+
+The latest dated working handover records the final public deployment, source
+commit and CI result. That evidence supersedes intermediate deployment IDs above.
