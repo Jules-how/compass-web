@@ -274,10 +274,21 @@ export async function loadOperatingDay(day = sydneyDay()) {
           : s.data.status,
     },
   }));
-  const prepared = records.filter(
-    (r: OperatingRecord) =>
-      r.kind === "preparation" && r.data.status !== "archived",
-  );
+  const prepared = records
+    .filter(
+      (r: OperatingRecord) =>
+        r.kind === "preparation" && r.data.status !== "archived",
+    )
+    .map((r: OperatingRecord) => {
+      const { messages, ...data } = r.data;
+      return {
+        ...r,
+        data: {
+          ...data,
+          message_count: Array.isArray(messages) ? messages.length : 0,
+        },
+      };
+    });
   const activeGoals = goals.records.filter((g) => !g.data.archived);
   const monthEnd = new Date(
     Date.UTC(Number(day.slice(0, 4)), Number(day.slice(5, 7)), 0),

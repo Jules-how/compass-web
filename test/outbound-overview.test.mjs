@@ -156,3 +156,8 @@ test('full history scan stops at exactly twelve requests and keeps prior evidenc
  const previous={events:[],complete_through:'2026-09-10T01:00:00Z'};
  const r=await helper.collectOutboundEmailHistory('unused',['p1'],previous,now);assert.equal(count,12);assert.equal(r.requests,12);assert.equal(r.status,'error');assert.equal(r.complete_through,previous.complete_through);
 });
+test('recovery drafts stay separate from new supply and survive first-contact loaded receipts',()=>{
+ const prepared=(id,purpose,status,lead_ids)=>({id,data:{campaign_id:'c1',purpose,status,lead_ids}});
+ const r=outboundOverview(input({call_target:10,ready_days:2,preparations:[prepared('new','first_contact','prepared',['new']),prepared('recovery','followup_recovery','prepared',['old']),prepared('sent-first','first_contact','loaded',['old'])]}),now);
+ const c=r.campaigns[0];assert.equal(c.first_contact_count,1);assert.equal(c.followup_count,1);assert.equal(c.prepared_count,2);assert.match(r.recommendations.find(a=>a.kind==='supply').reason,/1 first-contact recipients and 1 follow-up drafts/);assert.equal(c.loaded_receipt_count,1);
+});

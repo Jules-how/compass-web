@@ -4,6 +4,9 @@ Read `GET /api/agent/operating` before selecting work. It returns the current
 queue, alternatives, accepted order, campaigns/provider evidence, preparation,
 projects/goals, captured notes, and source coverage. Query `?day=YYYY-MM-DD` for
 another Sydney day. Normal Compass agent authentication applies.
+The queue returns preparation metadata and exact recipient IDs without repeating
+every draft. Read `GET /api/agent/operating?record=preparation:...` for one full
+review record when its messages are needed.
 
 `POST /api/agent/operating` accepts the strict command schema in
 `src/lib/operating-core.ts`. The local CLI is `node scripts/operating.mjs` for a

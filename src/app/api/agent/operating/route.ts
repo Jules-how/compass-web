@@ -1,12 +1,32 @@
 import { requireAgentAuth } from "@/lib/agent-auth";
 import { portalJson, readBoundedJson } from "@/lib/portal-http";
-import { loadOperatingDay, executeOperating } from "@/lib/operating-server";
+import {
+  loadOperatingDay,
+  executeOperating,
+  operatingRecord,
+} from "@/lib/operating-server";
+import { getPortalAdminClient } from "@/lib/portal-admin";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 export async function GET(request: Request) {
   const denied = requireAgentAuth(request);
   if (denied) return denied;
   try {
+    const id = new URL(request.url).searchParams.get("record");
+    if (id) {
+      if (
+        !/^(preparation|capture|source|preferences|day):/.test(id) ||
+        id.length > 200
+      )
+        return portalJson(
+          { error: "Invalid operating record" },
+          { status: 400 },
+        );
+      const record = await operatingRecord(getPortalAdminClient(), id);
+      return record
+        ? portalJson(record)
+        : portalJson({ error: "not_found" }, { status: 404 });
+    }
     return portalJson(
       await loadOperatingDay(
         new URL(request.url).searchParams.get("day") || undefined,

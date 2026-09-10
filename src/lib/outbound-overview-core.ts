@@ -28,12 +28,19 @@ export function outboundOverview(input: OutboundInput, now = new Date()) {
     const batches = input.preparations.filter(p => p.data.campaign_id === c.id && p.data.status !== "archived");
     const prepared = unique(batches.filter(p => p.data.status === "prepared").flatMap(p => p.data.lead_ids || []));
     const loaded = unique(batches.filter(p => p.data.status === "loaded").flatMap(p => p.data.lead_ids || []));
+    const purpose = (p: Preparation) => p.data.purpose === "first_contact" ? "first" : ["followup", "followup_recovery"].includes(String(p.data.purpose)) ? "followup" : "other";
+    const pending = (kind: string) => {
+      const imported = new Set(batches.filter(p => p.data.status === "loaded" && purpose(p) === kind).flatMap(p => p.data.lead_ids || []));
+      return unique(batches.filter(p => p.data.status === "prepared" && purpose(p) === kind).flatMap(p => p.data.lead_ids || [])).filter(id => !imported.has(id));
+    };
+    const first = pending("first"), followup = pending("followup"), other = pending("other");
+    const pendingIds = unique([...first, ...followup, ...other]);
     const freshness = c.instantly_campaign_id ? observationFreshness(c.provider?.observed_at, now) : "not_connected";
     const failedRefresh = !!c.instantly_campaign_id && (providerSource?.data.status === "error" || (providerSource?.data.status === "partial" && !(Date.parse(c.provider?.observed_at || "") >= Date.parse(providerSource.data.checked_at || ""))));
     return { ...c, provider_status: c.instantly_campaign_id ? c.provider?.status || "unknown" : "not connected", freshness,
       refresh_error: failedRefresh ? String(providerSource?.data.error || "Provider refresh incomplete") : null,
-      prepared_count: prepared.filter(id => !loaded.includes(id)).length, prepared_lead_ids: prepared.filter(id => !loaded.includes(id)), loaded_receipt_count: loaded.length,
-      overlapping_stage_count: prepared.filter(id => loaded.includes(id)).length,
+      prepared_count: pendingIds.length, prepared_lead_ids: pendingIds, first_contact_count: first.length, followup_count: followup.length, unclassified_prepared_count: other.length, loaded_receipt_count: loaded.length,
+      overlapping_stage_count: prepared.filter(id => !pendingIds.includes(id)).length,
       preparations: batches, href: c.instantly_campaign_id ? `https://app.instantly.ai/app/campaign/${encodeURIComponent(c.instantly_campaign_id)}/analytics` : "/sales/outbound" };
   });
   const actions: NextAction[] = [];
@@ -73,8 +80,9 @@ export function outboundOverview(input: OutboundInput, now = new Date()) {
   const followup = input.leads.filter(l => !taskLeadIds.has(l.id) && !l.is_archived && l.rhythm_disposition !== "closed" && l.last_outbound_at && Date.parse(l.last_outbound_at) <= now.getTime() - 2 * 86400000 && ["contacted", "in_instantly"].includes(l.outbound_status || "") && !l.rhythm_last_interaction_at && !restrictionReason(l, "email") && campaigns.some(c => c.instantly_campaign_id === l.instantly_campaign_id && c.freshness === "current" && !c.refresh_error && ["paused", "completed"].includes(c.provider_status)));
   if (followup.length) actions.push({ id: "followup:review", title: `Review follow-up for ${followup.length} nonresponders`, reason: "Recorded contact is at least two days old and the campaign is paused or completed. Verify the sequence, replies, suppression and recipient-specific recovery before proposing any send; no due send is inferred.", href: rhythmLink(followup[0].id), kind: "followup_review", state: "proposed", lead_ids: followup.map(l => l.id), priority: 40 });
   const preparedTotal = campaigns.reduce((n, c) => n + c.prepared_count, 0);
+  const firstTotal = campaigns.reduce((n, c) => n + c.first_contact_count, 0), followupTotal = campaigns.reduce((n, c) => n + c.followup_count, 0), otherTotal = campaigns.reduce((n, c) => n + c.unclassified_prepared_count, 0);
   const target = (input.call_target || 0) * (input.ready_days || 0);
-  if (!input.rhythm_error && !input.rhythm_partial && target > allReady.length) actions.push({ id: "supply", title: "Plan the next prospect batch", reason: preparedTotal ? `${preparedTotal} prepared email recipients already exist. Review those first; the selected call pool has ${allReady.length} against the recorded ${target}-account buffer. Reuse qualified stock before choosing another city.` : `The selected call pool has ${allReady.length} against the recorded ${target}-account buffer. Check existing qualified stock and city coverage before proposing a bounded new list.`, href: "/sales/outbound", kind: "supply", state: "proposed", lead_ids: [], priority: 70 });
+  if (!input.rhythm_error && !input.rhythm_partial && target > allReady.length) actions.push({ id: "supply", title: "Plan the next prospect batch", reason: preparedTotal ? `${firstTotal} first-contact recipients and ${followupTotal} follow-up drafts are prepared${otherTotal ? `; ${otherTotal} other prepared recipients have no recorded purpose` : ""}. Review the appropriate existing work first; the selected call pool has ${allReady.length} against the recorded ${target}-account buffer. Reuse qualified stock before choosing another city.` : `The selected call pool has ${allReady.length} against the recorded ${target}-account buffer. Check existing qualified stock and city coverage before proposing a bounded new list.`, href: "/sales/outbound", kind: "supply", state: "proposed", lead_ids: [], priority: 70 });
   // Expansion is a provisional coverage choice, never evidence of demand or untouched leads.
   const coveredCities = new Set(campaigns.flatMap(c => c.location_tags || []).map(city => city.trim().toLowerCase()));
   const candidate = ["Melbourne", "Brisbane", "Adelaide", "Canberra"].find(city => !coveredCities.has(city.toLowerCase()));
