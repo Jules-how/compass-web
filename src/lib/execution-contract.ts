@@ -8,6 +8,8 @@ export type ProofClause = {
 export type ProofGroup = { all: ProofClause[] } | { any: ProofClause[] }
 
 export type ExecutionContract = {
+  /** Explicit operator request; blocked alone may mean an external wait. */
+  attention?: { kind: 'operator_decision'; question: string }
   objective?: string
   inScope?: string[]
   acceptanceCriteria?: string[]

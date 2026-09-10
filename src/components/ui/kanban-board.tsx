@@ -98,22 +98,22 @@ export function KanbanBoard({
   }
 
   return (
-    <div ref={boardRef} className={cn('folio-kanban grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4', className)}>
+    <div ref={boardRef} role="region" aria-label="Status board" tabIndex={0} className={cn('folio-kanban', className)}>
       {columns.map((column) => (
         <div
           key={column.id}
           data-column-id={column.id}
           className={cn(
-            'rounded-2xl border border-stone-200/70 bg-white p-5 shadow-soft',
+            'folio-kanban-column',
             dropTarget === column.id && 'ring-2 ring-[#e85d2a]/40'
           )}
           onDragOver={(event) => handleDragOver(event, column.id)}
           onDragLeave={() => setDropTarget((current) => (current === column.id ? null : current))}
           onDrop={(event) => handleDrop(event, column.id)}
         >
-          <div className="mb-5 flex items-center justify-between gap-2">
+          <div className="folio-kanban-header">
             <div className="min-w-0">
-              <div className="flex items-center gap-2.5">
+              <div className="folio-kanban-heading">
                 <div
                   className="size-3 shrink-0 rounded-full"
                   style={{ backgroundColor: column.color || '#d6d3d1' }}
@@ -138,7 +138,7 @@ export function KanbanBoard({
             ) : null}
           </div>
 
-          <div className="space-y-3">
+          <div className="folio-kanban-cards">
             {column.tasks.length === 0 ? (
               <p className="rounded-xl border border-dashed border-stone-200 px-3 py-6 text-[12px] text-neutral-400">
                 {column.emptyText || 'Drop a card here.'}
@@ -148,7 +148,7 @@ export function KanbanBoard({
                 <div
                   key={task.id}
                   className={cn(
-                    'rounded-xl border border-stone-200/80 bg-stone-50/70 p-4',
+                    'folio-kanban-card',
                     task.draggable === false || !onMove ? 'cursor-default' : 'cursor-move'
                   )}
                   draggable={Boolean(onMove) && task.draggable !== false}
@@ -179,7 +179,7 @@ export function KanbanBoard({
                   </div>
 
                   {task.description ? (
-                    <p className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-pretty text-neutral-500">
+                    <p className="folio-kanban-description" title={task.description}>
                       {task.description}
                     </p>
                   ) : null}
@@ -244,8 +244,8 @@ export function KanbanBoard({
                     </div>
                   ) : null}
                   {onMove && task.draggable !== false ? (
-                    <label className="mt-3 flex items-center gap-2 text-[11px] text-neutral-600">
-                      <span>Move to</span>
+                    <label className="folio-kanban-status">
+                      <span>Status</span>
                       <select
                         data-task-id={task.id}
                         aria-label={`Move ${task.title} to`}

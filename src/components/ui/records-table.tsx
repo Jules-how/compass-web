@@ -234,11 +234,10 @@ export default function RecordsTable({
   fill?: boolean
 }) {
   const [sort, setSort] = useState<{ key: LeadColumnId | 'index'; dir: 1 | -1 }>({
-    key: 'first_name',
+    key: 'company',
     dir: 1
   })
-  const [autoWidths, setAutoWidths] = useState<Partial<Record<LeadColumnId, number>>>({})
-  const effectiveWidths = { ...autoWidths, ...widths }
+  const effectiveWidths = widths
 
   const visibleRows = useMemo(() => {
     return [...leads].sort((a, b) => {
@@ -262,22 +261,6 @@ export default function RecordsTable({
   const minWidth =
     84 + columns.reduce((sum, id) => sum + columnWidth(id, effectiveWidths), 0)
 
-  useEffect(() => {
-    if (!columns.includes('categories')) return
-    if (widths.categories != null) return
-    const nodes = document.querySelectorAll('.records-scroll .records-tags')
-    let max = 0
-    nodes.forEach((node) => {
-      max = Math.max(max, (node as HTMLElement).scrollWidth)
-    })
-    if (max <= 0) return
-    const needed = Math.min(MAX_LEAD_COLUMN_WIDTH, Math.max(MIN_LEAD_COLUMN_WIDTH, max + 28))
-    setAutoWidths((current) => {
-      const prev = current.categories ?? 0
-      if (needed <= prev + 8) return current
-      return { ...current, categories: needed }
-    })
-  }, [columns, leads, widths.categories])
 
   return (
     <div className={`records-shell ${fill ? 'records-shell-fill' : ''}`}>
@@ -312,7 +295,7 @@ export default function RecordsTable({
                 return (
                   <th
                     key={id}
-                    className="records-header-cell records-resizable"
+                    className={`records-header-cell records-resizable ${id === 'company' ? 'records-identity' : ''}`}
                     aria-sort={active ? (sort.dir === 1 ? 'ascending' : 'descending') : undefined}
                     draggable={Boolean(onColumnsChange)}
                     onDragStart={(event) => {
@@ -408,10 +391,13 @@ export default function RecordsTable({
                     </td>
                     {columns.map((column) => {
                       const cell = leadColumnValue(lead, column)
+                      if (column === 'company' && !cell.text) cell.text = lead.name?.trim() || lead.email?.trim() || lead.phone?.trim() || 'Unnamed record'
+                      if (column === 'last_touch' && !lead.last_outbound_at) cell.text = 'No outbound recorded'
                       return (
                         <td
                           key={column}
-                          className={`records-cell ${cell.muted ? 'records-muted' : ''} ${
+                          title={column === 'last_touch' ? (lead.last_outbound_at ? `Last outbound: ${new Date(lead.last_outbound_at).toLocaleString()}` : 'No outbound timestamp recorded') : column === 'company' && !lead.company?.trim() ? 'Contact identity; no company recorded' : cell.text || undefined}
+                          className={`records-cell ${column === 'company' ? 'records-identity' : ''} ${cell.muted ? 'records-muted' : ''} ${
                             column === 'lead_facts' ? 'records-cell-facts' : ''
                           }`}
                         >
@@ -489,9 +475,13 @@ function CellBody({
     if (tags.length === 0) return <span className="records-muted">—</span>
     return (
       <div className="records-tags">
-        {tags.map((tag) => (
+        {tags.slice(0, 2).map((tag) => (
           <Tag key={tag} name={tag} />
         ))}
+        {tags.length > 2 ? <details className="records-tags-more" onClick={(event) => event.stopPropagation()}>
+          <summary aria-label={`${tags.length - 2} more categories`}>+{tags.length - 2} more</summary>
+          <div>{tags.slice(2).map((tag) => <Tag key={tag} name={tag} />)}</div>
+        </details> : null}
       </div>
     )
   }
@@ -503,6 +493,9 @@ function CellBody({
         {strength.label}
       </span>
     )
+  }
+  if ((column === 'phone' || column === 'email') && cell.text) {
+    return <a className="records-link" href={`${column === 'phone' ? 'tel:' : 'mailto:'}${cell.text}`} onClick={(event) => event.stopPropagation()}>{cell.text}</a>
   }
   if (cell.href && cell.text) {
     return (

@@ -35,6 +35,8 @@ export type InboxItem = {
   title: string
   preview: string
   occurredAt: string
+  receivedVerified?: boolean
+  attentionRequested?: boolean
   unread: boolean
   triage: InboxTriageState
   snoozedUntil: string | null
@@ -75,6 +77,9 @@ export type InboxPayload = {
   channels: InboxChannels
   /** Legacy shape for older consumers. */
   leads: PortalInboundLead[]
+  checkedAt?: string
+  partial?: boolean
+  nextPage?: number | null
 }
 
 /** Shared client cache key — matches nav hover prefetch + badge warm. */
@@ -92,9 +97,9 @@ export function itemsForInboxTab(payload: InboxPayload | null | undefined, tab: 
 }
 
 export const INBOX_TAB_LABELS: Record<InboxTab, string> = {
-  agents: 'Agents',
-  instantly: 'Instantly',
-  leads: 'Leads'
+  agents: 'Decisions',
+  instantly: 'Replies',
+  leads: 'Enquiries'
 }
 
 export const INBOX_TAB_HINTS: Record<InboxTab, string> = {
@@ -110,7 +115,7 @@ export function parseInboxTab(value: string | null | undefined): InboxTab {
   if (value && (INBOX_TABS as readonly string[]).includes(value)) {
     return value as InboxTab
   }
-  return 'leads'
+  return 'instantly'
 }
 
 export function emptyInboxCounts(): InboxTabCounts {
@@ -119,7 +124,7 @@ export function emptyInboxCounts(): InboxTabCounts {
 
 export function formatInboxWhen(iso: string): string {
   const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
+  if (Number.isNaN(date.getTime())) return 'Received date unavailable'
   return new Intl.DateTimeFormat('en-AU', {
     timeZone: 'Australia/Sydney',
     day: '2-digit',
@@ -154,11 +159,13 @@ function clip(text: string | null | undefined, max = 120): string {
 function triageFor(
   lookup: TriageLookup | undefined,
   channel: InboxChannel,
-  sourceId: string
+  sourceId: string,
+  receivedAt?: string
 ): { triage: InboxTriageState; snoozedUntil: string | null; identityKey: string | null } {
   const row = lookup?.get(`${channel}:${sourceId}`)
   return {
-    triage: effectiveTriage(row?.triage, row?.snoozed_until),
+    triage: row?.triage === 'done' && receivedAt && Date.parse(receivedAt) > Date.parse(row.updated_at)
+      ? 'unread' : effectiveTriage(row?.triage, row?.snoozed_until),
     snoozedUntil: row?.snoozed_until ?? null,
     identityKey: row?.identity_key ?? null
   }
@@ -173,7 +180,7 @@ export function projectAgentInboxItem(
 ): InboxItem {
   const statusLabel =
     task.status === 'blocked'
-      ? 'Blocked — needs you'
+      ? 'Waiting — review in Tasks'
       : task.status === 'completed'
         ? 'Completed — review & close the loop'
         : task.status
@@ -188,9 +195,9 @@ export function projectAgentInboxItem(
   const { triage, snoozedUntil, identityKey } = triageFor(lookup, 'agents', task.id)
   const occurredAt = task.updated_at || task.created_at
   const unread = isUnreadTriage(triage, snoozedUntil, now)
-  const actionable =
-    isTriageActionable(triage, snoozedUntil, now) &&
-    (task.status === 'blocked' || task.status === 'completed')
+  let attentionRequested = false
+  try { attentionRequested = JSON.parse(task.execution_contract || '{}').attention?.kind === 'operator_decision' } catch {}
+  const actionable = isTriageActionable(triage, snoozedUntil, now) && attentionRequested
   const score = scoreInboxItem(
     {
       tab: 'agents',
@@ -203,6 +210,8 @@ export function projectAgentInboxItem(
 
   return {
     id: `agent:${task.id}`,
+    attentionRequested,
+    receivedVerified: true,
     tab: 'agents',
     sourceId: task.id,
     title: task.title,
@@ -221,7 +230,7 @@ export function projectAgentInboxItem(
     email: null,
     phone: null,
     body: task.notes?.trim() || statusLabel,
-    href: '/tasks',
+    href: `/tasks?task=${encodeURIComponent(task.id)}`,
     meta,
     agentStatus: task.status,
     instantlyStatus: null
@@ -231,13 +240,14 @@ export function projectAgentInboxItem(
 export function projectInstantlyInboxItem(
   lead: LeadContact,
   lookup?: TriageLookup,
-  now = Date.now()
+  now = Date.now(),
+  inbound?: { at: string; note?: string | null; outcome?: string }
 ): InboxItem {
   const interest = lead.interest_label?.trim() || null
   const campaign =
     lead.instantly_campaign_name?.trim() || lead.instantly_campaign?.trim() || null
   const preview =
-    clip(interest) || clip(campaign ? `Replied on ${campaign}` : null) || 'Instantly reply'
+    clip(inbound?.note) || clip(interest) || clip(campaign ? `Reply associated with ${campaign}` : null) || 'Open the source to read this reply'
   const meta: InboxItem['meta'] = [
     { label: 'Outbound status', value: lead.outbound_status || 'replied' }
   ]
@@ -247,8 +257,9 @@ export function projectInstantlyInboxItem(
   if (lead.role) meta.push({ label: 'Role', value: lead.role })
 
   const identity = inboxIdentityKey(lead.email, lead.phone)
-  const { triage, snoozedUntil, identityKey } = triageFor(lookup, 'instantly', lead.id)
-  const occurredAt = lead.updated_at || lead.last_outbound_at || lead.mirrored_at
+  const occurredAt = inbound?.at || ''
+  const { triage, snoozedUntil, identityKey } = triageFor(lookup, 'instantly', lead.id, occurredAt)
+  if (lead.instantly_synced_at) meta.push({ label: 'Provider last checked', value: formatInboxWhen(lead.instantly_synced_at) })
   const unread = isUnreadTriage(triage, snoozedUntil, now)
   const actionable = isTriageActionable(triage, snoozedUntil, now)
   const score = scoreInboxItem(
@@ -263,6 +274,7 @@ export function projectInstantlyInboxItem(
 
   return {
     id: `instantly:${lead.id}`,
+    receivedVerified: Boolean(inbound?.at),
     tab: 'instantly',
     sourceId: lead.id,
     title: lead.name?.trim() || lead.email || 'Instantly reply',
@@ -281,12 +293,11 @@ export function projectInstantlyInboxItem(
     email: lead.email,
     phone: lead.phone,
     body:
-      interest ||
-      (campaign ? `Reply associated with campaign “${campaign}”.` : 'Instantly inbound reply.'),
+      inbound?.note || 'Message text is not available in Compass. Open Unibox to read the original reply.',
     href: INSTANTLY_UNIBOX,
     hrefExternal: true,
     gmailHref: lead.email?.trim() ? gmailSearchUrl(lead.email.trim()) : null,
-    crmHref: `/leads?outbound_status=${encodeURIComponent(lead.outbound_status || 'replied')}`,
+    crmHref: `/sales/outbound/rhythm?lead=${encodeURIComponent(lead.id)}`,
     meta,
     agentStatus: null,
     instantlyStatus: lead.outbound_status
@@ -318,6 +329,7 @@ export function projectWebsiteInboxItem(
 
   return {
     id: `leads:${lead.id}`,
+    receivedVerified: true,
     tab: 'leads',
     sourceId: lead.id,
     title: lead.name,
@@ -351,7 +363,7 @@ export function projectWebsiteInboxItem(
 export function sortInboxItems(items: InboxItem[]): InboxItem[] {
   return [...items].sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score
-    return Date.parse(b.occurredAt) - Date.parse(a.occurredAt)
+    return (Date.parse(b.occurredAt) || 0) - (Date.parse(a.occurredAt) || 0)
   })
 }
 
@@ -383,7 +395,7 @@ export function linkRelatedInboxItems(items: InboxItem[]): InboxItem[] {
  * Needs-you strip: highest-scoring actionable items, one per identity when possible.
  */
 export function pickNeedsYou(items: InboxItem[], limit = 8): InboxItem[] {
-  const actionable = sortInboxItems(items.filter((item) => item.actionable))
+  const actionable = sortInboxItems(items.filter((item) => inboxScope(item) === 'current'))
   const preferred = actionable.filter((item) => {
     if (item.tab === 'agents') return item.agentStatus === 'blocked'
     return item.unread
@@ -410,9 +422,25 @@ export function countActionableBadge(items: {
 }): InboxTabCounts {
   return {
     agents: items.agents.filter(
-      (item) => item.actionable && item.agentStatus === 'blocked' && item.unread
+      (item) => inboxScope(item) === 'current' && item.unread
     ).length,
-    instantly: items.instantly.filter((item) => item.actionable && item.unread).length,
-    leads: items.leads.filter((item) => item.actionable && item.unread).length
+    instantly: items.instantly.filter((item) => inboxScope(item) === 'current' && item.unread).length,
+    leads: items.leads.filter((item) => inboxScope(item) === 'current' && item.unread).length
   }
+}
+
+export type InboxScope = 'current' | 'earlier' | 'snoozed' | 'done'
+export const INBOX_SCOPES: { id: InboxScope; label: string }[] = [
+  { id: 'current', label: 'Current attention' }, { id: 'earlier', label: 'Earlier / unverified' },
+  { id: 'snoozed', label: 'Snoozed' }, { id: 'done', label: 'Done' }
+]
+
+export function inboxScope(item: InboxItem, now = Date.now()): InboxScope {
+  const triage = effectiveTriage(item.triage, item.snoozedUntil, now)
+  if (triage === 'done' || item.lifecycle === 'discarded') return 'done'
+  if (triage === 'snoozed') return 'snoozed'
+  if (item.tab === 'agents' && !item.attentionRequested) return 'earlier'
+  const at = Date.parse(item.occurredAt)
+  if (!item.receivedVerified || !Number.isFinite(at) || at > now || now - at > 14 * 86400000) return 'earlier'
+  return 'current'
 }

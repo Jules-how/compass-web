@@ -189,9 +189,6 @@ export function TasksPanel() {
   return (
     <div className="space-y-6">
       <section className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[12px] text-neutral-500">
-          Open a task for its context, or change its status from the list.
-        </p>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {note ? (
             <p role="status" className="text-[12px] text-emerald-800">
@@ -222,16 +219,16 @@ export function TasksPanel() {
       ) : null}
 
       <div className="folio-task-toolbar">
-        <FolioFolders
+        {view === 'list' ? <FolioFolders
           label="Task folders"
           value={folder}
           onChange={setFolder}
           items={[
-            { id: 'open', label: 'Ready to move' },
+            { id: 'open', label: 'Ready' },
             { id: 'waiting', label: 'Waiting' },
             { id: 'completed', label: 'Completed' },
           ]}
-        />
+        /> : null}
         <div className="compass-seg" aria-label="Task view">
           <button
             className={`compass-seg-btn ${view === 'list' ? 'compass-seg-btn-active' : ''}`}

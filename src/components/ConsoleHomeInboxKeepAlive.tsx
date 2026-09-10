@@ -1,8 +1,10 @@
 'use client'
 
+import { ActivePane } from '@/components/ActivePane'
+import { loadHomeDashboard, loadInboxPanel, loadSalesOverview, loadOffersDesk, loadOutboundDesk, loadLeadsPanel, loadTasksPanel, loadProjectsPanel, loadFunctionsPanel, loadClientsPanel, loadExpenseBoard, loadInstallKanban, loadCsDeptBoard, loadPlanningDesk, loadOutboundRhythm } from '@/lib/console-destinations'
 import dynamic from 'next/dynamic'
 import { Suspense, useEffect, useState } from 'react'
-import { keepAliveKey, useConsoleViewPath } from '@/components/ConsoleNav'
+import { keepAliveKey, recordPaneVisibleFrame, useConsoleViewPath } from '@/components/ConsoleNav'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import { OperatorShell } from '@/components/OperatorShell'
 import { cn } from '@/lib/utils'
@@ -16,64 +18,68 @@ function DeskLoading({ label }: { label: string }) {
 }
 
 const HomeDashboard = dynamic(
-  () => import('@/components/home/HomeDashboard').then((m) => ({ default: m.HomeDashboard })),
+  loadHomeDashboard,
   { loading: () => <DeskLoading label="Loading home…" /> }
 )
 const InboxPanel = dynamic(
-  () => import('@/components/InboxPanel').then((m) => ({ default: m.InboxPanel })),
+  loadInboxPanel,
   { loading: () => <DeskLoading label="Loading inbox…" /> }
 )
 const SalesOverview = dynamic(
-  () => import('@/components/sales/SalesOverview').then((m) => ({ default: m.SalesOverview })),
+  loadSalesOverview,
   { loading: () => <DeskLoading label="Loading sales…" /> }
 )
 const OffersDesk = dynamic(
-  () => import('@/components/offers/OffersDesk').then((m) => ({ default: m.OffersDesk })),
+  loadOffersDesk,
   { loading: () => <DeskLoading label="Loading offers…" /> }
 )
 const OutboundDesk = dynamic(
-  () => import('@/components/outbound/OutboundDesk').then((m) => ({ default: m.OutboundDesk })),
+  loadOutboundDesk,
   { loading: () => <DeskLoading label="Loading outbound…" /> }
 )
 const LeadsPanel = dynamic(
-  () => import('@/components/LeadsPanel').then((m) => ({ default: m.LeadsPanel })),
+  loadLeadsPanel,
   { loading: () => <DeskLoading label="Loading leads…" /> }
 )
 const TasksPanel = dynamic(
-  () => import('@/components/TasksPanel').then((m) => ({ default: m.TasksPanel })),
+  loadTasksPanel,
   { loading: () => <DeskLoading label="Loading tasks…" /> }
 )
 const ProjectsPanel = dynamic(
-  () => import('@/components/ProjectsPanel').then((m) => ({ default: m.ProjectsPanel })),
+  loadProjectsPanel,
   { loading: () => <DeskLoading label="Loading projects…" /> }
 )
 const FunctionsPanel = dynamic(
-  () => import('@/components/FunctionsPanel').then((m) => ({ default: m.FunctionsPanel })),
+  loadFunctionsPanel,
   { loading: () => <DeskLoading label="Loading functions…" /> }
 )
 const ClientsPanel = dynamic(
-  () => import('@/components/ClientsPanel').then((m) => ({ default: m.ClientsPanel })),
+  loadClientsPanel,
   { loading: () => <DeskLoading label="Loading clients…" /> }
 )
 const FinancesBoard = dynamic(
-  () => import('@/components/finances/ExpenseBoard').then((m) => ({ default: m.ExpenseBoard })),
+  loadExpenseBoard,
   { loading: () => <DeskLoading label="Loading finances…" /> }
 )
 const InstallKanban = dynamic(
-  () =>
-    import('@/components/delivery-dept/InstallKanban').then((m) => ({ default: m.InstallKanban })),
+  loadInstallKanban,
   { loading: () => <DeskLoading label="Loading installs…" /> }
 )
 const CsDeptBoard = dynamic(
-  () => import('@/components/cs-dept/CsDeptBoard').then((m) => ({ default: m.CsDeptBoard })),
+  loadCsDeptBoard,
   { loading: () => <DeskLoading label="Loading retention…" /> }
 )
 
+const PlanningDesk = dynamic(loadPlanningDesk)
+const OutboundRhythm = dynamic(loadOutboundRhythm)
+
 function KeepAlivePane({
+  paneKey,
   active,
   className,
   children
 }: {
+  paneKey: string
   active: boolean
   className?: string
   children: React.ReactNode
@@ -81,15 +87,18 @@ function KeepAlivePane({
   useEffect(() => {
     if (!active) return
     window.dispatchEvent(new Event('resize'))
-  }, [active])
+    return recordPaneVisibleFrame(paneKey)
+  }, [active, paneKey])
 
   return (
     <div
       className={cn(active ? 'flex min-h-full flex-1 flex-col' : 'hidden', className)}
+      data-console-pane={paneKey}
+      data-console-active={active}
       aria-hidden={!active}
       inert={!active ? true : undefined}
     >
-      {children}
+      <ActivePane active={active}>{children}</ActivePane>
     </div>
   )
 }
@@ -99,7 +108,7 @@ function useSeen(active: boolean) {
   useEffect(() => {
     if (active) setSeen(true)
   }, [active])
-  return seen
+  return active || seen
 }
 
 /**
@@ -109,6 +118,10 @@ function useSeen(active: boolean) {
 export function ConsoleHomeInboxKeepAlive() {
   const viewPath = useConsoleViewPath()
   const key = keepAliveKey(viewPath)
+  const showPlanning = key === 'planning'
+  const showRhythm = key === 'rhythm'
+  const seenPlanning = useSeen(showPlanning)
+  const seenRhythm = useSeen(showRhythm)
   const showHome = key === 'home'
   const showInbox = key === 'inbox'
   const showTasks = key === 'tasks'
@@ -137,6 +150,7 @@ export function ConsoleHomeInboxKeepAlive() {
   const seenRetention = useSeen(showRetention)
 
   if (
+    !seenPlanning && !seenRhythm &&
     !seenHome &&
     !seenInbox &&
     !seenTasks &&
@@ -156,15 +170,17 @@ export function ConsoleHomeInboxKeepAlive() {
 
   return (
     <>
+      {seenPlanning ? <KeepAlivePane paneKey="planning" active={showPlanning}><Suspense fallback={<DeskLoading label="Loading planning…" />}><PlanningDesk /></Suspense></KeepAlivePane> : null}
+      {seenRhythm ? <KeepAlivePane paneKey="rhythm" active={showRhythm}><OperatorShell width="full"><OutboundRhythm /></OperatorShell></KeepAlivePane> : null}
       {seenHome ? (
-        <KeepAlivePane active={showHome}>
+        <KeepAlivePane paneKey="home" active={showHome}>
           <div className="flex min-h-0 flex-1 flex-col">
             <HomeDashboard />
           </div>
         </KeepAlivePane>
       ) : null}
       {seenInbox ? (
-        <KeepAlivePane active={showInbox}>
+        <KeepAlivePane paneKey="inbox" active={showInbox}>
           <main className="flex min-h-0 flex-1 flex-col">
             <Suspense
               fallback={
@@ -179,21 +195,21 @@ export function ConsoleHomeInboxKeepAlive() {
         </KeepAlivePane>
       ) : null}
       {seenTasks ? (
-        <KeepAlivePane active={showTasks}>
+        <KeepAlivePane paneKey="tasks" active={showTasks}>
           <OperatorShell title="Tasks" subtitle="Choose the work you can move. Keep external waits in their own place." width="full">
             <TasksPanel />
           </OperatorShell>
         </KeepAlivePane>
       ) : null}
       {seenProjects ? (
-        <KeepAlivePane active={showProjects}>
+        <KeepAlivePane paneKey="projects" active={showProjects}>
           <OperatorShell title="Projects" width="full" compact>
             <ProjectsPanel />
           </OperatorShell>
         </KeepAlivePane>
       ) : null}
       {seenFunctions ? (
-        <KeepAlivePane active={showFunctions}>
+        <KeepAlivePane paneKey="functions" active={showFunctions}>
           <OperatorShell
             title="Functions"
             subtitle="System map — how modules connect to live routes and tables"
@@ -204,7 +220,7 @@ export function ConsoleHomeInboxKeepAlive() {
         </KeepAlivePane>
       ) : null}
       {seenClients ? (
-        <KeepAlivePane active={showClients}>
+        <KeepAlivePane paneKey="clients" active={showClients}>
           <OperatorShell
             title="Clients"
             subtitle="Accounts, relationships, and delivery workspaces"
@@ -215,7 +231,7 @@ export function ConsoleHomeInboxKeepAlive() {
         </KeepAlivePane>
       ) : null}
       {seenOverview ? (
-        <KeepAlivePane active={showOverview}>
+        <KeepAlivePane paneKey="sales" active={showOverview}>
           <OperatorShell
             title="Sales"
             subtitle="Overview · Instantly throughput, targeting map, replies, and deal flow"
@@ -226,17 +242,17 @@ export function ConsoleHomeInboxKeepAlive() {
         </KeepAlivePane>
       ) : null}
       {seenOffers ? (
-        <KeepAlivePane active={showOffers}>
+        <KeepAlivePane paneKey="offers" active={showOffers}>
           <OffersDesk />
         </KeepAlivePane>
       ) : null}
       {seenOutbound ? (
-        <KeepAlivePane active={showOutbound}>
+        <KeepAlivePane paneKey="outbound" active={showOutbound}>
           <OutboundDesk />
         </KeepAlivePane>
       ) : null}
       {seenCrm ? (
-        <KeepAlivePane active={showCrm}>
+        <KeepAlivePane paneKey="leads" active={showCrm}>
           <OperatorShell active="leads" role="owner" title="CRM" compact width="full">
             <Suspense fallback={<DeskLoading label="Loading leads…" />}>
               <LeadsPanel />
@@ -245,14 +261,14 @@ export function ConsoleHomeInboxKeepAlive() {
         </KeepAlivePane>
       ) : null}
       {seenFinances ? (
-        <KeepAlivePane active={showFinances}>
+        <KeepAlivePane paneKey="finances" active={showFinances}>
           <OperatorShell title="Finances" subtitle="Expenses with source records">
             <FinancesBoard />
           </OperatorShell>
         </KeepAlivePane>
       ) : null}
       {seenInstalls ? (
-        <KeepAlivePane active={showInstalls}>
+        <KeepAlivePane paneKey="installs" active={showInstalls}>
           <OperatorShell
             title="Installs"
             subtitle="Configure each client system from intake to monitored lead delivery."
@@ -263,7 +279,7 @@ export function ConsoleHomeInboxKeepAlive() {
         </KeepAlivePane>
       ) : null}
       {seenRetention ? (
-        <KeepAlivePane active={showRetention}>
+        <KeepAlivePane paneKey="retention" active={showRetention}>
           <OperatorShell
             title="Retention"
             subtitle="Monday review. Drafts only. Approve, skip, or call the save play."

@@ -18,6 +18,8 @@ import {
   SettingsIcon,
   TasksIcon
 } from '@/components/nav-icons'
+import { destinationLoaders } from '@/lib/console-destinations'
+import { keepAliveKey } from '@/components/ConsoleNav'
 import { useConsoleNav } from '@/components/ConsoleNav'
 import { SidebarLabel, SidebarLink } from '@/components/ui/sidebar'
 import { prefetchJson } from '@/lib/use-cached-json'
@@ -74,7 +76,7 @@ const OPERATOR_SECTIONS: NavSection[] = [
     id: 'workspace',
     label: 'Workspace',
     items: [
-      { href: '/planning', label: 'Goals & notes', key: 'planning', icon: TasksIcon },
+      { href: '/planning', label: 'Goals & notes', key: 'planning', icon: TasksIcon, api: '/api/pathfinder' },
       { href: '/tasks', label: 'My Tasks', key: 'tasks', icon: TasksIcon, api: '/api/tasks' },
       { href: '/projects', label: 'Projects', key: 'projects', icon: ProjectsIcon, api: '/api/projects' },
       {
@@ -203,6 +205,11 @@ function NavItemLink({
 }) {
   const consoleNav = useConsoleNav()
   const isActive = active === item.key
+  const preload = () => {
+    prefetchApi(item.api, item.key)
+    const destination = keepAliveKey(item.href)
+    if (destination) void destinationLoaders[destination]().catch(() => {})
+  }
   const Icon = item.icon
   const showBadge =
     item.badge === 'inbox' && typeof inboxCount === 'number' && inboxCount > 0
@@ -217,14 +224,14 @@ function NavItemLink({
         )
       }}
       active={isActive}
-      onMouseEnter={() => prefetchApi(item.api, item.key)}
-      onFocus={() => prefetchApi(item.api, item.key)}
+      onMouseEnter={preload}
+      onFocus={preload}
       onClick={(event) => {
         if (!consoleNav) return
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
         if (event.button !== 0) return
         event.preventDefault()
-        prefetchApi(item.api, item.key)
+        preload()
         consoleNav.navigate(item.href)
       }}
       badge={

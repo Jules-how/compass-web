@@ -1,16 +1,17 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useCachedJson } from "@/lib/use-cached-json";
 import type { PathfinderData } from "@/lib/pathfinder/types";
 import { assessOutcome } from "@/lib/pathfinder/core.mjs";
-import { PathfinderMap } from "./PathfinderMap";
+import dynamic from "next/dynamic";
+const PathfinderMap = dynamic(() => import("./PathfinderMap").then((module) => module.PathfinderMap));
 import { GoalForm } from "./GoalForm";
 import { OutcomePanel, IssuePanel } from "./OutcomePanel";
 import TaskDetailPanel from "@/components/TaskDetailPanel";
 import { ProjectDetailPanel } from "@/components/ProjectDetailPanel";
 import { GoalPad } from "./GoalPad";
-import { PathfinderTimeline } from "./PathfinderTimeline";
+import { PathfinderTimeline, type TimelineRange } from "./PathfinderTimeline";
 import { QuickAdd, type AddKind } from "./QuickAdd";
 import { Plus } from "lucide-react";
 import { MilestonePanel } from "./MilestonePanel";
@@ -22,6 +23,8 @@ export function PathfinderBoard({
 }) {
   const { data, error, loading, reload, updatedAt } =
     useCachedJson<PathfinderData>("/api/pathfinder", "/api/pathfinder");
+  const [timelineRange, setTimelineRange] = useState<TimelineRange>({ span: 90, offset: 0, undatedOpen: false });
+  const [view, setView] = useState<"timeline" | "map">("timeline");
   const [focus, setFocus] = useState(initialGoalId);
   const [selection, setSelection] = useState<{
     kind: string;
@@ -35,6 +38,11 @@ export function PathfinderBoard({
     projectId?: string;
   } | null>(null);
   const [padGoalId, setPadGoalId] = useState(initialGoalId);
+  useEffect(() => {
+    setFocus(initialGoalId);
+    setPadGoalId(initialGoalId);
+    setSelection(initialGoalId ? { kind: "goal", id: initialGoalId } : null);
+  }, [initialGoalId]);
   const open = (kind: string, id: string) => {
     if (kind === "goal") setPadGoalId(id);
     setSelection({ kind, id });
@@ -145,15 +153,19 @@ export function PathfinderBoard({
               </button>
             </span>
           </div>
-          <div className="pathfinder-workbench">
-            <PathfinderMap
-              data={data}
-              goalId={focus}
-              onFocus={setFocus}
-              onOpen={open}
-              onAdd={add}
-              onCreateGoal={() => setCreating(true)}
-            />
+          <div className="pathfinder-view-toolbar">
+            <div role="group" aria-label="Planning view">
+              <button className={view === "timeline" ? "compass-btn-primary" : "compass-btn-secondary"} aria-pressed={view === "timeline"} onClick={() => setView("timeline")}>Timeline</button>
+              <button className={view === "map" ? "compass-btn-primary" : "compass-btn-secondary"} aria-pressed={view === "map"} onClick={() => setView("map")}>Map</button>
+            </div>
+            <label>Goal <select className="compass-input" value={focus} onChange={(event) => { setFocus(event.target.value); setPadGoalId(event.target.value); }}>
+              <option value="">All goals</option>
+              {activeGoals.map((goal) => <option key={goal.id} value={goal.id}>{goal.data.title}</option>)}
+            </select></label>
+          </div>
+          <div className="pathfinder-workbench pathfinder-primary-workbench">
+            {view === "timeline" ? <PathfinderTimeline range={timelineRange} onRangeChange={setTimelineRange} data={data} goalId={focus} onOpen={open} onAdd={() => add("checkpoint")} /> :
+              <PathfinderMap data={data} goalId={focus} onFocus={setFocus} onOpen={open} onAdd={add} onCreateGoal={() => setCreating(true)} />}
             <GoalPad
               data={data}
               goal={padGoal}
@@ -167,12 +179,6 @@ export function PathfinderBoard({
               onCreateGoal={() => setCreating(true)}
             />
           </div>
-          <PathfinderTimeline
-            data={data}
-            goalId={focus}
-            onOpen={open}
-            onAdd={() => add("checkpoint")}
-          />
           {adding && (
             <QuickAdd
               key={`${adding.kind}:${adding.goalId}`}

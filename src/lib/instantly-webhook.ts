@@ -281,6 +281,11 @@ export async function applyInstantlyWebhookEvent(
     },
   )
   if (eventError) throw new Error(eventError.message)
+  // Unknown provider time stays undated in Inbox, even when status uses receipt time.
+  const { error: provenanceError } = await supabase.from('lead_outreach_touches')
+    .update({ request_payload: { at_verified: Boolean(str(payload.timestamp) && Number.isFinite(Date.parse(payload.timestamp!))) } })
+    .eq('id', eventId)
+  if (provenanceError) throw new Error(provenanceError.message)
 
   const evidenceType = webhookEvidenceType(eventType)
   if (evidenceType) {

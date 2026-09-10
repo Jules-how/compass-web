@@ -1132,24 +1132,6 @@ body:has(.folio-shell) [class*="text-neutral-400"] {
 .folio-shell tbody tr:hover {
   background: var(--folio-surface);
 }
-.folio-kanban {
-  gap: 18px !important;
-}
-.folio-kanban > section,
-.folio-kanban > [data-column-id] {
-  background: var(--folio-accent-line);
-  border-radius: 12px;
-  border: 0;
-  min-width: 0;
-}
-.folio-kanban h3 {
-  font-family:
-    Folio Editorial,
-    Georgia,
-    serif;
-  font-size: 24px;
-  font-weight: 400;
-}
 .folio-outbound .folio-card:first-child h3 {
   font:
     400 28px/1.25 Folio Editorial,
@@ -1552,10 +1534,6 @@ body:has(.folio-shell) [class*="text-neutral-400"] {
     margin-bottom: 18px;
     font-size: 11px;
   }
-  .folio-kanban {
-    grid-template-columns: 1fr !important;
-    overflow: visible !important;
-  }
   .folio-data-state {
     min-height: 370px;
   }
@@ -1814,30 +1792,6 @@ body:has(.folio-shell) [class*="text-neutral-400"] {
 }
 .folio-campaign-actions label {
   margin-left: auto;
-}
-.folio-outbound > div.xl\:grid {
-  grid-template-columns: minmax(0, 1fr) 260px !important;
-}
-.folio-outbound aside .grid-cols-3 {
-  grid-template-columns: 1fr;
-  gap: 18px;
-}
-.folio-outbound aside .grid-cols-3 > div {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  column-gap: 12px;
-}
-.folio-outbound aside .grid-cols-3 > div > p:nth-child(2) {
-  grid-column: 2;
-  grid-row: 1/3;
-  font:
-    400 30px Folio Editorial,
-    Georgia,
-    serif;
-}
-.folio-outbound aside .grid-cols-3 > div > a,
-.folio-outbound aside .grid-cols-3 > div > p:nth-child(3) {
-  grid-column: 1;
 }
 @media (max-width: 650px) {
   .folio-campaign-folder {
@@ -2375,3 +2329,62 @@ body:has(.folio-shell) .folio-inbox > .compass-panel {
     padding: 20px 16px;
   }
 }
+
+/* Operational workspaces retain the Folio palette with readable, contained boards. */
+.folio-page[data-width="full"] { max-width: none; padding: 24px clamp(20px, 2vw, 40px) 32px; }
+.folio-kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(290px, 1fr); grid-template-columns: none; gap: 16px; overflow-x: auto; max-width: 100%; min-width: 0; padding: 2px 2px 12px; align-items: start; }
+.folio-kanban-column { min-width: 0; border: 1px solid #e8e6e3; background: #f1efec; border-radius: 12px; padding: 12px; }
+.folio-kanban-header { height: 96px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 8px 2px; }
+.folio-kanban-header h3 { font: 600 15px/20px Folio Sans, sans-serif; color: var(--folio-ink); }
+.folio-kanban-header p { font: 400 12px/18px Folio Sans, sans-serif; color: #69645f; }
+.folio-kanban-cards { display: grid; gap: 16px; }
+.folio-kanban-card { background: #fff; border: 1px solid #e8e6e3; border-radius: 10px; padding: 16px; min-width: 0; }
+.folio-kanban-card h4 { font: 600 15px/21px Folio Sans, sans-serif; color: var(--folio-ink); }
+.folio-kanban-card dl, .folio-kanban-card span, .folio-kanban-card a { font-size: 12px; }
+.folio-kanban-card h4 a, .folio-kanban-card h4 span { font-size: inherit; }
+.folio-kanban-description { margin-top: 8px; font: 400 13px/20px Folio Sans, sans-serif; color: #69645f; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.folio-kanban-status { display: grid; gap: 6px; border-top: 1px solid #e8e6e3; margin-top: 16px; padding-top: 12px; color: #69645f; font-size: 12px; }
+.folio-kanban-status select { width: 100%; min-height: 36px; font-size: 14px; }
+.folio-outbound-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+.folio-campaign-toolbar { justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.folio-campaign-toolbar .folio-folders { margin: 0; }
+.folio-campaign-title a, .folio-campaign-title strong, .folio-wave-card h3 { font: 600 18px/25px Folio Sans, sans-serif; color: var(--folio-ink); }
+.folio-campaign-title p { font-size: 14px; line-height: 21px; }
+.folio-campaign-detail { font-size: 12px; min-height: 20px; }
+.folio-campaign-actions { padding-top: 14px; border-top: 1px solid var(--folio-line); }
+.folio-campaign-actions label { display: grid; gap: 4px; font-size: 12px; }
+.folio-campaign-actions select { min-width: 190px; max-width: none; font-size: 14px; }
+.folio-outlook { min-width: 0; }
+.folio-outlook .folio-card h3 { font: 600 18px/25px Folio Sans, sans-serif; }
+.folio-outlook-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.folio-outlook-metrics > div > p:first-child { font-size: 14px; color: #69645f; }
+.folio-outlook-metrics > div > p:nth-child(2) { font: 600 28px/36px Folio Sans, sans-serif; font-variant-numeric: tabular-nums; }
+.folio-outlook-metrics > div > p:nth-child(3) { font-size: 12px; line-height: 18px; }
+.folio-outlook-action { display: flex; align-items: start; justify-content: space-between; gap: 20px; padding: 16px 0; border-top: 1px solid var(--folio-line); }
+.folio-outlook-action > div > p:first-child { font-size: 14px; font-weight: 600; }
+.folio-outlook-action > div > p:nth-child(2) { font-size: 13px; line-height: 20px; }
+.folio-outlook-action button { flex-shrink: 0; }
+.folio-wave-card p { color: #69645f; }
+@media (min-width: 1500px) {
+  .folio-outbound-workspace[data-view="folders"] { grid-template-columns: minmax(0, 1fr) 360px; }
+  .folio-outbound-workspace[data-view="folders"] .folio-outlook-metrics { grid-template-columns: 1fr; }
+}
+@media (max-width: 650px) {
+  .folio-page[data-width="full"] { padding: 24px 16px 32px; }
+  .folio-kanban { grid-auto-columns: min(86vw, 340px); }
+  .folio-outlook-metrics { grid-template-columns: 1fr; }
+  .folio-campaign-actions label, .folio-campaign-actions select { width: 100%; }
+  .folio-campaign-title a { font-size: 18px; }
+  .folio-outlook-action { flex-wrap: wrap; }
+}
+
+.folio-kanban-heading { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+.folio-kanban-header > div { flex: 1; }
+.folio-kanban-heading > div:first-child { margin-top: 4px; }
+.folio-outbound .folio-wave-card:first-child h3 { font: 600 18px/25px Folio Sans, sans-serif; }
+.folio-outbound .folio-outlook .folio-card:first-child h3 { font: 600 18px/25px Folio Sans, sans-serif; }
+.folio-campaign-folder .folio-section-heading h2 { font: 600 18px/25px Folio Sans, sans-serif; }
+@media (min-width: 1024px) {
+  .folio-inbox-index { width: 360px !important; flex: 0 0 360px; }
+}
+.folio-inbox-case { min-width: 0; background: #fffefa !important; }

@@ -82,7 +82,7 @@ export function WaveCampaignCard({
       : campaign?.summary || campaign?.wave_approach || campaign?.hypothesis || instantly?.copyNotes || ''
 
   return (
-    <Card className={cn('overflow-hidden', column === 'parked' && 'opacity-90')}>
+    <Card className={cn('folio-wave-card overflow-hidden', column === 'parked' && 'opacity-90')}>
       <div className="flex min-h-0">
         <div className="w-1 shrink-0 self-stretch" style={{ background: color }} aria-hidden />
         <div className="min-w-0 flex-1">
@@ -122,7 +122,7 @@ export function WaveCampaignCard({
             {summary ? <p className="line-clamp-2 text-[13px] leading-relaxed text-neutral-500">{summary}</p> : null}
             {column === 'recommended' ? (
               <p className="text-[12px] text-neutral-500">
-                {listSize || 150} leads
+                {listSize ? `${listSize} leads` : 'List size unset'}
                 {campaign?.offer_key ? ` · ${campaign.offer_key}` : ''}
                 {campaign?.wave_copy_strategy ? ` · ${campaign.wave_copy_strategy}` : ''}
               </p>

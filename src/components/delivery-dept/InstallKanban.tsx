@@ -238,10 +238,10 @@ export function InstallKanban() {
         </p>
       </div>
 
-      <div className="overflow-x-auto pb-2">
+      <div className="install-queue-scroll overflow-x-auto pb-2" role="region" aria-label="Install queue" tabIndex={0}>
         <div className="folio-install-queue flex min-w-max gap-4">
           {board.columns.map((col) => (
-            <section key={col.id} className="w-[260px] shrink-0">
+            <section key={col.id} className="install-queue-column">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div>
                   <p className="compass-section-label">{col.title}</p>

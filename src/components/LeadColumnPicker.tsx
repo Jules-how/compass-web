@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   LEAD_COLUMN_DEFS,
   loadHiddenLeadColumns,
@@ -22,7 +22,6 @@ import type { LeadContact } from '@/lib/types'
 import { useUndo } from '@/components/UndoProvider'
 
 export function LeadColumnPicker({
-  phoneSparse,
   visible,
   onChange,
   preset = 'crm',
@@ -57,11 +56,10 @@ export function LeadColumnPicker({
   const options = useMemo(() => {
     const q = query.trim().toLowerCase()
     return LEAD_COLUMN_DEFS.filter((c) => {
-      if (c.id === 'phone' && phoneSparse) return false
       if (!q) return true
       return c.label.toLowerCase().includes(q) || c.id.includes(q)
     })
-  }, [phoneSparse, query])
+  }, [query])
 
   function toggle(id: LeadColumnId) {
     if (required.includes(id)) return
@@ -160,32 +158,43 @@ export function LeadColumnPicker({
 }
 
 export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[]) {
+  const [view, setViewState] = useState<'operating' | 'legacy'>('operating')
+  const effectivePreset = preset === 'crm' && view === 'legacy' ? 'crm-legacy' : preset
+  const activePresetRef = useRef(effectivePreset)
+  activePresetRef.current = effectivePreset
+  useEffect(() => {
+    if (preset === 'crm' && window.localStorage.getItem('compass.crm.view.v1') === 'legacy') setViewState('legacy')
+  }, [preset])
+  function setView(next: 'operating' | 'legacy') {
+    setViewState(next)
+    window.localStorage.setItem('compass.crm.view.v1', next)
+  }
   const occupied = useMemo(() => occupiedLeadColumns(leads), [leads])
   const [pinned, setPinned] = useState<LeadColumnId[]>([])
   const [hidden, setHidden] = useState<LeadColumnId[]>([])
-  const [order, setOrder] = useState<LeadColumnId[]>(() => defaultColumnsFor(preset))
+  const [order, setOrder] = useState<LeadColumnId[]>(() => defaultColumnsFor(effectivePreset))
   const [widths, setWidths] = useState<Partial<Record<LeadColumnId, number>>>({})
   const [ready, setReady] = useState(false)
   const undo = useUndo()
 
   useEffect(() => {
-    setPinned(loadPinnedLeadColumns(preset))
-    setHidden(loadHiddenLeadColumns(preset))
-    setOrder(loadLeadColumnOrder(preset))
-    setWidths(loadLeadColumnWidths())
+    setPinned(loadPinnedLeadColumns(effectivePreset))
+    setHidden(loadHiddenLeadColumns(effectivePreset))
+    setOrder(loadLeadColumnOrder(effectivePreset))
+    setWidths(loadLeadColumnWidths(effectivePreset))
     setReady(true)
-  }, [preset])
+  }, [effectivePreset])
 
   const visible = useMemo(
     () =>
       resolveVisibleLeadColumns({
-        preset,
+        preset: effectivePreset,
         occupied,
         pinned,
         hidden,
         order
       }),
-    [preset, occupied, pinned, hidden, order]
+    [effectivePreset, occupied, pinned, hidden, order]
   )
 
   function applyVisible(
@@ -193,16 +202,18 @@ export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[
     nextPinned: LeadColumnId[],
     nextHidden: LeadColumnId[]
   ) {
-    setPinned(nextPinned)
-    setHidden(nextHidden)
-    setOrder(next)
-    persistPinnedLeadColumns(nextPinned, preset)
-    persistHiddenLeadColumns(nextHidden, preset)
-    persistLeadColumnOrder(next, preset)
+    if (activePresetRef.current === effectivePreset) {
+      setPinned(nextPinned)
+      setHidden(nextHidden)
+      setOrder(next)
+    }
+    persistPinnedLeadColumns(nextPinned, effectivePreset)
+    persistHiddenLeadColumns(nextHidden, effectivePreset)
+    persistLeadColumnOrder(next, effectivePreset)
   }
 
   function setVisible(next: LeadColumnId[]) {
-    const required = requiredColumnsFor(preset)
+    const required = requiredColumnsFor(effectivePreset)
     const added = next.filter((id) => !visible.includes(id))
     const removed = visible.filter((id) => !next.includes(id) && !required.includes(id))
     const nextPinned = Array.from(new Set([...pinned.filter((id) => !removed.includes(id)), ...added]))
@@ -216,15 +227,15 @@ export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[
     })
   }
 
-  function applyWidths(next: Partial<Record<LeadColumnId, number>>) {
-    setWidths(next)
-    persistLeadColumnWidths(next)
-  }
+  const applyWidths = useCallback((next: Partial<Record<LeadColumnId, number>>) => {
+    if (activePresetRef.current === effectivePreset) setWidths(next)
+    persistLeadColumnWidths(next, effectivePreset)
+  }, [effectivePreset])
 
   function resizeColumn(id: LeadColumnId, width: number) {
     setWidths((current) => {
       const next = { ...current, [id]: width }
-      persistLeadColumnWidths(next)
+      persistLeadColumnWidths(next, effectivePreset)
       return next
     })
   }
@@ -241,7 +252,7 @@ export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[
       const before = resizeStarted.current
       if (!before) return
       resizeStarted.current = null
-      const after = loadLeadColumnWidths()
+      const after = loadLeadColumnWidths(effectivePreset)
       undo.push({
         label: 'Column width',
         undo: () => applyWidths(before),
@@ -250,7 +261,7 @@ export function useLeadGridColumns(preset: LeadColumnPreset, leads: LeadContact[
     }
     window.addEventListener('mouseup', onUp)
     return () => window.removeEventListener('mouseup', onUp)
-  }, [undo])
+  }, [undo, effectivePreset, applyWidths])
 
-  return { visible, occupied, widths, resizeColumn: resizeColumnTracked, setVisible, ready }
+  return { view, setView, visible, occupied, widths, resizeColumn: resizeColumnTracked, setVisible, ready }
 }

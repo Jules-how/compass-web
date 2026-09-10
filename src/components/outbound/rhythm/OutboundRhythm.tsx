@@ -1,4 +1,6 @@
 "use client";
+
+import { useActivePane } from "@/components/ActivePane";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -41,6 +43,7 @@ type Payload = {
   work: { id: string; day: string; category: string; minutes: number }[];
 };
 export function OutboundRhythm({ compact = false }: { compact?: boolean }) {
+  const active = useActivePane();
   const [data, setData] = useState<Payload | null>(null),
     [error, setError] = useState(""),
     [selected, setSelected] = useState<string | null>(null),
@@ -68,6 +71,7 @@ export function OutboundRhythm({ compact = false }: { compact?: boolean }) {
     setError("");
   }, []);
   useEffect(() => {
+    if (!active) return;
     void load().catch((e) => setError(e.message));
     if (!compact)
       setSelected(new URLSearchParams(window.location.search).get("lead"));
@@ -78,7 +82,7 @@ export function OutboundRhythm({ compact = false }: { compact?: boolean }) {
       window.removeEventListener("outbound-rhythm-changed", update);
       window.removeEventListener("focus", update);
     };
-  }, [load, compact]);
+  }, [load, compact, active]);
   const changed = () =>
     window.dispatchEvent(new Event("outbound-rhythm-changed"));
   async function save(payload: Record<string, unknown>) {

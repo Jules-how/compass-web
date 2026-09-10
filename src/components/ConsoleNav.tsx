@@ -11,6 +11,31 @@ import {
 } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
+type PaneTiming = { token: number; key: string; start: number; warm: boolean }
+const mountedPanes = new Set<string>()
+let pendingPaneTiming: PaneTiming | null = null
+let timingSequence = 0
+
+/** Local-only User Timing. A frame opportunity is not a data-ready measurement. */
+export function recordPaneVisibleFrame(key: string) {
+  mountedPanes.add(key)
+  const timing = pendingPaneTiming
+  if (!timing || timing.key !== key) return () => {}
+  let secondFrame = 0
+  const firstFrame = requestAnimationFrame(() => {
+    secondFrame = requestAnimationFrame(() => {
+      if (pendingPaneTiming?.token !== timing.token) return
+      performance.measure(`compass:navigation:${timing.warm ? 'warm-existing' : 'first-mount'}:visible-frame`, {
+        start: timing.start,
+        end: performance.now(),
+        detail: { destination: key, token: timing.token, contentReady: false }
+      })
+      pendingPaneTiming = null
+    })
+  })
+  return () => { cancelAnimationFrame(firstFrame); cancelAnimationFrame(secondFrame) }
+}
+
 type ConsoleNavContextValue = {
   /** Path used for chrome + keep-alive (optimistic while RSC catches up). */
   viewPath: string
@@ -34,10 +59,12 @@ export function isHomeOrInboxPath(path: string) {
 /** Surfaces kept mounted in the console shell after first visit. */
 export function keepAliveKey(
   path: string
-): 'home' | 'inbox' | 'tasks' | 'projects' | 'functions' | 'clients' | 'sales' | 'offers' | 'outbound' | 'leads' | 'finances' | 'installs' | 'retention' | null {
+): 'home' | 'inbox' | 'tasks' | 'projects' | 'functions' | 'clients' | 'sales' | 'offers' | 'outbound' | 'leads' | 'finances' | 'installs' | 'retention' | 'planning' | 'rhythm' | null {
   const p = path.split('?')[0] || path
   if (p === '/home' || p.startsWith('/home/')) return 'home'
   if (p === '/inbox' || p.startsWith('/inbox/')) return 'inbox'
+  if (p === '/planning') return 'planning'
+  if (p === '/sales/outbound/rhythm') return 'rhythm'
   if (p === '/tasks') return 'tasks'
   if (p === '/projects') return 'projects'
   if (p === '/functions') return 'functions'
@@ -93,8 +120,11 @@ export function ConsoleNavProvider({ children }: { children: ReactNode }) {
       // Leaving those routes stays on the current panel until the real RSC
       // children arrive — avoids a blank main canvas.
       if (isKeepAlivePath(next)) {
+        const destination = keepAliveKey(next)!
+        pendingPaneTiming = { token: ++timingSequence, key: destination, start: performance.now(), warm: mountedPanes.has(destination) }
         setOptimisticPath(next)
       } else {
+        pendingPaneTiming = null
         setOptimisticPath(null)
       }
       router.push(href)

@@ -1,3 +1,5 @@
+import { readWaveDecision, waveReviewState } from '@/lib/wave-publication'
+import { dateOnlyInZone } from '@/lib/campaigns'
 import type { NextRequest } from 'next/server'
 import { requirePortalAccess } from '@/lib/portal-access'
 import {
@@ -9,39 +11,20 @@ import {
 } from '@/lib/portal-http'
 import { loadLeadSummaryCounts } from '@/lib/lead-search'
 import {
-  InstantlyApiError,
-  loadOutboundBoardFromInstantly,
-  resolveInstantlyApiKey,
-  type OutboundBoard
-} from '@/lib/instantly'
-import {
   mondayOfSydneyWeek,
   normalizeWaveActionKind,
   normalizeWaveActionSource,
   normalizeWaveActionStatus,
-  upcomingSendForecast,
   type WaveAction,
   type WaveBrief
 } from '@/lib/wave-desk'
 
 export const dynamic = 'force-dynamic'
 
-const EMPTY_BOARD: OutboundBoard = { live: [], history: [], liveCount: 0 }
-
 export async function GET() {
   try {
     const { supabase } = await requirePortalAccess({ operator: true })
-    const apiKey = await resolveInstantlyApiKey(supabase)
-    let board = EMPTY_BOARD
-    if (apiKey) {
-      try {
-        board = await loadOutboundBoardFromInstantly(apiKey)
-      } catch (err) {
-        if (!(err instanceof InstantlyApiError)) throw err
-      }
-    }
-
-    const [summary, actionsRes, briefsRes] = await Promise.all([
+    const [summary, actionsRes, briefsRes, decision] = await Promise.all([
       loadLeadSummaryCounts(supabase),
       supabase
         .from('compass_wave_actions')
@@ -52,17 +35,15 @@ export async function GET() {
         .from('compass_wave_briefs')
         .select('id,generated_at,recommendation,scan,created_at,revision,reviewed_at,publisher,run_id,decision_revision,metrics,metrics_updated_at,next_campaign_ids,next_status,resolved_at')
         .order('generated_at', { ascending: false })
-        .limit(14)
+        .limit(14),
+      readWaveDecision(supabase).catch(() => null)
     ])
 
-    const forecast = upcomingSendForecast(board)
     return portalJsonCached({
       recontactReady: summary.recontact_ready ?? 0,
-      emailsRemaining: forecast.remaining,
-      liveCampaigns: forecast.liveCampaigns,
       thisWeekStart: mondayOfSydneyWeek(),
       actions: (actionsRes.data ?? []) as WaveAction[],
-      briefs: (briefsRes.data ?? []).map(row => ({ ...row, scan: { ...row.scan, ...row.metrics } })) as WaveBrief[],
+      briefs: (briefsRes.data ?? []).map(row => ({ ...row, reviewState: decision ? waveReviewState(row, dateOnlyInZone(new Date().toISOString()), decision.revision) : 'stale', scan: { ...row.scan, ...row.metrics } })) as WaveBrief[],
       actionsError: actionsRes.error?.message ?? null,
       briefsError: briefsRes.error?.message ?? null
     })

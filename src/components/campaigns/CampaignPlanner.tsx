@@ -1,5 +1,7 @@
 'use client'
 
+import { useActivePane } from '@/components/ActivePane'
+
 import {
   useCallback,
   useEffect,
@@ -117,11 +119,16 @@ type CampaignsPayload = { campaigns: CompassCampaign[] }
 
 export function CampaignPlanner({
   deskSwitch,
-  initialView = 'calendar'
+  initialView = 'calendar',
+  view: controlledView,
+  onViewChange
 }: {
   deskSwitch?: ReactNode
   initialView?: 'calendar' | 'timeline'
+  view?: ViewMode
+  onViewChange?: (view: ViewMode) => void
 }) {
+  const active = useActivePane()
   const router = useRouter()
   const campaignsQuery = useCachedJson<CampaignsPayload>(CAMPAIGNS_QUERY_KEY, '/api/campaigns', {
     staleMs: 30_000
@@ -140,7 +147,9 @@ export function CampaignPlanner({
   const [filterOpen, setFilterOpen] = useState(false)
   const [displayOpen, setDisplayOpen] = useState(false)
   const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null)
-  const [view, setView] = useState<ViewMode>(initialView)
+  const [localView, setLocalView] = useState<ViewMode>(initialView)
+  const view = controlledView ?? localView
+  const setView = (next: ViewMode) => { setLocalView(next); onViewChange?.(next) }
   const [calendarGrain, setCalendarGrain] = useState<CalendarGrain>('month')
   const [calendarCursor, setCalendarCursor] = useState(() => startOfDay(new Date()))
   const [slotDraft, setSlotDraft] = useState<string | null>(null)
@@ -162,12 +171,6 @@ export function CampaignPlanner({
   const refresh = useCallback(() => {
     void campaignsQuery.reload(true)
   }, [campaignsQuery.reload])
-
-  useEffect(() => {
-    setView(initialView)
-    if (initialView === 'timeline') didCenterToday.current = false
-    if (initialView === 'calendar') setCalendarCursor(startOfDay(new Date()))
-  }, [initialView])
 
   const filtered = useMemo(() => {
     return campaigns.filter((c) => {
@@ -226,10 +229,10 @@ export function CampaignPlanner({
   )
 
   useEffect(() => {
-    if (!ready || view !== 'timeline' || didCenterToday.current) return
+    if (!active || !ready || view !== 'timeline' || didCenterToday.current) return
     scrollToToday('auto')
     didCenterToday.current = true
-  }, [ready, view, scrollToToday])
+  }, [active, ready, view, scrollToToday])
 
   useTimelineWheelZoom({
     scrollRef,
@@ -237,7 +240,7 @@ export function CampaignPlanner({
     range,
     labelWidth: listWidth,
     // Re-bind when the timeline scroller mounts (view switches) or first paints.
-    enabled: view === 'timeline' && scrollNode !== null,
+    enabled: active && view === 'timeline' && scrollNode !== null,
     onDensityChange: setDensity,
     onBeforeZoom: () => {
       // Keep the date under the cursor; skip the "center on today" path.
@@ -251,6 +254,7 @@ export function CampaignPlanner({
   }, [])
 
   useEffect(() => {
+    if (!active) return
     function onKey(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (e.target instanceof HTMLSelectElement) return
@@ -278,7 +282,7 @@ export function CampaignPlanner({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setZoomLevel, view, calendarGrain, slotDraft])
+  }, [active, setZoomLevel, view, calendarGrain, slotDraft])
 
   useEffect(() => {
     const el = scrollRef.current

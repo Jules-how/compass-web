@@ -15,20 +15,19 @@ import { useConsoleViewPath } from '@/components/ConsoleNav'
 import { LoadingBlock } from '@/components/LoadingBlock'
 import {
   countActionableBadge,
-  formatInboxRelative,
   formatInboxWhen,
   INBOX_CACHE_KEY,
-  INBOX_TAB_HINTS,
   INBOX_TAB_LABELS,
   INBOX_TABS,
   itemsForInboxTab,
+  inboxScope, INBOX_SCOPES, type InboxScope,
   parseInboxTab,
   pickNeedsYou,
   type InboxItem,
   type InboxPayload,
   type InboxTab
 } from '@/lib/inbox-ui'
-import type { InboxSuggestion, InboxTriageState, LeadLifecycleStatus } from '@/lib/inbox-triage'
+import { suggestInboxNextStep, type InboxSuggestion, type InboxTriageState, type LeadLifecycleStatus } from '@/lib/inbox-triage'
 import { INSTANTLY_CLASSIFY_ACTIONS, classifyAction } from '@/lib/inbox-classify'
 import { peekQueryCache, writeQueryCache } from '@/lib/query-cache'
 import { tasksHref } from '@/lib/task-organisation'
@@ -125,8 +124,8 @@ function NotificationRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate text-[13px] font-medium text-neutral-900">{item.title}</div>
-            <div className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-500">
+            <div className="truncate text-[14px] font-semibold text-neutral-900">{item.title}</div>
+            <div className="mt-0.5 line-clamp-2 text-[13px] leading-relaxed text-neutral-600">
               {item.preview}
             </div>
             {alsoIn.length > 0 ? (
@@ -135,7 +134,7 @@ function NotificationRow({
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1 pt-0.5">
             <span title={formatInboxWhen(item.occurredAt)} className="text-[11px] tabular-nums text-neutral-400">
-              {new Date(item.occurredAt).toLocaleDateString('en-AU',{day:'numeric',month:'short',timeZone:'Australia/Sydney'})}
+              {item.occurredAt ? new Date(item.occurredAt).toLocaleDateString('en-AU',{day:'numeric',month:'short',timeZone:'Australia/Sydney'}) : 'Undated'}
             </span>
             {item.unread ? (
               <>
@@ -257,7 +256,7 @@ function ContextPane({
           ) : null}
           {item.crmHref ? (
             <Link href={item.crmHref} className="compass-btn-secondary shrink-0 !px-2.5 !py-1.5 text-[12px]">
-              CRM
+              Follow-up & history
             </Link>
           ) : null}
         </div>
@@ -284,7 +283,7 @@ function ContextPane({
           </ActionButton>
           {(item.tab === 'leads' || item.email) && (
             <ActionButton disabled={busy} onClick={onCreateTask}>
-              Create task
+              {item.tab === 'instantly' ? 'Schedule follow-up' : 'Create task'}
             </ActionButton>
           )}
         </div>
@@ -329,7 +328,7 @@ function ContextPane({
                 className="text-[11px] text-neutral-500 underline-offset-2 hover:underline"
                 onClick={onRefreshSuggest}
               >
-                Refresh
+                Ask for help
               </button>
             </div>
             <p className="mt-1 text-sm font-medium text-neutral-900">{suggestion.nextStep}</p>
@@ -427,7 +426,7 @@ function applyOptimisticInboxUpdate(
 
   const updateItem = (entry: InboxItem): InboxItem | null => {
     if (entry.id !== itemId) return entry
-    if (patch.remove) return null
+    // Retain handled records for the Done and Snoozed views.
     return {
       ...entry,
       triage: patch.triage,
@@ -471,6 +470,8 @@ export function InboxPanel() {
   const searchParams = useSearchParams()
   const tab = parseInboxTab(searchParams.get('tab'))
   const selectedParam = searchParams.get('id')
+  const [scope, setScope] = useState<InboxScope>('current')
+  const [paging, setPaging] = useState(false)
   const [mobileShowContext, setMobileShowContext] = useState(false)
   const backButton = useRef<HTMLButtonElement>(null)
   const returnToList = useRef(false)
@@ -482,6 +483,8 @@ export function InboxPanel() {
       returnToList.current = false
     }
   }, [mobileShowContext, selectedParam])
+  const suggestionController = useRef<AbortController | null>(null)
+  const suggestionSelection = useRef<string | null>(null)
   const [suggestion, setSuggestion] = useState<InboxSuggestion | null>(null)
   const [busy, startTransition] = useTransition()
   const [actionError, setActionError] = useState<string | null>(null)
@@ -493,9 +496,9 @@ export function InboxPanel() {
     INBOX_CACHE_KEY
   )
 
-  const items = useMemo(() => itemsForInboxTab(data, tab), [data, tab])
+  const allItems = useMemo(() => itemsForInboxTab(data, tab), [data, tab])
+  const items = useMemo(() => allItems.filter((item) => inboxScope(item) === scope), [allItems, scope])
   const counts = data?.counts
-  const needsYou = data?.needsYou ?? []
 
   const selectedId = useMemo(() => {
     if (selectedParam && items.some((item) => item.id === selectedParam)) return selectedParam
@@ -503,6 +506,7 @@ export function InboxPanel() {
   }, [items, selectedParam])
 
   const selected = items.find((item) => item.id === selectedId) ?? null
+  suggestionSelection.current = selected?.id ?? null
 
   useEffect(() => {
     if (!activeRoute || selectedParam || !items[0]?.id) return
@@ -512,8 +516,11 @@ export function InboxPanel() {
     replaceInboxUrl(params)
   }, [activeRoute, items, pathname, selectedParam, tab])
 
-  const loadSuggestion = useCallback(async (item: InboxItem, signal?: AbortSignal) => {
-    setSuggestion(null)
+  const loadSuggestion = useCallback(async (item: InboxItem) => {
+    suggestionController.current?.abort()
+    const controller = new AbortController()
+    suggestionController.current = controller
+    const signal = controller.signal
     try {
       const res = await fetch('/api/inbox/suggest', {
         method: 'POST',
@@ -534,7 +541,7 @@ export function InboxPanel() {
       })
       if (signal?.aborted || !res.ok) return
       const json = (await res.json()) as InboxSuggestion
-      if (signal?.aborted) return
+      if (signal.aborted || suggestionSelection.current !== item.id) return
       setSuggestion(json)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
@@ -543,14 +550,29 @@ export function InboxPanel() {
   }, [])
 
   useEffect(() => {
-    if (!activeRoute || !selected) {
-      setSuggestion(null)
-      return
-    }
-    const controller = new AbortController()
-    void loadSuggestion(selected, controller.signal)
-    return () => controller.abort()
-  }, [activeRoute, selected, loadSuggestion])
+    suggestionController.current?.abort()
+    setSuggestion(selected ? suggestInboxNextStep({ ...selected }) : null)
+    return () => suggestionController.current?.abort()
+  }, [selected])
+
+  async function loadMore() {
+    if (!data || data.nextPage == null || paging) return
+    setPaging(true)
+    setActionError(null)
+    try {
+      const response = await fetch(`${INBOX_CACHE_KEY}?page=${data.nextPage}`)
+      if (!response.ok) throw new Error('Could not load older inbox items')
+      const next = await response.json() as InboxPayload
+      const current = peekQueryCache<InboxPayload>(INBOX_CACHE_KEY)?.data ?? data
+      const merge = (key: InboxTab) => [...new Map([...next.channels[key], ...current.channels[key]].map((item) => [item.id, item])).values()]
+      const channels = { agents: merge('agents'), instantly: merge('instantly'), leads: merge('leads') }
+      const mergedCounts = countActionableBadge(channels)
+      writeQueryCache(INBOX_CACHE_KEY, { ...next, channels, counts: mergedCounts,
+        badgeTotal: Object.values(mergedCounts).reduce((a,b) => a+b,0),
+        needsYou: pickNeedsYou(Object.values(channels).flat()) })
+    } catch (err) { setActionError(err instanceof Error ? err.message : 'Could not load items') }
+    finally { setPaging(false) }
+  }
 
   function setTab(next: InboxTab) {
     if (next === tab) return
@@ -711,6 +733,10 @@ export function InboxPanel() {
 
   function onCreateTask() {
     if (!selected) return
+    if (selected.tab === 'instantly') {
+      router.push(`/sales/outbound/rhythm?lead=${encodeURIComponent(selected.sourceId)}`)
+      return
+    }
     startTransition(() => {
       void (async () => {
         setActionError(null)
@@ -779,7 +805,7 @@ export function InboxPanel() {
   }
 
   // Only blank the panel on the very first load — tab switches never hit this gate.
-  if (loading || !data) {
+  if (!data) {
     return (
       <div className="flex flex-1 p-3 sm:p-4">
         <LoadingBlock label="Loading inbox…" />
@@ -787,7 +813,7 @@ export function InboxPanel() {
     )
   }
 
-  const empty = EMPTY_COPY[tab]
+  const empty = scope === 'current' ? { title: 'Nothing current needs attention here', body: 'Current shows received items from the last 14 days. Older or undated items are in Earlier / unverified. Callbacks stay in Today & follow-ups.' } : { title: `No ${scope} items loaded`, body: 'Use another view or load older items below.' }
 
   return (
     <div data-context-open={mobileShowContext} className="folio-inbox flex min-h-0 flex-1 flex-col p-3 sm:p-4">
@@ -795,41 +821,28 @@ export function InboxPanel() {
       <header className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-4 py-2.5">
         <div className="min-w-0">
           <h1 className="compass-page-title-compact">Inbox</h1>
-          <p className="truncate text-[12px] text-neutral-500">{INBOX_TAB_HINTS[tab]}</p>
+          <p className="truncate text-[12px] text-neutral-500">Recent replies, enquiries and explicit decisions. Older work stays accessible.</p>
         </div>
         <div className="shrink-0 rounded-xl bg-stone-50 px-2 py-1 text-[12px] tabular-nums text-neutral-500 ring-1 ring-stone-200/70">
-          {data.badgeTotal} need{data.badgeTotal === 1 ? 's' : ''} you · {items.length} shown
+          {items.length} shown · {data.partial ? 'Partial history' : 'Loaded sources checked'}
         </div>
       </header>
 
-      {needsYou.length > 0 ? (
-        <div className="folio-inbox-priorities shrink-0 border-b border-stone-100 bg-stone-50/60 px-3 py-2.5">
-          <div className="compass-section-label mb-1.5">Needs you</div>
-          <div className="flex gap-2 overflow-x-auto pb-0.5">
-            {needsYou.map((item) => (
-              <button
-                key={`needs-${item.id}`}
-                type="button"
-                onClick={() => selectItem(item)}
-                className={cn(
-                  'inline-flex max-w-[220px] shrink-0 items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e85d2a]/40',
-                  item.id === selectedId
-                    ? 'border-[#e85d2a]/40 bg-[#e85d2a]/10 shadow-soft'
-                    : 'border-stone-200 bg-white text-neutral-800 hover:border-stone-300'
-                )}
-              >
-                <SourceGlyph tab={item.tab} />
-                <span className="min-w-0">
-                  <span className="block truncate text-[12px] font-medium text-neutral-900">{item.title}</span>
-                  <span className="block truncate text-[11px] text-neutral-500">
-                    {INBOX_TAB_LABELS[item.tab]} · {formatInboxRelative(item.occurredAt)}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 px-4 py-3">
+        <div className="flex flex-wrap gap-2" aria-label="Inbox view">
+          {INBOX_SCOPES.map((view) => <button key={view.id} type="button" aria-pressed={scope === view.id}
+            className={cn('rounded-lg border px-3 py-2 text-sm', scope === view.id ? 'border-stone-300 bg-white font-semibold shadow-sm' : 'border-transparent text-neutral-600 hover:bg-stone-100')}
+            onClick={() => { setScope(view.id); setMobileShowContext(false) }}>
+            {view.label} <span className="ml-1 text-neutral-500">{allItems.filter((item) => inboxScope(item) === view.id).length}</span>
+          </button>)}
         </div>
-      ) : null}
+        <button type="button" className="compass-btn-secondary" onClick={() => void reload(true)}>Refresh inbox</button>
+      </div>
+      <p className="px-4 py-2 text-xs text-neutral-500">
+        {data.checkedAt ? `Compass checked ${formatInboxWhen(data.checkedAt)}. Provider sync times appear in each reply.` : ''}
+        {data.partial ? ' More history is available; counts cover loaded items only.' : ''}
+        {error ? ` Refresh failed: ${error}` : ''}
+      </p>
 
       <div
         role="tablist"
@@ -837,7 +850,7 @@ export function InboxPanel() {
         className="mx-3 mt-2 flex shrink-0 gap-0.5 overflow-x-auto rounded-xl border border-stone-200/80 bg-stone-50/80 p-0.5 shadow-soft"
       >
         {INBOX_TABS.map((key) => {
-          const count = counts?.[key] ?? 0
+          const count = itemsForInboxTab(data, key).filter((item) => inboxScope(item) === scope).length
           const active = tab === key
           return (
             <button
@@ -912,6 +925,7 @@ export function InboxPanel() {
               ))
             )}
           </div>
+          {data.nextPage != null ? <button type="button" disabled={paging} onClick={() => void loadMore()} className="border-t p-3 text-sm font-medium">{paging ? 'Loading…' : 'Load older items'}</button> : null}
         </section>
 
         <section

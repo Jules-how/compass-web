@@ -35,6 +35,7 @@ import {
   splitMorningBrief,
   splitNextQueue,
   sydneyDateOnly,
+  upcomingSendForecast,
 } from '@/lib/wave-desk'
 import { cn } from '@/lib/utils'
 import { FolioFolders } from '@/components/folio/FolioPrimitives'
@@ -47,8 +48,8 @@ type OutboundBoardPayload = {
 }
 type WaveDeskPayload = {
   recontactReady: number
-  emailsRemaining: number
-  liveCampaigns: number
+  actionsError?: string | null
+  briefsError?: string | null
   thisWeekStart: string
   actions: Array<{
     id: string
@@ -58,9 +59,11 @@ type WaveDeskPayload = {
     source: string
     status: string
     week_start: string | null
+    created_at?: string
   }>
   briefs: Array<{
     id: string
+    reviewState?: 'current' | 'stale' | 'unreviewed' | 'missing'
     generated_at: string
     recommendation: string | null
   }>
@@ -193,6 +196,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
 
   const latestBrief = deskQuery.data?.briefs?.[0]
   const brief = splitMorningBrief(latestBrief?.recommendation)
+  const forecast = boardQuery.data && !boardQuery.error ? upcomingSendForecast(boardQuery.data) : null
   const glance = glanceLabel(boardQuery.updatedAt)
   const loading = Boolean(
     campaignsQuery.loading || boardQuery.loading || deskQuery.loading,
@@ -358,8 +362,8 @@ export function OfferWavesBoard({ className }: { className?: string }) {
           {glance || 'Activate stays in Instantly.'}
         </p>
         <div className="relative flex flex-wrap items-center justify-end gap-2">
-          {note ? <p className="text-[12px] text-emerald-800">{note}</p> : null}
-          {error ? <p className="text-[12px] text-red-700">{error}</p> : null}
+          {note ? <p role="status" className="text-[12px] text-emerald-800">{note}</p> : null}
+          {error ? <p role="alert" className="text-[12px] text-red-700">{error}</p> : null}
           <WaveAddCampaign
             openToken={addToken}
             onCreated={() => {
@@ -370,16 +374,29 @@ export function OfferWavesBoard({ className }: { className?: string }) {
         </div>
       </section>
 
+      {campaignsQuery.error || boardQuery.error || deskQuery.error ? (
+        <p role="alert" className="text-sm text-red-700">
+          {campaignsQuery.error ? 'Campaign records could not be refreshed. ' : ''}
+          {boardQuery.error ? 'Instantly status and metrics are unavailable. ' : ''}
+          {deskQuery.error ? 'Outlook could not be refreshed. ' : ''}
+          <button type="button" className="underline" onClick={() => {
+            void campaignsQuery.reload(true)
+            void boardQuery.reload(true)
+            void deskQuery.reload(true)
+          }}>Retry</button>
+        </p>
+      ) : null}
+
       {brief.headline ? (
         <details className="folio-outbound-brief">
           <summary>
-            <span className="folio-caption">Daily brief</span>
-            <strong>{brief.headline}</strong>
+            <span className="folio-caption">{latestBrief?.reviewState === 'current' ? 'Daily brief' : 'Brief history'}</span>
+            <strong>{latestBrief?.reviewState === 'current' ? brief.headline : `Previous advice · ${latestBrief?.id ?? 'date unknown'}`}</strong>
           </summary>
           <Card>
             <CardContent className="space-y-3">
               <p className="text-[11px] font-semibold text-neutral-400">
-                This morning · {latestBrief?.id}
+                {latestBrief?.reviewState === 'current' ? 'Current reviewed brief' : 'Historical or unverified advice'} · {latestBrief?.id}
               </p>
               <h3 className="text-balance text-[16px] font-semibold leading-snug text-neutral-900">
                 {brief.headline}
@@ -410,7 +427,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
       {loading && !campaignsQuery.data ? (
         <WaveSkeleton />
       ) : (
-        <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
+        <div className="folio-outbound-workspace" data-view={campaignView}>
           <div className="order-1 min-w-0">
             <div className="folio-campaign-toolbar">
               <div className="compass-seg" aria-label="Campaign layout">
@@ -429,11 +446,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
                   Board
                 </button>
               </div>
-            </div>
-            {campaignView === 'board' ? (
-              <KanbanBoard columns={kanbanColumns} onMove={moveTask} />
-            ) : (
-              <>
+              {campaignView === 'folders' ? (
                 <FolioFolders
                   label="Campaign folders"
                   value={campaignFolder}
@@ -451,6 +464,12 @@ export function OfferWavesBoard({ className }: { className?: string }) {
                     count: c.tasks.length,
                   }))}
                 />
+              ) : null}
+            </div>
+            {campaignView === 'board' ? (
+              <KanbanBoard columns={kanbanColumns.map(column => ({ ...column, onAdd: undefined }))} onMove={moveTask} />
+            ) : (
+              <>
                 <section className="folio-paper folio-campaign-folder">
                   {kanbanColumns
                     .filter((c) => c.id === campaignFolder)
@@ -458,14 +477,6 @@ export function OfferWavesBoard({ className }: { className?: string }) {
                       <div key={column.id}>
                         <div className="folio-section-heading">
                           <h2>{column.title}</h2>
-                          {column.onAdd ? (
-                            <button
-                              className="compass-btn-secondary"
-                              onClick={column.onAdd}
-                            >
-                              Add campaign
-                            </button>
-                          ) : null}
                         </div>
                         <p className="folio-campaign-hint">
                           {column.hint ??
@@ -523,9 +534,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
                                   ) : null}
                                   {task.draggable !== false ? (
                                     <label>
-                                      <span className="sr-only">
-                                        Move {task.title}
-                                      </span>
+                                      <span>Status<span className="sr-only"> for {task.title}</span></span>
                                       <select
                                         className="compass-input"
                                         value={column.id}
@@ -569,7 +578,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
             )}
           </div>
 
-          <aside className="order-2 xl:sticky xl:top-4">
+          <aside className="folio-outlook">
             <Card>
               <CardHeader>
                 <div>
@@ -581,14 +590,15 @@ export function OfferWavesBoard({ className }: { className?: string }) {
                 </div>
               </CardHeader>
               <CardContent className="space-y-5">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="folio-outlook-metrics">
                   <div>
                     <p className="text-[11px] font-medium text-neutral-500">
-                      90-day retarget
+                      Leads eligible for recontact
                     </p>
                     <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
-                      {deskQuery.data?.recontactReady ?? '—'}
+                      {deskQuery.error ? 'Unavailable' : deskQuery.data?.recontactReady ?? '—'}
                     </p>
+                    <p className="mt-1 text-[12px] text-neutral-500">Existing leads meeting the 90-day recontact criteria</p>
                     <Link
                       href="/leads?recontact_ready=1"
                       className="mt-1 inline-block text-[12px] text-[#c2410c] hover:underline"
@@ -598,21 +608,21 @@ export function OfferWavesBoard({ className }: { className?: string }) {
                   </div>
                   <div>
                     <p className="text-[11px] font-medium text-neutral-500">
-                      Still to send
+                      Leads remaining
                     </p>
                     <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
-                      {deskQuery.data?.emailsRemaining ?? '—'}
+                      {boardQuery.error ? 'Unavailable' : forecast?.remaining ?? '—'}
                     </p>
                     <p className="mt-1 text-[12px] text-neutral-500">
-                      Live and paused
+                      Leads not yet contacted in live and paused campaigns
                     </p>
                   </div>
                   <div>
                     <p className="text-[11px] font-medium text-neutral-500">
-                      Live now
+                      Campaigns sending
                     </p>
                     <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
-                      {deskQuery.data?.liveCampaigns ?? '—'}
+                      {boardQuery.error ? 'Unavailable' : forecast?.liveCampaigns ?? '—'}
                     </p>
                     <p className="mt-1 text-[12px] text-neutral-500">
                       Sending in Instantly
@@ -624,7 +634,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
                   <p className="mb-2 text-[13px] font-semibold text-neutral-900">
                     Pipeline actions
                   </p>
-                  {openActions.length === 0 && doneActions.length === 0 ? (
+                  {deskQuery.error || deskQuery.data?.actionsError ? <p role="alert">Actions unavailable. Try refreshing.</p> : !deskQuery.data ? <p>Loading actions…</p> : openActions.length === 0 && doneActions.length === 0 ? (
                     <p className="text-[12px] text-pretty text-neutral-400">
                       Nothing queued. Morning scan or Add campaign writes the
                       next move here.
@@ -637,7 +647,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
                       ).map((action) => (
                         <li
                           key={action.id}
-                          className="flex flex-wrap items-start justify-between gap-2 rounded-xl bg-stone-50/80 px-3 py-2.5"
+                          className="folio-outlook-action"
                         >
                           <div className="min-w-0">
                             <p className="text-[13px] font-medium text-neutral-800">
@@ -653,7 +663,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
                                 {action.kind}
                               </Badge>
                               <span className="text-[11px] text-neutral-400">
-                                {action.source}
+                                {action.source} · {formatWaveDate(action.created_at?.slice(0, 10) || action.week_start) || 'Date unavailable'}
                               </span>
                             </div>
                           </div>

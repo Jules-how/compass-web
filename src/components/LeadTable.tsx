@@ -556,7 +556,7 @@ export default function LeadTable({
             : 'min-w-0 flex-1 space-y-3'
         }
       >
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="crm-operating-toolbar flex flex-wrap items-center gap-2">
           <div className="inline-flex items-center rounded-xl bg-stone-100/90 p-0.5 shadow-soft">
             <button
               type="button"
@@ -597,6 +597,13 @@ export default function LeadTable({
               ) : null}
             </button>
           </div>
+          {columnPreset === 'crm' ? (
+            <select className="compass-input" aria-label="CRM column view" value={grid.view}
+              onChange={(event) => grid.setView(event.target.value as 'operating' | 'legacy')}>
+              <option value="operating">Operating view</option>
+              <option value="legacy">Legacy / custom view</option>
+            </select>
+          ) : null}
           <input
             type="search"
             placeholder="Name, email, company, or phone"
@@ -698,7 +705,7 @@ export default function LeadTable({
         </div>
 
         {summary && !embed ? (
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+          <div className="crm-status-filters flex gap-1.5 overflow-x-auto pb-0.5" aria-label="Common status filters">
             {summaryChips.map((chip) => {
               const active = chipActive(chip.filters)
               return (

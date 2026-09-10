@@ -17,20 +17,30 @@ const shortDate = (date: string | number) =>
     day: "numeric",
     month: "short",
   }).format(new Date(typeof date === "string" ? dayTime(date) : date));
+export type TimelineRange = { span: number; offset: number; undatedOpen: boolean };
 export function PathfinderTimeline({
   data,
   goalId,
   onOpen,
   onAdd,
+  range: suppliedRange,
+  onRangeChange,
 }: {
   data: PathfinderData;
   goalId: string;
   onOpen: (kind: string, id: string) => void;
   onAdd: () => void;
+  range?: TimelineRange;
+  onRangeChange?: (range: TimelineRange) => void;
 }) {
-  const [span, setSpan] = useState(90);
-  const [offset, setOffset] = useState(0);
-  const [undatedOpen, setUndatedOpen] = useState(false);
+  const [localRange, setLocalRange] = useState<TimelineRange>({ span: 90, offset: 0, undatedOpen: false });
+  const range = suppliedRange ?? localRange;
+  const { span, offset, undatedOpen } = range;
+  const changeRange = (patch: Partial<TimelineRange>) => {
+    const next = { ...range, ...patch };
+    setLocalRange(next);
+    onRangeChange?.(next);
+  };
   const all = timelineEntries(goalWorkspace(data, goalId));
   const today = dayTime(
     new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }).format(
@@ -67,7 +77,7 @@ export function PathfinderTimeline({
       <header>
         <div>
           <CalendarDays size={16} aria-hidden="true" />
-          <h2>The road ahead</h2>
+          <h2>Timeline</h2>
           <span>{dated.length} dated items</span>
         </div>
         <div className="timeline-controls">
@@ -81,8 +91,7 @@ export function PathfinderTimeline({
                 key={days}
                 aria-pressed={span === days}
                 onClick={() => {
-                  setSpan(Number(days));
-                  setOffset(0);
+                  changeRange({ span: Number(days), offset: 0 });
                 }}
               >
                 {label}
@@ -93,7 +102,7 @@ export function PathfinderTimeline({
             className="folio-icon-button"
             aria-label="Previous time period"
             disabled={span === 0}
-            onClick={() => setOffset((o) => o - 1)}
+            onClick={() => changeRange({ offset: offset - 1 })}
           >
             <ChevronLeft size={16} aria-hidden="true" />
           </button>
@@ -101,7 +110,7 @@ export function PathfinderTimeline({
             className="folio-icon-button"
             aria-label="Next time period"
             disabled={span === 0}
-            onClick={() => setOffset((o) => o + 1)}
+            onClick={() => changeRange({ offset: offset + 1 })}
           >
             <ChevronRight size={16} aria-hidden="true" />
           </button>
@@ -145,7 +154,7 @@ export function PathfinderTimeline({
                     "○"
                   )}
                 </span>
-                <strong>{item.title}</strong>
+                <span className="timeline-item-caption"><strong>{item.title}</strong><small>{shortDate(item.date)} · {item.complete ? "Complete" : "Open"}</small></span>
               </button>
               <div className="timeline-track">
                 {ticks.map((tick) => (
@@ -189,7 +198,7 @@ export function PathfinderTimeline({
             <p className="timeline-empty">
               {dated.length
                 ? "No dated work in this window. Choose All dates to see the full plan."
-                : "Add dates to your goal and work to see the path unfold here."}
+                : "No dated milestones or actions are connected. Add a milestone or open undated work to add dates."}
             </p>
           )}
         </div>
@@ -202,7 +211,7 @@ export function PathfinderTimeline({
         {undated.length > 0 && (
           <button
             aria-expanded={undatedOpen}
-            onClick={() => setUndatedOpen(!undatedOpen)}
+            onClick={() => changeRange({ undatedOpen: !undatedOpen })}
           >
             {undated.length} without a date{" "}
             <span aria-hidden="true">{undatedOpen ? "−" : "+"}</span>

@@ -239,6 +239,7 @@ function campaignNameLookup(
 }
 
 type ExistingLead = {
+  last_outbound_at?: string | null
   instantly_event_at?: string | null
   updated_at?: string | null
 
@@ -256,7 +257,7 @@ async function loadExistingLeads(
 ): Promise<ExistingLead[]> {
   const rows: ExistingLead[] = []
   const selectCols =
-    'id,email,instantly_lead_id,outbound_status,suppression_reason,instantly_event_at,updated_at'
+    'id,email,instantly_lead_id,outbound_status,suppression_reason,instantly_event_at,last_outbound_at,updated_at'
 
   // Chunk to keep PostgREST URLs reasonable.
   const chunk = 200
@@ -371,7 +372,7 @@ export async function syncInstantlyLeadsIntoCompass(
       instantly_campaign: campaignName,
       instantly_campaign_name: campaignName,
       instantly_synced_at: stamp,
-      last_outbound_at: lastContactAt,
+      ...(str(lead.timestamp_last_contact) ? { last_outbound_at: str(lead.timestamp_last_contact) } : {}),
       updated_at: stamp,
       mirrored_at: stamp,
       suppression_reason: suppressionReason,
@@ -387,6 +388,7 @@ export async function syncInstantlyLeadsIntoCompass(
 
     let contactId: string
     if (match) {
+      if (match.last_outbound_at && (!patch.last_outbound_at || Date.parse(String(patch.last_outbound_at)) <= Date.parse(match.last_outbound_at))) delete patch.last_outbound_at
       // Don't demote a stronger local status unless Instantly is more advanced.
       if (!shouldOverwriteOutbound(match.outbound_status, outbound)) {
         delete patch.outbound_status
@@ -431,12 +433,21 @@ export async function syncInstantlyLeadsIntoCompass(
       if (email) byEmail.set(email, created)
     }
 
+    const replyAt = str(lead.timestamp_last_reply)
+    if (replyAt && Number.isFinite(Date.parse(replyAt))) {
+      await recordOutreachTouch(supabase, {
+        contactId, contactedAt: replyAt, channel: 'email', direction: 'inbound',
+        outcome: 'reply_observed', instantlyCampaignId: campaignId,
+        campaignName, source: 'instantly_reply_sync'
+      })
+    }
+
     // Log outreach for 90-day cooldown history (best-effort; never fail sync).
     try {
       const linked = await lookupCopyForInstantlyCampaign(supabase, campaignId)
-      await recordOutreachTouch(supabase, {
+      if (lead.timestamp_last_contact) await recordOutreachTouch(supabase, {
         contactId,
-        contactedAt: lastContactAt,
+        contactedAt: lead.timestamp_last_contact,
         channel: 'email',
         campaignId: linked.campaignId,
         campaignName: linked.campaignName || campaignName,

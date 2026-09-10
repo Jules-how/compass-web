@@ -1,0 +1,40 @@
+/* Scoped CRM and install workspace refinements. */
+.records-table .records-cell { height:60px; font-size:14px; padding:10px 12px; }
+.records-table .records-header-cell { height:44px; font-size:14px; background:#f1efec; color:#52504c; }
+.records-table .records-identity { position:sticky; left:84px; z-index:3; box-shadow:8px 0 12px -10px #0f12172e; }
+.records-table .records-header-cell.records-identity { z-index:5; }
+.records-table .records-muted { color:#686560; }
+.records-table .records-tags { width:auto; max-width:100%; flex-wrap:wrap; gap:4px; font-size:12px; }
+.records-tags-more { position:relative; }
+.records-tags-more summary { cursor:pointer; color:#52504c; font-size:12px; }
+.records-tags-more > div { display:flex; flex-wrap:wrap; gap:4px; padding:8px 0; }
+.records-table .records-link { user-select:text; }
+.crm-operating-toolbar { row-gap:10px; }
+.crm-status-filters button { min-height:36px; font-size:14px; }
+.install-stage-workspace { display:grid; grid-template-columns:280px minmax(0,1fr); gap:24px; align-items:start; }
+.install-stage-nav { min-width:0; }
+.install-stage-list { display:grid; gap:8px; }
+.install-stage-button { display:grid; grid-template-columns:28px minmax(0,1fr) 15px; gap:10px; align-items:center; width:100%; border:1px solid #e8e6e3; border-radius:10px; padding:12px; background:#f1efec; text-align:left; color:#292724; }
+.install-stage-button[aria-current="step"] { border-color:var(--compass-accent); background:#fff; box-shadow:inset 3px 0 var(--compass-accent); }
+.install-stage-button strong { display:block; font:600 14px/20px "Folio Sans",sans-serif; }
+.install-stage-button > span > span { display:block; margin-top:4px; font-size:12px; color:#686560; }
+.install-stage-number { font-size:14px; font-variant-numeric:tabular-nums; }
+.install-stage-detail { display:grid; min-width:0; gap:16px; }
+.install-stage-detail > aside { box-shadow:none; }
+.install-stage-mobile { display:none; }
+.install-save-bar { position:sticky; bottom:12px; z-index:10; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border:1px solid #e8e6e3; border-radius:12px; background:#fff; box-shadow:0 3px 16px #29272412; font-size:14px; }
+.install-sop-workspace { overflow:visible; }
+.install-queue-scroll { max-width:100%; }
+.install-queue-column { width:290px; flex-shrink:0; padding:12px; border:1px solid #e8e6e3; border-radius:12px; background:#f1efec; }
+.install-queue-column > div:first-child { min-height:72px; }
+@media (max-width:850px) {
+ .install-stage-workspace { grid-template-columns:minmax(0,1fr); }
+ .install-stage-list { display:none; }
+ .install-stage-mobile { display:grid; gap:8px; font-size:14px; }
+ .install-stage-mobile select { width:100%; max-width:100%; min-width:0; }
+}
+@media (max-width:650px) {
+ .records-table .records-identity { position:static; box-shadow:none; }
+ .records-table .records-header-cell.records-identity { position:sticky; }
+ .install-queue-column { width:min(86vw,340px); }
+}

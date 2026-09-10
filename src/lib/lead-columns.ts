@@ -11,7 +11,7 @@ export const LEAD_COLUMN_PINNED_KEY = 'compass.leadColumnsPinned.v1'
 export const LEAD_COLUMN_HIDDEN_KEY = 'compass.leadColumnsHidden.v1'
 export const LEAD_COLUMN_ORDER_KEY = 'compass.leadColumnOrder.v2'
 
-export type LeadColumnPreset = 'crm' | 'campaign'
+export type LeadColumnPreset = 'crm' | 'campaign' | 'crm-legacy'
 
 export type LeadColumnId =
   | 'first_name'
@@ -58,7 +58,7 @@ export const LEAD_COLUMN_DEFS: LeadColumnDef[] = [
   { id: 'lead_facts', label: 'Facts', defaultWidth: 220 },
   { id: 'status', label: 'Status', defaultWidth: 140 },
   { id: 'categories', label: 'Categories', defaultWidth: 320 },
-  { id: 'last_touch', label: 'Last interaction', defaultWidth: 160 },
+  { id: 'last_touch', label: 'Last outbound', defaultWidth: 160 },
   { id: 'strength', label: 'Connection strength', defaultWidth: 170 },
   { id: 'source', label: 'Source', defaultWidth: 120 },
   { id: 'campaign', label: 'Campaign', defaultWidth: 180 },
@@ -70,7 +70,7 @@ export const LEAD_COLUMN_DEFS: LeadColumnDef[] = [
   { id: 'email_origin', label: 'Email origin', defaultWidth: 120 }
 ]
 
-export const CRM_REQUIRED_COLUMNS: LeadColumnId[] = ['first_name', 'last_name', 'company']
+export const CRM_REQUIRED_COLUMNS: LeadColumnId[] = ['company']
 export const CAMPAIGN_REQUIRED_COLUMNS: LeadColumnId[] = [
   'company',
   'opener',
@@ -78,15 +78,11 @@ export const CAMPAIGN_REQUIRED_COLUMNS: LeadColumnId[] = [
 ]
 
 export const CRM_DEFAULT_COLUMNS: LeadColumnId[] = [
-  'first_name',
-  'last_name',
-  'company',
-  'categories',
-  'opener',
-  'lead_facts',
-  'vertical',
-  'last_touch',
-  'strength'
+  'company', 'location', 'status', 'phone', 'email', 'last_touch'
+]
+
+const LEGACY_CRM_COLUMNS: LeadColumnId[] = [
+  'first_name', 'last_name', 'company', 'categories', 'opener', 'lead_facts', 'vertical', 'last_touch', 'strength'
 ]
 
 export const CAMPAIGN_DEFAULT_COLUMNS: LeadColumnId[] = [
@@ -115,23 +111,23 @@ export function requiredColumnsFor(preset: LeadColumnPreset): LeadColumnId[] {
 }
 
 export function defaultColumnsFor(preset: LeadColumnPreset): LeadColumnId[] {
-  return preset === 'campaign' ? [...CAMPAIGN_DEFAULT_COLUMNS] : [...CRM_DEFAULT_COLUMNS]
+  return preset === 'campaign' ? [...CAMPAIGN_DEFAULT_COLUMNS] : preset === 'crm-legacy' ? [...LEGACY_CRM_COLUMNS] : [...CRM_DEFAULT_COLUMNS]
 }
 
 export function storageKeyFor(preset: LeadColumnPreset): string {
-  return preset === 'campaign' ? CAMPAIGN_LEAD_COLUMN_STORAGE_KEY : LEAD_COLUMN_STORAGE_KEY
+  return preset === 'campaign' ? CAMPAIGN_LEAD_COLUMN_STORAGE_KEY : preset === 'crm' ? 'compass.leadColumns.operating.v1' : LEAD_COLUMN_STORAGE_KEY
 }
 
 export function pinnedKeyFor(preset: LeadColumnPreset): string {
-  return `${LEAD_COLUMN_PINNED_KEY}.${preset}`
+  return `${LEAD_COLUMN_PINNED_KEY}.${preset === 'crm' ? 'crm.operating.v1' : preset === 'crm-legacy' ? 'crm' : preset}`
 }
 
 export function hiddenKeyFor(preset: LeadColumnPreset): string {
-  return `${LEAD_COLUMN_HIDDEN_KEY}.${preset}`
+  return `${LEAD_COLUMN_HIDDEN_KEY}.${preset === 'crm' ? 'crm.operating.v1' : preset === 'crm-legacy' ? 'crm' : preset}`
 }
 
 export function orderKeyFor(preset: LeadColumnPreset): string {
-  return `${LEAD_COLUMN_ORDER_KEY}.${preset}`
+  return `${LEAD_COLUMN_ORDER_KEY}.${preset === 'crm' ? 'crm.operating.v1' : preset === 'crm-legacy' ? 'crm' : preset}`
 }
 
 function readIdList(key: string): LeadColumnId[] | null {
@@ -233,15 +229,15 @@ export function resolveVisibleLeadColumns(opts: {
   const visible = LEAD_COLUMN_DEFS.map((c) => c.id).filter((id) => {
     if (required.includes(id)) return true
     if (hidden.has(id)) return false
-    return defaults.includes(id) || pinned.has(id) || occupied.has(id)
+    return defaults.includes(id) || pinned.has(id) || (opts.preset !== 'crm' && occupied.has(id))
   })
   return applyColumnOrder(visible, opts.order ?? defaults)
 }
 
-export function loadLeadColumnWidths(): Partial<Record<LeadColumnId, number>> {
+export function loadLeadColumnWidths(preset: LeadColumnPreset = 'campaign'): Partial<Record<LeadColumnId, number>> {
   if (typeof window === 'undefined') return {}
   try {
-    const raw = window.localStorage.getItem(LEAD_COLUMN_WIDTHS_KEY)
+    const raw = window.localStorage.getItem(preset === 'crm' ? `${LEAD_COLUMN_WIDTHS_KEY}.operating.v1` : LEAD_COLUMN_WIDTHS_KEY)
     if (!raw) return {}
     const parsed = JSON.parse(raw) as unknown
     if (!parsed || typeof parsed !== 'object') return {}
@@ -256,9 +252,9 @@ export function loadLeadColumnWidths(): Partial<Record<LeadColumnId, number>> {
   }
 }
 
-export function persistLeadColumnWidths(widths: Partial<Record<LeadColumnId, number>>) {
+export function persistLeadColumnWidths(widths: Partial<Record<LeadColumnId, number>>, preset: LeadColumnPreset = 'campaign') {
   if (typeof window === 'undefined') return
-  window.localStorage.setItem(LEAD_COLUMN_WIDTHS_KEY, JSON.stringify(widths))
+  window.localStorage.setItem(preset === 'crm' ? `${LEAD_COLUMN_WIDTHS_KEY}.operating.v1` : LEAD_COLUMN_WIDTHS_KEY, JSON.stringify(widths))
 }
 
 export function columnWidth(

@@ -17,6 +17,8 @@ export type RecordOutreachTouchInput = {
   instantlyCampaignId?: string | null
   copySnapshot?: OutreachTouchCopy | null
   source?: string
+  direction?: string
+  outcome?: string
 }
 
 /**
@@ -26,12 +28,13 @@ export async function recordOutreachTouch(
   supabase: SupabaseClient,
   input: RecordOutreachTouchInput
 ): Promise<{ id: string; wrote: boolean }> {
-  const id = outreachTouchId({
+  const baseId = outreachTouchId({
     contactId: input.contactId,
     instantlyCampaignId: input.instantlyCampaignId,
     contactedAt: input.contactedAt,
     source: input.source || 'instantly_sync'
   })
+  const id = input.direction === 'inbound' ? `${baseId}-${Date.parse(input.contactedAt)}` : baseId
   const row = {
     id,
     contact_id: input.contactId,
@@ -42,6 +45,9 @@ export async function recordOutreachTouch(
     instantly_campaign_id: input.instantlyCampaignId ?? null,
     copy_snapshot: input.copySnapshot ?? null,
     source: input.source || 'instantly_sync',
+    ...(input.direction ? { direction: input.direction } : {}),
+    ...(input.outcome ? { outcome: input.outcome } : {}),
+    ...(input.direction === 'inbound' ? { request_payload: { at_verified: true } } : {}),
     created_at: new Date().toISOString()
   }
   const { error } = await supabase.from('lead_outreach_touches').upsert(row, { onConflict: 'id' })

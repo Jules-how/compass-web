@@ -108,7 +108,7 @@ test('campaign planner files and migration are wired', () => {
 
   assert.match(planner, /useTimelineWheelZoom/)
   assert.match(planner, /setTimelineScrollRef/)
-  assert.match(planner, /enabled: view === 'timeline' && scrollNode !== null/)
+  assert.match(planner, /enabled: active && view === 'timeline' && scrollNode !== null/)
   assert.match(planner, /overscroll-contain/)
   assert.match(planner, /placement === 'left'/)
   assert.match(planner, /Side pop-out/)

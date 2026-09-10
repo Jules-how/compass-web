@@ -96,7 +96,9 @@ export function FolioHome({
     month: 'long',
     timeZone: 'Australia/Sydney',
   })
-  const brief = wave?.homeBlurb || wave?.recommendation || wave?.writeup
+  const currentReview = wave?.reviewState === 'current'
+  const dueActions = work.ready.filter((task) => task.lead_id && task.due && Date.parse(task.due) <= Date.now() + 86400000)
+  const brief = currentReview ? wave?.homeBlurb || wave?.recommendation || wave?.writeup : `${dueActions.length} dated outreach actions due by tomorrow. Review current replies, then work through Today & follow-ups.`
   async function decide(action: 'accept' | 'dismiss') {
     if (busy) return
     setBusy(true)
@@ -249,9 +251,9 @@ export function FolioHome({
                 >
                   {folder === 'today'
                     ? wave?.reviewState !== 'current'
-                      ? 'Review needed'
+                      ? 'Current work'
                       : wave?.briefStatus === 'proposed'
-                      ? 'Review needed'
+                      ? 'Current work'
                       : wave?.briefStatus === 'accepted'
                         ? 'Accepted'
                         : wave?.briefStatus === 'dismissed'
@@ -271,14 +273,14 @@ export function FolioHome({
               {folder === 'today' ? (
                 <>
                   <section className="folio-brief">
-                    <p className="folio-small">{waveReviewLabel(wave)}</p>
+                    <p className="folio-small">{currentReview ? waveReviewLabel(wave) : dateLabel}</p>
                     <p className="folio-caption">
                       {wave?.briefStatus === 'proposed'
                         ? 'Your next decision'
                         : 'Your working brief'}
                     </p>
                     <h2>
-                      {wave?.briefStatus === 'proposed' ? (
+                      {currentReview && wave?.briefStatus === 'proposed' ? (
                         <>
                           A moment to decide.
                           <br />
@@ -361,7 +363,7 @@ export function FolioHome({
                       ) : null}
                     </ul>
                   </section>
-                  {next.length ? (
+                  {currentReview && next.length ? (
                     <section className="folio-home-work">
                       <div className="folio-section-heading">
                         <h3>
@@ -541,7 +543,7 @@ export function FolioHome({
           <section className="folio-source">
             <div className="folio-section-heading">
               <h2>In the Inbox</h2>
-              <span>Retained items</span>
+              <span>{inbox.data?.partial ? 'Unread · partial history' : 'Current unread'}</span>
             </div>
             {inbox.error && !inbox.data ? (
               <p>Inbox counts unavailable.</p>
@@ -551,13 +553,13 @@ export function FolioHome({
                   <Link key={tab} href={`/inbox?tab=${tab}`}>
                     <span>
                       {tab === 'agents'
-                        ? 'Agents'
+                        ? 'Decisions'
                         : tab === 'instantly'
-                          ? 'Instantly'
-                          : 'Leads'}
+                          ? 'Replies'
+                          : 'Enquiries'}
                     </span>
                     <strong>
-                      {inbox.data?.channels?.[tab]?.length ?? '—'}
+                      {inbox.data?.counts?.[tab] ?? '—'}
                     </strong>
                   </Link>
                 ))}
@@ -569,16 +571,25 @@ export function FolioHome({
       <FolioDialog
         open={briefOpen}
         onClose={() => setBriefOpen(false)}
-        title={wave?.briefDate && wave.briefDate !== wave.sydneyDate ? `Brief · ${wave.briefDate}` : 'Today’s brief'}
+        title="Today’s brief"
       >
-        <p className="folio-small">{waveReviewLabel(wave)}</p>
+        <p className="folio-small">{dateLabel} · Current recorded work</p>
+        <div className="folio-note">
+          <h3>Start here</h3>
+          <p>{dueActions.length} dated outreach actions due by tomorrow.</p>
+          <ul>
+            {dueActions.slice(0, 5).map((task) => <li key={task.id}><Link href={`/sales/outbound/rhythm?lead=${encodeURIComponent(task.lead_id!)}`}>{task.title} <ArrowRight size={13} /></Link></li>)}
+          </ul>
+          <Link href="/sales/outbound/rhythm" className="compass-btn-primary">Open Today & follow-ups <ArrowRight size={14} /></Link>
+        </div>
+        <div className="folio-note">
+          <h3>Replies and enquiries</h3>
+          <p>{inbox.error ? 'Inbox could not refresh.' : inbox.data ? `${inbox.data.badgeTotal} current unread items in loaded sources.${inbox.data.partial ? ' More history is available in Inbox.' : ''}` : 'Loading current inbox…'}</p>
+          <Link href="/inbox">Open current inbox <ArrowRight size={13} /></Link>
+        </div>
+        {currentReview ? <><p className="folio-small">{waveReviewLabel(wave)}</p><p className="folio-dialog-copy">{wave?.writeup || wave?.recommendation || wave?.homeBlurb}</p></> :
+          <details className="folio-small"><summary>Previous review information</summary><p>{waveReviewLabel(wave)}</p><p>Use the current actions above while the written review is refreshed.</p></details>}
         {wave?.runId ? <details className="folio-small"><summary>Review source</summary><p>{wave.publisher} · {wave.runId}</p></details> : null}
-        <p className="folio-dialog-copy">
-          {wave?.writeup ||
-            wave?.recommendation ||
-            wave?.homeBlurb ||
-            'No brief is available.'}
-        </p>
         {next.length ? (
           <div className="folio-note">
             <h3>
@@ -625,7 +636,7 @@ export function FolioHome({
           </>
         ) : (
           <span className="folio-status">
-            {wave?.reviewState === 'current' ? wave.briefStatus : 'Current review needed'}
+            {currentReview ? wave?.briefStatus : 'Current actions available above'}
           </span>
         )}
       </FolioDialog>

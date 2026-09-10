@@ -1,7 +1,8 @@
 'use client'
 
+import { useActivePane } from '@/components/ActivePane'
 import { onWorkChanged } from '@/lib/workspace-change'
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
 import {
   loadQueryCache,
   peekQueryCache,
@@ -12,15 +13,16 @@ import {
 export function useCachedJson<T>(
   key: string | null,
   url: string | null,
-  options?: { staleMs?: number }
+  options?: { staleMs?: number; enabled?: boolean }
 ) {
+  const paneActive = useActivePane()
+  const enabled = paneActive && options?.enabled !== false
+  const invalidated = useRef(false)
   const snapshot = useSyncExternalStore(
     (onStoreChange) => (key ? subscribeQueryCache(key, onStoreChange) : () => {}),
     () => (key ? peekQueryCache<T>(key) : null),
     () => null
   )
-
-  const [bootstrapping, setBootstrapping] = useState(() => !snapshot?.data && !snapshot?.error)
 
   const reload = useCallback(
     async (force = true) => {
@@ -42,44 +44,37 @@ export function useCachedJson<T>(
   )
 
   useEffect(() => {
-    if (!key || !url) {
-      setBootstrapping(false)
-      return
-    }
-    let cancelled = false
-    void loadQueryCache<T>(
-      key,
-      async () => {
-        const res = await fetch(url, { headers: { Accept: 'application/json' } })
-        if (!res.ok) throw new Error(`Failed to load (${res.status})`)
-        return (await res.json()) as T
-      },
-      { force: false, staleMs: options?.staleMs }
-    ).finally(() => {
-      if (!cancelled) setBootstrapping(false)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [key, url, options?.staleMs])
+    if (!key || !url || !enabled) return
+    const force = invalidated.current
+    invalidated.current = false
+    void reload(force)
+  }, [key, url, enabled, reload])
 
   useEffect(() => {
     if (!key || !/^\/api\/(tasks|projects|home|pathfinder)(\/|\?|$)/.test(key)) return
-    // Local/cross-tab mutations refresh immediately. Server/agent writes are observed
-    // on focus and within 30 seconds for lightweight workspace reads. Home reads
-    // may refresh integrations, so they are event/focus driven, never polled.
-    const refresh = () => { if (document.visibilityState === 'visible') void reload(true) }
-    const unsubscribe = onWorkChanged(refresh)
+    const mutation = () => {
+      if (!enabled || document.visibilityState !== 'visible') { invalidated.current = true; return }
+      void reload(true)
+    }
+    const refresh = () => {
+      if (!enabled || document.visibilityState !== 'visible') return
+      const force = invalidated.current
+      invalidated.current = false
+      void reload(force)
+    }
+    const unsubscribe = onWorkChanged(mutation)
+    if (!enabled) return unsubscribe
     window.addEventListener('focus', refresh)
     document.addEventListener('visibilitychange', refresh)
     const timer = /^\/api\/home(\/|\?|$)/.test(key) ? null : window.setInterval(refresh, 30_000)
     return () => { unsubscribe(); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); if (timer !== null) window.clearInterval(timer) }
-  }, [key, reload])
+  }, [key, enabled, reload])
 
   return {
     data: snapshot?.data,
     error: snapshot?.error ?? null,
-    loading: bootstrapping && snapshot?.data === undefined,
+    loading: Boolean(key && url && enabled && snapshot?.data === undefined && (!snapshot?.error || snapshot?.promise)),
+    refreshing: Boolean(snapshot?.promise),
     updatedAt: snapshot?.updatedAt ?? 0,
     reload
   }

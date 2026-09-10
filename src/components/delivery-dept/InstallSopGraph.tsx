@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle,
   ArrowLeft,
@@ -152,7 +152,20 @@ export function InstallSopGraph({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [showPalette, setShowPalette] = useState(false)
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null)
-  const [dirty, setDirty] = useState(false)
+  const drafts = useRef(new Map<string, SopPlan>())
+  const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(new Set())
+  const activeKey = scope === 'template' ? 'template' : selectedInstallId || 'install'
+  const activeKeyRef = useRef(activeKey)
+  activeKeyRef.current = activeKey
+  const dirty = dirtyKeys.has(activeKey)
+  function setDirty(value: boolean) {
+    setDirtyKeys((current) => {
+      const next = new Set(current)
+      if (value) next.add(activeKey)
+      else next.delete(activeKey)
+      return next
+    })
+  }
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -167,6 +180,7 @@ export function InstallSopGraph({
   const availableNodes = SOP_NODE_CATALOG.filter((node) => !activePlan?.nodes.includes(node.id))
 
   useEffect(() => {
+    if (drafts.current.has('template')) return
     if (board.sopTemplate) {
       try {
         setTemplatePlan(normalizeSopPlan(board.sopTemplate))
@@ -177,19 +191,20 @@ export function InstallSopGraph({
   }, [board.sopTemplate])
 
   useEffect(() => {
-    setInstallPlan(selectedInstall ? planForInstall(selectedInstall) : null)
+    setInstallPlan(selectedInstall ? drafts.current.get(selectedInstall.id) ?? planForInstall(selectedInstall) : null)
   }, [selectedInstall])
 
   useEffect(() => {
-    if (!selectedInstall && scope === 'install') {
-      setScope('template')
-      setDirty(false)
-      setMessage(null)
-    } else if (scope === 'install') {
-      setDirty(false)
-      setMessage(null)
-    }
-  }, [selectedInstall, scope])
+    if (!selectedInstall && scope === 'install') setScope('template')
+    setMessage(null)
+  }, [selectedInstallId, scope, selectedInstall])
+
+  useEffect(() => {
+    if (!dirtyKeys.size) return
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirtyKeys])
 
   useEffect(() => {
     if (!activePlan?.nodes.length) {
@@ -202,6 +217,7 @@ export function InstallSopGraph({
   }, [activePlan, selectedNodeId])
 
   function setPlan(next: SopPlan) {
+    drafts.current.set(activeKey, next)
     if (scope === 'template') setTemplatePlan(next)
     else setInstallPlan(next)
     setDirty(true)
@@ -330,12 +346,13 @@ export function InstallSopGraph({
         scope === 'template'
           ? payload.plan
           : payload.install?.sopPlan
-      if (saved) {
+      if (saved && activeKeyRef.current === activeKey) {
         if (scope === 'template') setTemplatePlan(normalizeSopPlan(saved))
         else setInstallPlan(normalizeSopPlan(saved))
       }
+      drafts.current.set(activeKey, saved ? normalizeSopPlan(saved) : activePlan)
       setDirty(false)
-      setMessage(scope === 'template' ? 'Future install template saved.' : 'Current install workflow saved.')
+      if (activeKeyRef.current === activeKey) setMessage(scope === 'template' ? 'Future install template saved.' : 'Current install workflow saved.')
     } catch (err) {
       setMessage(err instanceof Error ? err.message : String(err))
     } finally {
@@ -355,7 +372,7 @@ export function InstallSopGraph({
   }
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="install-sop-workspace overflow-hidden">
       <CardHeader className="border-b border-stone-100">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
@@ -370,10 +387,10 @@ export function InstallSopGraph({
               <button
                 type="button"
                 aria-pressed={scope === 'template'}
+                disabled={saving}
                 className={scope === 'template' ? 'compass-btn-primary' : 'compass-btn-ghost'}
                 onClick={() => {
                   setScope('template')
-                  setDirty(false)
                   setMessage(null)
                 }}
               >
@@ -382,12 +399,11 @@ export function InstallSopGraph({
               <button
                 type="button"
                 aria-pressed={scope === 'install'}
-                disabled={!selectedInstall}
+                disabled={!selectedInstall || saving}
                 className={scope === 'install' ? 'compass-btn-primary' : 'compass-btn-ghost'}
                 onClick={() => {
                   if (!selectedInstall) return
                   setScope('install')
-                  setDirty(false)
                   setMessage(null)
                 }}
               >
@@ -396,6 +412,7 @@ export function InstallSopGraph({
             </div>
             <select
               className="compass-input min-w-[190px]"
+              disabled={saving}
               value={selectedInstallId || ''}
               onChange={(event) => onSelectInstall(event.target.value || null)}
               aria-label="Choose current install"
@@ -409,26 +426,17 @@ export function InstallSopGraph({
             </select>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Badge variant={scope === 'template' ? 'primary' : 'secondary'} appearance="light" size="sm">
-            {scope === 'template' ? 'Editing future installs' : `Editing ${selectedInstall?.business || 'current install'}`}
-          </Badge>
-          <Badge variant={dirty ? 'warning' : 'secondary'} appearance="light" size="sm">
-            {dirty ? 'Unsaved changes' : 'Saved'}
-          </Badge>
-          {selectedInstall && scope === 'template' ? (
-            <span className="text-xs text-neutral-500">
-              Current install: {selectedInstall.business || 'Unnamed install'}
-            </span>
-          ) : null}
-          {message ? <span className="text-xs text-neutral-600">{message}</span> : null}
-        </div>
+        <p className="mt-3 text-sm text-neutral-600">
+          {scope === 'template' ? 'Editing the template for future installs.' : `Editing ${selectedInstall?.business || 'current install'}.`}
+          {' '}Unsaved edits are retained when switching scope or installs.
+        </p>
       </CardHeader>
 
       <CardContent className="space-y-5 p-5">
+        <fieldset disabled={saving} className="min-w-0 space-y-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="compass-section-label">Workflow map</p>
+            <p className="compass-section-label">Stages</p>
             <p className="mt-1 text-sm text-neutral-500">
               Drag a stage to reorder it. Dependencies are enforced. Use the arrow buttons on smaller screens.
             </p>
@@ -502,70 +510,36 @@ export function InstallSopGraph({
           </div>
         ) : null}
 
-        <div className="overflow-x-auto pb-2">
-          <div className="flex min-w-max items-stretch gap-2" role="list" aria-label="Install SOP stages">
-            {activeDefinitions.map((node, index) => {
-              const Icon = iconMap[node.icon]
-              const status = statusLabel(activePlan, node.id)
-              const StatusIcon = status.Icon
-              const isSelected = selectedNode?.id === node.id
-              return (
-                <div key={node.id} className="flex items-center gap-2" role="listitem">
-                  <button
-                    type="button"
-                    draggable
-                    onDragStart={() => setDraggedNodeId(node.id)}
-                    onDragEnd={() => setDraggedNodeId(null)}
+        <div className="install-stage-workspace">
+          <nav className="install-stage-nav" aria-label="Install SOP stages">
+            <label className="install-stage-mobile">
+              Stage
+              <select className="compass-input" value={selectedNode?.id || ''} onChange={(event) => setSelectedNodeId(event.target.value)}>
+                {activeDefinitions.map((node, index) => <option key={node.id} value={node.id}>{index + 1}. {node.title} · {statusLabel(activePlan, node.id).label}</option>)}
+              </select>
+            </label>
+            <ol className="install-stage-list">
+              {activeDefinitions.map((node, index) => {
+                const status = statusLabel(activePlan, node.id)
+                return <li key={node.id}>
+                  <button type="button" draggable
+                    className="install-stage-button"
+                    aria-current={selectedNode?.id === node.id ? 'step' : undefined}
+                    onDragStart={() => setDraggedNodeId(node.id)} onDragEnd={() => setDraggedNodeId(null)}
                     onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => {
-                      event.preventDefault()
-                      if (draggedNodeId) moveNode(draggedNodeId, node.id)
-                      setDraggedNodeId(null)
-                    }}
-                    onClick={() => setSelectedNodeId(node.id)}
-                    className={[
-                      'group relative flex w-[184px] flex-col rounded-2xl border bg-white p-3 text-left shadow-soft transition',
-                      isSelected
-                        ? 'border-[var(--compass-accent)]/60 ring-2 ring-[var(--compass-accent)]/10'
-                        : 'border-stone-200/80 hover:border-stone-300',
-                      draggedNodeId === node.id ? 'opacity-50' : ''
-                    ].join(' ')}
-                    aria-label={`${node.title}, ${status.label}`}
-                  >
-                    <span className="flex items-start justify-between gap-2">
-                      <span className="rounded-xl bg-stone-100 p-2 text-neutral-700">
-                        <Icon className="size-4" aria-hidden="true" />
-                      </span>
-                      <span className={`rounded-full border px-1.5 py-1 ${status.className}`} title={status.label}>
-                        <StatusIcon className="size-3.5" aria-hidden="true" />
-                      </span>
-                    </span>
-                    <span className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-                      {node.kicker}
-                    </span>
-                    <span className="mt-1 text-sm font-semibold text-neutral-900">{node.title}</span>
-                    <span className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-500">{node.summary}</span>
-                    <span className="mt-3 flex items-center justify-between gap-2 text-[11px] text-neutral-400">
-                      <span>{ownerLabel(node.owner)}</span>
-                      <GripVertical className="size-3.5 opacity-0 transition group-hover:opacity-100" aria-hidden="true" />
-                    </span>
-                    {!node.required ? (
-                      <span className="absolute -right-2 -top-2 rounded-full border border-stone-200 bg-white p-1 text-neutral-400 shadow-sm">
-                        <Plus className="size-3" aria-hidden="true" />
-                      </span>
-                    ) : null}
+                    onDrop={(event) => { event.preventDefault(); if (draggedNodeId) moveNode(draggedNodeId, node.id); setDraggedNodeId(null) }}
+                    onClick={() => setSelectedNodeId(node.id)}>
+                    <span className="install-stage-number">{index + 1}</span>
+                    <span><strong>{node.title}</strong><span>{status.label} · {ownerLabel(node.owner)}</span></span>
+                    <GripVertical size={15} aria-hidden="true" />
                   </button>
-                  {index < activeDefinitions.length - 1 ? (
-                    <ArrowRight className="size-4 shrink-0 text-stone-300" aria-hidden="true" />
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-        </div>
+                </li>
+              })}
+            </ol>
+          </nav>
 
         {selectedNode ? (
-          <div className="grid gap-5 border-t border-stone-100 pt-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="install-stage-detail">
             <div className="rounded-2xl border border-stone-200 bg-stone-50 p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-start gap-3">
@@ -685,15 +659,6 @@ export function InstallSopGraph({
               )}
 
               <div className="mt-5 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="compass-btn-primary inline-flex items-center gap-2"
-                  disabled={!dirty || saving || (scope === 'install' && !selectedInstall)}
-                  onClick={() => void savePlan()}
-                >
-                  <Save className="size-4" aria-hidden="true" />
-                  {saving ? 'Saving…' : 'Save changes'}
-                </button>
                 {!selectedNode.required ? (
                   <button
                     type="button"
@@ -742,6 +707,16 @@ export function InstallSopGraph({
             </aside>
           </div>
         ) : null}
+        </div>
+        </fieldset>
+        <div className="install-save-bar">
+          <span role="status" aria-live="polite">{saving ? 'Saving…' : message || (dirty ? 'Unsaved changes' : 'Saved')}
+            {!dirty && dirtyKeys.size > 0 ? ' · Unsaved changes in another scope or install' : ''}
+          </span>
+          <button type="button" className="compass-btn-primary" disabled={!dirty || saving} onClick={() => void savePlan()}>
+            <Save size={16} aria-hidden="true" /> {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
       </CardContent>
     </Card>
   )

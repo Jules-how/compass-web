@@ -173,7 +173,7 @@ function PageMain({
       : []
   if (flush) {
     return (
-      <main className="folio-flush flex min-h-0 flex-1 flex-col">
+      <main data-width={width} className="folio-flush flex min-h-0 flex-1 flex-col">
         {children}
       </main>
     )
@@ -181,6 +181,7 @@ function PageMain({
 
   return (
     <main
+      data-width={width}
       className={`folio-page mx-auto w-full ${WIDTH[width]} ${compact ? 'folio-page-compact' : ''}`}
     >
       {(title || actions) && (
