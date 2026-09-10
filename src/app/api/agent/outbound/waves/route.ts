@@ -170,7 +170,7 @@ export async function POST(request: Request) {
       p_day: day, p_expected_revision: body.expectedRevision, p_decision_value: source.value, p_payload: payload
     })
     if (error) {
-      if (error.code === '40001') return portalJson({ error: error.message }, { status: 409 })
+      if (['40001', 'PT409'].includes(error.code)) return portalJson({ error: error.message }, { status: 409 })
       throw new Error('Brief publication failed. No partial brief or actions were saved.')
     }
     console.info('[wave-publication]', JSON.stringify({ day, publisher: body.publisher, runId: body.runId, decisionRevision: source.revision, revision: data.revision, replayed: data.replayed }))

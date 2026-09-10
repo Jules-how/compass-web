@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     const saved = await supabase.rpc('compass_decide_wave_brief', {
       p_day: day, p_revision: body.revision, p_decision_value: source.value, p_action: body.action
     })
-    if (saved.error) return portalJson({ error: saved.error.code === '40001' ? saved.error.message : 'Unable to save the decision.' }, { status: saved.error.code === '40001' ? 409 : 503 })
+    if (saved.error) return portalJson({ error: ['40001', 'PT409'].includes(saved.error.code) ? saved.error.message : 'Unable to save the decision.' }, { status: ['40001', 'PT409'].includes(saved.error.code) ? 409 : 503 })
     return portalJson(saved.data)
   } catch (err) {
     const access = portalAccessResponse(err)

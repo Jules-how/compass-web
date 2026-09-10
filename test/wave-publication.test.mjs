@@ -14,6 +14,7 @@ async function setup() {
     INSERT INTO compass_settings VALUES('planning.note.458e8ef0-80cc-5405-aa5c-eb804faf70b0','decision-four');
     GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;`);
   await db.exec(migration);
+  await db.exec(await readFile(new URL('../supabase/migrations/20260910031500_wave_conflict_http.sql', import.meta.url),'utf8'));
   const day = (await db.query("select to_char(now() at time zone 'Australia/Sydney','YYYY-MM-DD') as day")).rows[0].day;
   const payload = { publisher:'compass-morning-pilot',runId:'test-run-001',decisionRevision:4,recommendation:'Sydney reviewed proposal',scan:{writeup:'Current plan'},next_campaign_ids:[],actions:[{title:'Review existing cohort',kind:'volume'}],tasks:[{title:'Review cohort',marker:`daily_setup:${day}:review-cohort`,notes:`daily_setup:${day}:review-cohort\n\nEvidence`,task_type:'SELL'}] };
   const publish = (rev=0,body=payload,source='decision-four') => db.query('select compass_publish_wave_brief($1,$2,$3,$4) as result',[day,rev,source,body]);
@@ -98,4 +99,9 @@ test('Home freshness distinguishes legacy, prior-day and superseded advice', asy
  assert.equal(waveReviewState(current,'2026-09-10',4),'current');
  assert.equal(waveReviewState(current,'2026-09-10',5),'stale');
  assert.equal(waveReviewState(current,'2026-09-11',4),'stale');
+});
+
+test('database conflicts carry an explicit PostgREST HTTP 409 code', async () => {
+  const { db, publish } = await setup();
+  try { await assert.rejects(publish(99), error => error.code === 'PT409'); } finally { await db.close(); }
 });
