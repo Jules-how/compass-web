@@ -7,5 +7,5 @@ export function waveReviewLabel(wave: MorningWavePayload | null | undefined): st
   const time = wave.reviewedAt ? new Intl.DateTimeFormat('en-AU', {
     timeZone: 'Australia/Sydney', dateStyle: 'medium', timeStyle: 'short'
   }).format(new Date(wave.reviewedAt)) : 'time unavailable'
-  return `Reviewed ${time} Sydney · Compass morning review`
+  return `Reviewed ${time} Sydney · Compass brief`
 }
