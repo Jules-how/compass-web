@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getPortalAdminClient } from "@/lib/portal-admin";
 import { listPlanning } from "@/lib/planning-server";
+import { collectOutboundEmailHistory } from "@/lib/outbound-email-history";
 import {
   resolveInstantlyApiKey,
   instantlyFetch,
@@ -85,7 +86,10 @@ async function reconcileOperatingCampaigns(db: SupabaseClient) {
         .not("status", "in", "(cancelled,archived)")
         .limit(101),
     );
-    if (bound.length > 100) throw new Error("More than 100 bound campaigns; provider coverage is incomplete");
+    if (bound.length > 100)
+      throw new Error(
+        "More than 100 bound campaigns; provider coverage is incomplete",
+      );
     const analytics = await fetchInstantlyCampaignAnalytics(key);
     const failures: string[] = [];
     // Bounded concurrency. GET details also covers empty campaigns absent from analytics.
@@ -116,6 +120,19 @@ async function reconcileOperatingCampaigns(db: SupabaseClient) {
         }),
       );
     }
+    const history = await operatingRecord(db, "source:outbound-email-history");
+    await saveOperatingRecord(
+      db,
+      "source:outbound-email-history",
+      "source",
+      await collectOutboundEmailHistory(
+        key,
+        bound
+          .filter((c: any) => c.offer_key === "installation-booking")
+          .map((c: any) => c.instantly_campaign_id),
+        history?.data,
+      ),
+    );
     await saveOperatingRecord(db, "source:instantly", "source", {
       name: "Instantly",
       status: failures.length ? "partial" : "current",
@@ -152,7 +169,7 @@ export async function loadOperatingDay(day = sydneyDay()) {
   )
     throw new Error("Use a valid day");
   const db = getPortalAdminClient();
-  const [tasks, projects, records, goals, nativeRuns, campaigns] =
+  const [tasks, projects, records, goals, nativeRuns, campaigns, goalLinks] =
     await Promise.all([
       rows(db.from("compass_tasks").select("*").order("id").limit(2001)),
       rows(db.from("compass_projects").select("*").order("id").limit(501)),
@@ -183,12 +200,21 @@ export async function loadOperatingDay(day = sydneyDay()) {
           .not("status", "in", "(archived,cancelled)")
           .limit(100),
       ),
+      rows(
+        db
+          .from("compass_pathfinder_links")
+          .select("goal_id,work_type,work_id,state")
+          .eq("relation", "contributes")
+          .in("state", ["active", "proposed"])
+          .limit(2001),
+      ),
     ]);
   if (
     tasks.length > 2000 ||
     projects.length > 500 ||
     records.length > 1000 ||
-    goals.total > 100
+    goals.total > 100 ||
+    goalLinks.length > 2000
   )
     throw new Error(
       "Operating view exceeds its completeness limit; narrow or archive inactive records before planning",
@@ -289,6 +315,12 @@ export async function loadOperatingDay(day = sydneyDay()) {
         .filter(
           (t: WorkTask) =>
             t.operating_context?.goal_id === g.id ||
+            goalLinks.some(
+              (l: any) =>
+                l.goal_id === g.id &&
+                ((l.work_type === "task" && l.work_id === t.id) ||
+                  (l.work_type === "project" && l.work_id === t.project_id)),
+            ) ||
             projects.find((p: any) => p.id === t.project_id)?.operating_context
               ?.goal_id === g.id,
         )

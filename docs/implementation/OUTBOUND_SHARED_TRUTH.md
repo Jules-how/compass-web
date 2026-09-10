@@ -54,3 +54,28 @@ Uses operating-server.ts and its migration, owned by the concurrent operating-se
 build. This task owns outbound-overview-* modules, routes, UI, MCP bridge and tests.
 Implementation in progress; deployment and production verification will be recorded
 here with actual evidence. No claim of perfect or unattended operation from tests alone.
+
+## Verified implementation details
+
+- Overview and both API routes use loadOutboundOverview and the same pure projection.
+- MCP outbound.overview uses that API; operating/operating.write expose the existing
+  operating contract without adding a second task store.
+- The default Outbound tab is Overview. Home shows recorded activity alongside its
+  one canonical work queue. The full view preserves the operating queue's order;
+  it distinguishes future callbacks from ready work with a future deadline.
+- Exact historical sent-message receipts repair missing event history. The ongoing
+  collector fully paginates current-offer sent history, up to 12 requests per check;
+  it retains the last complete watermark on errors, repeated cursors or page caps.
+  Covered history replaces overlapping event-feed sends, and newer feed events
+  append. No synthetic send, webhook, prospect message or lead outcome is emitted.
+- Provider timestamp_email determines the calendar day. timestamp_created is not a
+  sent-time filter. Sources: https://developer.instantly.ai/api-reference/email/list-email
+  and https://developer.instantly.ai/api-reference/schemas/email (checked 10 September).
+- Source checks are bounded and stale/error observations remain explicit. Calls
+  still require actual capture. Only preparation registered in Compass is visible.
+- 21 focused overview tests pass; the companion MCP/navigation suites passed 40
+  tests. Desktop and 390px static rendering of the actual component inspected.
+- First release 482326e live: signed-in Outbound and authenticated agent response
+  matched Sydney paused/40 sent and Perth paused/unknown provider analytics. This
+  live check exposed the historical daily-feed and future-deadline issues above;
+  final-patch production verification remains to be recorded below.

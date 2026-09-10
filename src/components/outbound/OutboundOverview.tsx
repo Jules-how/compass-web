@@ -40,9 +40,9 @@ export function OutboundOverview({ compact = false }: { compact?: boolean }) {
     return () => { clearInterval(timer); unsubscribe(); window.removeEventListener("focus", update); window.removeEventListener("outbound-rhythm-changed", update); document.removeEventListener("visibilitychange", update); };
   }, [load, active]);
   const actions = data?.recommendations.filter(a => a.state !== "blocked" && a.state !== "scheduled") || [];
-  return <section className={styles.overview} aria-label={compact ? "Outbound next actions" : "Outbound overview"} aria-busy={busy}>
+  return <section className={`${styles.overview} ${compact ? styles.compact : ""}`} aria-label={compact ? "Outbound activity" : "Outbound overview"} aria-busy={busy}>
     <header className={styles.header}>
-      <div><h2>{compact ? "Outbound" : "What’s happening, and what’s next"}</h2><p>Shared campaign evidence and recorded next actions.</p></div>
+      <div><h2>{compact ? "Outbound" : "What’s happening, and what’s next"}</h2>{!compact ? <p>Shared campaign evidence and recorded next actions.</p> : null}</div>
       <div className={styles.controls}>
         {compact ? <Link href="/sales/outbound">Open Outbound <ArrowUpRight size={14} aria-hidden="true" /></Link> : <Link href="/sales/outbound/rhythm">Calls & follow-ups</Link>}
         <button type="button" className="compass-btn-secondary" disabled={busy} onClick={() => void load(true)}><RefreshCw size={14} aria-hidden="true" />{busy ? "Checking…" : "Refresh"}</button>
@@ -50,13 +50,13 @@ export function OutboundOverview({ compact = false }: { compact?: boolean }) {
     </header>
     {error ? <p className={styles.warning} role="alert">{error} {data ? "Previous view retained; it may be out of date." : ""} <button type="button" onClick={() => void load()} disabled={busy}>Retry</button></p> : null}
     {!data ? <p role="status">{busy ? "Reading campaign and activity records…" : "No snapshot available."}</p> : <>
-      <p className={styles.meta}>Read {time(data.checked_at)} · Sydney time. Provider observations refresh after five minutes; each campaign shows its own check time.</p>
+      <p className={styles.meta}>{compact ? `Checked ${time(data.checked_at)} · Sydney` : `Read ${time(data.checked_at)} · Sydney time. Provider observations refresh after five minutes; each campaign shows its own check time.`}</p>
       {data.coverage.calls_error || data.coverage.activity_error ? <p role="alert" className={styles.warning}>{data.coverage.calls_error} {data.coverage.activity_error}</p> : null}
       <div className={styles.activity}>
         {data.activity.map(a => <section key={a.day}><h3>{a.day === data.day ? "Today" : "Yesterday"} <small>{a.day}</small></h3><p><strong>{number(a.email_sends)}</strong> recorded email sends · <strong>{number(a.calls)}</strong> calls · <strong>{number(a.replies)}</strong> replies · <strong>{number(a.meetings)}</strong> meetings booked</p></section>)}
       </div>
-      <p className={styles.meta}>{data.coverage.message}{data.coverage.activity === "partial" ? " The activity limit was reached; counts are incomplete." : ""}{data.coverage.undated_events ? ` ${data.coverage.undated_events} events have unverified dates and are excluded.` : ""}</p>
-      <section className={styles.section}>
+      <p className={styles.meta}>{compact ? "Recorded activity. Open Outbound for source coverage." : data.coverage.message}{data.coverage.activity === "partial" ? " The activity limit was reached; counts are incomplete." : ""}{data.coverage.undated_events ? ` ${data.coverage.undated_events} events have unverified dates and are excluded.` : ""}</p>
+      {!compact ? <section className={styles.section}>
         <h3>Recommended next actions</h3>
         <p className={styles.meta}>{data.accepted_order_preserved ? "Your reviewed task order is preserved. Other recommendations remain proposals." : "Suggested from current records. Your accepted day and campaign permissions stay in force."}</p>
         <ol className={styles.actions}>
@@ -67,7 +67,7 @@ export function OutboundOverview({ compact = false }: { compact?: boolean }) {
           </li>)}
         </ol>
         {!actions.length ? <p>No actionable recommendation is established by the current records. Review missing sources and capture outstanding promises.</p> : null}
-      </section>
+      </section> : null}
       {!compact ? <>
         <section className={styles.section}><h3>Campaigns</h3><p className={styles.meta}>Provider activity and preparation receipts are separate. Loaded receipts are not added to the provider’s recipient total.</p>
           {!data.campaigns.length ? <p>No current-offer campaign records found.</p> : null}
@@ -85,7 +85,7 @@ export function OutboundOverview({ compact = false }: { compact?: boolean }) {
         </section>
         {data.recommendations.some(a => a.state === "scheduled") ? <details className={styles.section}><summary>Upcoming commitments</summary>{data.recommendations.filter(a => a.state === "scheduled").map(a => <p key={a.id}><Link href={a.href}>{a.title}</Link> · {time(a.due)}</p>)}</details> : null}
         {data.recommendations.some(a => a.state === "blocked") ? <details className={styles.section}><summary>Blocked next actions</summary>{data.recommendations.filter(a => a.state === "blocked").map(a => <p key={a.id}><Link href={a.href}>{a.title}</Link> · {a.reason}</p>)}</details> : null}
-        <details className={styles.section}><summary>Recorded activity and source coverage</summary>{data.activity.map(a => <section key={a.day}><h4>{a.day}</h4><ul>{a.events.map(e => <li key={e.id}><Link href={`/sales/outbound/rhythm?lead=${encodeURIComponent(e.lead_id)}`}>{e.company || "Contact record"}</Link> · {e.channel} · {e.outcome} · {time(e.at)}</li>)}</ul></section>)}<p>Call coverage: {data.coverage.calls}. Unrecorded conversations must be captured before they can inform the queue.</p>{data.sources.filter(s => s.id === "source:instantly").map(s => <p key={s.id}>{s.data.status} · {s.data.coverage} {s.data.error}</p>)}</details>
+        <details className={styles.section}><summary>Recorded activity and source coverage</summary>{data.activity.map(a => <section key={a.day}><h4>{a.day}</h4><ul>{a.events.map(e => <li key={e.id}>{e.lead_id ? <Link href={`/sales/outbound/rhythm?lead=${encodeURIComponent(e.lead_id)}`}>{e.company || "Contact record"}</Link> : <span>Verified sent message</span>} · {e.channel} · {e.outcome} · {time(e.at)}</li>)}</ul></section>)}<p>Call coverage: {data.coverage.calls}. Unrecorded conversations must be captured before they can inform the queue.</p>{data.sources.filter(s => ["source:instantly", "source:outbound-email-history"].includes(s.id)).map(s => <p key={s.id}>{s.data.status} · {s.data.coverage} {s.data.error}</p>)}</details>
       </> : null}
     </>}
   </section>;

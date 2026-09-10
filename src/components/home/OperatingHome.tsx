@@ -28,14 +28,18 @@ export function OperatingHome() {
     [due, setDue] = useState(""),
     [personal, setPersonal] = useState(false);
   const [notice, setNotice] = useState("");
+  const readVersion = useRef(0);
   const reload = useCallback(async () => {
+    const version = ++readVersion.current;
     try {
       const r = await fetch(`/api/operating?day=${day}`, { cache: "no-store" });
       const b = await r.json();
       if (!r.ok) throw new Error(b.error || "Unable to load your work");
+      if (version !== readVersion.current) return;
       setData(b);
       setError("");
     } catch (e) {
+      if (version !== readVersion.current) return;
       setError(e instanceof Error ? e.message : "Unable to load");
     }
   }, [day]);
@@ -198,6 +202,9 @@ export function OperatingHome() {
           <span>{t.title}</span>
           <small>
             {why ||
+              (t.status === "blocked"
+                ? t.operating_context?.blocker || "Blocked"
+                : "") ||
               t.operating_context?.next_action ||
               t.notes?.slice(0, 120) ||
               "Open task context"}
@@ -262,6 +269,22 @@ export function OperatingHome() {
             { id: "sources", label: "Sources & preparation" },
           ]}
         />
+        <button
+          className="compass-btn-ghost"
+          onClick={() => setDay(sydneyDay())}
+        >
+          Today
+        </button>
+        <button
+          className="compass-btn-ghost"
+          onClick={() => {
+            const d = new Date(`${sydneyDay()}T12:00:00Z`);
+            d.setUTCDate(d.getUTCDate() + 1);
+            setDay(d.toISOString().slice(0, 10));
+          }}
+        >
+          Tomorrow
+        </button>
         <label>
           Day{" "}
           <input
@@ -298,7 +321,7 @@ export function OperatingHome() {
                 {queue.length} available actions
               </span>
             </div>
-            {data.interruption ? (
+            {data.interruption && domain === "all" ? (
               <FolioNotice>
                 <strong>A change to review.</strong>
                 <p>
@@ -360,7 +383,9 @@ export function OperatingHome() {
                 </>
               ) : null}
             </section>
-            {data.review?.data.status !== "accepted" && queue.length ? (
+            {data.review?.data.status !== "accepted" &&
+            queue.length &&
+            domain === "all" ? (
               <div className="folio-actions">
                 <button
                   disabled={busy}
@@ -428,32 +453,36 @@ export function OperatingHome() {
             ) : null}
           </article>
           <aside className="operating-aside">
-            <section>
-              <OutboundOverview compact />
-              <h2>Campaigns</h2>
-              {data.campaigns.map((c: any) => (
-                <div key={c.id} className="operating-campaign">
-                  <Link href={`/sales/outbound/editor/${c.id}`}>{c.name}</Link>
-                  <strong>
-                    {c.provider?.status || "Not checked"} ·{" "}
-                    {c.provider?.sent ?? "Unknown"} sent
-                  </strong>
-                  <p>
-                    {c.preparations
-                      .map(
-                        (p: any) =>
-                          `${p.data.lead_ids.length} ${p.data.status}`,
-                      )
-                      .join(" · ") || "No preparation receipt registered"}
-                  </p>
-                  <small>
-                    {c.provider?.observed_at
-                      ? `Provider checked ${new Date(c.provider.observed_at).toLocaleTimeString("en-AU", { timeZone: "Australia/Sydney", hour: "2-digit", minute: "2-digit" })}`
-                      : "Provider state needs checking"}
-                  </small>
-                </div>
-              ))}
-            </section>
+            {domain !== "personal" ? (
+              <section>
+                <OutboundOverview compact />
+                <h2>Campaigns</h2>
+                {data.campaigns.map((c: any) => (
+                  <div key={c.id} className="operating-campaign">
+                    <Link href={`/sales/outbound/editor/${c.id}`}>
+                      {c.name}
+                    </Link>
+                    <strong>
+                      {c.provider?.status || "Not checked"} ·{" "}
+                      {c.provider?.sent ?? "Unknown"} sent
+                    </strong>
+                    <p>
+                      {c.preparations
+                        .map(
+                          (p: any) =>
+                            `${p.data.lead_ids.length} ${p.data.status}`,
+                        )
+                        .join(" · ") || "No preparation receipt registered"}
+                    </p>
+                    <small>
+                      {c.provider?.observed_at
+                        ? `Provider checked ${new Date(c.provider.observed_at).toLocaleTimeString("en-AU", { timeZone: "Australia/Sydney", hour: "2-digit", minute: "2-digit" })}`
+                        : "Provider state needs checking"}
+                    </small>
+                  </div>
+                ))}
+              </section>
+            ) : null}
             {calendarList(data.calendar)}
             <section>
               <h2>Waiting</h2>
@@ -507,12 +536,16 @@ export function OperatingHome() {
                     <h3>{g.data.title}</h3>
                   </Link>
                   <p>
-                    {g.data.status} · Due {g.data.due || "not set"}
+                    {g.data.status === "draft" ? "Proposed" : "Agreed"} · Due{" "}
+                    {g.data.due || "not set"}
                   </p>
                   <p>
                     {g.tasks.length} linked open actions ·{" "}
-                    {g.data.regular ?? "Qualitative"} {g.data.unit}
+                    {g.data.measurementType === "qualitative"
+                      ? "Outcome"
+                      : `${g.data.regular ?? "Target not set"} ${g.data.unit}`}
                   </p>
+                  {g.data.criteria ? <p>{g.data.criteria}</p> : null}
                   {!g.tasks.length ? (
                     <p className="folio-small">No execution work linked yet.</p>
                   ) : null}
@@ -526,13 +559,16 @@ export function OperatingHome() {
               .filter(matches)
               .map((t: WorkTask) => workRow(t))}
           </ul>
-          <h3>Active projects</h3>
+          <h3>Current projects</h3>
           {data.projects
             .filter(
               (p: any) =>
                 !["completed", "canceled", "cancelled", "archived"].includes(
                   p.status,
                 ) &&
+                (p.status === "active" ||
+                  p.operating_context?.state === "ready" ||
+                  p.operating_context?.state === "awaiting_confirmation") &&
                 (domain === "all" ||
                   (p.operating_context?.domain || "business") === domain),
             )
@@ -641,7 +677,15 @@ export function OperatingHome() {
               {selected.operating_context?.done_when ||
                 "Confirm the outcome after completing the task."}
             </p>
-            {selected.notes && selected.notes !== selected.operating_context?.reason ? <details><summary>Working notes and materials</summary><p style={{whiteSpace:"pre-wrap",lineHeight:1.7}}>{selected.notes}</p></details> : null}
+            {selected.notes &&
+            selected.notes !== selected.operating_context?.reason ? (
+              <details>
+                <summary>Working notes and materials</summary>
+                <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}>
+                  {selected.notes}
+                </p>
+              </details>
+            ) : null}
             {selected.operating_context?.links
               ?.filter((l) => safeLink(l.url))
               .map((l) => (

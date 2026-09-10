@@ -16,3 +16,5 @@
 .overview a { text-decoration:underline; text-underline-offset:3px; }.overview a:focus-visible,.overview button:focus-visible,.overview summary:focus-visible { outline:2px solid #b94e19; outline-offset:4px; }
 @media(max-width:850px) { .metrics { grid-template-columns:repeat(3,minmax(0,1fr)); }.header { flex-direction:column; gap:12px; } }
 @media(max-width:520px) { .activity { grid-template-columns:1fr; gap:16px; }.metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }.campaign { padding:16px; }.campaign header { align-items:flex-start; flex-direction:column; gap:10px; }.header h2 { font-size:21px; } }
+
+.compact .activity { grid-template-columns:1fr; gap:12px; padding:14px 0; margin-top:12px; }.compact .header { flex-direction:column; gap:8px; }.compact .header h2 { font-size:20px; }

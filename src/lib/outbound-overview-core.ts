@@ -6,9 +6,9 @@ export type NextAction = { id: string; title: string; reason: string; href: stri
 export type Source = { id: string; data: { status?: string; checked_at?: string; last_success_at?: string; error?: string; coverage?: string; [key: string]: unknown } };
 export type OutboundInput = {
   day: string; campaigns: OutboundCampaign[]; preparations: Preparation[]; sources: Source[];
-  tasks: Array<{ id: string; title: string; status: string; due: string | null; lead_id?: string | null; outreach_state?: string; outreach_channel?: string; outreach_reason?: string | null; operating_context?: { campaign_id?: string; reason?: string; next_action?: string; state?: string } }>;
-  accepted_task_ids: string[]; leads: RhythmLead[]; rhythm_tasks: RhythmTask[]; reply_ids: string[]; ready_ids: string[];
-  touches: Array<RhythmTouch & { request_payload?: { at_verified?: boolean } | null }>; activity_error?: string; activity_partial: boolean;
+  tasks: Array<{ id: string; title: string; status: string; due: string | null; lead_id?: string | null; outreach_state?: string; outreach_channel?: string; outreach_reason?: string | null; operating_context?: { campaign_id?: string; reason?: string; next_action?: string; state?: string; links?: Array<{ label: string; url: string }> } }>;
+  accepted_task_ids: string[]; queue_task_ids?: string[]; leads: RhythmLead[]; rhythm_tasks: RhythmTask[]; reply_ids: string[]; ready_ids: string[];
+  touches: Array<RhythmTouch & { request_payload?: { at_verified?: boolean } | null }>; activity_error?: string; activity_partial: boolean; email_history_window?: { from: string; through: string; campaign_ids: string[] };
   rhythm_error?: string; rhythm_partial: boolean; call_target?: number; ready_days?: number;
 };
 export function previousDay(day: string) {
@@ -50,11 +50,11 @@ export function outboundOverview(input: OutboundInput, now = new Date()) {
     const due = t.due && Number.isFinite(Date.parse(t.due)) && (/^\d{4}-\d{2}-\d{2}$/.test(t.due) ? t.due <= input.day : Date.parse(t.due) <= now.getTime());
     const lead = leads.get(t.lead_id || "");
     const restriction = lead && !confirmation ? lead.is_archived ? "Archived contact — review before action" : restrictionReason(lead, t.outreach_channel || "call") : null;
-    const future = !!t.due && Number.isFinite(Date.parse(t.due)) && !due;
+    const future = !!t.outreach_state && !!t.due && Number.isFinite(Date.parse(t.due)) && !due;
     actions.push({ id: `task:${t.id}`, task_id: t.id, title: confirmation ? `Review completion evidence: ${t.title}` : t.title,
       reason: restriction || c?.reason || t.outreach_reason || (due ? "A recorded commitment is due." : "An existing next action is recorded."),
       kind: confirmation ? "confirmation" : "commitment", state: blocked || !!restriction ? "blocked" : !confirmation && future ? "scheduled" : !confirmation && accepted ? "accepted" : "proposed",
-      href: t.lead_id ? rhythmLink(t.lead_id) : "/", campaign_id: c?.campaign_id,
+      href: t.lead_id ? rhythmLink(t.lead_id) : c?.links?.find(l => /^\/(?!\/)|^https:\/\//.test(l.url))?.url || "/", campaign_id: c?.campaign_id,
       lead_ids: t.lead_id ? [t.lead_id] : [], due: t.due, priority: blocked || restriction ? 95 : confirmation ? 20 : future ? 95 : due && accepted ? 0 : due ? 25 : 55 });
   }
   const taskLeadIds = new Set(relevantTasks.map(t => t.lead_id));
@@ -83,7 +83,9 @@ export function outboundOverview(input: OutboundInput, now = new Date()) {
   }
   actions.sort((a,b) => a.priority - b.priority || (a.due || "9999").localeCompare(b.due || "9999") || a.id.localeCompare(b.id));
   const accepted = input.accepted_task_ids.map(id => actions.find(a => a.task_id === id)).filter((a): a is NextAction => !!a && a.state === "accepted");
-  const ordered = [...accepted, ...actions.filter(a => !accepted.some(x => x.id === a.id))];
+  const canonical = (input.queue_task_ids || []).map(id => actions.find(a => a.task_id === id)).filter((a): a is NextAction => !!a && a.state !== "blocked" && a.state !== "scheduled");
+  const preserved = accepted.length ? accepted : canonical;
+  const ordered = [...preserved, ...actions.filter(a => !preserved.some(x => x.id === a.id))];
   const days = [previousDay(input.day), input.day];
   const seen = new Set<string>();
   let undated = 0;
@@ -95,10 +97,13 @@ export function outboundOverview(input: OutboundInput, now = new Date()) {
   const activity = days.map(day => {
     const events = touches.filter(t => dayKey(t.contacted_at) === day && Date.parse(t.contacted_at) <= now.getTime() && t.outcome !== "next_step");
     const count = (f: (t: RhythmTouch) => boolean) => input.activity_error ? null : events.filter(f).length;
-    return { day, email_sends: count(t => t.outcome === "email_sent"), replies: count(t => t.outcome === "reply_received"), calls: count(t => t.channel === "call" && t.direction === "outbound"), meetings: count(t => ["meeting_agreed", "lead_meeting_booked"].includes(t.outcome || "")), events: events.map(t => ({ id: t.id, at: t.contacted_at, lead_id: t.contact_id, company: leads.get(t.contact_id)?.company || null, channel: t.channel, outcome: t.outcome, note: t.note })) };
+    const sends = events.filter(t => t.outcome === "email_sent").length;
+    const history = input.email_history_window;
+    const historyCoversDay = history && dayKey(history.from) <= day && dayKey(history.through) >= day && campaigns.filter(c => c.instantly_campaign_id).every(c => history.campaign_ids.includes(c.instantly_campaign_id!));
+    return { day, email_sends: input.activity_error ? (sends > 0 ? sends : null) : sends > 0 || historyCoversDay ? sends : null, replies: count(t => t.outcome === "reply_received"), calls: count(t => t.channel === "call" && t.direction === "outbound"), meetings: count(t => ["meeting_agreed", "lead_meeting_booked"].includes(t.outcome || "")), events: events.map(t => ({ id: t.id, at: t.contacted_at, lead_id: t.contact_id, company: leads.get(t.contact_id)?.company || null, channel: t.channel, outcome: t.outcome, note: t.note })) };
   });
   return { schema_version: 1, day: input.day, timezone: "Australia/Sydney", checked_at: now.toISOString(), campaigns, recommendations: ordered,
-    recommended_next: actions.find(a => a.state !== "blocked" && a.state !== "scheduled")?.id || null,
+    recommended_next: (canonical[0] || actions.find(a => a.state !== "blocked" && a.state !== "scheduled"))?.id || null,
     accepted_order_preserved: accepted.length > 0,
     activity, coverage: { activity: input.activity_error ? "unavailable" : input.activity_partial ? "partial" : "recorded", activity_error: input.activity_error || null, undated_events: undated,
       message: "Recorded events for current offer campaigns and selected contacts. Missing/unrecorded provider or phone history is not zero activity. Campaign totals are separate from daily events.",

@@ -78,6 +78,17 @@ test("reviewed order survives urgent interruption; alternatives expose recommend
   assert.equal(q.recommended[0], "promise");
   assert.equal(q.interruption, true);
 });
+test("a cancelled prerequisite does not make dependent work ready", () => {
+  const result = c.operatingQueue(
+    [
+      task("cancelled", {}, { status: "cancelled" }),
+      task("dependent", { depends_on: ["cancelled"] }),
+    ],
+    "2026-09-11",
+  );
+  assert.equal(result.queue.length, 0);
+  assert.equal(result.waiting.length, 1);
+});
 test("legacy uncontextualised tasks are proposals; date boundaries use Sydney DST", () => {
   assert.equal(
     c.operatingQueue([task("old", {}, { operating_context: {} })], "2026-09-11")

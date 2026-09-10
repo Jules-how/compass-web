@@ -179,7 +179,8 @@ export function operatingQueue(
       continue;
     }
     const unfinished = (c.depends_on || []).filter(
-      (id) => !byId.has(id) || openTask(byId.get(id)!),
+      (id) =>
+        !["completed", "done"].includes(byId.get(id)?.status || "missing"),
     );
     if (
       task.status === "blocked" ||

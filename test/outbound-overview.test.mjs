@@ -128,3 +128,31 @@ test('unbound preparation is not a provider outage; unrelated partial refresh do
  const partial=outboundOverview(input({sources:[{id:'source:instantly',data:{status:'partial',checked_at:now.toISOString(),error:'Different campaign failed'}}]}),now);
  assert.equal(partial.campaigns[0].refresh_error,null);
 });
+test('canonical ready work uses deadline, not callback availability, and opens its review link',()=>{
+ const tasks=[{id:'review',title:'Review Perth',status:'not-started',due:'2026-09-12',operating_context:{state:'ready',campaign_id:'c1',links:[{label:'Review',url:'/work/review/perth'}]}},{id:'recovery',title:'Sydney recovery',status:'not-started',due:'2026-09-10',operating_context:{state:'ready',campaign_id:'c1'}}];
+ const r=outboundOverview(input({tasks,queue_task_ids:['review','recovery']}),now);
+ assert.equal(r.recommendations[0].task_id,'review');assert.equal(r.recommendations[0].state,'proposed');assert.equal(r.recommendations[0].href,'/work/review/perth');assert.equal(r.recommended_next,'task:review');
+});
+test('historical exact-message receipt replaces covered feed interval without inventing sends or double counting',async()=>{
+ const at=new Date().toISOString(); const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Australia/Sydney',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const operating={day,sources:[{id:'source:instantly',data:{checked_at:at}},{id:'source:outbound-email-history',data:{events:[{id:'exact1',email:'fixture@example.test',at,campaign_id:'p1'}],complete_through:at,window_from:`${day}T00:00:00+10:00`,campaign_ids:['p1']}}],campaigns:[campaign()],preparations:[],queue:[],waiting:[],proposals:[],confirmation:[],review:null};
+ const chain={select(){return this},gte(){return this},lte(){return this},order(){return this},limit(){return Promise.resolve({data:[event('webhook-same-message',at,{instantly_campaign_id:'p1'})],error:null})}};
+ const server=loadTypescript('src/lib/outbound-overview-server.ts',{'@/lib/portal-admin':{getPortalAdminClient:()=>({from:()=>chain})},'@/lib/operating-server':{loadOperatingDay:async()=>operating},'@/lib/outbound-rhythm-server':{loadRhythm:async()=>({ready:[],leads:[],tasks:[],replies:[],preferences:{}})}});
+ const r=await server.loadOutboundOverview();assert.equal(r.activity[1].email_sends,1);assert.equal(r.activity[1].events[0].id,'history:exact1');assert.equal(r.activity[0].email_sends,null);
+});
+test('sent-history helper follows continuation and preserves exact message times, not database creation times',async()=>{
+ const paths=[];const helper=loadTypescript('src/lib/outbound-email-history.ts',{'@/lib/instantly':{instantlyFetch:async path=>{paths.push(path);return paths.length===1?{items:[{id:'one',campaign_id:'p1',timestamp_email:'2026-09-10T06:12:23Z',timestamp_created:'2026-09-10T20:00:00Z',lead:'fixture@example.test'}],next_starting_after:'next'}:{items:[]}}}});
+ const r=await helper.collectOutboundEmailHistory('unused',['p1'],{},now);assert.equal(paths.length,2);assert.match(paths[0],/email_type=sent/);assert.match(paths[1],/starting_after=next/);assert.equal(r.events[0].at,'2026-09-10T06:12:23Z');assert.equal(r.status,'current');assert.equal(r.complete_through,now.toISOString());
+});
+test('history page cap, invalid rows and repeated cursor do not advance completed watermark',async()=>{
+ for(const page of [{items:[],next_starting_after:'repeat'},{items:[{id:'missing-time',campaign_id:'p1'}]}]) {
+  const helper=loadTypescript('src/lib/outbound-email-history.ts',{'@/lib/instantly':{instantlyFetch:async()=>page}});
+  const previous={events:[{id:'old',email:'e',at:'2026-09-10T00:00:00Z',campaign_id:'p1'}],complete_through:'2026-09-10T01:00:00Z'};
+  const r=await helper.collectOutboundEmailHistory('unused',['p1'],previous,now);assert.equal(r.status,'error');assert.equal(r.complete_through,previous.complete_through);assert.deepEqual(r.events,previous.events);
+ }
+});
+test('full history scan stops at exactly twelve requests and keeps prior evidence when more pages exist',async()=>{
+ let count=0;const helper=loadTypescript('src/lib/outbound-email-history.ts',{'@/lib/instantly':{instantlyFetch:async()=>({items:[],next_starting_after:`cursor-${++count}`})}});
+ const previous={events:[],complete_through:'2026-09-10T01:00:00Z'};
+ const r=await helper.collectOutboundEmailHistory('unused',['p1'],previous,now);assert.equal(count,12);assert.equal(r.requests,12);assert.equal(r.status,'error');assert.equal(r.complete_through,previous.complete_through);
+});
