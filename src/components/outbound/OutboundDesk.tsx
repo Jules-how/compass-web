@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CampaignPlanner } from "@/components/campaigns/CampaignPlanner";
 import { OperatorShell } from "@/components/OperatorShell";
@@ -62,7 +63,7 @@ export function OutboundDesk() {
     }).length;
   }, [campaignsQuery.data]);
 
-  const switcher = <OutboundDeskSwitch value={desk} onChange={setDesk} />;
+  const switcher = <div className="flex flex-wrap items-center gap-3"><OutboundDeskSwitch value={desk} onChange={setDesk} /><Link className="compass-btn-primary" href="/sales/outbound/rhythm">Today & follow-ups</Link></div>;
 
   if (!ready) {
     return (

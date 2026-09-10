@@ -86,7 +86,7 @@ export default function TaskDetailPanel({
           title: title.trim(),
           status,
           priority,
-          due: due || null,
+          ...(task.lead_id ? {} : { due: due || null }),
           project_id: projectId || null,
           business_function_id: businessFunctionId || null,
           task_type: taskType || null,
@@ -181,11 +181,13 @@ export default function TaskDetailPanel({
             <span className="mb-1 block text-xs font-medium text-neutral-500">Due</span>
             <input
               type="date"
+              title={task.lead_id ? "Use the outreach queue to preserve the callback time and timezone" : undefined}
               value={due}
               onChange={(e) => setDue(e.target.value)}
               className="w-full rounded-xl border border-stone-200 px-2 py-1.5 text-sm"
-              disabled={saving}
+              disabled={saving || Boolean(task.lead_id)}
             />
+            {task.lead_id && <a className="mt-1 block text-xs underline" href={`/sales/outbound/rhythm?lead=${encodeURIComponent(task.lead_id)}`}>Edit callback time in Outreach</a>}
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-neutral-500">Project</span>

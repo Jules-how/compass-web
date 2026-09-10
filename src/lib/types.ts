@@ -17,6 +17,11 @@ export type TaskStatus = (typeof TASK_STATUSES)[number]
 export type TaskType = (typeof TASK_TYPES)[number]
 
 export interface CompassTask {
+  lead_id?: string | null
+  outreach_channel?: string | null
+  outreach_timezone?: string | null
+  outreach_state?: string | null
+
   id: string
   title: string
   status: TaskStatus

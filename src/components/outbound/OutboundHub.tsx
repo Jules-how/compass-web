@@ -14,6 +14,7 @@ export function OutboundHub(_props: { onOpenEditor?: () => void } = {}) {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)]">
       <div className="min-w-0 space-y-6">
+        <section className="folio-paper p-5"><h2 className="font-display text-2xl">Your outreach rhythm</h2><p className="my-2 text-sm">Calls, follow-ups and the week ahead.</p><Link className="underline" href="/sales/outbound/rhythm">Open Today and Upcoming →</Link></section>
         <OfferWavesBoard />
         <OutboundWorkshopSection />
         <OutboundLiveSection />

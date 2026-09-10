@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import type { LeadContact } from '@/lib/types'
 import { formatLeadFactsDetail, parseLeadFacts } from '@/lib/lead-facts'
 import { humanizeEmailOrigin, humanizeIcpStatus } from '@/lib/lead-icp'
+import { RhythmLeadPanel } from '@/components/outbound/rhythm/RhythmLeadPanel'
 import { LeadRecontactPanel } from '@/components/LeadRecontactPanel'
 
 function humanizeStatus(status: string | null | undefined): string {
@@ -80,7 +81,8 @@ export function LeadSidecar({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+        <RhythmLeadPanel key={lead.id} leadId={lead.id} onSaved={() => window.dispatchEvent(new Event('outbound-rhythm-changed'))} />
+        <h3 className="mb-1 mt-5 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
           Record details
         </h3>
         <dl>

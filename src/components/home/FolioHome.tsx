@@ -3,6 +3,7 @@
 import { waveReviewLabel } from '@/lib/wave-review-label'
 
 import Link from 'next/link'
+import { OutboundRhythm } from '@/components/outbound/rhythm/OutboundRhythm'
 import { useState } from 'react'
 import {
   ArrowRight,
@@ -445,7 +446,8 @@ export function FolioHome({
             </article>
           )}
           <div className="folio-goal-findings">
-            <PathfinderHome />
+            <OutboundRhythm compact />
+      <PathfinderHome />
           </div>
         </div>
         <aside className="folio-margin" aria-label="Supporting context">

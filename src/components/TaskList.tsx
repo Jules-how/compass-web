@@ -228,7 +228,7 @@ export default function TaskList({
       const res = await workFetch(`/api/tasks/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus })
+        body: JSON.stringify({ status: nextStatus, expected_updated_at: task.updated_at })
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))

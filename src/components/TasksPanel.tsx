@@ -156,7 +156,7 @@ export function TasksPanel() {
       const res = await workFetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: toColumnId }),
+        body: JSON.stringify({ status: toColumnId, expected_updated_at: data?.topTasks.find(task => task.id === taskId)?.updated_at }),
       })
       if (!res.ok) throw new Error('Could not move task')
       setNote(

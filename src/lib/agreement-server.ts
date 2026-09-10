@@ -503,3 +503,17 @@ export function sealCommercial(value: unknown) {
 export function openCommercial<T>(value: string): T {
   return decode(value) as unknown as T
 }
+
+/** Read-only whole-business receipt summary; never attribute these to a lead cohort. */
+export async function agreementOutcomeSummary(since: string) {
+  const { data, error } = await getPortalAdminClient().from('compass_settings')
+    .select('value').like('id', 'commercial.agreement.%').order('updated_at', { ascending: false }).limit(501)
+  if (error) throw new Error('Commercial receipts unavailable')
+  if ((data?.length || 0) > 500) throw new Error('Commercial receipt coverage exceeds this summary')
+  const records = (data || []).map(r => decode(String(r.value))).filter(r => !r.clientId.startsWith('cs-demo-'))
+  const signed = records.filter(r => r.signature?.acceptedAt && r.signature.acceptedAt >= since)
+  const paid = records.filter(r => r.payment?.status === 'paid' && r.payment.paidAt && r.payment.paidAt >= since)
+  return { signed: signed.length, paymentReceipts: paid.length,
+    paidAud: paid.reduce((sum, r) => sum + (totalCents(r.terms.monthlyAud, r.terms.gstMode) + totalCents(r.terms.setupAud, r.terms.gstMode)) / 100, 0),
+    scope: 'Whole business: recorded first-invoice payments, not cohort attribution or recurring revenue.' }
+}

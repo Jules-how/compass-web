@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { siteFromEmailOrUrl } from '@/lib/company-site'
 import { applyLeadIcpFields } from '@/lib/lead-icp'
@@ -31,6 +32,8 @@ const ENRICH_STATUSES = new Set([
 export type LeadCommitExisting = {
   id: string
   email: string | null
+  phone?: string | null
+  contact_source_key?: string | null
   company: string | null
   city: string | null
   company_domain: string | null
@@ -39,6 +42,9 @@ export type LeadCommitExisting = {
 }
 
 export type LeadCommitInput = {
+  id?: unknown
+  contact_source_key?: unknown
+  phone_source_url?: unknown
   email?: unknown
   company?: unknown
   name?: unknown
@@ -79,6 +85,7 @@ export type LeadCommitDecision =
 
 export type LeadCommitResult = {
   ok: boolean
+  receipts?: Array<{id:string;key:string;action:string}>
   inserted: number
   updated: number
   skipped: Array<{ key: string; reason: string; existing_id?: string }>
@@ -105,6 +112,8 @@ export function mergeLeadCommitRow(
 export function decideLeadCommit(
   incoming: LeadCommitInput,
   lookups: {
+    byId?: Map<string, LeadCommitExisting>
+    bySource?: Map<string, LeadCommitExisting>
     byEmail: Map<string, LeadCommitExisting>
     byDomain: Map<string, LeadCommitExisting>
     byCompanyCity: Map<string, LeadCommitExisting>
@@ -115,7 +124,9 @@ export function decideLeadCommit(
   const email = normalizeEmail(asText(incoming.email))
   const company = asText(incoming.company)
   const key = email || normalizeCompanyKey(company) || 'row'
-  if (!email) return { action: 'skip', key, reason: 'missing email' }
+  const phone = normalizePhone(asText(incoming.phone))
+  if (!email && !phone) return { action: 'skip', key, reason: 'missing email or phone' }
+  if (!email && !asText(incoming.phone_source_url)) return { action: 'skip', key, reason: 'published phone source required' }
   if (!company) return { action: 'skip', key: email, reason: 'missing company' }
 
   const site = siteFromEmailOrUrl({
@@ -125,6 +136,17 @@ export function decideLeadCommit(
   const domain = site.company_domain
   const city = asText(incoming.city)
   const cityKey = companyCityKey(company, city)
+
+  const explicitId = asText(incoming.id)
+  const sourceKey = asText(incoming.contact_source_key)
+  const identityMatch = explicitId ? lookups.byId?.get(explicitId) : sourceKey ? lookups.bySource?.get(sourceKey) : undefined
+  if (explicitId && !identityMatch) return { action: 'skip', key, reason: 'lead id not found' }
+  if (identityMatch) {
+    const emailOwner = email ? lookups.byEmail.get(email) : undefined
+    if (emailOwner && emailOwner.id !== identityMatch.id) return { action: 'skip', key, reason: 'email belongs to another lead' }
+    if (identityMatch.email && email && identityMatch.email !== email) return { action: 'skip', key, reason: 'conflicting email; explicit review required' }
+    return { action: 'update', key, id: identityMatch.id, patch: buildUpdatePatch(incoming, identityMatch, { email: email || identityMatch.email || '', company, site, now }) }
+  }
 
   const emailMatch = lookups.byEmail.get(email)
   if (emailMatch) {
@@ -172,10 +194,12 @@ function buildBaseFields(
   }
 ): Record<string, unknown> {
   const patch: Record<string, unknown> = {
-    email: ctx.email,
+    email: ctx.email || null,
     company: ctx.company,
     updated_at: ctx.now
   }
+  if (incoming.phone_source_url) patch.contact_phone_source_url = asText(incoming.phone_source_url)
+  if (incoming.contact_source_key) patch.contact_source_key = asText(incoming.contact_source_key)
   if (incoming.name !== undefined) patch.name = optionalText(incoming.name)
   if (incoming.phone !== undefined) patch.phone = normalizePhone(asText(incoming.phone)) || null
   if (incoming.role !== undefined) patch.role = optionalText(incoming.role)
@@ -271,7 +295,7 @@ function buildInsertRow(
 ): Record<string, unknown> {
   const patch = buildBaseFields(incoming, ctx)
   return {
-    id: `contact-${crypto.randomUUID()}`,
+    id: incoming.contact_source_key ? `contact-source-${createHash('sha256').update(asText(incoming.contact_source_key)).digest('hex').slice(0,32)}` : `contact-${crypto.randomUUID()}`,
     name: optionalText(incoming.name) || ctx.company,
     phone: incoming.phone !== undefined ? normalizePhone(asText(incoming.phone)) || null : null,
     role: optionalText(incoming.role),
@@ -293,10 +317,14 @@ function buildInsertRow(
 }
 
 function remember(lookups: {
+  byId?: Map<string, LeadCommitExisting>
+  bySource?: Map<string, LeadCommitExisting>
   byEmail: Map<string, LeadCommitExisting>
   byDomain: Map<string, LeadCommitExisting>
   byCompanyCity: Map<string, LeadCommitExisting>
 }, row: LeadCommitExisting) {
+  lookups.byId?.set(row.id, row)
+  if (row.contact_source_key) lookups.bySource?.set(row.contact_source_key,row)
   const email = normalizeEmail(row.email || '')
   if (email) lookups.byEmail.set(email, row)
   if (row.company_domain) lookups.byDomain.set(row.company_domain.toLowerCase(), row)
@@ -308,9 +336,11 @@ async function fetchExisting(
   admin: SupabaseClient,
   emails: string[],
   domains: string[],
-  companies: string[]
+  companies: string[],
+  ids: string[],
+  sourceKeys: string[]
 ): Promise<LeadCommitExisting[]> {
-  const cols = 'id,email,company,city,company_domain,outbound_status,icp_status'
+  const cols = 'id,email,phone,contact_source_key,company,city,company_domain,outbound_status,icp_status'
   const found = new Map<string, LeadCommitExisting>()
 
   const load = async (column: string, values: string[]) => {
@@ -326,6 +356,8 @@ async function fetchExisting(
     }
   }
 
+  await load('id', ids)
+  await load('contact_source_key', sourceKeys)
   await load('email', emails)
   await load('company_domain', domains)
   await load('company', companies)
@@ -348,17 +380,23 @@ export async function commitLeadRows(
   const inserts: Array<{ key: string; row: Record<string, unknown> }> = []
   const updates: Array<{ key: string; id: string; patch: Record<string, unknown> }> = []
 
-  const mergedRows = input.rows.map((row) => mergeLeadCommitRow(input.defaults, row))
+  const mergedRows = input.rows.map((row) => {
+    const merged = mergeLeadCommitRow(input.defaults, row)
+    if (!asText(merged.email) && !merged.contact_source_key && merged.phone && merged.company) {
+      merged.contact_source_key = 'phone:' + createHash('sha256').update(JSON.stringify([normalizeCompanyKey(asText(merged.company)),asText(merged.city).toLowerCase(),normalizePhone(asText(merged.phone)),asText(merged.phone_source_url)])).digest('hex')
+    }
+    return merged
+  })
   const emails = mergedRows.map((row) => normalizeEmail(asText(row.email))).filter(Boolean)
   const domains = mergedRows
     .map((row) => siteFromEmailOrUrl({ email: asText(row.email), website: asText(row.website) }).company_domain)
     .filter((d): d is string => Boolean(d))
   const companies = mergedRows.map((row) => asText(row.company)).filter(Boolean)
 
-  const existing = input.dryRun
-    ? []
-    : await fetchExisting(admin, [...new Set(emails)], [...new Set(domains)], [...new Set(companies)])
+  const existing = await fetchExisting(admin, [...new Set(emails)], [...new Set(domains)], [...new Set(companies)], mergedRows.map(r => asText(r.id)).filter(Boolean), mergedRows.map(r => asText(r.contact_source_key)).filter(Boolean))
   const lookups = {
+    byId: new Map<string, LeadCommitExisting>(),
+    bySource: new Map<string, LeadCommitExisting>(),
     byEmail: new Map<string, LeadCommitExisting>(),
     byDomain: new Map<string, LeadCommitExisting>(),
     byCompanyCity: new Map<string, LeadCommitExisting>()
@@ -383,6 +421,7 @@ export async function commitLeadRows(
       inserts.push({ key: decision.key, row: decision.row })
       remember(lookups, {
         id: String(decision.row.id),
+        contact_source_key: decision.row.contact_source_key as string | null,
         email: String(decision.row.email ?? ''),
         company: String(decision.row.company ?? ''),
         city: (decision.row.city as string | null) ?? null,
@@ -392,7 +431,9 @@ export async function commitLeadRows(
       })
       continue
     }
-    updates.push({ key: decision.key, id: decision.id, patch: decision.patch })
+    const pending = inserts.find(item => item.row.id === decision.id)
+    if (pending) Object.assign(pending.row, decision.patch)
+    else updates.push({ key: decision.key, id: decision.id, patch: decision.patch })
   }
 
   if (input.dryRun) {
@@ -405,6 +446,7 @@ export async function commitLeadRows(
     }
   }
 
+  const receipts: Array<{id:string;key:string;action:string}> = []
   let inserted = 0
   let updated = 0
   const touchedIds: string[] = []
@@ -417,7 +459,7 @@ export async function commitLeadRows(
       continue
     }
     inserted += slice.length
-    for (const item of slice) touchedIds.push(String(item.row.id))
+    for (const item of slice) { touchedIds.push(String(item.row.id)); receipts.push({id:String(item.row.id),key:item.key,action:'inserted'}) }
   }
 
   for (const item of updates) {
@@ -428,6 +470,7 @@ export async function commitLeadRows(
     }
     updated += 1
     touchedIds.push(item.id)
+    receipts.push({id:item.id,key:item.key,action:'updated'})
   }
 
   if (input.mark && touchedIds.length) {
@@ -466,6 +509,7 @@ export async function commitLeadRows(
 
   return {
     ok: failed.length === 0,
+    receipts,
     inserted,
     updated,
     skipped,

@@ -1,12 +1,11 @@
+import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import {
   interestLabelForOutbound,
   interestSuppressionReason,
   isInstantlySuppressedOutbound,
-  shouldOverwriteOutbound
 } from '@/lib/instantly-leads-sync'
-import { lookupCopyForInstantlyCampaign, recordOutreachTouch } from '@/lib/lead-outreach'
 import { appendEvidence } from '@/lib/events'
 import { leadStageFromOutbound } from '@/lib/pipeline-spine'
 
@@ -57,7 +56,9 @@ function normalizeEmail(email: string | null | undefined): string | null {
 }
 
 /** Map Instantly webhook event_type → Compass outbound_status. */
-export function mapWebhookEventToOutboundStatus(eventType: string | null | undefined): string | null {
+export function mapWebhookEventToOutboundStatus(
+  eventType: string | null | undefined,
+): string | null {
   switch ((eventType || '').trim().toLowerCase()) {
     case 'reply_received':
     case 'auto_reply_received':
@@ -142,18 +143,28 @@ function displayNameFromPayload(payload: InstantlyWebhookPayload, email: string 
  */
 export async function applyInstantlyWebhookEvent(
   supabase: SupabaseClient,
-  payload: InstantlyWebhookPayload
+  payload: InstantlyWebhookPayload,
 ): Promise<InstantlyWebhookApplyResult> {
   const eventType = str(payload.event_type)
   const outbound = mapWebhookEventToOutboundStatus(eventType)
   if (!eventType || !outbound) {
-    return { ok: true, skipped: true, reason: 'ignored_event', eventType: eventType || undefined }
+    return {
+      ok: true,
+      skipped: true,
+      reason: 'ignored_event',
+      eventType: eventType || undefined,
+    }
   }
 
   const email = normalizeEmail(payload.lead_email || payload.email)
   const instantlyLeadId = str(payload.lead_id) || str(payload.id)
   if (!email && !instantlyLeadId) {
-    return { ok: true, skipped: true, reason: 'missing_lead_identity', eventType }
+    return {
+      ok: true,
+      skipped: true,
+      reason: 'missing_lead_identity',
+      eventType,
+    }
   }
 
   const stamp = new Date().toISOString()
@@ -200,11 +211,11 @@ export async function applyInstantlyWebhookEvent(
     interest_label: interestLabelForOutbound(outbound),
     lead_status_source: 'instantly_webhook',
     instantly_synced_at: stamp,
-    last_outbound_at: eventAt,
+    ...(eventType === 'email_sent' ? { last_outbound_at: eventAt } : {}),
     updated_at: stamp,
     mirrored_at: stamp,
     suppression_reason: suppressionReason,
-    recontact_ok: suppressed ? 0 : 1
+    recontact_ok: suppressed ? 0 : 1,
   }
   if (instantlyLeadId) patch.instantly_lead_id = instantlyLeadId
   if (campaignId) {
@@ -221,16 +232,7 @@ export async function applyInstantlyWebhookEvent(
   let updated = false
 
   if (match) {
-    if (!shouldOverwriteOutbound(match.outbound_status, outbound)) {
-      delete patch.outbound_status
-      delete patch.interest_label
-    }
-    if (!suppressed && match.suppression_reason) {
-      delete patch.suppression_reason
-      delete patch.recontact_ok
-    }
-    const { error } = await supabase.from('lead_contacts').update(patch).eq('id', match.id)
-    if (error) throw new Error(error.message)
+    // Status/history are applied atomically below with provider event ordering.
     contactId = match.id
     updated = true
   } else {
@@ -238,7 +240,7 @@ export async function applyInstantlyWebhookEvent(
       id: instantlyLeadId ? `inst-${instantlyLeadId}` : `inst-mail-${email}`,
       name,
       ...patch,
-      created_at: stamp
+      created_at: stamp,
     }
     const { error } = await supabase.from('lead_contacts').insert(row)
     if (error) throw new Error(error.message)
@@ -246,21 +248,39 @@ export async function applyInstantlyWebhookEvent(
     inserted = true
   }
 
-  try {
-    const linked = await lookupCopyForInstantlyCampaign(supabase, campaignId)
-    await recordOutreachTouch(supabase, {
-      contactId,
-      contactedAt: eventAt,
-      channel: 'email',
-      campaignId: linked.campaignId,
-      campaignName: linked.campaignName || campaignName,
-      instantlyCampaignId: campaignId,
-      copySnapshot: linked.copy,
-      source: 'instantly_webhook'
-    })
-  } catch {
-    // best-effort
-  }
+  const eventId =
+    'inst-event-' +
+    createHash('sha256')
+      .update(
+        JSON.stringify([
+          eventType,
+          instantlyLeadId || email,
+          campaignId,
+          str(payload.timestamp),
+          str(payload.event_id) || str(payload.email_id) || payload.reply_text_snippet || '',
+        ]),
+      )
+      .digest('hex')
+  const { data: eventResult, error: eventError } = await supabase.rpc(
+    'compass_outbound_provider_event',
+    {
+      p: {
+        id: eventId,
+        lead_id: contactId,
+        at: eventAt,
+        event: eventType,
+        status: outbound,
+        campaign_id: campaignId,
+        campaign_name: campaignName,
+        provider_lead_id: instantlyLeadId,
+        note: str(payload.reply_text_snippet),
+        interest_label: interestLabelForOutbound(outbound),
+        suppression_reason: suppressionReason,
+        pipeline_stage: leadStageFromOutbound(outbound),
+      },
+    },
+  )
+  if (eventError) throw new Error(eventError.message)
 
   const evidenceType = webhookEvidenceType(eventType)
   if (evidenceType) {
@@ -278,16 +298,9 @@ export async function applyInstantlyWebhookEvent(
           email,
           campaign_id: campaignId,
           campaign_name: campaignName,
-          outbound_status: outbound
-        }
+          outbound_status: outbound,
+        },
       })
-      await supabase
-        .from('lead_contacts')
-        .update({
-          pipeline_stage: leadStageFromOutbound(outbound),
-          updated_at: stamp
-        })
-        .eq('id', contactId)
     } catch {
       // best-effort
     }
@@ -296,9 +309,9 @@ export async function applyInstantlyWebhookEvent(
   return {
     ok: true,
     contactId,
-    outboundStatus: outbound,
+    outboundStatus: eventResult?.status || outbound,
     eventType,
     inserted,
-    updated
+    updated,
   }
 }

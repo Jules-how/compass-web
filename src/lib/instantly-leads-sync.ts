@@ -239,6 +239,9 @@ function campaignNameLookup(
 }
 
 type ExistingLead = {
+  instantly_event_at?: string | null
+  updated_at?: string | null
+
   id: string
   email: string | null
   instantly_lead_id: string | null
@@ -253,7 +256,7 @@ async function loadExistingLeads(
 ): Promise<ExistingLead[]> {
   const rows: ExistingLead[] = []
   const selectCols =
-    'id,email,instantly_lead_id,outbound_status,suppression_reason'
+    'id,email,instantly_lead_id,outbound_status,suppression_reason,instantly_event_at,updated_at'
 
   // Chunk to keep PostgREST URLs reasonable.
   const chunk = 200
@@ -394,7 +397,13 @@ export async function syncInstantlyLeadsIntoCompass(
         delete patch.suppression_reason
         delete patch.recontact_ok
       }
-      const { error } = await supabase.from('lead_contacts').update(patch).eq('id', match.id)
+      if (match.instantly_event_at && (!lead.timestamp_last_reply || Date.parse(lastContactAt) <= Date.parse(match.instantly_event_at))) {
+        for (const field of ['outbound_status','interest_label','suppression_reason','recontact_ok','last_outbound_at']) delete patch[field]
+      }
+      let update = supabase.from('lead_contacts').update(patch).eq('id', match.id)
+      // If a webhook writes after our read, leave its newer state for the next sync.
+      if (match.updated_at) update = update.eq('updated_at', match.updated_at)
+      const { error } = await update
       if (error) throw new Error(error.message)
       updated += 1
       contactId = match.id
