@@ -1,5 +1,6 @@
 'use client'
 
+import { ConsolePaneBoundary } from '@/components/ConsolePaneBoundary'
 import { ActivePane } from '@/components/ActivePane'
 import { loadHomeDashboard, loadInboxPanel, loadSalesOverview, loadOffersDesk, loadOutboundDesk, loadLeadsPanel, loadTasksPanel, loadProjectsPanel, loadFunctionsPanel, loadClientsPanel, loadExpenseBoard, loadInstallKanban, loadCsDeptBoard, loadPlanningDesk, loadOutboundRhythm } from '@/lib/console-destinations'
 import dynamic from 'next/dynamic'
@@ -70,8 +71,8 @@ const CsDeptBoard = dynamic(
   { loading: () => <DeskLoading label="Loading retention…" /> }
 )
 
-const PlanningDesk = dynamic(loadPlanningDesk)
-const OutboundRhythm = dynamic(loadOutboundRhythm)
+const PlanningDesk = dynamic(loadPlanningDesk, { loading: () => <DeskLoading label="Loading planning…" /> })
+const OutboundRhythm = dynamic(loadOutboundRhythm, { loading: () => <DeskLoading label="Loading outreach…" /> })
 
 function KeepAlivePane({
   paneKey,
@@ -98,7 +99,7 @@ function KeepAlivePane({
       aria-hidden={!active}
       inert={!active ? true : undefined}
     >
-      <ActivePane active={active}>{children}</ActivePane>
+      <ConsolePaneBoundary><Suspense fallback={<DeskLoading label="Opening workspace…" />}><ActivePane active={active}>{children}</ActivePane></Suspense></ConsolePaneBoundary>
     </div>
   )
 }

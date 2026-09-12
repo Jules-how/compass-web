@@ -1,16 +1,18 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { RefreshCw, ArrowUpRight } from "lucide-react";
+import { RefreshCw, ArrowUpRight, X, ChevronRight } from "lucide-react";
 import { useActivePane } from "@/components/ActivePane";
 import { onWorkChanged } from "@/lib/workspace-change";
 import { safeLink } from "@/lib/operating-core";
 import type { OutboundOverview as Snapshot } from "@/lib/outbound-overview-core";
+import { ModalFrame } from "@/components/ui/ModalFrame";
 import styles from "./OutboundOverview.module.css";
 const number = (n: number | null | undefined) => n == null ? "Unknown" : n.toLocaleString();
 const time = (v: string | null | undefined) => v && Number.isFinite(Date.parse(v)) ? new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Sydney", dateStyle: "medium", ...(/^\d{4}-\d{2}-\d{2}$/.test(v) ? {} : { timeStyle: "short" as const }) }).format(new Date(v)) : "Not checked";
 export function OutboundOverview({ compact = false }: { compact?: boolean }) {
   const active = useActivePane();
+  const [selected, setSelected] = useState<Snapshot["recommendations"][number] | null>(null);
   const [data, setData] = useState<Snapshot | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,7 +42,16 @@ export function OutboundOverview({ compact = false }: { compact?: boolean }) {
     return () => { clearInterval(timer); unsubscribe(); window.removeEventListener("focus", update); window.removeEventListener("outbound-rhythm-changed", update); document.removeEventListener("visibilitychange", update); };
   }, [load, active]);
   const actions = data?.recommendations.filter(a => a.state !== "blocked" && a.state !== "scheduled") || [];
-  return <section className={`${styles.overview} ${compact ? styles.compact : ""}`} aria-label={compact ? "Outbound activity" : "Outbound overview"} aria-busy={busy}>
+  return <><ModalFrame open={active && selected !== null} onClose={() => setSelected(null)} label={selected?.title || "Task details"} overlayClassName={styles.dialogOverlay} contentClassName={styles.dialog}>
+    {selected ? <>
+      <header className={styles.dialogHeader}><span className={styles.actionMeta}>Next action · {selected.state === "accepted" ? "Recorded commitment" : "Suggested"}</span><button type="button" className="compass-btn-secondary" aria-label="Close task details" onClick={() => setSelected(null)}><X size={18} aria-hidden="true" /></button></header>
+      <h2>{selected.title}</h2>
+      {selected.due ? <p className={styles.meta}>Due {time(selected.due)}</p> : null}
+      <section><h3>Why this matters</h3><p>{selected.reason}</p></section>
+      {selected.lead_ids.length ? <details><summary>{selected.lead_ids.length} source contacts</summary><ul>{selected.lead_ids.map(id => <li key={id}><Link href={`/sales/outbound/rhythm?lead=${encodeURIComponent(id)}`}>Open contact {id}</Link></li>)}</ul></details> : null}
+      <footer><Link className="compass-btn-primary" href={selected.href} onClick={() => setSelected(null)}>Open workspace <ArrowUpRight size={16} aria-hidden="true" /></Link><button type="button" className="compass-btn-secondary" onClick={() => setSelected(null)}>Back to actions</button></footer>
+    </> : null}
+  </ModalFrame><section className={`${styles.overview} ${compact ? styles.compact : ""}`} aria-label={compact ? "Outbound activity" : "Outbound overview"} aria-busy={busy}>
     <header className={styles.header}>
       <div><h2>{compact ? "Outbound" : "What’s happening, and what’s next"}</h2>{!compact ? <p>Shared campaign evidence and recorded next actions.</p> : null}</div>
       <div className={styles.controls}>
@@ -60,10 +71,16 @@ export function OutboundOverview({ compact = false }: { compact?: boolean }) {
         <h3>Recommended next actions</h3>
         <p className={styles.meta}>{data.accepted_order_preserved ? "Your reviewed task order is preserved. Other recommendations remain proposals." : "Suggested from current records. Your accepted day and campaign permissions stay in force."}</p>
         <ol className={styles.actions}>
-          {(compact ? actions.slice(0, 3) : actions).map((a, i) => <li key={a.id}>
-            <span className={styles.index} aria-hidden="true">{i + 1}</span><div><Link href={a.href}>{a.title}</Link><p>{a.reason}</p><small>{a.state === "accepted" ? "Recorded commitment" : "Proposed"}{a.due ? ` · Due ${time(a.due)}` : ""}</small>
-              {!compact && a.lead_ids.length ? <details><summary>{a.lead_ids.length} source contacts</summary><ul>{a.lead_ids.map(id => <li key={id}><Link href={`/sales/outbound/rhythm?lead=${encodeURIComponent(id)}`}>Open contact {id}</Link></li>)}</ul></details> : null}
-            </div>
+          {actions.map((a, i) => <li key={a.id} data-priority={i === 0 ? "first" : undefined}>
+            <button type="button" className={styles.actionButton} onClick={() => setSelected(a)} aria-haspopup="dialog">
+              <span className={styles.index} aria-hidden="true">{i + 1}</span>
+              <span className={styles.actionCopy}>
+                <span className={styles.actionMeta}>{i === 0 ? "Start here" : `Next · ${i + 1}`} · {a.state === "accepted" ? "Recorded commitment" : "Suggested"}{a.due ? ` · Due ${time(a.due)}` : ""}</span>
+                <span className={styles.actionTitle}>{a.title}</span>
+                <span className={styles.actionReason}>{a.reason}</span>
+              </span>
+              <ChevronRight size={20} aria-hidden="true" />
+            </button>
           </li>)}
         </ol>
         {!actions.length ? <p>No actionable recommendation is established by the current records. Review missing sources and capture outstanding promises.</p> : null}
@@ -89,5 +106,5 @@ export function OutboundOverview({ compact = false }: { compact?: boolean }) {
         <details className={styles.section}><summary>Recorded activity and source coverage</summary>{data.activity.map(a => <section key={a.day}><h4>{a.day}</h4><ul>{a.events.map(e => <li key={e.id}>{e.lead_id ? <Link href={`/sales/outbound/rhythm?lead=${encodeURIComponent(e.lead_id)}`}>{e.company || "Contact record"}</Link> : <span>Verified sent message</span>} · {e.channel} · {e.outcome} · {time(e.at)}</li>)}</ul></section>)}<p>Call coverage: {data.coverage.calls}. Unrecorded conversations must be captured before they can inform the queue.</p>{data.sources.filter(s => ["source:instantly", "source:outbound-email-history"].includes(s.id)).map(s => <p key={s.id}>{s.data.status} · {s.data.coverage} {s.data.error}</p>)}</details>
       </> : null}
     </>}
-  </section>;
+  </section></>;
 }
