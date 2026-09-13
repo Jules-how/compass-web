@@ -42,6 +42,8 @@ Operator UI also exposes `GET/POST /api/outbound/copy-archive` (+ `[id]` PATCH/D
 
 ## Endpoints
 
+Goals & actions use the same canonical work and planning owners. Read [GOALS_ACTIONS.md](GOALS_ACTIONS.md) for rich notebooks, city sessions and the source-bound local Codex instruction adapter. MCP exposes `goals.actions`, `planning.notebook` and `instructions`; an existing running MCP process must reload to discover them. Direct HTTPS routes are available immediately after deployment. ChatGPT/ChatGPT Work do not gain a trusted explicit-instruction connection from the shared secret alone.
+
 | Method | Path | Notes |
 |--------|------|-------|
 | `GET` | `/api/agent/brief` | Compact daily brief (~1–2KB) plus `currentWave` (campaign, trade, cluster, uncontacted remaining, last import). Cached snapshot unless `x-compass-fresh: 1` |

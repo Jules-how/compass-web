@@ -10,6 +10,8 @@ const PlanningBoard = dynamic(() => import('./PlanningBoard').then(m => m.Planni
 const PlanningRecords = dynamic(() => import('./PlanningRecords').then(m => m.PlanningRecords))
 const PathfinderBoard = dynamic(() => import('@/components/pathfinder/PathfinderBoard').then(m => m.PathfinderBoard))
 
+const GoalsActions = dynamic(() => import('@/components/goals/GoalsActions').then(m => m.GoalsActions))
+
 export function PlanningDesk() {
   const params = useSearchParams()
   const active = useActivePane()
@@ -17,7 +19,7 @@ export function PlanningDesk() {
   const route = useRef({ view: params.get('view'), goal: params.get('goal') })
   if (active && pathname === '/planning') route.current = { view: params.get('view'), goal: params.get('goal') }
   const { view, goal } = route.current
-  return <OperatorShell width="full">
-    {view === 'records' ? <PlanningBoard /> : view === 'activity' ? <PlanningRecords /> : <PathfinderBoard initialGoalId={goal ?? undefined} />}
+  return <OperatorShell width="full" flush={!view || !['records','activity','pathfinder'].includes(view)}>
+    {view === 'records' ? <PlanningBoard /> : view === 'activity' ? <PlanningRecords /> : view === 'pathfinder' ? <PathfinderBoard initialGoalId={goal ?? undefined} /> : <GoalsActions initialGoalId={goal ?? undefined} />}
   </OperatorShell>
 }

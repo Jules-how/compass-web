@@ -16,6 +16,21 @@ const SEARCH_DEFAULT_LIMIT = 2000
 
 export const TOOLS = [
   {
+    name: 'goals.actions',
+    description: 'Read the shared weekly goals/actions workspace, a city session, existing prospects or goal evidence. A session command creates a proposal or revision-checked agent-owned session; it never calls or sends.',
+    inputSchema: { type: 'object', properties: { section: { type: 'string', enum: ['workspace', 'session', 'prospects', 'evidence'] }, id: { type: 'string' }, city: { type: 'string' }, q: { type: 'string' }, cursor: { type: 'string' }, goal: { type: 'string' }, command: { type: 'object', additionalProperties: true } }, additionalProperties: false }
+  },
+  {
+    name: 'planning.notebook',
+    description: 'Read or save the canonical rich goal/contact notebook. Read first and preserve existing formatting. Save command needs subject, document, current revision and stable request_id; uncertain retries must reuse the exact command. Never send body-only replacements.',
+    inputSchema: { type: 'object', properties: { kind: { type: 'string', enum: ['goal', 'contact'] }, id: { type: 'string' }, command: { type: 'object', additionalProperties: true } }, additionalProperties: false }
+  },
+  {
+    name: 'instructions',
+    description: 'Inspect connected explicit-instruction surfaces, or submit an unchanged signed envelope from the trusted host adapter. Requires an actual user instruction and its exact scope. An agent-written confirmation is not authority. See docs/GOALS_ACTIONS.md. Supports goal edits and task completion; no campaign execution.',
+    inputSchema: { type: 'object', properties: { envelope: { type: 'object', required: ['payload', 'signature'], properties: { payload: { type: 'string' }, signature: { type: 'string' } }, additionalProperties: false } }, additionalProperties: false }
+  },
+  {
     name: 'pathfinder',
     description: 'Read approved outcomes, supporting canonical work, outcome evidence and persistent findings. Optional goal_id narrows the context. Use before daily planning; missing capacity remains unknown.',
     inputSchema: {type:'object',properties:{goal_id:{type:'string'}},additionalProperties:false}
@@ -330,6 +345,17 @@ export async function callTool(name, args = {}, { cfg, fetchImpl }) {
   if (!cfg.secret) return toolError('missing COMPASS_AGENT_SECRET')
 
   switch (name) {
+    case 'goals.actions':
+    case 'planning.notebook':
+    case 'instructions': {
+      const base = name === 'goals.actions' ? '/api/agent/goals/actions' : name === 'planning.notebook' ? '/api/agent/planning/notebook' : '/api/agent/instructions';
+      const body = name === 'instructions' ? args.envelope : args.command;
+      if (body !== undefined && (!body || typeof body !== 'object' || Array.isArray(body))) return toolError('Write payload must be an object');
+      const keys = name === 'goals.actions' ? ['section', 'id', 'city', 'q', 'cursor', 'goal'] : name === 'planning.notebook' ? ['kind', 'id'] : [];
+      const query = new URLSearchParams(keys.filter(key => args[key] !== undefined).map(key => [key, String(args[key])]));
+      const r = await compassFetch(cfg, { method: body ? 'POST' : 'GET', path: base + (!body && query.size ? '?' + query : ''), ...(body ? { body } : {}), fetchImpl });
+      return r.status >= 400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);
+    }
     case 'pathfinder': {
       const path='/api/agent/pathfinder'+(args.goal_id?'?goal_id='+encodeURIComponent(args.goal_id):'');
       const r=await compassFetch(cfg,{method:'GET',path,fetchImpl});

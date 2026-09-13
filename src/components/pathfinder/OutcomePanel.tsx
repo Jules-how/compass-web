@@ -17,7 +17,7 @@ export async function pathfinderCommand(command: unknown) {
     body: JSON.stringify(command),
   });
   const b = await r.json();
-  if (!r.ok) throw new Error(b.error || "Unable to save");
+  if (!r.ok) throw Object.assign(new Error(b.error || "Unable to save"),{status:r.status});
   return b.result;
 }
 export function OutcomePanel({

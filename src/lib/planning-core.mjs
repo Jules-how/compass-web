@@ -1,3 +1,4 @@
+import { validateDocument, documentText } from "./rich-document.mjs";
 export const GOAL_PERIODS = [
   "daily",
   "weekly",
@@ -43,8 +44,15 @@ export function validatePlanning(kind, input) {
     const direction = input.direction === "decrease" ? "decrease" : "increase";
     const regular = qualitative ? null : number(input.regular, !draft),
       stretch = number(input.stretch);
-    if (!qualitative && regular != null && stretch != null && (direction === "decrease" ? stretch > regular : stretch < regular))
-      throw new Error("Stretch must be more ambitious than the regular target.");
+    if (
+      !qualitative &&
+      regular != null &&
+      stretch != null &&
+      (direction === "decrease" ? stretch > regular : stretch < regular)
+    )
+      throw new Error(
+        "Stretch must be more ambitious than the regular target.",
+      );
     const actual = number(input.actual),
       source = text(input.source, 2000);
     if (actual != null && !source)
@@ -53,19 +61,27 @@ export function validatePlanning(kind, input) {
       due = date(input.due, !draft);
     if (start && due && start > due)
       throw new Error("The deadline must follow the start date.");
-    if (qualitative && !draft && !text(input.criteria)) throw new Error("Describe an observable acceptance condition.");
+    if (qualitative && !draft && !text(input.criteria))
+      throw new Error("Describe an observable acceptance condition.");
     return {
       ...base,
       period,
       domain: input.domain === "personal" ? "personal" : "business",
       measurementType: qualitative ? "qualitative" : "quantitative",
+      measuresProfile: input.measuresProfile === "sales_validation" ? "sales_validation" : "goal",
       direction,
       criteria: text(input.criteria, 4000),
       metricDefinition: text(input.metricDefinition, 4000),
       owner: text(input.owner, 120) || "Jules",
-      expectedSprints: input.expectedSprints === "" || input.expectedSprints == null ? null : Math.floor(number(input.expectedSprints)),
+      expectedSprints:
+        input.expectedSprints === "" || input.expectedSprints == null
+          ? null
+          : Math.floor(number(input.expectedSprints)),
       currency: text(input.currency, 8),
-      freshnessDays: input.freshnessDays == null ? 30 : Math.max(1, Math.min(365, number(input.freshnessDays, true))),
+      freshnessDays:
+        input.freshnessDays == null
+          ? 30
+          : Math.max(1, Math.min(365, number(input.freshnessDays, true))),
       start,
       due,
       regular,
@@ -81,15 +97,34 @@ export function validatePlanning(kind, input) {
       links: text(input.links, 2000),
     };
   }
-  if (kind === "note")
+  if (kind === "note") {
+    const document = input.document ? validateDocument(input.document) : null;
+    if (typeof input.body === "string" && input.body.length > 20000)
+      throw new Error(
+        "Note exceeds 20,000 characters; saved content is unchanged.",
+      );
+    const subject = input.subject;
+    if (
+      subject &&
+      (!["goal", "contact"].includes(subject.kind) ||
+        !/^[-a-zA-Z0-9_.:]{1,200}$/.test(subject.id || ""))
+    )
+      throw new Error("Invalid notebook subject.");
     return {
       ...base,
-      body: typeof input.body === "string" ? input.body.slice(0, 20000) : "",
+      body: document
+        ? documentText(document)
+        : typeof input.body === "string"
+          ? input.body
+          : "",
+      ...(document ? { document } : {}),
+      ...(subject ? { subject: { kind: subject.kind, id: subject.id } } : {}),
       date: date(input.date),
       goalId: text(input.goalId, 100),
       links: text(input.links, 2000),
       status: input.status === "decision" ? "decision" : "idea",
     };
+  }
   if (kind === "time") {
     const actualMinutes = number(input.actualMinutes),
       plannedMinutes = number(input.plannedMinutes);
@@ -140,13 +175,24 @@ export function checkGoalParent(row, id, goals) {
   }
 }
 export function goalProgress(goal) {
-  if (goal.measurementType === "qualitative" || goal.actual == null || goal.regular == null) return null;
+  if (
+    goal.measurementType === "qualitative" ||
+    goal.actual == null ||
+    goal.regular == null
+  )
+    return null;
   const baseline = goal.baseline ?? (goal.direction === "decrease" ? null : 0);
   if (baseline == null) return null;
-  const span = goal.direction === "decrease" ? baseline - goal.regular : goal.regular - baseline;
+  const span =
+    goal.direction === "decrease"
+      ? baseline - goal.regular
+      : goal.regular - baseline;
   if (span <= 0) return null;
-  const change = goal.direction === "decrease" ? baseline - goal.actual : goal.actual - baseline;
-  return Math.max(0, Math.min(100, Math.round(change / span * 100)));
+  const change =
+    goal.direction === "decrease"
+      ? baseline - goal.actual
+      : goal.actual - baseline;
+  return Math.max(0, Math.min(100, Math.round((change / span) * 100)));
 }
 
 /** Autosaves in one writing session share a history snapshot; goal revisions stay explicit. */
@@ -154,16 +200,32 @@ export function planningHistory(existing, kind, at) {
   if (!existing) return [];
   const history = existing.history ?? [];
   const latest = history.at(-1);
-  if (kind === "note" && latest && Date.parse(at) - Date.parse(latest.at) < 5 * 60 * 1000)
+  if (
+    kind === "note" &&
+    latest &&
+    Date.parse(at) - Date.parse(latest.at) < 5 * 60 * 1000
+  )
     return history;
-  return [...history, { revision: existing.revision, at: existing.updatedAt, data: existing.data }];
+  return [
+    ...history,
+    {
+      revision: existing.revision,
+      at: existing.updatedAt,
+      data: existing.data,
+    },
+  ];
 }
 
 /** Agents may propose goals; only the operator can revise approved strategy. */
 export function assertPlanningAuthority(kind, existing, proposed, actor) {
   if (actor !== "agent" || kind !== "goal") return;
-  if (proposed.status === "committed" || existing?.data.status === "committed") {
-    throw new Error("Only Jules can commit or change an approved goal. Record an observation or recommendation in Pathfinder instead.");
+  if (
+    proposed.status === "committed" ||
+    existing?.data.status === "committed"
+  ) {
+    throw new Error(
+      "Only Jules can commit or change an approved goal. Record an observation or recommendation in Pathfinder instead.",
+    );
   }
 }
 export function pricingScenario(input) {

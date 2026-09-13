@@ -23,6 +23,17 @@ export type Observation = {
   id: string;
   goal_id: string;
   goal_revision: number;
+  metric_id?: "primary" | "payment";
+  receipt?: {
+    kind: "payment" | "refund";
+    receipt_id: string;
+    payment_id: string;
+    client_id: string;
+    offer_key: string;
+    amount: number;
+    currency: "AUD";
+    received_on: string;
+  } | null;
   idempotency_key: string;
   provenance: "measured" | "reported" | "estimate";
   value: number | null;

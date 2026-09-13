@@ -5,7 +5,12 @@ import { listPlanning } from "@/lib/planning-server";
 import { portalJson, portalAccessResponse } from "@/lib/portal-http";
 import { z } from "zod";
 import { commandSchema } from "./contracts";
-import { canWritePathfinderLink, assessOutcome, supportingTasks, executionSummary } from "./core.mjs";
+import {
+  canWritePathfinderLink,
+  assessOutcome,
+  supportingTasks,
+  executionSummary,
+} from "./core.mjs";
 import type { CompassTask } from "@/lib/types";
 import type { Actor, PathfinderData, PathfinderIssue } from "./types";
 
@@ -254,7 +259,10 @@ export async function executePathfinder(
         l.relation === input.relation,
     );
     if (!canWritePathfinderLink(actor, existing, input))
-      throw new PathfinderError(403, "Only the operator can commit or change an approved route link.");
+      throw new PathfinderError(
+        403,
+        "Only the operator can commit or change an approved route link.",
+      );
     const payload = {
       goal_id: input.goal_id,
       work_type: input.work_type,
@@ -330,18 +338,35 @@ export async function executePathfinder(
         403,
         "Submit an agent observation as reported or estimate; Jules verifies the source.",
       );
-    if (input.observed_at > stamp || input.period_end > stamp.slice(0, 10))
+    const reportingDay = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Australia/Sydney",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(stamp));
+    if (input.observed_at > stamp || input.period_end > reportingDay)
       throw new PathfinderError(
         400,
         "Observations cannot claim future results.",
       );
     if (
+      input.metric_id === "primary" &&
       (goal.data.measurementType === "qualitative") !==
-      (input.accepted !== null)
+        (input.accepted !== null)
     )
       throw new PathfinderError(
         400,
         "The observation must match this goal’s measurement type.",
+      );
+    if (
+      input.receipt &&
+      (input.receipt.received_on > reportingDay ||
+        input.receipt.received_on < input.period_start ||
+        input.receipt.received_on > input.period_end)
+    )
+      throw new PathfinderError(
+        400,
+        "Receipt date must fall inside its reporting period and cannot be in the future.",
       );
     const { action, ...values } = input;
     void action;

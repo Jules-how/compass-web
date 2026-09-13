@@ -5,7 +5,7 @@ import {
   readBoundedJson,
   requireSameOrigin,
 } from "@/lib/portal-http";
-import { listPlanning, savePlanning } from "@/lib/planning-server";
+import { getPlanning, listPlanning, savePlanning } from "@/lib/planning-server";
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
@@ -13,7 +13,10 @@ export async function GET(request: Request) {
     const q = new URL(request.url).searchParams;
     const p = Number(q.get("page") || 0);
     if (!Number.isInteger(p) || p < 0) throw new Error("Invalid page.");
-    return portalJson(await listPlanning(q.get("kind") || "goal", p));
+    const kind = q.get("kind") || "goal";
+    const id = q.get("id");
+    if (id) return portalJson({ record: await getPlanning(kind, id) });
+    return portalJson(await listPlanning(kind, p));
   } catch (e) {
     return (
       portalAccessResponse(e) ||

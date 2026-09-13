@@ -38,7 +38,7 @@ const day = [
 const workspace = [
   { href: '/projects', label: 'Projects', icon: FolderOpen },
   { href: '/documents', label: 'Documents', icon: FileText },
-  { href: '/planning', label: 'Planning', icon: NotebookPen },
+  { href: '/planning', label: 'Goals & actions', icon: NotebookPen },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
 ]
 const work = [

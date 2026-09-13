@@ -9,7 +9,7 @@ export function assessOutcome(
   const relevant = observations
     .filter(
       (o) =>
-        o.goal_id === goal.id &&
+        o.goal_id === goal.id && (!o.metric_id || o.metric_id === "primary") &&
         o.goal_revision === goal.revision &&
         o.observed_at <= now,
     )

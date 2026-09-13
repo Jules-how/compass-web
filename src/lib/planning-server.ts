@@ -1,8 +1,11 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { getPortalAdminClient } from "@/lib/portal-admin";
 import { sealCommercial, openCommercial } from "@/lib/agreement-server";
-import { compareAndSwapPlanning } from "@/lib/planning-persist.mjs";
+import {
+  compareAndSwapPlanning,
+  currentPlanningRecord,
+} from "@/lib/planning-persist.mjs";
 import {
   PLANNING_KINDS,
   validatePlanning,
@@ -17,6 +20,7 @@ export type PlanningRow = {
   createdAt: string;
   updatedAt: string;
   data: Record<string, any>;
+  authorship?: Record<string, unknown>;
   history: Array<{ revision: number; at: string; data: Record<string, any> }>;
 };
 export async function listPlanning(kind: string, page = 0) {
@@ -37,19 +41,31 @@ export async function listPlanning(kind: string, page = 0) {
   };
 }
 export async function getPlanning(kind: string, id: string) {
-  if (!PLANNING_KINDS.includes(kind) || !new RegExp(`^planning\\.${kind}\\.[a-f0-9-]{36}$`).test(id))
+  if (
+    !PLANNING_KINDS.includes(kind) ||
+    !new RegExp(`^planning\\.${kind}\\.[a-f0-9-]{36}$`).test(id)
+  )
     throw new Error("Invalid record ID.");
   const { data, error } = await getPortalAdminClient()
-    .from("compass_settings").select("value").eq("id", id).maybeSingle();
+    .from("compass_settings")
+    .select("value")
+    .eq("id", id)
+    .maybeSingle();
   if (error) throw new Error("Unable to load planning record.");
   return data ? openCommercial<PlanningRow>(String(data.value)) : null;
 }
-export async function savePlanning(body: {
-  kind: string;
-  id?: string;
-  revision?: number;
-  data: unknown;
-}, actor: "operator" | "agent" = "operator") {
+export async function savePlanning(
+  body: {
+    kind: string;
+    id?: string;
+    revision?: number;
+    request_id?: string;
+    data: unknown;
+  },
+  actor: "operator" | "agent" | "delegated_user" = "operator",
+  operationFingerprint?: unknown,
+  authorship?: Record<string, unknown>,
+) {
   const data: Record<string, any> = validatePlanning(body.kind, body.data);
   const id = body.id || `planning.${body.kind}.${randomUUID()}`;
   if (!new RegExp(`^planning\\.${body.kind}\\.[a-f0-9-]{36}$`).test(id))
@@ -62,9 +78,42 @@ export async function savePlanning(body: {
     .maybeSingle();
   if (readError) throw new Error("Unable to read the current record.");
   const existing = old ? openCommercial<PlanningRow>(String(old.value)) : null;
+  const hash = createHash("sha256")
+    .update(
+      JSON.stringify({
+        actor,
+        kind: body.kind,
+        id,
+        revision: body.revision ?? 0,
+        data: operationFingerprint ?? data,
+      }),
+    )
+    .digest("hex");
+  if (body.request_id) {
+    if (!/^[a-zA-Z0-9:._-]{8,200}$/.test(body.request_id))
+      throw new Error("Invalid request ID.");
+    if (!body.id)
+      throw new Error("Retryable writes require a stable record ID.");
+    const { data: receipt, error } = await db
+      .from("compass_planning_receipts")
+      .select("digest,record_id,value")
+      .eq("request_id", body.request_id)
+      .maybeSingle();
+    if (error)
+      throw new Error(
+        "Notebook save service is unavailable. Your draft has not been discarded.",
+      );
+    if (receipt) {
+      if (receipt.digest !== hash || receipt.record_id !== id)
+        throw new Error("Request ID reused for a different change.");
+      return openCommercial<PlanningRow>(receipt.value);
+    }
+  }
+  if (existing?.data.document && !data.document)
+    throw new Error(
+      "This note has rich formatting. Use the notebook document API; a plain-text overwrite would lose content.",
+    );
   assertPlanningAuthority(body.kind, existing, data, actor);
-  if (existing && JSON.stringify(existing.data) === JSON.stringify(data))
-    return existing;
   if (existing && existing.revision !== body.revision)
     throw new Error("This record changed. Reload before editing it.");
   if (!existing && body.revision)
@@ -79,7 +128,7 @@ export async function savePlanning(body: {
       if (page > 50)
         throw new Error("Goal hierarchy is too large to validate.");
     }
-    const proposed = [...goals.filter(g => g.id !== id), {id, data}];
+    const proposed = [...goals.filter((g) => g.id !== id), { id, data }];
     checkGoalParent(data, id, proposed);
     for (const child of goals.filter(
       (g) => !g.data.archived && g.data.parentId === id,
@@ -114,25 +163,52 @@ export async function savePlanning(body: {
     updatedAt: at,
     data,
     history: planningHistory(existing, body.kind, at),
+    ...(authorship ? { authorship } : {}),
   };
+  if (body.kind === "note" && body.request_id && row.history.length > 200)
+    row.history = row.history.slice(-200); // Earlier encrypted snapshots remain in durable operation receipts.
   if (row.history.length > 200)
     throw new Error(
       "This record has 200 revisions. Start a linked successor record to preserve its history.",
     );
   const value = sealCommercial(row);
+  if (body.request_id) {
+    const { data: saved, error } = await db.rpc(
+      "compass_save_planning_operation",
+      {
+        p_id: id,
+        p_expected_value: old?.value ?? null,
+        p_value: value,
+        p_at: at,
+        p_request_id: body.request_id,
+        p_digest: hash,
+        p_receipt_value: sealCommercial({
+          ...currentPlanningRecord(row),
+          ...(!existing?.data.document && existing?.history?.length
+            ? { legacyHistory: existing.history }
+            : {}),
+        }),
+      },
+    );
+    if (error)
+      throw new Error(
+        error.message === "revision_conflict"
+          ? "This record changed. Compare the saved version before replacing it."
+          : error.message,
+      );
+    return openCommercial<PlanningRow>(saved);
+  }
   if (old) {
     await compareAndSwapPlanning(db, id, old.value, value, at);
   } else {
-    const { error } = await db
-      .from("compass_settings")
-      .insert({
-        id,
-        value,
-        scope: "planning",
-        is_secret: 1,
-        updated_at: at,
-        mirrored_at: at,
-      });
+    const { error } = await db.from("compass_settings").insert({
+      id,
+      value,
+      scope: "planning",
+      is_secret: 1,
+      updated_at: at,
+      mirrored_at: at,
+    });
     if (error)
       throw new Error(
         "Unable to create record; reload to check whether it already exists.",

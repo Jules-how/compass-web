@@ -55,6 +55,9 @@ test('search, commit, ledger, and export tools', () => {
   assert.deepEqual(
     TOOLS.map((t) => t.name),
     [
+      'goals.actions',
+      'planning.notebook',
+      'instructions',
       'pathfinder',
       'pathfinder.review',
       'outbound.overview',
@@ -185,7 +188,7 @@ test('copy patch sends Prefer minimal', async () => {
 
 test('rpc tools/list', async () => {
   const res = await handleRpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, { cfg, fetchImpl: mockFetch({}) })
-  assert.equal(res.result.tools.length, 16)
+  assert.equal(res.result.tools.length, TOOLS.length)
 })
 
 test('leads.search hits unified GET', async () => {
@@ -278,4 +281,21 @@ test('outbound overview and operating tools route through shared source contract
   const command = { action: 'record', id: 'capture:fixture', request_id: 'fixture', revision: 0, kind: 'capture', data: { body: 'Exact source text' } };
   await callTool('operating.write', { command }, { cfg, fetchImpl: mockFetch(capture) });
   assert.deepEqual(JSON.parse(capture.body), command);
+});
+
+test('goal tools preserve revisioned documents and signed envelopes through the shared APIs', async () => {
+  const capture = {};
+  await callTool('goals.actions', { section: 'prospects', city: 'Sydney', q: 'A & B' }, { cfg, fetchImpl: mockFetch(capture) });
+  assert.equal(new URL(capture.url).searchParams.get('q'), 'A & B');
+  assert.equal(capture.method, 'GET');
+  const command = { subject: { kind: 'goal', id: 'planning.goal.fixture' }, revision: 12, request_id: 'same-retry', document: { type: 'doc', content: [] } };
+  await callTool('planning.notebook', { command }, { cfg, fetchImpl: mockFetch(capture) });
+  assert.match(capture.url, /api\/agent\/planning\/notebook$/);
+  assert.deepEqual(JSON.parse(capture.body), command);
+  const envelope = { payload: 'host-signed-payload', signature: 'exact-signature' };
+  await callTool('instructions', { envelope }, { cfg, fetchImpl: mockFetch(capture) });
+  assert.deepEqual(JSON.parse(capture.body), envelope);
+  assert.equal(capture.method, 'POST');
+  await callTool('instructions', {}, { cfg, fetchImpl: mockFetch(capture) });
+  assert.equal(capture.method, 'GET');
 });

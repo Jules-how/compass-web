@@ -53,10 +53,50 @@ export async function loadRhythm(db: SupabaseClient, params: URLSearchParams) {
       ),
     ]);
     if (!leads.length) throw new Error("lead_not_found");
+    const { data: history } = await db
+      .from("compass_operating_records")
+      .select("data")
+      .eq("id", "source:outbound-email-history")
+      .maybeSingle();
+    const historyEvents = Array.isArray(history?.data?.events)
+      ? history.data.events
+      : [];
+    const providerEmails = historyEvents
+      .filter(
+        (e: any) =>
+          (e.contact_id === leadId ||
+            (e.email &&
+              String(e.email).toLowerCase() ===
+                String(leads[0].email || "").toLowerCase())) &&
+          e.id &&
+          e.at,
+      )
+      .map((e: any) => ({
+        id: `history:${e.id}`,
+        contact_id: leadId,
+        contacted_at: e.at,
+        channel: "email",
+        direction: "outbound",
+        outcome: "email_sent",
+        note:
+          e.summary ||
+          "Verified sent email; message body not present in this history receipt.",
+        source: "verified_history",
+        instantly_campaign_id: e.campaign_id,
+      }));
+    const contactHistory = [
+      ...new Map(
+        [...touches, ...providerEmails].map((t) => [t.id, t]),
+      ).values(),
+    ]
+      .sort((a, b) =>
+        String(b.contacted_at).localeCompare(String(a.contacted_at)),
+      )
+      .slice(0, 50);
     return {
       lead: leads[0] as unknown as RhythmLead,
       tasks: tasks as unknown as RhythmTask[],
-      touches: touches as RhythmTouch[],
+      touches: contactHistory as RhythmTouch[],
       historyLimit: 50,
     };
   }
@@ -213,9 +253,14 @@ export async function saveRhythm(
       ("complete_task" in command && command.complete_task))
   )
     throw new Error("operator_confirmation_required");
-  const { data, error } = await db.rpc("compass_outbound_rhythm_save", {
-    p: command,
-  });
+  const { data, error } = await db.rpc(
+    "goal_id" in command && command.goal_id
+      ? "compass_goal_touch_save"
+      : "compass_outbound_rhythm_save",
+    {
+      p: command,
+    },
+  );
   if (error) throw new Error(error.message);
   return data;
 }

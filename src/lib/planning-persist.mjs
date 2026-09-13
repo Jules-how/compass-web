@@ -6,11 +6,15 @@ export async function compareAndSwapPlanning(db, id, previous, value, at) {
     p_value: value,
     p_at: at,
   });
-  if (error) throw new Error("Unable to save planning record. Please retry after checking service status.");
-  if (data !== true) throw new Error("This record changed. Reload before editing it.");
+  if (error)
+    throw new Error(
+      "Unable to save planning record. Please retry after checking service status.",
+    );
+  if (data !== true)
+    throw new Error("This record changed. Reload before editing it.");
 }
 
 export function currentPlanningRecord(row) {
-  const { history, ...current } = row;
+  const { history, receipts, legacyHistory, ...current } = row;
   return current;
 }

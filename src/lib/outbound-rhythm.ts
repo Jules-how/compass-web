@@ -30,7 +30,7 @@ const next = z.object({
   channel: z.enum(["call", "email", "sms", "other"]),
   reason: z.string().max(2000),
   timezone: timeZone,
-  due: z.string().datetime({ offset: true }),
+  due: z.string().datetime({ offset: true }).optional(),
   state: z.enum(["proposed", "accepted"]),
   sms_basis: z.string().max(1000).optional(),
 });
@@ -70,6 +70,16 @@ export const rhythmCommand = z
       expected_updated_at: z.string().optional(),
       complete_task: z.boolean().optional(),
       additional: z.boolean().optional(),
+      goal_id: z
+        .string()
+        .regex(/^planning\.goal\.[a-f0-9-]{36}$/)
+        .optional(),
+      session_id: z.string().uuid().optional(),
+      conversation: z.boolean().optional(),
+      signals: z
+        .array(z.enum(["value", "demand", "next_step", "meeting_booked"]))
+        .max(4)
+        .optional(),
     }),
     z.object({
       operation: z.literal("task"),
@@ -96,11 +106,33 @@ export const rhythmCommand = z
   ])
   .superRefine((p, ctx) => {
     if (p.operation === "capture") {
-      if (p.disposition === "schedule" && !p.next)
+      if (p.disposition === "schedule" && !p.next?.due)
         ctx.addIssue({
           code: "custom",
           message: "Set the next action and time",
           path: ["next"],
+        });
+      if (p.next?.state === "accepted" && !p.next.due)
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "An accepted promise needs its time; save an unresolved date instead.",
+          path: ["next", "due"],
+        });
+      if (p.signals?.length && !p.conversation)
+        ctx.addIssue({
+          code: "custom",
+          message: "Positive signals require a recorded conversation.",
+          path: ["signals"],
+        });
+      if (
+        p.conversation &&
+        ["no_answer", "invalid_route", "next_step"].includes(p.outcome)
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "This outcome is not a conversation.",
+          path: ["conversation"],
         });
       if (p.disposition === "closed" && !p.note.trim())
         ctx.addIssue({

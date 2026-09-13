@@ -28,6 +28,21 @@ export const observationCommand = z
     action: z.literal("observe"),
     goal_id: id,
     goal_revision: z.number().int().positive(),
+    metric_id: z.enum(["primary", "payment"]).default("primary"),
+    receipt: z
+      .object({
+        kind: z.enum(["payment", "refund"]),
+        receipt_id: id,
+        payment_id: id,
+        client_id: id,
+        offer_key: id,
+        amount: z.number().positive().max(100000000),
+        currency: z.literal("AUD"),
+        received_on: day,
+      })
+      .strict()
+      .nullable()
+      .default(null),
     idempotency_key: id,
     provenance: z.enum(["measured", "reported", "estimate"]),
     value: z.number().finite().nullable().default(null),
@@ -40,6 +55,10 @@ export const observationCommand = z
     evidence_ids: evidence,
   })
   .strict()
+  .refine(
+    (v) => (v.metric_id === "payment") === Boolean(v.receipt),
+    "Payment observations require a receipt, and primary observations cannot carry one.",
+  )
   .refine(
     (v) => v.period_start <= v.period_end,
     "The reporting period ends before it starts.",
