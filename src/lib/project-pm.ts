@@ -104,7 +104,7 @@ export const PROJECT_ICON_COLORS = [
   '#D9487D',
   '#1FA971',
   '#D4A017',
-  '#E85D2A',
+  '#F97316',
   '#EB5757',
   '#7C6CF0',
   '#6B7C8F'
@@ -118,11 +118,11 @@ export const DEFAULT_PROJECT_ICON_COLOR = '#95A2B3'
  * Keys are normalized slugs (lowercase, hyphenated).
  */
 const FUNCTION_ICON_COLOR_BY_KEY: Record<string, string> = {
-  sales: '#E85D2A',
-  sell: '#E85D2A',
-  outbound: '#E85D2A',
-  pipeline: '#E85D2A',
-  crm: '#E85D2A',
+  sales: '#F97316',
+  sell: '#F97316',
+  outbound: '#F97316',
+  pipeline: '#F97316',
+  crm: '#F97316',
   'client-deliveries': '#1FA971',
   'client-delivery': '#1FA971',
   deliveries: '#1FA971',

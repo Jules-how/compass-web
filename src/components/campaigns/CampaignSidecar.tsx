@@ -980,7 +980,7 @@ export function CampaignSidecar({
                   Started: {progress.started}
                 </span>
                 <span>
-                  <span className="mr-1 inline-block h-2 w-2 rounded-full bg-violet-500" />
+                  <span className="mr-1 inline-block h-2 w-2 rounded-full bg-orange-500" />
                   Completed: {progress.completed}
                 </span>
               </div>
@@ -1143,11 +1143,11 @@ function ProgressChart({
         />
         <polyline
           fill="none"
-          stroke="#8b5cf6"
+          stroke="#f97316"
           strokeWidth="1.4"
           points={`0,${y} 55,${(y + 28) / 2} 100,${16 - pct * 0.04}`}
         />
-        <circle cx="55" cy={(y + 28) / 2} r="1.4" fill="#8b5cf6" />
+        <circle cx="55" cy={(y + 28) / 2} r="1.4" fill="#f97316" />
       </svg>
       {!start || !end ? (
         <div className="absolute inset-0 flex items-center justify-center text-[11px] text-neutral-400">

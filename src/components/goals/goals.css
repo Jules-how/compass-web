@@ -1,19 +1,19 @@
 .ga-workspace {
-  --ga-border: #e6e7eb;
-  --ga-muted: #686b76;
-  --ga-accent: #625bd4;
+  --ga-border: var(--folio-line);
+  --ga-muted: var(--folio-muted);
+  --ga-accent: var(--folio-plum);
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
   height: 100%;
-  color: #252731;
-  background: #fcfcfd;
+  color: var(--folio-ink);
+  background: var(--folio-desk);
   font-size: 14px;
 }
 .ga-workspace button,
 .ga-dialog button {
-  border: 1px solid var(--ga-border, #e6e7eb);
+  border: 1px solid var(--ga-border, #e7e5e4);
   border-radius: 6px;
   padding: 6px 10px;
   background: #fff;
@@ -23,11 +23,11 @@
 }
 .ga-workspace button:hover,
 .ga-dialog button:hover {
-  background: #f1f1f7;
+  background: var(--folio-surface);
 }
 .ga-workspace :focus-visible,
 .ga-dialog :focus-visible {
-  outline: 2px solid #625bd4;
+  outline: 2px solid var(--ga-accent);
   outline-offset: 2px;
 }
 .ga-workspace button:disabled,
@@ -37,9 +37,9 @@
 }
 .ga-workspace .ga-primary,
 .ga-dialog .ga-primary {
-  background: #625bd4;
-  color: white;
-  border-color: #625bd4;
+  background: var(--folio-accent);
+  color: var(--folio-ink);
+  border-color: var(--folio-accent);
 }
 .ga-header {
   display: flex;
@@ -58,7 +58,7 @@
 }
 .ga-goal-picker {
   font-size: 12px;
-  color: #686b76;
+  color: var(--ga-muted);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -78,7 +78,7 @@
 .ga-metrics {
   display: flex;
   margin: 0 24px;
-  border-block: 1px solid #e6e7eb;
+  border-block: 1px solid var(--ga-border);
   flex-shrink: 0;
 }
 .ga-metrics > div {
@@ -88,7 +88,7 @@
   gap: 12px;
   flex: 1;
   padding: 8px 18px;
-  border-right: 1px solid #e6e7eb;
+  border-right: 1px solid var(--ga-border);
 }
 .ga-metrics > div:first-child {
   padding-left: 0;
@@ -99,7 +99,7 @@
 }
 .ga-metrics span {
   font-size: 12px;
-  color: #686b76;
+  color: var(--ga-muted);
 }
 .ga-metrics b {
   font-size: 17px;
@@ -113,7 +113,7 @@
   flex-wrap: wrap;
   gap: 6px;
   padding: 9px 24px;
-  border-bottom: 1px solid #e6e7eb;
+  border-bottom: 1px solid var(--ga-border);
   flex-shrink: 0;
 }
 .ga-controls nav,
@@ -128,8 +128,8 @@
   background: transparent;
 }
 .ga-controls nav button[aria-current] {
-  background: #eeedf9;
-  color: #514bb6;
+  background: var(--folio-accent-soft);
+  color: var(--ga-accent);
 }
 .ga-switches button {
   padding: 3px 7px;
@@ -138,14 +138,14 @@
 }
 .ga-switches button[aria-pressed="true"],
 .ga-session-phases button[aria-pressed="true"] {
-  background: #eeedf9;
-  color: #514bb6;
+  background: var(--folio-accent-soft);
+  color: var(--ga-accent);
 }
 .ga-switches select,
 .ga-switches input {
   padding: 3px 6px;
   font-size: 12px;
-  border: 1px solid #e6e7eb;
+  border: 1px solid var(--ga-border);
   border-radius: 5px;
   max-width: 120px;
   background: #fff;
@@ -166,7 +166,7 @@
 .ga-objective {
   overflow-y: auto;
   padding: 22px 22px 40px;
-  border-left: 1px solid #e6e7eb;
+  border-left: 1px solid var(--ga-border);
   background: #fff;
   min-height: 0;
   overscroll-behavior: contain;
@@ -179,7 +179,7 @@
 }
 .ga-rail-title h2 {
   font-size: 13px;
-  color: #686b76;
+  color: var(--ga-muted);
   font-weight: 500;
 }
 .ga-objective h3 {
@@ -196,19 +196,19 @@
 }
 .ga-objective hr {
   margin: 22px 0;
-  border-color: #e6e7eb;
+  border-color: var(--ga-border);
 }
 .ga-objective a {
   display: block;
-  color: #625bd4;
+  color: var(--ga-accent);
   font-size: 13px;
   margin-top: 14px;
 }
 .ga-badge {
   display: inline-block;
   font-size: 11px;
-  background: #eeedf9;
-  color: #514bb6;
+  background: var(--folio-accent-soft);
+  color: var(--ga-accent);
   padding: 2px 7px;
   border-radius: 4px;
 }
@@ -222,7 +222,7 @@
 }
 .ga-board-tools > span {
   font-size: 12px;
-  color: #686b76;
+  color: var(--ga-muted);
   margin-right: auto;
 }
 .ga-board-tools h2 {
@@ -245,7 +245,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #fcfcfd;
+  background: var(--folio-desk);
   font-size: 13px;
   font-weight: 600;
   display: flex;
@@ -282,7 +282,7 @@
 }
 .ga-card-kind {
   font-size: 11px;
-  color: #686b76;
+  color: var(--ga-muted);
 }
 .ga-card-meta {
   font-size: 11px;
@@ -294,7 +294,7 @@
   width: 100%;
   text-align: left;
   font-size: 11px;
-  color: #686b76;
+  color: var(--ga-muted);
   padding: 3px 12px;
 }
 .ga-completed strong {
@@ -319,7 +319,7 @@
 .ga-backlog summary {
   padding: 4px;
   cursor: pointer;
-  color: #686b76;
+  color: var(--ga-muted);
 }
 .ga-backlog-cards {
   display: flex;
@@ -342,7 +342,7 @@
   flex-direction: column;
 }
 .ga-linked a {
-  color: #625bd4;
+  color: var(--ga-accent);
 }
 .ga-paper {
   padding: 24px;
@@ -370,15 +370,15 @@
 }
 .ga-muted,
 .goal-small {
-  color: #686b76;
+  color: var(--ga-muted);
   font-size: 12px;
   line-height: 20px;
 }
 .ga-notice,
 .goal-notice {
   padding: 10px 16px;
-  background: #f5f3fc;
-  color: #514b70;
+  background: var(--folio-accent-soft);
+  color: var(--compass-ink-soft);
   font-size: 13px;
   line-height: 21px;
 }
@@ -388,14 +388,14 @@
   flex-direction: column;
   gap: 5px;
   padding: 14px 0;
-  border-bottom: 1px solid #e6e7eb;
+  border-bottom: 1px solid var(--ga-border);
   text-align: left;
 }
 .ga-evidence-row span,
 .ga-evidence-row small,
 .ga-campaign span,
 .ga-campaign small {
-  color: #686b76;
+  color: var(--ga-muted);
   font-size: 12px;
 }
 .ga-campaign strong {
@@ -411,7 +411,7 @@
 }
 .ga-workspace dt,
 .ga-dialog dt {
-  color: #686b76;
+  color: var(--ga-muted);
 }
 .ga-workspace dd,
 .ga-dialog dd {
@@ -430,14 +430,14 @@
   justify-content: center;
 }
 .ga-dialog {
-  --ga-border: #e6e7eb;
+  --ga-border: var(--folio-line);
   background: #fff;
-  border: 1px solid #e6e7eb;
+  border: 1px solid var(--ga-border);
   border-radius: 12px;
   width: 100%;
   max-width: 920px;
   padding: 24px;
-  color: #252731;
+  color: var(--folio-ink);
   font-size: 14px;
   box-shadow: 0 24px 100px #12172733;
   outline: none;
@@ -455,7 +455,7 @@
 }
 .ga-dialog-title p {
   font-size: 13px;
-  color: #686b76;
+  color: var(--ga-muted);
   margin-top: 6px;
 }
 .ga-dialog input:not([type="checkbox"]),
@@ -498,7 +498,7 @@
 .ga-prospect-pick {
   max-height: 40vh;
   overflow: auto;
-  border-block: 1px solid #e6e7eb;
+  border-block: 1px solid var(--ga-border);
 }
 .ga-prospect-pick > label {
   display: flex;
@@ -509,7 +509,7 @@
 }
 .ga-prospect-pick small {
   display: block;
-  color: #686b76;
+  color: var(--ga-muted);
   margin-top: 4px;
 }
 .ga-prospect-grid {
@@ -533,7 +533,7 @@
 .ga-prospect span,
 .ga-prospect small {
   font-size: 12px;
-  color: #686b76;
+  color: var(--ga-muted);
 }
 .ga-session-phases {
   display: flex;
@@ -559,7 +559,7 @@
 }
 .ga-contact-bar span {
   font-size: 12px;
-  color: #686b76;
+  color: var(--ga-muted);
 }
 .ga-contact-dialog .ga-controls {
   padding: 10px 0;
@@ -602,7 +602,7 @@
   gap: 4px;
   flex-wrap: wrap;
   align-items: center;
-  border-block: 1px solid #e6e7eb;
+  border-block: 1px solid var(--ga-border);
   padding: 8px 0;
   position: sticky;
   top: 0;
@@ -620,7 +620,7 @@
 }
 .goal-rich-tools > span {
   font-size: 11px;
-  color: #686b76;
+  color: var(--ga-muted);
   margin-left: auto;
 }
 .goal-rich-content {
@@ -670,18 +670,18 @@
   flex: 1;
 }
 .goal-rich-content a {
-  color: #625bd4;
+  color: var(--ga-accent);
   text-decoration: underline;
 }
 .goal-rich-content a[data-compass-task] {
   display: block;
-  border: 1px solid #e6e7eb;
+  border: 1px solid var(--ga-border);
   padding: 8px 12px;
   border-radius: 6px;
   margin: 8px 0;
 }
 .goal-rich-content blockquote {
-  border-left: 3px solid #cfcbe9;
+  border-left: 3px solid var(--folio-accent-line);
   padding-left: 18px;
 }
 .goal-rich-content pre {
@@ -693,8 +693,8 @@
   margin: 20px 0;
 }
 .goal-rich-tools button[aria-pressed="true"] {
-  background: #eeedf9;
-  color: #514bb6;
+  background: var(--folio-accent-soft);
+  color: var(--ga-accent);
 }
 @media (min-width: 900px) {
   .folio-flush:has(.ga-workspace) {
@@ -747,7 +747,7 @@
     flex: none;
     overflow: visible;
     border: 0;
-    border-top: 1px solid #e6e7eb;
+    border-top: 1px solid var(--ga-border);
   }
   .ga-header {
     align-items: flex-start;
@@ -763,7 +763,7 @@
   }
   .ga-metrics > div {
     flex-basis: 45%;
-    border-bottom: 1px solid #e6e7eb;
+    border-bottom: 1px solid var(--ga-border);
   }
   .ga-buttons {
     flex-direction: column;

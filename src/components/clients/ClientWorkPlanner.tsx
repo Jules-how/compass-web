@@ -40,7 +40,7 @@ function statusTone(status: string): string {
     case 'in_progress':
       return 'bg-sky-50 text-sky-700 ring-sky-200'
     case 'planned':
-      return 'bg-violet-50 text-violet-700 ring-violet-200'
+      return 'bg-orange-50 text-orange-700 ring-orange-200'
     case 'completed':
       return 'bg-emerald-50 text-emerald-700 ring-emerald-200'
     case 'canceled':

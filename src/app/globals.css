@@ -8,20 +8,20 @@
 */
 :root {
   color-scheme: light;
-  --compass-ink: #0f1217;
-  --compass-ink-soft: #3f4550;
-  --compass-muted: #6b7280;
-  --compass-faint: #9ca3af;
+  --compass-ink: #1c1917;
+  --compass-ink-soft: #44403c;
+  --compass-muted: #57534e;
+  --compass-faint: #78716c;
   --compass-panel: #ffffff;
-  --compass-line: #e8e6e3;
+  --compass-line: #e7e5e4;
   --compass-line-strong: #d6d3d1;
-  --compass-wash: #f6f4f1;
-  --compass-sidebar: #f1efec;
-  --compass-accent: #e85d2a;
-  --compass-accent-hover: #c94a1f;
-  --compass-accent-soft: rgba(232, 93, 42, 0.1);
-  --compass-shadow: 0 1px 2px rgba(15, 18, 23, 0.04), 0 8px 24px rgba(15, 18, 23, 0.04);
-  --compass-shadow-sm: 0 1px 2px rgba(15, 18, 23, 0.05);
+  --compass-wash: #faf9f6;
+  --compass-sidebar: #eeece6;
+  --compass-accent: #f97316;
+  --compass-accent-hover: #ea580c;
+  --compass-accent-soft: rgba(249, 115, 22, 0.1);
+  --compass-shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 8px 24px rgba(28, 25, 23, 0.04);
+  --compass-shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05);
   --destructive-foreground: #ffffff;
   --color-destructive-foreground: var(--destructive-foreground);
 }
@@ -35,8 +35,8 @@ body {
   @apply text-neutral-900 antialiased;
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   background:
-    radial-gradient(1000px 520px at 8% -8%, rgba(232, 93, 42, 0.07), transparent 55%),
-    radial-gradient(800px 480px at 96% 0%, rgba(15, 18, 23, 0.035), transparent 48%),
+    radial-gradient(1000px 520px at 8% -8%, rgba(249, 115, 22, 0.07), transparent 55%),
+    radial-gradient(800px 480px at 96% 0%, rgba(28, 25, 23, 0.035), transparent 48%),
     var(--compass-wash);
   color: var(--compass-ink);
 }

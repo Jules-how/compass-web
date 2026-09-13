@@ -101,8 +101,8 @@ const SECTIONS: {
     title: 'Openers',
     subtitle: 'Insertable first lines',
     icon: Sparkles,
-    textColor: 'text-violet-700',
-    bgColor: 'bg-violet-500/10'
+    textColor: 'text-orange-700',
+    bgColor: 'bg-orange-500/10'
   },
   {
     key: 'expressions',

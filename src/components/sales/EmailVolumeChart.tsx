@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 const chartConfig = {
   sent: {
     label: 'Emails sent',
-    color: '#e85d2a'
+    color: '#f97316'
   }
 } satisfies ChartConfig
 
@@ -256,7 +256,7 @@ export function EmailVolumeChart({ model }: { model: SalesOverviewModel }) {
               />
 
               {peak?.date ? (
-                <ReferenceLine x={peak.date} stroke="#e85d2a" strokeDasharray="4 4" strokeWidth={1} />
+                <ReferenceLine x={peak.date} stroke="#f97316" strokeDasharray="4 4" strokeWidth={1} />
               ) : null}
 
               <XAxis
@@ -295,7 +295,7 @@ export function EmailVolumeChart({ model }: { model: SalesOverviewModel }) {
                         cx={cx}
                         cy={cy}
                         r={6}
-                        fill="#e85d2a"
+                        fill="#f97316"
                         stroke="white"
                         strokeWidth={2}
                         filter="url(#dotShadow)"
@@ -306,7 +306,7 @@ export function EmailVolumeChart({ model }: { model: SalesOverviewModel }) {
                 }}
                 activeDot={{
                   r: 6,
-                  fill: '#e85d2a',
+                  fill: '#f97316',
                   stroke: 'white',
                   strokeWidth: 2,
                   filter: 'url(#dotShadow)'

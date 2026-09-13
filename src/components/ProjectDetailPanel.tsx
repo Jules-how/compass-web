@@ -325,7 +325,7 @@ export function ProjectDetailPanel({
               Close
             </button>
           ) : (
-            <Link href="/projects" className="text-sm text-[#5753bf] underline">
+            <Link href="/projects" className="text-sm text-[#c2410c] underline">
               Back to projects
             </Link>
           )}
@@ -454,7 +454,7 @@ export function ProjectDetailPanel({
                         { title: '', description: '', target_date: '', completed: false }
                       ])
                     }
-                    className="text-xs font-medium text-[#5753bf]"
+                    className="text-xs font-medium text-[#c2410c]"
                   >
                     + Milestone
                   </button>
@@ -597,7 +597,7 @@ export function ProjectDetailPanel({
               <div className="mt-2 flex items-center gap-3">
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-stone-100">
                   <div
-                    className="h-full rounded-full bg-[#6965db]"
+                    className="h-full rounded-full bg-[#f97316]"
                     style={{ width: `${project.stats.percentComplete}%` }}
                   />
                 </div>
@@ -843,7 +843,7 @@ export function ProjectDetailPanel({
                   {group.items.map((task) => (
                     <li key={task.id} className="flex items-center justify-between gap-3 px-4 py-3">
                       <div className="min-w-0">
-                        <button type="button" onClick={() => setSelectedTaskId(task.id)} className="text-left text-sm font-medium text-neutral-900 hover:text-[#5753bf]">
+                        <button type="button" onClick={() => setSelectedTaskId(task.id)} className="text-left text-sm font-medium text-neutral-900 hover:text-[#c2410c]">
                           {task.title}
                         </button>
                         <div className="mt-0.5 text-xs text-neutral-500">
@@ -856,7 +856,7 @@ export function ProjectDetailPanel({
                       </div>
                       <button
                         type="button" onClick={() => setSelectedTaskId(task.id)}
-                        className="shrink-0 text-xs font-medium text-[#5753bf] hover:underline"
+                        className="shrink-0 text-xs font-medium text-[#c2410c] hover:underline"
                       >
                         Open task
                       </button>

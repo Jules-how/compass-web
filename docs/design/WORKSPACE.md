@@ -1,6 +1,6 @@
 # Compass workspace design
 
-Jules selected Linear as Compass's visual foundation on 10 September 2026 and authorised implementation. This replaces the former cream/orange editorial operator interface. The supplied Linear Projects and Kanban screenshots govern proportions and hierarchy; Notion is the writing reference, and Attio is the CRM and Reports reference.
+Compass keeps the compact operational proportions selected from the Linear references on 10 September 2026. On 13 September 2026, Jules replaced the cool grey and violet colour treatment with the Switchflow site palette: warm cream surfaces, stone neutrals and orange actions. The supplied Linear Projects and Kanban screenshots still govern proportions and hierarchy; Notion is the writing reference, and Attio is the CRM and Reports reference.
 
 ## Owners
 
@@ -11,7 +11,7 @@ Jules selected Linear as Compass's visual foundation on 10 September 2026 and au
 ## Visual language
 
 - One font: the existing self-hosted Geist Sans, exposed through `--workspace-font`. Body and controls use 14px; secondary labels use 12–13px; document writing uses 16px. Use weight and spacing for hierarchy, rather than oversized serif headings.
-- Light-grey navigation, near-white surfaces, dark-grey text, subtle grey dividers and restrained violet-blue actions. Status colours retain their meanings. Real records determine all counts, dates and progress.
+- Warm cream navigation and canvas, white working surfaces, stone text and dividers, and restrained orange actions. Filled orange controls use dark ink for readable contrast; darker orange is used for links and focus. Status colours retain their meanings. Real records determine all counts, dates and progress.
 - Desktop sidebar 232px (208px on narrower desktop), 48px toolbar, 20–24px main insets. Compact pages carry their accessible heading without repeating a large visible heading underneath the breadcrumb.
 - Default operational pages fill the available width. Tables, timelines and boards scroll within their working area. Explicit 3xl/4xl reading or form measures remain bounded. Never shrink the whole interface with CSS zoom or transforms.
 - Controls are normally 34px tall, with 40px form/action targets on phones. Cards use an 8px radius and subtle outlines. Main workspaces do not nest ornamental cards merely to contain another toolbar.

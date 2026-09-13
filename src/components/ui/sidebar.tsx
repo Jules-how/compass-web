@@ -138,7 +138,7 @@ export const MobileSidebar = ({
         <div className="flex w-full items-center justify-between gap-3">
           <Link href="/home" className="flex items-center gap-2.5 rounded-xl px-1 py-0.5">
             <span
-              className="flex h-8 w-8 items-center justify-center rounded-[11px] bg-[#f3e4d8] text-[#e85d2a]"
+              className="flex h-8 w-8 items-center justify-center rounded-[11px] bg-[#fff7ed] text-[#c2410c]"
               aria-hidden
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">

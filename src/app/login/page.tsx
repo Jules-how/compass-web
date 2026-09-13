@@ -28,7 +28,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <div className="w-full max-w-sm animate-fade-up rounded-2xl border border-stone-200/70 bg-white/95 p-8 shadow-lift backdrop-blur-sm">
         <div className="mb-7 text-center">
           <div
-            className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-[12px] bg-[#f3e4d8] text-[#e85d2a]"
+            className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-[12px] bg-[#fff7ed] text-[#c2410c]"
             aria-hidden
           >
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">

@@ -43,7 +43,7 @@ import {
 const ROW_HEIGHT = 76
 const EMPTY_ROWS = 10
 const HEADER_HEIGHT = 52
-const TODAY_ACCENT = '#6965db'
+const TODAY_ACCENT = '#c2410c'
 const BAR_TOP = 22
 const BAR_HEIGHT = 26
 
@@ -766,7 +766,7 @@ export const ProjectTimeline = forwardRef<
                         </span>
                         {isCreating ? (
                           <span
-                            className="relative block overflow-hidden rounded-[6px] border border-[#6965db] bg-white shadow-[0_0_0_1px_rgba(105,101,219,0.2)]"
+                            className="relative block overflow-hidden rounded-[6px] border border-[#c2410c] bg-white shadow-[0_0_0_1px_rgba(194,65,12,0.2)]"
                             style={{ width, height: BAR_HEIGHT }}
                           >
                             <span
@@ -781,7 +781,7 @@ export const ProjectTimeline = forwardRef<
                             aria-label={`${project.name}: ${formatProjectDate(resolvedDates.start)} to ${formatProjectDate(resolvedDates.end)}. Open project to edit dates.`}
                             className={`relative block touch-none overflow-hidden rounded-[6px] border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition select-none ${
                               isBarDragging
-                                ? 'cursor-grabbing border-[#6965db] shadow-[0_0_0_1px_rgba(105,101,219,0.28)]'
+                                ? 'cursor-grabbing border-[#c2410c] shadow-[0_0_0_1px_rgba(194,65,12,0.28)]'
                                 : 'cursor-grab border-neutral-300 group-hover:border-neutral-400 active:cursor-grabbing'
                             }`}
                             style={{ width, height: BAR_HEIGHT }}
@@ -872,7 +872,7 @@ export const ProjectTimeline = forwardRef<
                         className="pointer-events-none absolute z-20 -translate-x-1/2"
                         style={{ left: hoverX, top: BAR_TOP - 18 }}
                       >
-                        <div className="mb-1.5 whitespace-nowrap rounded-md bg-[#6965db] px-1.5 py-0.5 text-[11px] font-medium text-white shadow-sm">
+                        <div className="mb-1.5 whitespace-nowrap rounded-md bg-[#c2410c] px-1.5 py-0.5 text-[11px] font-medium text-white shadow-sm">
                           {hoverDate.toLocaleDateString('en-US', {
                             weekday: 'short',
                             month: 'short',
@@ -890,7 +890,7 @@ export const ProjectTimeline = forwardRef<
                         className="pointer-events-none absolute z-20 -translate-x-1/2"
                         style={{ left: hoverX ?? left, top: 4 }}
                       >
-                        <div className="whitespace-nowrap rounded-md bg-[#6965db] px-1.5 py-0.5 text-[11px] font-medium text-white shadow-sm">
+                        <div className="whitespace-nowrap rounded-md bg-[#c2410c] px-1.5 py-0.5 text-[11px] font-medium text-white shadow-sm">
                           {hoverDate.toLocaleDateString('en-US', {
                             weekday: 'short',
                             month: 'short',

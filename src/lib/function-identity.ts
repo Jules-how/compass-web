@@ -20,7 +20,7 @@ export type FunctionIdentityInput = ProjectFunctionColorInput
  * Avoid stacking multiple cool blues (old cyan + indigo looked identical).
  */
 export const FUNCTION_KIND_COLORS: Record<FunctionKind, string> = {
-  sales: '#E85D2A',
+  sales: '#F97316',
   marketing: '#D9487D',
   product: '#5B5FE8',
   delivery: '#1FA971',

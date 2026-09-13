@@ -55,7 +55,7 @@ interface ClientMetaAttachPanelProps {
 function statusTone(status: string): string {
   if (status === 'live') return 'bg-emerald-50 text-emerald-800'
   if (status === 'created_paused') return 'bg-sky-50 text-sky-800'
-  if (status === 'briefed') return 'bg-violet-50 text-violet-800'
+  if (status === 'briefed') return 'bg-orange-50 text-orange-800'
   if (status === 'archived') return 'bg-stone-100 text-stone-500'
   return 'bg-amber-50 text-amber-800'
 }

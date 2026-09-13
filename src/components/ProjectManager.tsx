@@ -290,7 +290,7 @@ function ToolbarIconButton({
       onClick={onClick}
       className={cn(
         'flex size-8 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-stone-100 hover:text-neutral-800',
-        active && 'bg-[#efeffb] text-[#5753bf]'
+        active && 'bg-[#fff7ed] text-[#c2410c]'
       )}
     >
       {children}
@@ -1375,7 +1375,7 @@ export function ProjectManager({
                             <ProjectTitleLink
                               projectId={project.id}
                               onOpen={openProject}
-                              className="block truncate text-sm font-medium text-neutral-900 hover:text-[#5753bf]"
+                              className="block truncate text-sm font-medium text-neutral-900 hover:text-[#c2410c]"
                             >
                               {project.name}
                             </ProjectTitleLink>
@@ -1411,7 +1411,7 @@ export function ProjectManager({
                           <div className="flex items-center gap-2">
                             <div className="h-1.5 w-16 overflow-hidden rounded-full bg-stone-100">
                               <div
-                                className="h-full rounded-full bg-[#6965db]"
+                                className="h-full rounded-full bg-[#f97316]"
                                 style={{ width: `${project.stats.percentComplete}%` }}
                               />
                             </div>

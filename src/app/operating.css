@@ -16,10 +16,10 @@
 .operating-field input:not([type="checkbox"]),
 .operating-field textarea {
   background: var(--folio-paper, #ffffff);
-  border: 1px solid #e2e4e8;
+  border: 1px solid var(--folio-control);
   border-radius: 7px;
   padding: 8px;
-  color: #242424;
+  color: var(--folio-ink);
 }
 .operating-next {
   padding: 16px 0 24px;
@@ -129,7 +129,7 @@
 .operating-home textarea:focus-visible,
 .operating-home select:focus-visible,
 .operating-home summary:focus-visible {
-  outline: 2px solid var(--folio-accent, #6d5ce7);
+  outline: 2px solid var(--folio-plum, #c2410c);
   outline-offset: 4px;
 }
 .operating-home .folio-dialog-copy {

@@ -1,4 +1,4 @@
-/* Linear-inspired shared workspace. Page-specific layouts inherit these tokens. */
+/* Compact shared workspace. Page-specific layouts inherit the Switchflow palette tokens. */
 .folio-shell {
   grid-template-columns: 232px minmax(0, 1fr);
   padding: 8px 8px 8px 0;
@@ -24,9 +24,9 @@ body:has(.folio-shell) :is(h1, h2, h3, h4, h5, h6, button, input, select) { font
 .folio-navigation { gap: 22px; }
 body:has(.folio-shell) .folio-caption { font-size: 12px !important; line-height: 1.5; letter-spacing: 0; text-transform: none; font-weight: 500; }
 .folio-navigation > div > .folio-caption { padding: 0 10px; margin: 0 0 7px; }
-.folio-nav-link { min-height: 34px; padding: 6px 10px; gap: 10px; font-size: 14px; margin: 1px 0; color: #555761; border-radius: 6px; }
-.folio-nav-link:hover { background: #e9e9ed; }
-.folio-nav-link[aria-current="page"] { background: #e3e3e8; color: var(--folio-ink); font-weight: 500; }
+.folio-nav-link { min-height: 34px; padding: 6px 10px; gap: 10px; font-size: 14px; margin: 1px 0; color: var(--folio-muted); border-radius: 6px; }
+.folio-nav-link:hover { background: color-mix(in srgb, var(--folio-selection) 72%, white); }
+.folio-nav-link[aria-current="page"] { background: var(--folio-selection); color: var(--folio-ink); font-weight: 500; }
 .folio-nav-link svg { width: 17px; height: 17px; }
 .folio-nav-dot { display: none; }
 .folio-more { font-size: 13px; }
@@ -68,11 +68,11 @@ body:has(.folio-shell) :is(.compass-btn, .compass-btn-primary, .compass-btn-seco
   font: 500 14px/20px var(--workspace-font);
   border-radius: 6px;
 }
-body:has(.folio-shell) .compass-btn-primary { background: var(--folio-plum); box-shadow: 0 1px 2px #20212712; }
-body:has(.folio-shell) .compass-btn-primary:hover:not(:disabled) { background: #5052b9; }
+body:has(.folio-shell) .compass-btn-primary { background: var(--folio-accent); color: var(--folio-ink); box-shadow: 0 1px 2px #1c191712; }
+body:has(.folio-shell) .compass-btn-primary:hover:not(:disabled) { background: var(--compass-accent-hover); }
 body:has(.folio-shell) .compass-btn-secondary { border-color: var(--folio-control); background: #fff; color: var(--folio-ink); }
 body:has(.folio-shell) .compass-btn-secondary:hover:not(:disabled) { background: var(--folio-surface); }
-body:has(.folio-shell) .compass-btn-ghost { color: #555761; }
+body:has(.folio-shell) .compass-btn-ghost { color: var(--folio-muted); }
 body:has(.folio-shell) .compass-input { padding: 7px 10px; min-height: 34px; font-size: 14px; line-height: 20px; }
 body:has(.folio-shell) :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid var(--folio-plum); outline-offset: 2px; }
 body:has(.folio-shell) .compass-seg { border: 1px solid var(--folio-line); background: var(--folio-surface); padding: 2px; gap: 2px; border-radius: 7px; }
@@ -83,13 +83,13 @@ body:has(.folio-shell) [data-slot="card-header"] { min-height: 46px; padding: 12
 body:has(.folio-shell) [data-slot="card-content"] { padding: 18px; }
 body:has(.folio-shell) [data-slot="card-title"] { font: 600 15px/1.4 var(--workspace-font); letter-spacing: -.15px; }
 .folio-folders { gap: 4px; padding-top: 0; }
-.folio-folders button { min-height: 34px; padding: 6px 12px; font-size: 13px; border: 1px solid transparent; border-radius: 6px; color: #555761; background: transparent; }
-.folio-folders button[aria-pressed="true"] { background: #eeeef1; border-color: transparent; font-weight: 500; }
-.folio-folders button span { background: #e1e2e7; color: #656773; font-size: 11px; }
+.folio-folders button { min-height: 34px; padding: 6px 12px; font-size: 13px; border: 1px solid transparent; border-radius: 6px; color: var(--folio-muted); background: transparent; }
+.folio-folders button[aria-pressed="true"] { background: var(--folio-selection); border-color: transparent; font-weight: 500; }
+.folio-folders button span { background: var(--folio-line); color: var(--folio-muted); font-size: 11px; }
 .folio-paper, .folio-record-surface { border-radius: 8px; box-shadow: none; padding: 20px 24px; }
 .folio-record-surface { padding: 16px 20px; }
 .folio-shell table { font-size: 14px; }
-.folio-shell th { font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; background: #fafafb; }
+.folio-shell th { font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; background: var(--folio-surface); }
 .folio-shell td { padding-top: 10px; padding-bottom: 10px; }
 .folio-status { font-size: 12px; padding: 3px 7px; font-weight: 500; }
 .folio-workspace-links { font-size: 13px; margin-bottom: 16px; gap: 8px 18px; }
@@ -153,7 +153,7 @@ body:has(.folio-shell) [data-slot="card-title"] { font: 600 15px/1.4 var(--works
   .folio-page, .folio-home, .folio-page[data-width="full"] { padding: 18px 20px 24px; }
   .folio-page-compact, .folio-page-compact[data-width="full"] { padding-top: 12px; }
   .folio-inbox-index { width: 100% !important; }
-  .folio-mobile-nav { z-index: 40; background: #fffffffa; padding: 5px 12px calc(5px + env(safe-area-inset-bottom)); backdrop-filter: none; }
+  .folio-mobile-nav { z-index: 40; background: color-mix(in srgb, var(--folio-paper) 97%, transparent); padding: 5px 12px calc(5px + env(safe-area-inset-bottom)); backdrop-filter: none; }
   .folio-mobile-nav > a, .folio-mobile-nav > button { font-size: 11px; min-height: 50px; }
   .folio-home-layout { grid-template-columns: minmax(0, 1fr); }
 }

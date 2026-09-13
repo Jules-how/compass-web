@@ -108,7 +108,7 @@ export function KanbanBoard({
           data-column-id={column.id}
           className={cn(
             'folio-kanban-column',
-            dropTarget === column.id && 'ring-2 ring-[#6965db]/40'
+            dropTarget === column.id && 'ring-2 ring-[#c2410c]/40'
           )}
           onDragOver={(event) => handleDragOver(event, column.id)}
           onDragLeave={() => setDropTarget((current) => (current === column.id ? null : current))}
@@ -161,7 +161,7 @@ export function KanbanBoard({
                   <div className="flex items-start justify-between gap-2">
                     <h4 className="min-w-0 text-[14px] font-medium leading-snug text-neutral-900">
                       {task.href ? (
-                        <Link href={task.href} title={task.title} className="break-words hover:text-[#5753bf]">
+                        <Link href={task.href} title={task.title} className="break-words hover:text-[#c2410c]">
                           {task.title}
                         </Link>
                       ) : onTaskClick ? (
@@ -169,7 +169,7 @@ export function KanbanBoard({
                           type="button"
                           onClick={() => onTaskClick(task.id, column.id)}
                           title={task.title}
-                          className="break-words text-left hover:text-[#5753bf]"
+                          className="break-words text-left hover:text-[#c2410c]"
                         >
                           {task.title}
                         </button>
@@ -239,7 +239,7 @@ export function KanbanBoard({
                           target="_blank"
                           rel="noreferrer"
                           onClick={(event) => event.stopPropagation()}
-                          className="flex items-center gap-0.5 text-[12px] font-medium text-[#5753bf] hover:underline"
+                          className="flex items-center gap-0.5 text-[12px] font-medium text-[#c2410c] hover:underline"
                         >
                           {task.externalLabel || 'Instantly'}
                           <ArrowUpRight className="size-3" />

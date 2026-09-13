@@ -662,7 +662,7 @@ export function ClientDetailPanel({
 
             <form
               onSubmit={postUpdate}
-              className="rounded-xl border border-violet-200/70 bg-white p-4 shadow-sm"
+              className="rounded-xl border border-orange-200/70 bg-white p-4 shadow-sm"
             >
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <div className="inline-flex rounded-lg bg-stone-100 p-0.5 text-xs font-medium">

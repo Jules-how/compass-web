@@ -35,7 +35,7 @@ const ICON_MAP: Record<
   structures: { icon: Layers, textColor: 'text-stone-600', bgColor: 'bg-stone-500/10' },
   ctas: { icon: MousePointerClick, textColor: 'text-emerald-700', bgColor: 'bg-emerald-500/10' },
   subjects: { icon: Type, textColor: 'text-sky-700', bgColor: 'bg-sky-500/10' },
-  openers: { icon: Sparkles, textColor: 'text-violet-700', bgColor: 'bg-violet-500/10' },
+  openers: { icon: Sparkles, textColor: 'text-orange-700', bgColor: 'bg-orange-500/10' },
   templates: { icon: LayoutTemplate, textColor: 'text-rose-700', bgColor: 'bg-rose-500/10' }
 }
 

@@ -74,7 +74,7 @@ export function WaveCampaignCard({
   const goLive = formatWaveDate(goLiveRaw)
   const listSize = campaign?.wave_list_size ?? campaign?.wave_cohort_count ?? 0
   const testing = campaign ? testingVariableLabel(campaign.testing_variable) : ''
-  const color = campaign?.color || (column === 'live' || instantly?.status === 'live' ? '#e85d2a' : '#d6d3d1')
+  const color = campaign?.color || (column === 'live' || instantly?.status === 'live' ? '#f97316' : '#d6d3d1')
   const chip = statusChip({ column, instantly, campaign })
   const summary =
     column === 'recommended'

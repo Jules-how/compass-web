@@ -181,7 +181,7 @@ export function CompassMark({ className }: { className?: string }) {
     <span
       className={
         className ??
-        'flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#f3e4d8] text-[#e85d2a]'
+        'flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#fff7ed] text-[#c2410c]'
       }
       aria-hidden
     >

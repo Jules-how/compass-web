@@ -52,7 +52,7 @@ const LANES: Array<{
   {
     id: 'completed',
     title: 'Done',
-    color: '#6965db',
+    color: '#16a34a',
     hint: 'Finished or cancelled.',
   },
 ]

@@ -240,7 +240,7 @@ export function OfferWavesBoard({ className }: { className?: string }) {
       {
         id: 'recommended',
         title: OFFER_WAVE_COLUMN_LABELS.recommended,
-        color: '#e85d2a',
+        color: '#f97316',
         emptyText: 'Drop a campaign here.',
         hint: 'Agent-only until you move it to next.',
         tasks: grouped.recommended.map((campaign) =>
