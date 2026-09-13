@@ -36,7 +36,11 @@ export async function loadGoalActions() {
 export async function goalProspects(params: URLSearchParams) {
   return searchLeadContacts(
     getPortalAdminClient(),
-    { city: params.get("city") || undefined, q: params.get("q") || undefined },
+    {
+      city: params.get("city") || undefined,
+      q: params.get("q") || undefined,
+      vertical: params.get("vertical") || undefined,
+    },
     {
       mode: "agent",
       columns: "full",

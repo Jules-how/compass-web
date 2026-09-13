@@ -18,7 +18,7 @@ export const TOOLS = [
   {
     name: 'goals.actions',
     description: 'Read the shared weekly goals/actions workspace, a city session, existing prospects or goal evidence. A session command creates a proposal or revision-checked agent-owned session; it never calls or sends.',
-    inputSchema: { type: 'object', properties: { section: { type: 'string', enum: ['workspace', 'session', 'prospects', 'evidence'] }, id: { type: 'string' }, city: { type: 'string' }, q: { type: 'string' }, cursor: { type: 'string' }, goal: { type: 'string' }, command: { type: 'object', additionalProperties: true } }, additionalProperties: false }
+    inputSchema: { type: 'object', properties: { section: { type: 'string', enum: ['workspace', 'session', 'prospects', 'evidence'] }, id: { type: 'string' }, city: { type: 'string' }, vertical: { type: 'string' }, q: { type: 'string' }, cursor: { type: 'string' }, goal: { type: 'string' }, command: { type: 'object', additionalProperties: true } }, additionalProperties: false }
   },
   {
     name: 'planning.notebook',
@@ -351,7 +351,7 @@ export async function callTool(name, args = {}, { cfg, fetchImpl }) {
       const base = name === 'goals.actions' ? '/api/agent/goals/actions' : name === 'planning.notebook' ? '/api/agent/planning/notebook' : '/api/agent/instructions';
       const body = name === 'instructions' ? args.envelope : args.command;
       if (body !== undefined && (!body || typeof body !== 'object' || Array.isArray(body))) return toolError('Write payload must be an object');
-      const keys = name === 'goals.actions' ? ['section', 'id', 'city', 'q', 'cursor', 'goal'] : name === 'planning.notebook' ? ['kind', 'id'] : [];
+      const keys = name === 'goals.actions' ? ['section', 'id', 'city', 'vertical', 'q', 'cursor', 'goal'] : name === 'planning.notebook' ? ['kind', 'id'] : [];
       const query = new URLSearchParams(keys.filter(key => args[key] !== undefined).map(key => [key, String(args[key])]));
       const r = await compassFetch(cfg, { method: body ? 'POST' : 'GET', path: base + (!body && query.size ? '?' + query : ''), ...(body ? { body } : {}), fetchImpl });
       return r.status >= 400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);

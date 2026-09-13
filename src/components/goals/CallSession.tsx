@@ -68,7 +68,7 @@ export function NewSession({
     setError("");
     try {
       const d = await readJson(
-        `/api/goals/actions?section=prospects&city=${city}&q=${encodeURIComponent(query)}${more && cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+        `/api/goals/actions?section=prospects&vertical=hvac&city=${city}&q=${encodeURIComponent(query)}${more && cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
       );
       setLeads((old) => (more ? [...old, ...d.leads] : d.leads));
       setCursor(d.next_cursor);
@@ -132,8 +132,8 @@ export function NewSession({
         <button onClick={onClose}>Close</button>
       </div>
       <p>
-        Choose prospects from the existing ledger. Review their installation fit
-        and priority before calling.
+        Choose AC and heating businesses from the existing ledger. Review their
+        installation fit and priority before calling.
       </p>
       <fieldset disabled={busy || Boolean(pending.current)}>
         <div className="ga-form-row">
@@ -180,7 +180,9 @@ export function NewSession({
                 type="checkbox"
                 checked={Boolean(selected[l.id])}
                 disabled={
-                  !l.phone || Boolean(l.is_archived) || l.icp_status === "fail"
+                  !l.phone ||
+                  Boolean(l.is_archived) ||
+                  ["fail", "skip"].includes(l.icp_status)
                 }
                 onChange={(e) =>
                   setSelected((old) => {
@@ -224,7 +226,9 @@ export function NewSession({
         onClick={() => void save()}
       >
         {busy
-          ? "Saving…"
+          ? pending.current
+            ? "Saving…"
+            : "Loading prospects…"
           : pending.current
             ? "Retry session save"
             : "Create session"}
@@ -299,7 +303,7 @@ export function CallSession({
       (l: any) =>
         !restrictionReason(l, "call") &&
         !l.is_archived &&
-        l.icp_status !== "fail" &&
+        !["fail", "skip"].includes(l.icp_status) &&
         !data.tasks.some(
           (t: any) =>
             t.lead_id === l.id &&
@@ -617,7 +621,11 @@ function ContactPanel({
     try {
       const d = await load();
       const blocked = restrictionReason(d.lead, "call");
-      if (blocked || d.lead.is_archived || d.lead.icp_status === "fail")
+      if (
+        blocked ||
+        d.lead.is_archived ||
+        ["fail", "skip"].includes(d.lead.icp_status)
+      )
         throw new Error(blocked || "Review this business before calling.");
       const phone = String(d.lead.phone).replace(/[^+0-9]/g, "");
       if (!/^\+?\d{6,15}$/.test(phone))
