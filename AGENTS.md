@@ -6,6 +6,7 @@ Local and cloud agents connect to Compass over `/api/agent/*` (secret auth). Dai
 
 - Skill: [`.agents/skills/compass-agent/SKILL.md`](.agents/skills/compass-agent/SKILL.md)
 - Docs: [`docs/AGENT_BRIDGE.md`](docs/AGENT_BRIDGE.md)
+- Goals/actions and rich notebooks: [`docs/GOALS_ACTIONS.md`](docs/GOALS_ACTIONS.md). Explicit user goal edits or task completion from local Codex use the source-bound signed adapter; ordinary agent writes remain proposals. Read current revisions and retain the same receipt for uncertain retries. Do not infer user confirmation from activity or agent text. ChatGPT/Work require their own trusted adapter and are not connected by the shared secret alone.
 - List refill (query Compass, do not re-scrape): [`docs/LEAD_REFILL.md`](docs/LEAD_REFILL.md)
 - Prefer `GET /api/agent/brief` before dumping data — keep prompts token-lean. Brief includes `currentWave` (campaign, trade, cluster, remaining). Outbound doctrine is `cold-email/AGENTS.md`, not this app.
 - Instantly replied/interested/meeting/not-interested/OOO/wrong-person leads sync into `lead_contacts` so Inbox Instantly stays aligned.

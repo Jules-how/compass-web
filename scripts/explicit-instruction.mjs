@@ -40,7 +40,7 @@ if (
   throw new Error("Environment instructions are not a user action.");
 const command = JSON.parse(await fs.readFile(commandFile, "utf8"));
 const issued_at = new Date().toISOString(),
-  expires_at = new Date(Date.now() + 600000).toISOString();
+  expires_at = new Date(Date.parse(issued_at) + 600000).toISOString();
 const payload = Buffer.from(
   JSON.stringify({
     version: 1,

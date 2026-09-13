@@ -189,6 +189,16 @@ export function GoalsActions({ initialGoalId }: { initialGoalId?: string }) {
     overdue = openTasks.filter(
       (t) => t.due && taskDay(t) < first && t.status !== "completed",
     );
+  if (group === "Days") {
+    columns.unshift(
+      ...(overdue.length
+        ? [{ id: "overdue", title: "Overdue / earlier", tasks: overdue }]
+        : []),
+      ...(unscheduled.length
+        ? [{ id: "unscheduled", title: "Not scheduled", tasks: unscheduled }]
+        : []),
+    );
+  }
   const session = data.sessions.find((s) => s.id === sessionId);
   const saved = async () => {
     await refresh();
@@ -380,33 +390,6 @@ export function GoalsActions({ initialGoalId }: { initialGoalId?: string }) {
                         Link existing work
                       </button>
                     </div>
-                    {(overdue.length > 0 || unscheduled.length > 0) && (
-                      <div className="ga-backlog">
-                        {[
-                          { label: "Overdue / earlier", tasks: overdue },
-                          { label: "Not scheduled", tasks: unscheduled },
-                        ]
-                          .filter((g) => g.tasks.length)
-                          .map((g) => (
-                            <details key={g.label}>
-                              <summary>
-                                {g.label} · {g.tasks.length}
-                              </summary>
-                              <div className="ga-backlog-cards">
-                                {g.tasks.map((t) => (
-                                  <ActionCard
-                                    key={t.id}
-                                    task={t}
-                                    sessions={data.sessions}
-                                    onTask={setTask}
-                                    onSession={setSessionId}
-                                  />
-                                ))}
-                              </div>
-                            </details>
-                          ))}
-                      </div>
-                    )}
                     <div
                       className={`ga-board ${period === "Month" ? "ga-month" : ""}`}
                     >

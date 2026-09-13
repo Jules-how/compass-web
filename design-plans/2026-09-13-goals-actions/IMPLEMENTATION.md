@@ -25,3 +25,12 @@ Browser validation uses one Chrome tab. No in-app browser tab was opened after t
 ## Boundaries
 
 No campaign launch, message, telephone call, payment or task completion follows from implementation or QA. Actual city allocations, calling capacity and the risk reversal's detailed refund conditions remain unset. Existing outcomes and accepted schedules are retained.
+
+## Live acceptance, 13 September
+
+- Released commit `cc29fb9` and verified the production alias: agent instructions and goals/actions routes both return 200; unauthenticated instructions return 401.
+- Source-bound adapter created AC validation goal `planning.goal.3581955e-bd49-4e2d-986b-51b6ee58566c`, revision 1. Exact replay returned revision 1 again. Goal dates remain unset; proposed definition preserves the agreed A$2,500 collection criterion and refundable A$2,500/month retainer.
+- Live adapter test caught a one-millisecond expiry construction error. Both timestamps now derive from the same instant; corrected envelope passed.
+- Operator notebook heading save reached agent readback at revision 1 with unchanged text. Agent appended agreed offer terms preserving the heading at revision 2. No synthetic sales evidence.
+- Operator Add action created `task-bbef5c82-cc7a-4030-9fa9-faf4327eb140` and its canonical goal link atomically. Title: Scope the AC installation market and write the offer hypothesis. Status remains not-started, due null.
+- Desktop inspection exposed the existing collapsed-sidebar grid placing the workspace in a zero-width column. Corrected the collapsed shell to use one full-width track. Phone inspection at 390px exposed shrink/overlap between board and objective; mobile panes now keep their natural height. Unscheduled/overdue work appears as board columns, keeping headings compact and undated actions visible. Final post-release layout measurements remain to verify.

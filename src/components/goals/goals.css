@@ -46,7 +46,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 24px 10px;
+  padding: 10px 24px 10px;
   flex-shrink: 0;
 }
 .ga-header h1 {
@@ -87,7 +87,7 @@
   justify-content: space-between;
   gap: 12px;
   flex: 1;
-  padding: 11px 18px;
+  padding: 8px 18px;
   border-right: 1px solid #e6e7eb;
 }
 .ga-metrics > div:first-child {
@@ -217,8 +217,8 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 12px 20px 10px;
-  min-height: 52px;
+  padding: 6px 20px;
+  min-height: 40px;
 }
 .ga-board-tools > span {
   font-size: 12px;
@@ -727,6 +727,7 @@
 }
 @media (max-width: 899px) {
   .ga-workspace {
+    flex: none;
     height: auto;
     min-height: 100%;
     overflow: visible;
@@ -734,12 +735,16 @@
   .ga-body {
     display: flex;
     flex-direction: column;
+    flex: none;
     overflow: visible;
   }
   .ga-main {
+    flex: none;
+    min-height: auto;
     overflow: visible;
   }
   .ga-objective {
+    flex: none;
     overflow: visible;
     border: 0;
     border-top: 1px solid #e6e7eb;
@@ -781,5 +786,9 @@
   }
   .ga-controls {
     gap: 10px;
+  }
+  .ga-switches input[type="date"] {
+    max-width: none;
+    width: 150px;
   }
 }
