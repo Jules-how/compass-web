@@ -31,6 +31,9 @@ export type CanvaDesignIds = {
 export type MetaAttachRow = {
   id: string
   client_id: string
+  offer_revision_id: string
+  engagement_id: string
+  source_snapshot: Record<string, unknown>
   status: MetaAttachStatus
   offer_cell: string
   destination_url: string | null

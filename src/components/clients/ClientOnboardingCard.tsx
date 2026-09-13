@@ -8,6 +8,8 @@ type OnboardingFormSummary = {
   id: string
   status: 'sent' | 'opened' | 'submitted' | 'expired'
   offerKey: string
+  offerRevisionId: string | null
+  engagementId: string | null
   sentAt: string
   openedAt: string | null
   submittedAt: string | null
@@ -47,18 +49,32 @@ export function ClientOnboardingCard({ clientId }: { clientId: string }) {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [onboardingReady, setOnboardingReady] = useState(false)
 
   const load = useCallback(async () => {
     setError(null)
     const res = await fetch(`/api/clients/${clientId}/onboarding`, { cache: 'no-store' })
-    const body = (await res.json().catch(() => ({}))) as { form?: OnboardingFormSummary | null; error?: string }
+    const body = (await res.json().catch(() => ({}))) as {
+      form?: OnboardingFormSummary | null
+      onboardingReady?: boolean
+      error?: string
+    }
     if (!res.ok) throw new Error(body.error || `Failed to load (${res.status})`)
     setForm(body.form ?? null)
+    setOnboardingReady(body.onboardingReady === true)
   }, [clientId])
 
   useEffect(() => {
     void load().catch((err) => setError(err instanceof Error ? err.message : String(err)))
-  }, [load])
+    const refresh = (event: Event) => {
+      const detail = (event as CustomEvent<{ clientId?: string }>).detail
+      if (detail?.clientId === clientId) {
+        void load().catch((err) => setError(err instanceof Error ? err.message : String(err)))
+      }
+    }
+    window.addEventListener('compass:engagement-updated', refresh)
+    return () => window.removeEventListener('compass:engagement-updated', refresh)
+  }, [clientId, load])
 
   async function sendForm() {
     setBusy(true)
@@ -68,7 +84,7 @@ export function ClientOnboardingCard({ clientId }: { clientId: string }) {
       const res = await fetch(`/api/clients/${clientId}/onboarding`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ offerKey: 'booked-jobs-system' })
+        body: JSON.stringify({})
       })
       const body = (await res.json().catch(() => ({}))) as { form?: OnboardingFormSummary; error?: string }
       if (!res.ok) throw new Error(body.error || `Send failed (${res.status})`)
@@ -95,7 +111,7 @@ export function ClientOnboardingCard({ clientId }: { clientId: string }) {
       <CardHeader>
         <div>
           <CardTitle>Onboarding form</CardTitle>
-          <CardDescription>Send the branded setup form after a signed deal.</CardDescription>
+          <CardDescription>Send the scoped setup form after the agreement is signed and payment is confirmed.</CardDescription>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -108,6 +124,9 @@ export function ClientOnboardingCard({ clientId }: { clientId: string }) {
                 {statusLabel(form.status)}
               </span>
               <span className="text-xs text-neutral-500">Sent {formatRelativeTouch(form.sentAt)}</span>
+              {form.offerRevisionId ? (
+                <span className="text-xs text-neutral-500">Pinned revision {form.offerRevisionId.slice(-8)}</span>
+              ) : null}
             </div>
             {form.openedAt ? (
               <p className="text-xs text-neutral-600">Opened {formatRelativeTouch(form.openedAt)}</p>
@@ -125,13 +144,22 @@ export function ClientOnboardingCard({ clientId }: { clientId: string }) {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-neutral-600">No form sent yet.</p>
+          <p className="text-sm text-neutral-600">
+            {onboardingReady
+              ? 'The signed, paid engagement is ready for onboarding.'
+              : 'Onboarding is locked until a revision-pinned agreement is signed and payment is confirmed.'}
+          </p>
         )}
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         {message ? <p className="text-sm text-emerald-600">{message}</p> : null}
 
-        <button type="button" onClick={() => void sendForm()} disabled={busy} className="compass-btn-primary">
+        <button
+          type="button"
+          onClick={() => void sendForm()}
+          disabled={busy || (!onboardingReady && !form)}
+          className="compass-btn-primary"
+        >
           {busy ? 'Creating…' : form ? 'Send new link' : 'Send onboarding form'}
         </button>
       </CardContent>

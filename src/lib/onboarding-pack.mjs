@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const DEFAULT_ONBOARDING_OFFER_KEY = 'booked-jobs-system'
+export const DEFAULT_ONBOARDING_OFFER_KEY = 'installation-booking'
 
 const FIELD_TYPES = new Set([
   'text',
@@ -25,19 +25,13 @@ const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'satur
 export const AUTHORISATION_FIELD_ID = 'authorisation'
 
 export const ONBOARDING_DELIVERY_TASKS = [
-  { key: 'provision_number', title: 'Provision Switchflow number', task_type: 'DELIVER' },
-  { key: 'configure_agent', title: 'Configure voice agent', task_type: 'DELIVER' },
-  { key: 'calendar_probe', title: 'Probe Google Calendar access', task_type: 'DELIVER' },
-  { key: 'forwarding_setup', title: 'Set up call forwarding', task_type: 'DELIVER' },
-  { key: 'go_live_test_call', title: 'Go-live test call', task_type: 'DELIVER' },
-  { key: 'go_live_test_sms', title: 'Go-live test SMS', task_type: 'DELIVER' }
+  { key: 'confirm_access', title: 'Confirm Ads, page, tracking and calendar access', task_type: 'DELIVER' },
+  { key: 'capture_baseline', title: 'Capture the agreed enquiry and booking baseline', task_type: 'DELIVER' },
+  { key: 'prepare_search', title: 'Prepare the Google Search campaign paused', task_type: 'DELIVER' },
+  { key: 'prepare_booking', title: 'Prepare qualification, SMS, calendar and handoff', task_type: 'DELIVER' },
+  { key: 'staging_test', title: 'Run consent, tracking and booking staging tests', task_type: 'DELIVER' },
+  { key: 'live_authorisation', title: 'Obtain explicit go-live authorisation', task_type: 'ADMIN' }
 ]
-
-export const ONBOARDING_INVOICE_TASK = {
-  key: 'raise_install_invoice',
-  title: 'Raise install invoice in QuickBooks',
-  task_type: 'ADMIN'
-}
 
 const moduleDir = dirname(fileURLToPath(import.meta.url))
 
@@ -199,40 +193,36 @@ export function validateOnboardingAnswers(pack, answers) {
 }
 
 /** @param {string} band */
-export function tierFromVanBand(band) {
-  return band === '4-8' ? 'vans_4_8' : 'vans_3'
-}
-
-/** @param {Record<string, unknown>} answers @param {Record<string, unknown>} existingClient @param {Record<string, unknown>} existingDealTerms @param {string} submittedAt */
-export function mapOnboardingSubmit(answers, existingClient = {}, existingDealTerms = {}, submittedAt = new Date().toISOString()) {
-  const tier = tierFromVanBand(String(answers.van_count_band || ''))
+/** @param {Record<string, unknown>} answers @param {Record<string, unknown>} existingClient @param {string} submittedAt */
+export function mapOnboardingSubmit(answers, existingClient = {}, submittedAt = new Date().toISOString()) {
   const tradingName = String(answers.trading_name || '').trim()
   const legalName = String(answers.legal_entity_name || '').trim()
-  const ownerName = String(answers.owner_name || '').trim()
+  const contactName = String(answers.primary_contact_name || '').trim()
   const trade = String(answers.trade || '').trim()
-  const billingEmail = String(answers.billing_email || '').trim()
 
   const delivery = {
     trading_name: tradingName,
     legal_entity_name: legalName,
     abn: String(answers.abn || '').trim(),
-    gst_registered: answers.gst_registered === true,
-    owner_name: ownerName,
-    owner_mobile: String(answers.owner_mobile || '').trim(),
-    public_number: String(answers.public_number || '').trim(),
-    carrier: String(answers.carrier || '').trim(),
-    line_type: String(answers.line_type || '').trim(),
-    van_count_band: String(answers.van_count_band || '').trim(),
+    billing_email: String(answers.billing_email || '').trim(),
+    primary_contact_name: contactName,
+    primary_contact_mobile: String(answers.primary_contact_mobile || '').trim(),
     trade,
-    services_offered: String(answers.services_offered || '').trim(),
-    service_suburbs: String(answers.service_suburbs || '').trim(),
+    website: String(answers.website_url || '').trim(),
+    installation_services: String(answers.installation_services || '').trim(),
+    service_areas: String(answers.service_areas || '').trim(),
+    excluded_services_areas: String(answers.excluded_services_areas || '').trim(),
+    weekly_quote_capacity: String(answers.weekly_quote_capacity || '').trim(),
+    google_ads_customer_id: String(answers.google_ads_customer_id || '').trim() || null,
+    monthly_media_budget_aud: String(answers.monthly_media_budget_aud || '').trim(),
+    tracking_status: String(answers.tracking_status || '').trim(),
+    landing_page_status: String(answers.landing_page_status || '').trim(),
     business_hours: answers.business_hours ?? null,
-    after_hours_preference: String(answers.after_hours_preference || '').trim(),
-    booked_out_action: String(answers.booked_out_action || '').trim(),
+    qualification_rules: String(answers.qualification_rules || '').trim(),
     do_not_book_rules: String(answers.do_not_book_rules || '').trim(),
     google_calendar_id: String(answers.google_calendar_id || '').trim(),
-    spoken_business_name: String(answers.spoken_business_name || '').trim(),
-    after_hours_greeting: String(answers.after_hours_greeting || '').trim() || null,
+    handoff_email: String(answers.handoff_email || '').trim(),
+    reminder_preference: String(answers.reminder_preference || '').trim(),
     authorisation: true,
     authorisation_at: submittedAt,
     onboarding_submitted_at: submittedAt
@@ -245,20 +235,14 @@ export function mapOnboardingSubmit(answers, existingClient = {}, existingDealTe
   if (!String(existingClient.industry || '').trim() && trade) {
     clientPatch.industry = trade
   }
-  if (!String(existingClient.main_contact_name || '').trim() && ownerName) {
-    clientPatch.main_contact_name = ownerName
+  if (!String(existingClient.main_contact_name || '').trim() && contactName) {
+    clientPatch.main_contact_name = contactName
+  }
+  if (!String(existingClient.website || '').trim() && delivery.website) {
+    clientPatch.website = delivery.website
   }
 
-  const dealTerms = {
-    ...existingDealTerms,
-    offer: existingDealTerms.offer || DEFAULT_ONBOARDING_OFFER_KEY,
-    tier,
-    billing_email: billingEmail || existingDealTerms.billing_email || '',
-    status: existingDealTerms.status === 'draft' || !existingDealTerms.status ? 'contracted' : existingDealTerms.status,
-    delivery
-  }
-
-  return { clientPatch, dealTerms, delivery, tier }
+  return { clientPatch, delivery }
 }
 
 /** @param {Record<string, unknown>} delivery */
@@ -272,18 +256,18 @@ export function buildOnboardingTaskNotes(delivery) {
 /** @param {string} key @param {Record<string, unknown>} delivery */
 function summariseDeliveryForTask(key, delivery) {
   switch (key) {
-    case 'provision_number':
-      return `Public number: ${delivery.public_number}\nCarrier: ${delivery.carrier}\nLine: ${delivery.line_type}`
-    case 'configure_agent':
-      return `Spoken name: ${delivery.spoken_business_name}\nTrade: ${delivery.trade}\nServices: ${delivery.services_offered}`
-    case 'calendar_probe':
-      return `Calendar: ${delivery.google_calendar_id}`
-    case 'forwarding_setup':
-      return `After hours: ${delivery.after_hours_preference}\nPublic number: ${delivery.public_number}`
-    case 'go_live_test_call':
-      return `Owner mobile: ${delivery.owner_mobile}\nPublic number: ${delivery.public_number}`
-    case 'go_live_test_sms':
-      return `Owner mobile: ${delivery.owner_mobile}`
+    case 'confirm_access':
+      return `Ads customer: ${delivery.google_ads_customer_id || 'new account required'}\nSite: ${delivery.website}\nCalendar: ${delivery.google_calendar_id}\nTracking: ${delivery.tracking_status}`
+    case 'capture_baseline':
+      return `Quote capacity: ${delivery.weekly_quote_capacity}\nServices: ${delivery.installation_services}\nAreas: ${delivery.service_areas}`
+    case 'prepare_search':
+      return `Budget: A$${delivery.monthly_media_budget_aud}\nServices: ${delivery.installation_services}\nExclusions: ${delivery.excluded_services_areas}`
+    case 'prepare_booking':
+      return `Qualified: ${delivery.qualification_rules}\nDo not book: ${delivery.do_not_book_rules}\nHandoff: ${delivery.handoff_email}`
+    case 'staging_test':
+      return `Calendar: ${delivery.google_calendar_id}\nReminders: ${delivery.reminder_preference}\nActivation remains separate.`
+    case 'live_authorisation':
+      return 'Confirm payment, access, staging evidence and explicit go-live instruction. Onboarding is not activation.'
     default:
       return ''
   }

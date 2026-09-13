@@ -1,0 +1,80 @@
+{
+  "offerKey": "installation-booking",
+  "title": "Switchflow Ads + booking onboarding",
+  "subtitle": "Set the installation demand, qualification and booking rules for the exact service you accepted.",
+  "sections": [
+    {
+      "id": "business",
+      "title": "Business and contacts",
+      "description": "The legal and day-to-day details used for this engagement.",
+      "fields": [
+        { "id": "legal_entity_name", "label": "Legal entity name", "type": "text", "required": true, "blocks": null },
+        { "id": "abn", "label": "ABN", "help": "11 digits, spaces optional.", "type": "text", "required": true, "blocks": null },
+        { "id": "billing_email", "label": "Billing email", "type": "email", "required": true, "blocks": null },
+        { "id": "trading_name", "label": "Trading name", "type": "text", "required": true, "blocks": null },
+        { "id": "primary_contact_name", "label": "Primary contact", "type": "text", "required": true, "blocks": null },
+        { "id": "primary_contact_mobile", "label": "Primary contact mobile", "type": "tel", "required": true, "blocks": "delivery" },
+        { "id": "trade", "label": "Trade", "help": "For this offer, normally air conditioning / HVAC.", "type": "text", "required": true, "blocks": "delivery" },
+        { "id": "website_url", "label": "Current website", "type": "text", "required": true, "blocks": "delivery" }
+      ]
+    },
+    {
+      "id": "market",
+      "title": "Installation market",
+      "description": "What should generate an eligible quote request, and where.",
+      "fields": [
+        { "id": "installation_services", "label": "Installation services to promote", "help": "List the installation work you want quoted. Exclude service-only work unless it is expressly in scope.", "type": "textarea", "required": true, "blocks": "delivery" },
+        { "id": "service_areas", "label": "Service areas", "help": "Suburbs, cities or regions that can accept installation work.", "type": "textarea", "required": true, "blocks": "delivery" },
+        { "id": "excluded_services_areas", "label": "Services and areas to exclude", "type": "textarea", "required": true, "blocks": "delivery" },
+        { "id": "weekly_quote_capacity", "label": "Weekly installation quote capacity", "type": "text", "required": true, "blocks": "delivery" }
+      ]
+    },
+    {
+      "id": "ads",
+      "title": "Google Ads and measurement",
+      "description": "Access is checked separately. Nothing is activated from this form.",
+      "fields": [
+        { "id": "google_ads_customer_id", "label": "Google Ads customer ID", "help": "Optional if no account exists yet.", "type": "text", "required": false, "blocks": "delivery" },
+        { "id": "monthly_media_budget_aud", "label": "Approved monthly media budget (AUD)", "help": "Advertising spend is paid by you and is separate from Switchflow fees.", "type": "text", "required": true, "blocks": "delivery" },
+        { "id": "tracking_status", "label": "Current conversion tracking", "type": "select", "required": true, "blocks": "delivery", "options": [
+          { "value": "working", "label": "Working and verified" },
+          { "value": "present_unverified", "label": "Present but unverified" },
+          { "value": "none", "label": "Not set up" },
+          { "value": "unknown", "label": "Unknown" }
+        ] },
+        { "id": "landing_page_status", "label": "Installation landing page", "type": "select", "required": true, "blocks": "delivery", "options": [
+          { "value": "approved_existing", "label": "Use an approved existing page" },
+          { "value": "switchflow_page", "label": "Prepare a scoped Switchflow page" },
+          { "value": "decision_required", "label": "Decision required at kickoff" }
+        ] }
+      ]
+    },
+    {
+      "id": "booking",
+      "title": "Qualification and booking",
+      "description": "These rules control which enquiries can become quote appointments.",
+      "fields": [
+        { "id": "business_hours", "label": "Business hours", "type": "hours", "required": true, "blocks": "delivery" },
+        { "id": "qualification_rules", "label": "Qualified installation enquiry", "help": "State the job type, area, timing and other conditions that must be true.", "type": "textarea", "required": true, "blocks": "delivery" },
+        { "id": "do_not_book_rules", "label": "Do-not-book rules", "type": "textarea", "required": true, "blocks": "delivery" },
+        { "id": "calendar_share_note", "label": "Share the quote calendar", "type": "file_note", "required": false, "blocks": null, "help": "In Google Calendar settings, share the agreed quote calendar with {{BOOKING_GRANT_EMAIL}} with permission to make changes to events." },
+        { "id": "google_calendar_id", "label": "Quote calendar email or ID", "type": "email", "required": true, "blocks": "delivery" },
+        { "id": "handoff_email", "label": "Enquiry handoff email", "type": "email", "required": true, "blocks": "delivery" },
+        { "id": "reminder_preference", "label": "Appointment reminder preference", "type": "textarea", "required": true, "blocks": "delivery" }
+      ]
+    },
+    {
+      "id": "authorisation",
+      "title": "Authorisation",
+      "fields": [
+        {
+          "id": "authorisation",
+          "label": "I authorise Switchflow to prepare the agreed Google Ads, landing-page, form, consented SMS, calendar and handoff workflow for this engagement. I understand that access, tracking and live activation are separate checked steps.",
+          "type": "toggle",
+          "required": true,
+          "blocks": null
+        }
+      ]
+    }
+  ]
+}

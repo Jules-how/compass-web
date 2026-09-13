@@ -64,6 +64,8 @@ Goals & actions use the same canonical work and planning owners. Read [GOALS_ACT
 | `GET` | `/api/agent/outbound/:kind/:id` | Full row |
 | `PATCH` | `/api/agent/outbound/:kind/:id` | Partial update (`Prefer: return=minimal` for lean ack) |
 | `DELETE` | `/api/agent/outbound/:kind/:id` | Soft-archive |
+| `GET` | `/api/agent/offers/:id/lineage` | Active immutable offer/ICP revision, preserved history and bounded market tests |
+| `POST` | `/api/agent/offers/:id/lineage` | Create or close a market test. Use `create_market_test` or `close_market_test`; closeout evidence is required |
 | `GET/PATCH` | `/api/agent/outbound/campaigns/:campaignId/copy` | Campaign copy + experiment + wave fields (`full=1` includes `sequence_draft`). Changing `sequence_draft` / `cold_expression` clears `copy_confirmed_at` |
 | `POST` | `/api/campaigns/:id/challenger` | Operator: spawn one-factor challenger (cookie auth) |
 | `POST` | `/api/campaigns/:id/instantly/ensure` | Operator: create paused Instantly campaign + bind (`pushSequence` optional) |
@@ -81,6 +83,8 @@ Goals & actions use the same canonical work and planning owners. Read [GOALS_ACT
 | `GET/POST` | `/api/agent/cs` | Weekly retention run. GET = board counts. POST = recompute + persist drafts (`persist:false` to dry run). Review at `/operations/cs` |
 
 Kinds: `offers` | `expressions` | `structures` | `ctas` | `subjects` | `openers` | `templates`.
+
+Offer content and ICP changes through `PATCH .../outbound/offers/:id` create a new immutable revision. Include `revision_note`. Lifecycle-only status changes do not create a content revision. Campaigns, preparations, agreements and delivery records use revision IDs; never fill a missing historical revision from the current offer.
 
 List filters: `offer_key`, `vertical`, `location`, `q`, `archived=1`, `limit`, `full=1`.
 

@@ -101,6 +101,10 @@ let source = fs
     'const getPortalAdminClient=()=>globalThis.agreementTestDb',
   )
   .replace(
+    "import { appendEvidence } from '@/lib/events'",
+    'const appendEvidence=async()=>({inserted:true,id:"test-event"})',
+  )
+  .replace(
     "'@/lib/agreements.mjs'",
     JSON.stringify(
       pathToFileURL(
@@ -128,8 +132,31 @@ const valid = () => ({
   bankInstructions: 'TEST fixture, not a real account',
   termsReviewed: true,
 })
+const attribution = () => ({
+  offerId: 'offer-installation-booking',
+  offerKey: 'installation-booking',
+  offerName: 'Ads + booking',
+  revision: {
+    id: 'offer-revision-fixture',
+    offer_id: 'offer-installation-booking',
+    version_no: 3,
+    version_label: 'v3',
+    snapshot_scope: 'full',
+    snapshot: {
+      offer_key: 'installation-booking',
+      name: 'Ads + booking',
+      lock: { icp: 'Australian AC installers' }
+    },
+    content_hash: 'fixture-hash',
+    change_reason: 'Fixture',
+    source: 'test',
+    supersedes_revision_id: null,
+    created_by: 'test',
+    created_at: '2026-09-10T00:00:00Z'
+  }
+})
 test('encrypted persistence, unforgeable token, immutable acceptance and idempotent task creation', async () => {
-  const r = await api.createAgreement('client-fixture', valid())
+  const r = await api.createAgreement('client-fixture', valid(), attribution())
   const stored = tables.get('compass_settings').get(r.id)
   assert.equal(stored.value.includes('signer@example.com'), false)
   const token = api.signingToken(r.id)
@@ -147,6 +174,7 @@ test('encrypted persistence, unforgeable token, immutable acceptance and idempot
   )
   assert.equal(signed.status, 'signed')
   assert.equal(signed.payment.status, 'pending')
+  assert.equal(signed.offerRevisionId, 'offer-revision-fixture')
   await assert.rejects(
     () =>
       api.acceptAgreement(
@@ -165,6 +193,7 @@ test('encrypted persistence, unforgeable token, immutable acceptance and idempot
   await api.ensureSigningTasks(signed)
   assert.equal(tables.get('compass_projects').size, 1)
   assert.equal(tables.get('compass_tasks').size, 4)
+  assert.equal(tables.get('compass_client_engagements').size, 1)
   const publicData = api.publicAgreement(signed)
   assert.equal(publicData.signature.ip, undefined)
   const paid = await api.confirmBankPayment(signed, 'fixture-bank-ref')
@@ -172,7 +201,7 @@ test('encrypted persistence, unforgeable token, immutable acceptance and idempot
   assert.equal(paid.documentHash, r.documentHash)
 })
 test('signatory mismatch and missing consent do not accept an agreement', async () => {
-  const r = await api.createAgreement('other-client', valid())
+  const r = await api.createAgreement('other-client', valid(), attribution())
   await assert.rejects(() =>
     api.acceptAgreement(
       r,
@@ -218,7 +247,7 @@ test('checkout cannot start before signing and retries use the persisted session
     const r = await api.createAgreement('card-client', {
       ...valid(),
       paymentMethod: 'stripe',
-    })
+    }, attribution())
     await assert.rejects(() => api.beginCheckout(r, 'https://example.com'))
     const signed = await api.acceptAgreement(
       r,

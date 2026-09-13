@@ -1,9 +1,9 @@
 /** Shared agreement validation and rendering. No provider calls or browser-only state. */
 export const AGREEMENT_OFFER = 'installation-booking'
 export const AGREEMENT_SCOPE =
-  'Manage one agreed installation-enquiry stream through response, qualification, quote-appointment booking, reminders, human handoff, exception handling and outcome reporting.'
+  'Manage one agreed Google Search installation-enquiry stream through demand capture, response, qualification, quote-appointment booking, reminders, human handoff, exception handling and outcome reporting.'
 export const AGREEMENT_EXCLUSIONS =
-  'Advertising spend or management, website rebuilds, SEO, custom integrations and additional enquiry streams are excluded unless expressly listed below.'
+  'Client-funded advertising spend is separate from Switchflow fees. Full website rebuilds, SEO, custom integrations and additional enquiry streams are excluded unless expressly listed below.'
 export function agreementDefaults(clientName = '') {
   return {
     clientName,

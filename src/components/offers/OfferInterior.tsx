@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type {
@@ -17,6 +17,7 @@ import type {
 import { emptyOfferLock, slugifyOfferKey, VERTICAL_VARIANT_STATUSES } from '@/lib/offer-sku'
 import { OfferCellRows } from '@/components/offers/TestCellsBoard'
 import { testingVariableLabel } from '@/lib/campaigns'
+import type { MarketTest, OfferRevision } from '@/lib/offer-revisions'
 
 function linesToList(value: string) {
   return value
@@ -244,6 +245,8 @@ export function OfferInterior({
 
       <ResultsStrip card={card} />
 
+      <OfferLineagePanel offerId={offer.id} activeRevisionId={offer.active_revision_id} />
+
       {cells.length > 0 || card.campaigns.length > 0 ? (
         <section className="compass-panel space-y-3 p-5">
           <div className="compass-section-label">Cells</div>
@@ -292,6 +295,10 @@ function ResultsStrip({ card }: { card: OfferDeskCard }) {
                 {campaign.testingVariable && campaign.testingVariable !== 'none'
                   ? ` · ${testingVariableLabel(campaign.testingVariable)}`
                   : ''}
+                {' · '}
+                {campaign.offerRevisionId
+                  ? `revision ${campaign.offerRevisionId.slice(-8)}`
+                  : 'historical · revision unknown'}
               </div>
             </Link>
           ))}
@@ -373,6 +380,7 @@ function OfferLockForm({
   const [high, setHigh] = useState(formatAud(offer.retainer_high_aud))
   const [term, setTerm] = useState(offer.term_days?.toString() ?? '')
   const [guarantee, setGuarantee] = useState(offer.guarantee ?? '')
+  const [revisionNote, setRevisionNote] = useState('Offer or ICP definition updated.')
 
   const lock: OfferLock = useMemo(
     () => ({
@@ -426,6 +434,7 @@ function OfferLockForm({
           guarantee,
           vertical_tags: linesToList(verticalTags.replace(/,/g, '\n')),
           location_tags: linesToList(locationTags.replace(/,/g, '\n')),
+          revision_note: revisionNote,
           lock
         })
       }}
@@ -671,10 +680,161 @@ function OfferLockForm({
       </Panel>
 
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      <label className="block max-w-2xl text-sm">
+        <span className="mb-1.5 block text-neutral-600">Revision note</span>
+        <input
+          required
+          className="compass-input"
+          value={revisionNote}
+          onChange={(event) => setRevisionNote(event.target.value)}
+          placeholder="What changed, and why?"
+        />
+        <span className="mt-1 block text-xs text-neutral-500">
+          Saving a changed offer or ICP creates a new immutable revision. Existing campaigns keep their original revision.
+        </span>
+      </label>
       <button type="submit" className="compass-btn-primary" disabled={busy}>
         {busy ? 'Saving…' : 'Save lock'}
       </button>
     </form>
+  )
+}
+
+function OfferLineagePanel({ offerId, activeRevisionId }: { offerId: string; activeRevisionId: string | null }) {
+  const [revisions, setRevisions] = useState<OfferRevision[]>([])
+  const [tests, setTests] = useState<MarketTest[]>([])
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState({
+    name: '',
+    hypothesis: '',
+    vertical: '',
+    geography: '',
+    channel: 'cold-email',
+    sample_size_target: '',
+    budget_aud: ''
+  })
+
+  const load = useCallback(async () => {
+    const [revisionResponse, testResponse] = await Promise.all([
+      fetch(`/api/offers/${offerId}/revisions`, { cache: 'no-store' }),
+      fetch(`/api/offers/${offerId}/market-tests`, { cache: 'no-store' })
+    ])
+    const revisionBody = await revisionResponse.json()
+    const testBody = await testResponse.json()
+    if (!revisionResponse.ok) throw new Error(revisionBody.error || 'Unable to load revisions.')
+    if (!testResponse.ok) throw new Error(testBody.error || 'Unable to load market tests.')
+    setRevisions(revisionBody.revisions ?? [])
+    setTests(testBody.tests ?? [])
+  }, [offerId])
+
+  useEffect(() => {
+    void load().catch((reason) => setError(reason instanceof Error ? reason.message : String(reason)))
+  }, [load, activeRevisionId])
+
+  async function createTest(event: React.FormEvent) {
+    event.preventDefault()
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch(`/api/offers/${offerId}/market-tests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draft)
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error || 'Unable to create market test.')
+      setDraft({ name: '', hypothesis: '', vertical: '', geography: '', channel: 'cold-email', sample_size_target: '', budget_aud: '' })
+      setOpen(false)
+      await load()
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function changeTest(test: MarketTest, status: MarketTest['status']) {
+    let closeout: Record<string, unknown> | undefined
+    if (['won', 'lost', 'inconclusive', 'cancelled'].includes(status)) {
+      const note = window.prompt('Record the evidence and decision for closing this test.')?.trim()
+      if (!note) return
+      closeout = { note }
+    }
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch(`/api/offers/${offerId}/market-tests/${test.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, closeout })
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error || 'Unable to update market test.')
+      await load()
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const active = revisions.find((revision) => revision.id === activeRevisionId)
+
+  return (
+    <section className="compass-panel space-y-4 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="compass-section-label">Offer lineage</div>
+          <p className="mt-2 text-sm text-neutral-700">
+            Active: {active ? `${active.version_label} · ${active.change_reason}` : 'No active revision'}
+          </p>
+          <p className="mt-1 text-xs text-neutral-500">
+            {revisions.length} preserved revision{revisions.length === 1 ? '' : 's'}. Recovered history stays partial and is never silently promoted.
+          </p>
+        </div>
+        <button type="button" className="compass-btn-secondary" onClick={() => setOpen((value) => !value)}>
+          {open ? 'Cancel' : 'New market test'}
+        </button>
+      </div>
+
+      {open ? (
+        <form className="grid gap-3 rounded-xl border border-stone-200 bg-stone-50/70 p-4 sm:grid-cols-2" onSubmit={createTest}>
+          <input required className="compass-input" placeholder="Test name" value={draft.name} onChange={(event) => setDraft((row) => ({ ...row, name: event.target.value }))} />
+          <input required className="compass-input" placeholder="Vertical" value={draft.vertical} onChange={(event) => setDraft((row) => ({ ...row, vertical: event.target.value }))} />
+          <input required className="compass-input" placeholder="Geography" value={draft.geography} onChange={(event) => setDraft((row) => ({ ...row, geography: event.target.value }))} />
+          <input required className="compass-input" placeholder="Channel" value={draft.channel} onChange={(event) => setDraft((row) => ({ ...row, channel: event.target.value }))} />
+          <textarea required className="compass-input min-h-[80px] sm:col-span-2" placeholder="Hypothesis" value={draft.hypothesis} onChange={(event) => setDraft((row) => ({ ...row, hypothesis: event.target.value }))} />
+          <input className="compass-input" inputMode="numeric" placeholder="Sample target (optional)" value={draft.sample_size_target} onChange={(event) => setDraft((row) => ({ ...row, sample_size_target: event.target.value }))} />
+          <input className="compass-input" inputMode="decimal" placeholder="Budget AUD (optional)" value={draft.budget_aud} onChange={(event) => setDraft((row) => ({ ...row, budget_aud: event.target.value }))} />
+          <button className="compass-btn-primary sm:col-span-2" disabled={busy}>Create planned test</button>
+        </form>
+      ) : null}
+
+      {tests.length ? (
+        <div className="space-y-2">
+          {tests.map((test) => (
+            <div key={test.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-100 bg-white px-4 py-3 text-sm">
+              <div>
+                <div className="font-medium text-neutral-900">{test.name}</div>
+                <div className="text-xs text-neutral-500">{test.vertical} · {test.geography} · {test.channel} · {test.status}</div>
+              </div>
+              <select
+                aria-label={`Status for ${test.name}`}
+                className="compass-input w-auto"
+                value={test.status}
+                disabled={busy}
+                onChange={(event) => void changeTest(test, event.target.value as MarketTest['status'])}
+              >
+                {['planned', 'running', 'paused', 'won', 'lost', 'inconclusive', 'cancelled'].map((status) => <option key={status} value={status}>{status}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      ) : <p className="text-sm text-neutral-500">No bounded market test recorded yet.</p>}
+      {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
+    </section>
   )
 }
 
@@ -1073,7 +1233,10 @@ function VerticalVariantsSection({
                         </div>
                         <div className="tabular-nums text-neutral-500">
                           {campaign.locationTags?.[0] || 'no city'} · {formatCount(campaign.sent)} sent ·{' '}
-                          {formatCount(campaign.positive)} positive
+                          {formatCount(campaign.positive)} positive ·{' '}
+                          {campaign.offerRevisionId
+                            ? `revision ${campaign.offerRevisionId.slice(-8)}`
+                            : 'historical · revision unknown'}
                         </div>
                       </Link>
                     ))}

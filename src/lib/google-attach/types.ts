@@ -133,6 +133,9 @@ export type GoogleAttachGoogleIds = {
 export type GoogleAttachRow = {
   id: string
   client_id: string
+  offer_revision_id: string
+  engagement_id: string
+  source_snapshot: Record<string, unknown>
   status: GoogleAttachStatus
   customer_id: string | null
   link_status: string | null

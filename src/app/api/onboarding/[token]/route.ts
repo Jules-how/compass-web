@@ -131,7 +131,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       ok: true,
       clientId: result.clientId,
       projectId: result.projectId,
-      invoiceCreated: result.invoiceCreated,
       redirectUrl: `${resolveAppOrigin(request)}/onboard/${token}?done=1`
     })
   } catch {

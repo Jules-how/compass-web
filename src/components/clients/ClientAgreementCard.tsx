@@ -6,6 +6,9 @@ type Row = {
   id: string
   status: string
   createdAt: string
+  offerKey: string
+  offerRevisionId: string
+  offerRevisionNumber: number
   url: string
   payment?: { status: string }
   terms: ReturnType<typeof agreementDefaults>
@@ -59,6 +62,7 @@ export function ClientAgreementCard({
       const b = await r.json()
       if (!r.ok) throw new Error(b.error)
       await load()
+      window.dispatchEvent(new CustomEvent('compass:engagement-updated', { detail: { clientId } }))
       setMessage(
         action === 'create'
           ? 'Signing link created. No message has been sent.'
@@ -234,7 +238,7 @@ export function ClientAgreementCard({
                 <span className="text-sm font-medium">
                   {r.status} · initial payment:{' '}
                   {r.payment?.status || 'not paid'} ·{' '}
-                  {new Date(r.createdAt).toLocaleDateString('en-AU')}
+                  {new Date(r.createdAt).toLocaleDateString('en-AU')} · {r.offerKey} v{r.offerRevisionNumber}
                 </span>
                 <a
                   href={r.url}

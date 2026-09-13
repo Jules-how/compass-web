@@ -12,6 +12,10 @@ export type EvidenceEventInput = {
   product?: string | null
   messaging_component?: string | null
   campaign?: string | null
+  offer_revision_id?: string | null
+  market_test_id?: string | null
+  opportunity_id?: string | null
+  engagement_id?: string | null
   payload?: Record<string, unknown>
   /** Native id used to build idempotency_key when key omitted. */
   native_id: string
@@ -30,6 +34,10 @@ export type EvidenceEventRow = {
   product: string | null
   messaging_component: string | null
   campaign: string | null
+  offer_revision_id: string | null
+  market_test_id: string | null
+  opportunity_id: string | null
+  engagement_id: string | null
   payload: Record<string, unknown>
   idempotency_key: string
   created_at: string
@@ -62,6 +70,10 @@ function normalizeRow(input: EvidenceEventInput): Record<string, unknown> {
     product: input.product ?? null,
     messaging_component: input.messaging_component ?? null,
     campaign: input.campaign ?? null,
+    offer_revision_id: input.offer_revision_id ?? null,
+    market_test_id: input.market_test_id ?? null,
+    opportunity_id: input.opportunity_id ?? null,
+    engagement_id: input.engagement_id ?? null,
     payload: input.payload ?? {},
     idempotency_key
   }
@@ -102,7 +114,7 @@ export async function listEvidence(
   let query = supabase
     .from('compass_evidence_events')
     .select(
-      'id,ts,client_id,lead_id,source,type,vertical,offer,product,messaging_component,campaign,payload,idempotency_key,created_at'
+      'id,ts,client_id,lead_id,source,type,vertical,offer,product,messaging_component,campaign,offer_revision_id,market_test_id,opportunity_id,engagement_id,payload,idempotency_key,created_at'
     )
     .order('ts', { ascending: true })
 

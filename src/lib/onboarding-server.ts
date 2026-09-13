@@ -10,25 +10,19 @@ import {
   mapOnboardingSubmit,
   DEFAULT_ONBOARDING_OFFER_KEY,
   ONBOARDING_DELIVERY_TASKS,
-  ONBOARDING_INVOICE_TASK,
   validateOnboardingAnswers
 } from '@/lib/onboarding-pack.mjs'
-import { amountsFromTier } from '@/lib/qbo-invoice.mjs'
-import { defaultDealTerms, parseDealTerms } from '@/lib/qbo-deal'
-import {
-  createQboClient,
-  loadQboRefreshToken,
-  type QboClientRecord
-} from '@/lib/qbo'
-import { sydneyTodayYmd } from '@/lib/qbo-invoice.mjs'
-import { spawnInstallOnSubmit } from '@/lib/delivery-dept/store'
 import { bookingGrantEmail, generateOnboardingToken } from '@/lib/onboarding-rate-limit'
+import { appendEvidence } from '@/lib/events'
 
 export type OnboardingFormRow = {
   id: string
   client_id: string
   token: string
   offer_key: string
+  offer_revision_id: string | null
+  engagement_id: string | null
+  agreement_id: string | null
   status: 'sent' | 'opened' | 'submitted' | 'expired'
   sent_at: string
   opened_at: string | null
@@ -38,7 +32,17 @@ export type OnboardingFormRow = {
 }
 
 const FORM_COLUMNS =
-  'id,client_id,token,offer_key,status,sent_at,opened_at,submitted_at,answers,created_at'
+  'id,client_id,token,offer_key,offer_revision_id,engagement_id,agreement_id,status,sent_at,opened_at,submitted_at,answers,created_at'
+
+export type OnboardingEngagement = {
+  id: string
+  client_id: string
+  offer_key: string
+  offer_revision_id: string
+  agreement_id: string
+  status: 'paid' | 'onboarding'
+  accepted_terms: Record<string, unknown>
+}
 
 export async function loadFormByToken(
   admin: SupabaseClient,
@@ -85,14 +89,15 @@ export function publicPackForForm(offerKey: string) {
   return hydratePackForClient(pack, bookingGrantEmail())
 }
 
-const PROJECT_EXTERNAL_PREFIX = 'onboarding:booked-jobs-system:'
+const PROJECT_EXTERNAL_PREFIX = 'onboarding:installation-booking:'
 
 async function ensureDeliveryProject(
   admin: SupabaseClient,
   clientId: string,
-  clientName: string
+  clientName: string,
+  engagement: OnboardingEngagement
 ): Promise<string> {
-  const externalId = `${PROJECT_EXTERNAL_PREFIX}${clientId}`
+  const externalId = `${PROJECT_EXTERNAL_PREFIX}${engagement.id}`
   const { data: existing } = await admin
     .from('compass_projects')
     .select('id')
@@ -107,15 +112,15 @@ async function ensureDeliveryProject(
     .from('compass_projects')
     .insert({
       id,
-      name: `${clientName.trim() || 'Client'} · fill-and-capture delivery`,
+      name: `${clientName.trim() || 'Client'} · Ads + booking delivery`,
       status: 'in_progress',
       priority: 1,
       health: 'on_track',
       client_id: clientId,
       source: 'onboarding',
       external_id: externalId,
-      summary: 'Auto-created from client onboarding form.',
-      labels: ['onboarding', 'fill-capture'],
+      summary: `Created from paid engagement ${engagement.id}. Delivery stays gated until access, staging and live authorisation are confirmed.`,
+      labels: ['onboarding', 'installation-booking', `revision:${engagement.offer_revision_id}`],
       created_at: now,
       updated_at: now,
       mirrored_at: now
@@ -173,37 +178,46 @@ async function upsertOnboardingTask(
   if (error) throw new Error(error.message)
 }
 
-async function hasInstallInvoice(admin: SupabaseClient, clientId: string): Promise<boolean> {
-  const { data, error } = await admin
-    .from('compass_qbo_docs')
-    .select('id')
-    .eq('client_id', clientId)
-    .eq('doc_type', 'invoice')
-    .eq('invoice_kind', 'install_first_month')
-    .limit(1)
-  if (error && !/does not exist|schema cache/i.test(error.message)) {
-    throw new Error(error.message)
-  }
-  return (data ?? []).length > 0
-}
-
 export type SubmitOnboardingResult = {
   validationErrors?: Array<{ fieldId: string; message: string }>
   clientId: string
   projectId: string
-  invoiceCreated: boolean
-  invoiceTaskCreated: boolean
 }
 
 export async function processOnboardingSubmit(
   form: OnboardingFormRow
 ): Promise<SubmitOnboardingResult> {
+  if (
+    form.offer_key !== DEFAULT_ONBOARDING_OFFER_KEY ||
+    !form.offer_revision_id ||
+    !form.engagement_id ||
+    !form.agreement_id
+  ) {
+    throw new Error('onboarding_engagement_required')
+  }
   const admin = getPortalAdminClient()
+  const engagementResult = await admin
+    .from('compass_client_engagements')
+    .select('id,client_id,offer_key,offer_revision_id,agreement_id,status,accepted_terms')
+    .eq('id', form.engagement_id)
+    .eq('client_id', form.client_id)
+    .maybeSingle()
+  if (engagementResult.error) throw new Error(engagementResult.error.message)
+  const engagement = engagementResult.data as OnboardingEngagement | null
+  if (
+    !engagement ||
+    !['paid', 'onboarding'].includes(engagement.status) ||
+    engagement.offer_key !== form.offer_key ||
+    engagement.offer_revision_id !== form.offer_revision_id ||
+    engagement.agreement_id !== form.agreement_id
+  ) {
+    throw new Error('onboarding_lineage_mismatch')
+  }
   const pack = loadOnboardingPack(form.offer_key)
   const answers = { ...form.answers }
   const validationErrors = validateOnboardingAnswers(pack, answers)
   if (validationErrors.length > 0) {
-    return { validationErrors, clientId: form.client_id, projectId: '', invoiceCreated: false, invoiceTaskCreated: false }
+    return { validationErrors, clientId: form.client_id, projectId: '' }
   }
 
   const submittedAt = new Date().toISOString()
@@ -211,36 +225,20 @@ export async function processOnboardingSubmit(
 
   const { data: clientRow, error: clientError } = await admin
     .from('compass_clients')
-    .select('id,name,industry,website,main_contact_name,deal_terms,qbo_customer_id')
+    .select('id,name,industry,website,main_contact_name')
     .eq('id', form.client_id)
     .maybeSingle()
   if (clientError) throw new Error(clientError.message)
   if (!clientRow) throw new Error('client_not_found')
 
-  const existingDeal = parseDealTerms(clientRow.deal_terms)
-  const { clientPatch, dealTerms, delivery } = mapOnboardingSubmit(
+  const { clientPatch, delivery } = mapOnboardingSubmit(
     answers,
     clientRow,
-    existingDeal,
     submittedAt
   )
-  const amounts = amountsFromTier(dealTerms.tier as 'vans_3' | 'vans_4_8')
-  const mergedDealTerms = {
-    ...defaultDealTerms({
-      offer: String(dealTerms.offer || DEFAULT_ONBOARDING_OFFER_KEY),
-      tier: dealTerms.tier as 'vans_3' | 'vans_4_8',
-      billing_email: String(dealTerms.billing_email || ''),
-      status: dealTerms.status as 'draft' | 'contracted' | 'retainer_active' | 'paused' | 'ended',
-      install_aud: amounts.installAud,
-      monthly_aud: amounts.monthlyAud,
-      gst_mode: 'exclusive' as const
-    }),
-    delivery
-  }
 
   const clientUpdate = {
     ...clientPatch,
-    deal_terms: mergedDealTerms,
     updated_at: submittedAt
   }
 
@@ -250,54 +248,31 @@ export async function processOnboardingSubmit(
     .eq('id', form.client_id)
   if (updateClientError) throw new Error(updateClientError.message)
 
-  const projectId = await ensureDeliveryProject(admin, form.client_id, String(clientRow.name || ''))
-  await spawnInstallOnSubmit(admin, {
-    id: form.client_id,
-    name: String(clientPatch.name || clientRow.name || ''),
-    deal_terms: mergedDealTerms
-  })
+  const projectId = await ensureDeliveryProject(
+    admin,
+    form.client_id,
+    String(clientPatch.name || clientRow.name || ''),
+    engagement
+  )
   const taskNotes = buildOnboardingTaskNotes(delivery)
   for (const task of taskNotes) {
     await upsertOnboardingTask(admin, projectId, task)
   }
 
-  let invoiceCreated = false
-  let invoiceTaskCreated = false
-  const alreadyInvoiced = await hasInstallInvoice(admin, form.client_id)
-
-  if (!alreadyInvoiced) {
-    const qboConnected = Boolean(await loadQboRefreshToken(admin))
-    if (qboConnected) {
-      try {
-        const qbo = createQboClient({ supabase: admin })
-        const today = sydneyTodayYmd()
-        const clientRecord: QboClientRecord = {
-          id: form.client_id,
-          name: String(clientPatch.name || clientRow.name),
-          deal_terms: mergedDealTerms,
-          qbo_customer_id: clientRow.qbo_customer_id,
-          main_contact_name: String(clientPatch.main_contact_name || clientRow.main_contact_name)
-        }
-        await qbo.createInvoice(clientRecord, 'install_first_month', {
-          txnDate: today,
-          dueDate: today
-        })
-        invoiceCreated = true
-      } catch {
-        await upsertOnboardingTask(admin, projectId, {
-          ...ONBOARDING_INVOICE_TASK,
-          notes: `onboarding_key:${ONBOARDING_INVOICE_TASK.key}\nQBO invoice create failed; raise install + first month manually.`
-        })
-        invoiceTaskCreated = true
-      }
-    } else {
-      await upsertOnboardingTask(admin, projectId, {
-        ...ONBOARDING_INVOICE_TASK,
-        notes: `onboarding_key:${ONBOARDING_INVOICE_TASK.key}\nQuickBooks not connected.`
-      })
-      invoiceTaskCreated = true
-    }
-  }
+  const engagementUpdate = await admin
+    .from('compass_client_engagements')
+    .update({
+      status: 'onboarding',
+      onboarding_snapshot: {
+        answers: delivery,
+        submitted_at: submittedAt,
+        form_id: form.id
+      },
+      updated_at: submittedAt
+    })
+    .eq('id', engagement.id)
+    .eq('status', engagement.status)
+  if (engagementUpdate.error) throw new Error(engagementUpdate.error.message)
 
   const { error: formError } = await admin
     .from('compass_onboarding_forms')
@@ -309,20 +284,40 @@ export async function processOnboardingSubmit(
     .eq('id', form.id)
   if (formError) throw new Error(formError.message)
 
+  try {
+    await appendEvidence(admin, {
+      client_id: form.client_id,
+      source: 'onboarding',
+      type: 'client.onboarding.submitted',
+      offer: form.offer_key,
+      offer_revision_id: form.offer_revision_id,
+      engagement_id: form.engagement_id,
+      native_id: form.id,
+      payload: { form_id: form.id, project_id: projectId, submitted_at: submittedAt }
+    })
+  } catch {
+    // The submitted form and engagement snapshot remain the authoritative receipt.
+  }
+
   return {
     clientId: form.client_id,
-    projectId,
-    invoiceCreated,
-    invoiceTaskCreated
+    projectId
   }
 }
 
 export async function createOnboardingForm(
   admin: SupabaseClient,
   clientId: string,
-  offerKey = DEFAULT_ONBOARDING_OFFER_KEY
+  engagement: OnboardingEngagement
 ): Promise<OnboardingFormRow> {
-  validateOfferPackExists(offerKey)
+  if (
+    engagement.client_id !== clientId ||
+    engagement.offer_key !== DEFAULT_ONBOARDING_OFFER_KEY ||
+    engagement.status !== 'paid'
+  ) {
+    throw new Error('paid_installation_engagement_required')
+  }
+  validateOfferPackExists(engagement.offer_key)
   const now = new Date().toISOString()
   const id = `onboard-form-${crypto.randomUUID()}`
   const token = generateOnboardingToken()
@@ -330,7 +325,10 @@ export async function createOnboardingForm(
     id,
     client_id: clientId,
     token,
-    offer_key: offerKey,
+    offer_key: engagement.offer_key,
+    offer_revision_id: engagement.offer_revision_id,
+    engagement_id: engagement.id,
+    agreement_id: engagement.agreement_id,
     status: 'sent',
     sent_at: now,
     opened_at: null,
@@ -341,6 +339,23 @@ export async function createOnboardingForm(
   const { data, error } = await admin.from('compass_onboarding_forms').insert(row).select(FORM_COLUMNS).single()
   if (error) throw new Error(error.message)
   return { ...(data as OnboardingFormRow), answers: {} }
+}
+
+export async function latestPaidOnboardingEngagement(
+  admin: SupabaseClient,
+  clientId: string
+): Promise<OnboardingEngagement | null> {
+  const { data, error } = await admin
+    .from('compass_client_engagements')
+    .select('id,client_id,offer_key,offer_revision_id,agreement_id,status,accepted_terms,paid_at,updated_at')
+    .eq('client_id', clientId)
+    .eq('offer_key', DEFAULT_ONBOARDING_OFFER_KEY)
+    .eq('status', 'paid')
+    .order('paid_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return data ? (data as OnboardingEngagement) : null
 }
 
 function validateOfferPackExists(offerKey: string): void {

@@ -42,17 +42,24 @@ export async function preparationContext(
 ): Promise<Context> {
   const camp = await db
     .from("compass_pipeline_campaigns")
-    .select("id,offer_key,status,vertical_tags,location_tags,sequence_draft")
+    .select("id,offer_key,offer_revision_id,market_test_id,status,vertical_tags,location_tags,sequence_draft")
     .eq("id", campaignId)
     .single();
   requireData(camp);
   if (["cancelled", "completed", "archived"].includes(camp.data.status))
     throw new Error("campaign_not_preparable");
-  const [offer, config] = await Promise.all([
+  if (!camp.data.offer_revision_id)
+    throw new Error("campaign_offer_revision_required");
+  const [offer, revision, config] = await Promise.all([
     db
       .from("compass_outbound_offers")
-      .select("offer_key,lock,gtm_status,archived")
+      .select("offer_key,active_revision_id,gtm_status,archived")
       .eq("offer_key", camp.data.offer_key)
+      .single(),
+    db
+      .from("compass_offer_revisions")
+      .select("id,version_no,content_hash,snapshot")
+      .eq("id", camp.data.offer_revision_id)
       .single(),
     db
       .from("compass_outbound_configs")
@@ -61,6 +68,7 @@ export async function preparationContext(
       .maybeSingle(),
   ]);
   requireData(offer);
+  requireData(revision);
   check(config.error);
   if (!config.data) throw new Error("preparation_configuration_required");
   if (
@@ -70,7 +78,17 @@ export async function preparationContext(
     throw new Error("one_vertical_and_city_required");
   return {
     campaign_id: campaignId,
-    offer: offer.data,
+    offer_revision_id: revision.data.id,
+    market_test_id: camp.data.market_test_id ?? null,
+    offer: {
+      offer_key: revision.data.snapshot?.offer_key,
+      lock: revision.data.snapshot?.lock,
+      gtm_status: offer.data.gtm_status,
+      archived: offer.data.archived,
+      revision_id: revision.data.id,
+      version_no: revision.data.version_no,
+      content_hash: revision.data.content_hash
+    },
     vertical: camp.data.vertical_tags[0],
     city: camp.data.location_tags[0],
     sequence: camp.data.sequence_draft,
@@ -264,6 +282,8 @@ export async function createPreparationRun(
       candidates_hash: digest(candidates),
       context,
       context_hash: contextHash,
+      offer_revision_id: context.offer_revision_id,
+      market_test_id: context.market_test_id,
     },
     { onConflict: "id", ignoreDuplicates: true },
   );
@@ -429,6 +449,31 @@ export async function completePreparationRun(
     },
   });
   check(result.error);
+  const assessments = bundle.records
+    .filter((record) => Boolean(record.candidate.lead_id))
+    .map((record) => {
+      const leadId = String(record.candidate.lead_id)
+      const key = digest([leadId, ctx.offer_revision_id, ctx.market_test_id ?? "none"])
+      return {
+        id: "lead-assessment-" + key.slice(0, 32),
+        assessment_key: key,
+        lead_id: leadId,
+        offer_revision_id: ctx.offer_revision_id,
+        market_test_id: ctx.market_test_id,
+        preparation_id: pid,
+        verdict: record.status,
+        reasons: record.reasons,
+        evidence: record.candidate.evidence,
+        assessed_by: "outbound-preparation",
+        assessed_at: new Date().toISOString()
+      };
+    });
+  if (assessments.length) {
+    const savedAssessments = await db
+      .from("compass_lead_assessments")
+      .upsert(assessments, { onConflict: "assessment_key" });
+    check(savedAssessments.error);
+  }
   return { id: pid, counts: bundle.counts, hash: bundle.hash };
 }
 export async function currentBundle(

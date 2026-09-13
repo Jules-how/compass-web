@@ -14,6 +14,8 @@ One configuration and batch schema serve the first Sydney/HVAC cell. Required ev
 
 `GET /api/agent/outbound/preparation?campaign_id=<cell>` returns configuration, the latest ten runs, preparations, approvals and receipts. GET does not seed or mutate a pathway.
 
+Every new campaign is pinned to the active offer revision when it is created. Every preparation run and immutable preparation receipt copies that revision ID (and any market-test ID). A historical campaign with no defensible revision attribution fails closed instead of inheriting today's ICP.
+
 `POST` to that endpoint accepts a discriminated action:
 
 - `configure`: `recipe`, `settings`, current `revision` (zero for creation).

@@ -16,6 +16,7 @@ import {
   loadGoogleAdsRefreshToken
 } from '@/lib/google-attach/oauth'
 import type { GoogleAttachPlan, GoogleAttachRow, GoogleAttachStatus } from '@/lib/google-attach/types'
+import { getDeliveryEngagement } from '@/lib/offer-revisions'
 
 export function newGoogleAttachId(): string {
   return `gattach-${crypto.randomUUID()}`
@@ -43,6 +44,7 @@ export async function createGoogleAttachDraft(
     destinationUrl?: string
   }
 ): Promise<GoogleAttachRow> {
+  const engagement = await getDeliveryEngagement(supabase, input.clientId)
   const clientRes = await supabase
     .from('compass_clients')
     .select('id,name,industry,website,voice,deal_terms')
@@ -51,7 +53,13 @@ export async function createGoogleAttachDraft(
   if (!clientRes.data) throw new Error('client_not_found')
 
   const voice = (clientRes.data.voice ?? {}) as Record<string, unknown>
-  const trade = resolveClientTrade(clientRes.data.deal_terms, clientRes.data.industry)
+  const onboarding = engagement.onboarding_snapshot.answers ?? {}
+  const delivery = {
+    ...onboarding,
+    services_offered: onboarding.installation_services,
+    service_suburbs: onboarding.service_areas
+  }
+  const trade = resolveClientTrade({ delivery }, clientRes.data.industry)
   const destination =
     input.destinationUrl?.trim() ||
     defaultDestinationUrl({
@@ -61,10 +69,6 @@ export async function createGoogleAttachDraft(
     })
 
   if (!destination) throw new Error('destination_required')
-
-  const delivery = (clientRes.data.deal_terms as Record<string, unknown>)?.delivery as
-    | Record<string, unknown>
-    | undefined
 
   const refreshToken = googleAdsApiConfigured().configured
     ? await loadGoogleAdsRefreshToken(supabase)
@@ -83,6 +87,14 @@ export async function createGoogleAttachDraft(
   const row = {
     id: newGoogleAttachId(),
     client_id: input.clientId,
+    offer_revision_id: engagement.offer_revision_id,
+    engagement_id: engagement.id,
+    source_snapshot: {
+      engagement_id: engagement.id,
+      offer_revision_id: engagement.offer_revision_id,
+      accepted_terms: engagement.accepted_terms,
+      onboarding: engagement.onboarding_snapshot
+    },
     status: 'draft' as GoogleAttachStatus,
     customer_id: input.customerId?.replace(/-/g, '') || null,
     link_status: null,
@@ -178,14 +190,10 @@ export async function runGoogleAttachAction(
       throw new Error(`mcc_link_not_active:${link.status}`)
     }
 
-    const dealTerms = (
-      await supabase
-        .from('compass_clients')
-        .select('deal_terms')
-        .eq('id', input.clientId)
-        .maybeSingle()
-    ).data?.deal_terms as Record<string, unknown> | undefined
-    const serviceSuburbs = (dealTerms?.delivery as Record<string, unknown> | undefined)?.service_suburbs
+    const sourceSnapshot = (row.source_snapshot ?? {}) as Record<string, unknown>
+    const onboardingSnapshot = sourceSnapshot.onboarding as Record<string, unknown> | undefined
+    const onboardingAnswers = onboardingSnapshot?.answers as Record<string, unknown> | undefined
+    const serviceSuburbs = onboardingAnswers?.service_areas
 
     let plan = row.plan as GoogleAttachPlan
     if (plan.geo?.pending) {

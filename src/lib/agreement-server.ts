@@ -16,11 +16,17 @@ import {
   totalCents,
   validateAgreement,
 } from '@/lib/agreements.mjs'
+import type { ActiveOfferRevision } from '@/lib/offer-revisions'
+import { appendEvidence } from '@/lib/events'
 
 type Terms = ReturnType<typeof validateAgreement>
 export type AgreementRecord = {
   id: string
   clientId: string
+  offerKey: string
+  offerRevisionId: string
+  offerRevisionNumber: number
+  offerSnapshot: Record<string, unknown>
   terms: Terms
   document: string
   documentHash: string
@@ -173,7 +179,18 @@ export function cardConfigured() {
     process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET,
   )
 }
-export async function createAgreement(clientId: string, input: unknown) {
+export async function createAgreement(
+  clientId: string,
+  input: unknown,
+  attribution: ActiveOfferRevision
+) {
+  if (
+    !attribution?.revision?.id ||
+    attribution.revision.snapshot_scope !== 'full' ||
+    attribution.offerKey !== attribution.revision.snapshot.offer_key
+  ) {
+    throw new Error('A current full offer revision is required before issuing an agreement.')
+  }
   const terms = validateAgreement(input)
   if (terms.paymentMethod === 'stripe' && !cardConfigured())
     throw new Error(
@@ -184,6 +201,10 @@ export async function createAgreement(clientId: string, input: unknown) {
   const record: AgreementRecord = {
     id: clientPrefix(clientId) + randomUUID(),
     clientId,
+    offerKey: attribution.offerKey,
+    offerRevisionId: attribution.revision.id,
+    offerRevisionNumber: attribution.revision.version_no,
+    offerSnapshot: attribution.revision.snapshot,
     terms,
     document,
     documentHash: createHash('sha256').update(document).digest('hex'),
@@ -257,9 +278,10 @@ export async function acceptAgreement(
 export async function ensureSigningTasks(record: AgreementRecord) {
   if (record.status !== 'signed') return
   const admin = getPortalAdminClient()
+  const engagementId = await ensureClientEngagement(record)
   const projectId =
     'project-signed-' +
-    createHash('sha256').update(record.clientId).digest('hex').slice(0, 24)
+    createHash('sha256').update(engagementId).digest('hex').slice(0, 24)
   const stamp = new Date().toISOString()
   const { error: pe } = await admin
     .from('compass_projects')
@@ -271,12 +293,12 @@ export async function ensureSigningTasks(record: AgreementRecord) {
         status: 'planned',
         priority: 2,
         health: 'no_updates',
-        labels: ['installation-booking', 'signed-client'],
+        labels: [record.offerKey, `offer-v${record.offerRevisionNumber}`, 'signed-client'],
         summary:
           'Signed agreement. Confirm payment and access before delivery. Build only the scoped workflow.',
         source: 'agreement-signing',
-        external_id: record.id,
-        notes: `Agreement ${record.id}. ${record.terms.successMeasure}`,
+        external_id: engagementId,
+        notes: `Engagement ${engagementId}. Agreement ${record.id}. Offer revision ${record.offerRevisionId}. ${record.terms.successMeasure}`,
         created_at: stamp,
         updated_at: stamp,
         mirrored_at: stamp,
@@ -305,7 +327,7 @@ export async function ensureSigningTasks(record: AgreementRecord) {
           notes:
             i === 0
               ? 'Verify payment evidence and agree kickoff. Signing is not payment.'
-              : 'Begin after payment/access and scope are confirmed. Reuse existing systems; track quality, client outcomes and delivery effort.',
+              : `Begin after payment/access and scope are confirmed. Use engagement ${engagementId} and offer revision ${record.offerRevisionId}; track quality, client outcomes and delivery effort.`,
           created_at: stamp,
           updated_at: stamp,
           mirrored_at: stamp,
@@ -318,6 +340,81 @@ export async function ensureSigningTasks(record: AgreementRecord) {
       )
   }
 }
+
+export function engagementIdForAgreement(agreementId: string) {
+  return `engagement-${createHash('sha256').update(agreementId).digest('hex').slice(0, 32)}`
+}
+
+export async function ensureClientEngagement(record: AgreementRecord) {
+  if (!record.offerKey || !record.offerRevisionId || !record.offerSnapshot) {
+    throw new Error(
+      'This historical agreement has no pinned offer revision. Reissue it before onboarding or delivery.',
+    )
+  }
+  const admin = getPortalAdminClient()
+  const id = engagementIdForAgreement(record.id)
+  const signedAt = record.signature?.acceptedAt
+  if (!signedAt) throw new Error('A signed agreement is required for an engagement.')
+  const status = record.payment?.status === 'paid' ? 'paid' : 'signed'
+  const { error } = await admin.from('compass_client_engagements').upsert(
+    {
+      id,
+      client_id: record.clientId,
+      opportunity_id: null,
+      offer_revision_id: record.offerRevisionId,
+      offer_key: record.offerKey,
+      agreement_id: record.id,
+      agreement_document_hash: record.documentHash,
+      accepted_terms: {
+        agreement: record.terms,
+        offer_revision: record.offerSnapshot,
+      },
+      status,
+      signed_at: signedAt,
+      paid_at: record.payment?.paidAt ?? null,
+      created_at: signedAt,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'agreement_id', ignoreDuplicates: true },
+  )
+  if (error) throw new Error('Agreement signed; client engagement creation needs retry.')
+
+  if (status === 'paid') {
+    const current = await admin
+      .from('compass_client_engagements')
+      .select('id,status')
+      .eq('agreement_id', record.id)
+      .maybeSingle()
+    if (current.error) throw new Error('Unable to read client engagement.')
+    if (current.data?.status === 'signed') {
+      const paid = await admin
+        .from('compass_client_engagements')
+        .update({ status: 'paid', paid_at: record.payment?.paidAt, updated_at: new Date().toISOString() })
+        .eq('id', current.data.id)
+      if (paid.error) throw new Error('Payment recorded; client engagement update needs retry.')
+    }
+  }
+  try {
+    await appendEvidence(admin, {
+      client_id: record.clientId,
+      source: 'agreement',
+      type: status === 'paid' ? 'commercial.payment.confirmed' : 'commercial.agreement.signed',
+      offer: record.offerKey,
+      offer_revision_id: record.offerRevisionId,
+      engagement_id: id,
+      native_id: `${record.id}:${status}`,
+      payload: {
+        agreement_id: record.id,
+        document_hash: record.documentHash,
+        signed_at: signedAt,
+        paid_at: record.payment?.paidAt ?? null
+      }
+    })
+  } catch {
+    // The engagement is authoritative; evidence polling can repair this optional projection.
+  }
+  return id
+}
 export async function confirmBankPayment(
   record: AgreementRecord,
   reference: string,
@@ -329,7 +426,7 @@ export async function confirmBankPayment(
       'Record the bank transaction reference after verifying receipt.',
     )
   if (record.payment?.status === 'paid') return record
-  return change(record, {
+  const next = await change(record, {
     payment: {
       method: 'bank',
       status: 'paid',
@@ -337,6 +434,8 @@ export async function confirmBankPayment(
       paidAt: new Date().toISOString(),
     },
   })
+  await ensureClientEngagement(next)
+  return next
 }
 async function stripe(
   path: string,
@@ -429,7 +528,7 @@ export async function reconcileCheckout(
   const current = record || (await getAgreement(session.metadata?.agreement_id))
   if (current.payment?.status === 'paid') return current
   if (!isPaidCheckout(session, current)) return current
-  return change(current, {
+  const next = await change(current, {
     payment: {
       method: 'stripe',
       status: 'paid',
@@ -444,6 +543,8 @@ export async function reconcileCheckout(
       subscription: session.subscription,
     },
   })
+  await ensureClientEngagement(next)
+  return next
 }
 export async function refreshPayment(record: AgreementRecord) {
   if (record.checkout && record.payment?.status !== 'paid')

@@ -40,6 +40,7 @@ import { ClientCommsPanel } from '@/components/clients/ClientCommsPanel'
 import { ClientWorkPlanner } from '@/components/clients/ClientWorkPlanner'
 import { MetaAdsManagerPanel } from '@/components/clients/MetaAdsManagerPanel'
 import { ClientAgreementCard } from '@/components/clients/ClientAgreementCard'
+import { ClientOnboardingCard } from '@/components/clients/ClientOnboardingCard'
 import { ClientVoicePanel } from '@/components/ClientVoicePanel'
 import { ClientReactivationPanel } from '@/components/clients/ClientReactivationPanel'
 import { ClientMetaAttachPanel } from '@/components/clients/ClientMetaAttachPanel'
@@ -846,8 +847,9 @@ export function ClientDetailPanel({
         </div>
       ) : null}
 
-      <div hidden={tab !== 'agreement'}>
+      <div hidden={tab !== 'agreement'} className="grid gap-4 lg:grid-cols-2">
         <ClientAgreementCard key={clientId} clientId={clientId} clientName={data.client.name} />
+        <ClientOnboardingCard key={`onboarding-${clientId}`} clientId={clientId} />
       </div>
       {tab === 'delivery-tools' ? (
         <div className="grid gap-4 lg:grid-cols-2">

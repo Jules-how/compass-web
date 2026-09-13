@@ -50,6 +50,7 @@ export type OfferLock = {
 }
 
 export type OfferSkuFields = {
+  active_revision_id: string | null
   gtm_status: GtmStatus
   one_sentence: string | null
   dream_outcome: string | null
@@ -68,6 +69,8 @@ export type OfferCampaignBind = {
   name: string
   status: string
   offer_key?: string | null
+  offer_revision_id?: string | null
+  market_test_id?: string | null
   instantly_campaign_id?: string | null
   vertical_tags?: string[]
   location_tags?: string[]
@@ -90,6 +93,8 @@ export type OfferCampaignResult = {
   expressionKey: string | null
   copyStatus: string | null
   hypothesis: string | null
+  offerRevisionId: string | null
+  marketTestId: string | null
   cohort: number
   positive: number
   meetings: number
@@ -180,6 +185,7 @@ export function emptyOfferLock(): OfferLock {
 
 export function emptyOfferSkuFields(): OfferSkuFields {
   return {
+    active_revision_id: null,
     gtm_status: 'testing',
     one_sentence: null,
     dream_outcome: null,
@@ -359,6 +365,10 @@ export function projectOfferSku(row: Record<string, unknown>): OfferSku {
     provenance: normalizeProvenance(row.provenance),
     source_creator: typeof row.source_creator === 'string' ? row.source_creator : null,
     source_file: typeof row.source_file === 'string' ? row.source_file : null,
+    active_revision_id:
+      typeof row.active_revision_id === 'string' && row.active_revision_id.trim()
+        ? row.active_revision_id.trim()
+        : null,
     gtm_status: parseGtmStatus(row.gtm_status, archived),
     one_sentence: typeof row.one_sentence === 'string' && row.one_sentence.trim() ? row.one_sentence.trim() : null,
     dream_outcome:
@@ -512,6 +522,8 @@ export function assembleOfferDesk(input: {
           expressionKey: campaign.expression_key?.trim() || null,
           copyStatus: campaign.copy_status?.trim() || null,
           hypothesis: campaign.hypothesis?.trim() || null,
+          offerRevisionId: campaign.offer_revision_id?.trim() || null,
+          marketTestId: campaign.market_test_id?.trim() || null,
           cohort: rowTally.cohort,
           positive: rowTally.positive,
           meetings: rowTally.meetings,

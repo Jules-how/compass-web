@@ -17,6 +17,7 @@ import {
   refreshPayment,
   revokeAgreement,
 } from '@/lib/agreement-server'
+import { getActiveOfferRevision } from '@/lib/offer-revisions'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 type Context = { params: Promise<{ id: string }> }
@@ -67,7 +68,8 @@ export async function POST(request: NextRequest, context: Context) {
       reference?: string
     }
     if (body.action === 'create') {
-      const record = await createAgreement(id, body.terms)
+      const { supabase } = await requirePortalAccess({ operator: true })
+      const record = await createAgreement(id, body.terms, await getActiveOfferRevision(supabase))
       return portalJson(
         {
           agreement: {

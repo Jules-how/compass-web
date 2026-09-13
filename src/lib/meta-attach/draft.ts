@@ -6,6 +6,7 @@ import { appendEvidence } from '@/lib/events'
 import { buildDraftPayload } from '@/lib/meta-attach/draft-merge'
 import { loadMetaPack, resolveTradePackId } from '@/lib/meta-attach/pack'
 import type { ClientFactsForMetaAttach, MetaAttachRow } from '@/lib/meta-attach/types'
+import { getDeliveryEngagement } from '@/lib/offer-revisions'
 
 export async function createMetaAttachDraft(
   supabase: SupabaseClient,
@@ -16,7 +17,19 @@ export async function createMetaAttachDraft(
     destinationUrl?: string
   }
 ): Promise<MetaAttachRow> {
-  const packId = input.packId?.trim() || resolveTradePackId(input.client)
+  const engagement = await getDeliveryEngagement(supabase, input.client.id)
+  const onboarding = engagement.onboarding_snapshot.answers ?? {}
+  const pinnedClient: ClientFactsForMetaAttach = {
+    ...input.client,
+    deal_terms: {
+      delivery: {
+        ...onboarding,
+        services_offered: onboarding.installation_services,
+        service_suburbs: onboarding.service_areas
+      }
+    }
+  }
+  const packId = input.packId?.trim() || resolveTradePackId(pinnedClient)
   const pack = loadMetaPack(packId)
   const offerCell =
     input.offerCell?.trim() ||
@@ -24,7 +37,7 @@ export async function createMetaAttachDraft(
     Object.keys(pack.offer_cells)[0]
 
   const draft = buildDraftPayload({
-    client: input.client,
+    client: pinnedClient,
     pack,
     offerCell,
     destinationUrl: input.destinationUrl
@@ -35,6 +48,14 @@ export async function createMetaAttachDraft(
   const row = {
     id,
     client_id: input.client.id,
+    offer_revision_id: engagement.offer_revision_id,
+    engagement_id: engagement.id,
+    source_snapshot: {
+      engagement_id: engagement.id,
+      offer_revision_id: engagement.offer_revision_id,
+      accepted_terms: engagement.accepted_terms,
+      onboarding: engagement.onboarding_snapshot
+    },
     status: 'draft' as const,
     offer_cell: draft.offer_cell,
     destination_url: draft.destination_url,
@@ -56,6 +77,8 @@ export async function createMetaAttachDraft(
     nativeId: id,
     vertical: pack.vertical,
     offer: draft.offer_cell,
+    offer_revision_id: engagement.offer_revision_id,
+    engagement_id: engagement.id,
     payload: { pack_id: packId, offer_cell: draft.offer_cell }
   })
 
@@ -71,6 +94,8 @@ export async function emitMetaAttachEvent(
     vertical?: string
     offer?: string
     payload?: Record<string, unknown>
+    offer_revision_id?: string
+    engagement_id?: string
   }
 ): Promise<void> {
   await appendEvidence(supabase, {
@@ -80,6 +105,8 @@ export async function emitMetaAttachEvent(
     vertical: input.vertical ?? null,
     offer: input.offer ?? null,
     product: 'meta_attach',
+    offer_revision_id: input.offer_revision_id ?? null,
+    engagement_id: input.engagement_id ?? null,
     native_id: input.nativeId,
     payload: input.payload ?? {}
   })

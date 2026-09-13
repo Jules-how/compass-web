@@ -86,6 +86,8 @@ export interface CompassCampaign {
   owner_label: string | null
   instantly_campaign_id?: string | null
   offer_key?: string | null
+  offer_revision_id?: string | null
+  market_test_id?: string | null
   structure_id?: string | null
   opener_mode?: string | null
   vertical_tags?: string[]
@@ -141,7 +143,7 @@ export interface CompassCampaignActivity {
 }
 
 const CAMPAIGN_CORE_COLUMNS =
-  'id,name,status,priority,health,start_date,end_date,go_live_at,google_calendar_event_id,color,summary,labels,owner_label,instantly_campaign_id,offer_key,structure_id,opener_mode,vertical_tags,location_tags,copy_status,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,opener_reviewed_at,copy_confirmed_at,wave_lane,wave_rationale,wave_list_size,wave_copy_strategy,wave_approach,testing_variable,created_at,updated_at'
+  'id,name,status,priority,health,start_date,end_date,go_live_at,google_calendar_event_id,color,summary,labels,owner_label,instantly_campaign_id,offer_key,offer_revision_id,market_test_id,structure_id,opener_mode,vertical_tags,location_tags,copy_status,hypothesis,experiment_factor,experiment_role,parent_campaign_id,experiment_status,sample_size_target,experiment_decision,expression_key,cta_type,opener_reviewed_at,copy_confirmed_at,wave_lane,wave_rationale,wave_list_size,wave_copy_strategy,wave_approach,testing_variable,created_at,updated_at'
 
 /** Planner / list GET — skip bulky sequence JSON. */
 export const CAMPAIGN_BOARD_COLUMNS = CAMPAIGN_CORE_COLUMNS
@@ -156,6 +158,8 @@ export function emptyCampaignCopyFields() {
   return {
     instantly_campaign_id: null as string | null,
     offer_key: null as string | null,
+    offer_revision_id: null as string | null,
+    market_test_id: null as string | null,
     structure_id: null as string | null,
     opener_mode: 'nick-tier' as string | null,
     vertical_tags: [] as string[],

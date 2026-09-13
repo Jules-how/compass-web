@@ -45,7 +45,8 @@ test('signed text binds amounts, scope, ABN and no GST without reviving the old 
   assert.match(text, /1,500.00/)
   assert.match(text, /no GST charged/)
   assert.match(text, /70833262837/)
-  assert.doesNotMatch(text, /live Search|van tier|1,997/)
+  assert.doesNotMatch(text, /van tier|1,997/)
+  assert.match(text, /Google Search/)
   assert.match(text, /no appointment.*guarantee/is)
 })
 test('acceptance rejects expired, revoked, already signed and changed documents', () => {

@@ -9,6 +9,7 @@ import {
 } from '@/lib/agent-outbound'
 import { getPortalAdminClient } from '@/lib/portal-admin'
 import { portalJson, readBoundedJson } from '@/lib/portal-http'
+import { hasOfferContentPatch, reviseOffer } from '@/lib/offer-revisions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -71,14 +72,32 @@ export async function PATCH(request: Request, context: Ctx) {
 
   try {
     const admin = getPortalAdminClient()
-    const existing = await admin.from(table).select('id').eq('id', id).maybeSingle()
+    const existing = await admin.from(table).select('*').eq('id', id).maybeSingle()
     if (existing.error) {
       return portalJson({ error: 'fetch_failed', detail: existing.error.message }, { status: 500 })
     }
     if (!existing.data) return portalJson({ error: 'not_found' }, { status: 404 })
 
-    const { data, error } = await admin.from(table).update(built.row).eq('id', id).select('*').single()
-    if (error) return portalJson({ error: 'update_failed', detail: error.message }, { status: 400 })
+    let data: Record<string, unknown>
+    if (kind === 'offers' && hasOfferContentPatch(built.row)) {
+      data = await reviseOffer(admin, {
+        offerId: id,
+        patch: built.row,
+        expectedActiveRevisionId:
+          typeof existing.data.active_revision_id === 'string' ? existing.data.active_revision_id : null,
+        changeReason:
+          typeof body.revision_note === 'string' && body.revision_note.trim()
+            ? body.revision_note.trim()
+            : 'Offer definition updated through the Compass agent API.',
+        createdBy: 'agent-api'
+      })
+    } else {
+      const updated = await admin.from(table).update(built.row).eq('id', id).select('*').single()
+      if (updated.error) {
+        return portalJson({ error: 'update_failed', detail: updated.error.message }, { status: 400 })
+      }
+      data = updated.data as Record<string, unknown>
+    }
 
     if (wantsMinimalReturn(request)) {
       return portalJson({

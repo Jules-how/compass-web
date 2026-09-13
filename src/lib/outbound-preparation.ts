@@ -67,6 +67,8 @@ export type Settings = {
 };
 export type Context = {
   campaign_id: string;
+  offer_revision_id: string;
+  market_test_id: string | null;
   offer: Record<string, unknown>;
   vertical: string;
   city: string;

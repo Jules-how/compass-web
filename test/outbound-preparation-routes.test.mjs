@@ -169,19 +169,22 @@ test('agent route authenticates before creating the service client and never sup
 test('CSV export rechecks the remote pause state after an earlier reservation', async () => {
   const { fixture } = await import('./helpers/outbound-fixture.mjs')
   const f = fixture()
-  const bundle = { context: f.context, hash: 'a'.repeat(64) }
+  const lineage = { offer_revision_id: 'revision-test', market_test_id: null }
+  const bundle = { context: { ...f.context, ...lineage, offer: { ...f.context.offer, revision_id: 'revision-test', version_no: 1, content_hash: 'revision-hash' } }, hash: 'a'.repeat(64) }
   let reserved = false
   const records = {
     compass_pipeline_campaigns: {
       id: 'test-cell',
       offer_key: 'installation-booking',
+      ...lineage,
       status: 'planned',
       vertical_tags: ['hvac'],
       location_tags: ['sydney'],
       sequence_draft: f.context.sequence,
       instantly_campaign_id: 'instant'
     },
-    compass_outbound_offers: f.context.offer,
+    compass_outbound_offers: { ...f.context.offer, active_revision_id: 'revision-test' },
+    compass_offer_revisions: { id: 'revision-test', version_no: 1, content_hash: 'revision-hash', snapshot: f.context.offer },
     compass_outbound_configs: {
       recipe: f.context.recipe,
       settings: f.context.settings
@@ -222,14 +225,16 @@ test('CSV export rechecks the remote pause state after an earlier reservation', 
 test('import actions explain missing approval and reservation before platform access', async () => {
   const { fixture } = await import('./helpers/outbound-fixture.mjs')
   const f = fixture()
-  const bundle = { context: f.context, hash: 'a'.repeat(64) }
+  const lineage = { offer_revision_id: 'revision-test', market_test_id: null }
+  const bundle = { context: { ...f.context, ...lineage, offer: { ...f.context.offer, revision_id: 'revision-test', version_no: 1, content_hash: 'revision-hash' } }, hash: 'a'.repeat(64) }
   const records = {
     compass_pipeline_campaigns: {
-      id: 'test-cell', offer_key: 'installation-booking', status: 'planned',
+      id: 'test-cell', offer_key: 'installation-booking', ...lineage, status: 'planned',
       vertical_tags: ['hvac'], location_tags: ['sydney'],
       sequence_draft: f.context.sequence, instantly_campaign_id: 'instant'
     },
-    compass_outbound_offers: f.context.offer,
+    compass_outbound_offers: { ...f.context.offer, active_revision_id: 'revision-test' },
+    compass_offer_revisions: { id: 'revision-test', version_no: 1, content_hash: 'revision-hash', snapshot: f.context.offer },
     compass_outbound_configs: { recipe: f.context.recipe, settings: f.context.settings },
     compass_outbound_approvals: null,
     compass_outbound_loads: null
