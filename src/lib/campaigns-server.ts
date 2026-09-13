@@ -7,6 +7,9 @@ import {
   CAMPAIGN_LIST_COLUMNS,
   emptyCampaignCopyFields,
   normalizeCampaignHealth,
+  normalizeExperimentFactor,
+  normalizeExperimentRole,
+  normalizeExperimentStatus,
   normalizeCampaignStatus,
   normalizeCtaType,
   normalizeLabels,
@@ -33,8 +36,17 @@ export function projectCampaignRow(row: CompassCampaign): CompassCampaign {
   })
 }
 
+/** Older deployments may not have the optional commercial-lineage migration yet. */
+export async function withCampaignColumns<T extends { error: { code?: string; message: string } | null }>(columns: string, run: (columns: string) => PromiseLike<T>): Promise<T> {
+  const result = await run(columns)
+  if (result.error?.code === '42703' && /column .*\b(offer_revision_id|market_test_id)\b.* does not exist/.test(result.error.message)) {
+    return await run(columns.split(',').filter(column => !['offer_revision_id', 'market_test_id'].includes(column)).join(','))
+  }
+  return result
+}
+
 export async function listPipelineCampaigns(supabase: SupabaseClient): Promise<CompassCampaign[]> {
-  const campaignsRes = await supabase.from('compass_pipeline_campaigns').select(CAMPAIGN_BOARD_COLUMNS).order('go_live_at', { ascending: true, nullsFirst: false })
+  const campaignsRes = await withCampaignColumns(CAMPAIGN_BOARD_COLUMNS, columns => supabase.from('compass_pipeline_campaigns').select(columns).order('go_live_at', { ascending: true, nullsFirst: false }))
   if (campaignsRes.error) throw new Error(campaignsRes.error.message)
   const rows = (campaignsRes.data ?? []).map(row => projectCampaignRow(row as unknown as CompassCampaign))
   const cohorts = await loadCohortLeadRowsForCampaigns<{ id: string; outbound_status?: string; opener?: string }>(supabase, rows.map(row => row.id), 'id,pipeline_campaign_id,outbound_status,opener')
@@ -47,11 +59,8 @@ export async function getPipelineCampaignRow(
   supabase: SupabaseClient,
   id: string
 ): Promise<CompassCampaign | null> {
-  const { data, error } = await supabase
-    .from('compass_pipeline_campaigns')
-    .select(CAMPAIGN_LIST_COLUMNS)
-    .eq('id', id)
-    .maybeSingle()
+  const { data, error } = await withCampaignColumns(CAMPAIGN_LIST_COLUMNS, columns => supabase
+    .from('compass_pipeline_campaigns').select(columns).eq('id', id).maybeSingle())
   if (error) throw new Error(error.message)
   if (!data) return null
   return projectCampaignRow(data as unknown as CompassCampaign)
@@ -79,6 +88,10 @@ export type CampaignWriteInput = {
   cold_expression?: string | null
   sequence_draft?: CompassCampaign['sequence_draft']
   copy_status?: string
+  experiment_factor?: string
+  experiment_role?: string
+  experiment_status?: string
+  parent_campaign_id?: string | null
   hypothesis?: string | null
   wave_lane?: string | null
   wave_rationale?: string | null
@@ -126,6 +139,10 @@ export function buildCampaignInsert(input: CampaignWriteInput): Record<string, u
     cold_expression: input.cold_expression ?? null,
     sequence_draft: input.sequence_draft ?? null,
     hypothesis: input.hypothesis ?? null,
+    experiment_factor: normalizeExperimentFactor(input.experiment_factor),
+    experiment_role: normalizeExperimentRole(input.experiment_role),
+    experiment_status: normalizeExperimentStatus(input.experiment_status),
+    parent_campaign_id: input.parent_campaign_id || null,
     wave_lane: normalizeWaveLane(input.wave_lane),
     wave_rationale: input.wave_rationale?.trim() || null,
     wave_list_size: listSize,
@@ -216,11 +233,8 @@ export async function insertPipelineCampaign(
   input: CampaignWriteInput
 ): Promise<CompassCampaign> {
   const row = buildCampaignInsert(input)
-  const { data, error } = await supabase
-    .from('compass_pipeline_campaigns')
-    .insert(row)
-    .select(CAMPAIGN_LIST_COLUMNS)
-    .single()
+  const { data, error } = await withCampaignColumns(CAMPAIGN_LIST_COLUMNS, columns => supabase
+    .from('compass_pipeline_campaigns').insert(row).select(columns).single())
   if (error) throw new Error(error.message)
   await supabase.from('compass_pipeline_activity').insert({
     id: `act-${crypto.randomUUID()}`,
@@ -238,14 +252,13 @@ export async function updatePipelineCampaignRow(
   body: Record<string, unknown>
 ): Promise<CompassCampaign> {
   const patch = buildCampaignPatch(body)
-  const { data, error } = await supabase
-    .from('compass_pipeline_campaigns')
-    .update(patch)
-    .eq('id', id)
-    .select(CAMPAIGN_LIST_COLUMNS)
-    .maybeSingle()
+  const { data, error } = await withCampaignColumns(CAMPAIGN_LIST_COLUMNS, columns => {
+    let query = supabase.from('compass_pipeline_campaigns').update(patch).eq('id', id)
+    if (typeof body.expected_updated_at === 'string') query = query.eq('updated_at', body.expected_updated_at)
+    return query.select(columns).maybeSingle()
+  })
   if (error) throw new Error(error.message)
-  if (!data) throw new Error('not_found')
+  if (!data) throw new Error(typeof body.expected_updated_at === 'string' ? 'campaign_conflict' : 'not_found')
   return projectCampaignRow(data as unknown as CompassCampaign)
 }
 

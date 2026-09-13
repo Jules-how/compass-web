@@ -17,6 +17,7 @@ const LOCAL_STORAGE_KEY = 'compass.pipeline.campaigns.v1'
 const MIGRATED_FLAG = 'compass.pipeline.campaigns.migrated.v1'
 
 export type CampaignPatch = Partial<{
+  expected_updated_at: string
   name: string
   status: string
   priority: number
@@ -147,8 +148,8 @@ export async function createCampaign(
     id?: string
     name?: string
     status?: string
-    start_date?: string
-    end_date?: string
+    start_date?: string | null
+    end_date?: string | null
     go_live_at?: string | null
     color?: string
   } & CampaignPatch
@@ -179,6 +180,10 @@ export async function createCampaign(
       sequence_draft: input?.sequence_draft,
       copy_status: input?.copy_status,
       hypothesis: input?.hypothesis,
+      experiment_factor: input?.experiment_factor,
+      experiment_role: input?.experiment_role,
+      experiment_status: input?.experiment_status,
+      parent_campaign_id: input?.parent_campaign_id,
       wave_lane: input?.wave_lane,
       wave_rationale: input?.wave_rationale,
       wave_list_size: input?.wave_list_size,

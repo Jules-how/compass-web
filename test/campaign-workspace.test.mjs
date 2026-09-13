@@ -147,9 +147,9 @@ test('campaign list GET skips sequence bodies and tallies the resolved CRM cohor
   assert.match(campaigns, /CAMPAIGN_LIST_COLUMNS = `\$\{CAMPAIGN_CORE_COLUMNS\},cold_expression,sequence_draft`/)
 
   const store = read('src/lib/campaigns-server.ts')
-  assert.match(store, /select\(CAMPAIGN_BOARD_COLUMNS\)/)
+  assert.match(store, /withCampaignColumns\(CAMPAIGN_BOARD_COLUMNS,/)
   assert.match(store, /loadCohortLeadRowsForCampaigns/)
-  assert.match(store, /select\(CAMPAIGN_LIST_COLUMNS\)/)
+  assert.match(store, /withCampaignColumns\(CAMPAIGN_LIST_COLUMNS,/)
 
   const list = read('src/app/api/campaigns/route.ts')
   assert.match(list, /listPipelineCampaigns/)

@@ -591,7 +591,7 @@ export function sydneyNineAmIso(dateOnly: string): string {
       hourCycle: 'h23'
     }).format(plus10)
   )
-  const offset = hour === 9 ? '+10:00' : hour === 8 ? '+11:00' : '+10:00'
+  const offset = hour === 9 ? '+10:00' : hour === 10 ? '+11:00' : '+10:00'
   return new Date(`${dateOnly}T09:00:00${offset}`).toISOString()
 }
 

@@ -6,6 +6,7 @@ import { loadOutboundRhythm } from "@/lib/console-destinations";
 import { ActivePane } from "@/components/ActivePane";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { TestPlanner } from "@/components/outbound/TestPlanner";
 import { CampaignPlanner } from "@/components/campaigns/CampaignPlanner";
 import { OperatorShell } from "@/components/OperatorShell";
 import {
@@ -21,6 +22,7 @@ import { mondayOfWeek, mondayWeeksAhead } from "@/lib/campaign-queue";
 import {
   DEFAULT_OUTBOUND_DESK,
   readOutboundDesk,
+  parseOutboundDesk,
   writeOutboundDesk,
   type OutboundDeskId,
 } from "@/lib/outbound-desk";
@@ -50,7 +52,8 @@ export function OutboundDesk() {
   );
 
   useEffect(() => {
-    const saved = new URLSearchParams(window.location.search).has("campaign") ? "overview" : readOutboundDesk();
+    const params = new URLSearchParams(window.location.search);
+    const saved = params.has("campaign") ? "overview" : params.has("desk") ? parseOutboundDesk(params.get("desk")) : readOutboundDesk();
     setDeskState(saved);
     setVisited(new Set([saved]));
     setReady(true);
@@ -89,7 +92,7 @@ export function OutboundDesk() {
       {(["overview", "notebook", "waves", "calendar", "timeline"] as const).map(tab => visited.has(tab) ? (
         <div key={tab} hidden={desk !== tab} inert={desk !== tab ? true : undefined}>
           <ActivePane active={desk === tab}>
-            {tab === "overview" ? <OutboundOverview /> : tab === "notebook" ? <OutboundNotebook campaigns={campaignsQuery.data?.campaigns ?? []} /> : tab === "waves" ? <OfferWavesBoard /> : <CampaignPlanner initialView={tab} view={plannerViews[tab]} onViewChange={view => setPlannerViews(previous => ({ ...previous, [tab]: view }))} />}
+            {tab === "overview" ? <OutboundOverview /> : tab === "notebook" ? <OutboundNotebook campaigns={campaignsQuery.data?.campaigns ?? []} /> : tab === "waves" ? <OfferWavesBoard /> : tab === "calendar" ? <TestPlanner /> : <CampaignPlanner initialView={tab} view={plannerViews[tab]} onViewChange={view => setPlannerViews(previous => ({ ...previous, [tab]: view }))} />}
           </ActivePane>
         </div>
       ) : null)}

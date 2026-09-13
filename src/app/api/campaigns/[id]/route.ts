@@ -113,6 +113,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const access = portalAccessResponse(err)
     if (access) return access
     const message = err instanceof Error ? err.message : 'update_failed'
+    if (message === 'campaign_conflict') return portalJson({ error: 'campaign_conflict', detail: 'This campaign changed. Refresh before saving.' }, { status: 409 })
     if (message === 'not_found') return portalJson({ error: 'not_found' }, { status: 404 })
     return portalJson({ error: 'update_failed', detail: message }, { status: 500 })
   }

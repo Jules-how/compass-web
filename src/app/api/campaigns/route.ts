@@ -62,6 +62,10 @@ export async function POST(request: NextRequest) {
     cold_expression?: string | null
     sequence_draft?: OutboundSequence | null
     copy_status?: string
+    experiment_factor?: string
+    experiment_role?: string
+    experiment_status?: string
+    parent_campaign_id?: string | null
     hypothesis?: string | null
     wave_lane?: string | null
     wave_rationale?: string | null
@@ -123,6 +127,10 @@ export async function POST(request: NextRequest) {
       sequence_draft: body.sequence_draft ?? null,
       copy_status: body.copy_status,
       hypothesis: body.hypothesis,
+      experiment_factor: body.experiment_factor,
+      experiment_role: body.experiment_role,
+      experiment_status: body.experiment_status,
+      parent_campaign_id: body.parent_campaign_id,
       wave_lane: body.wave_lane ?? 'next',
       wave_rationale: body.wave_rationale,
       wave_list_size: body.wave_list_size,
