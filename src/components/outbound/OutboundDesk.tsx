@@ -76,7 +76,7 @@ export function OutboundDesk() {
     }).length;
   }, [campaignsQuery.data]);
 
-  const switcher = <div className="flex flex-wrap items-center gap-3"><OutboundDeskSwitch value={desk} onChange={setDesk} /><Link className="compass-btn-primary" href="/sales/outbound/rhythm" onMouseEnter={() => { void loadOutboundRhythm(); }} onFocus={() => { void loadOutboundRhythm(); }} onClick={event => { if (!navigation || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); void loadOutboundRhythm(); navigation.navigate("/sales/outbound/rhythm"); }}>Today & follow-ups</Link></div>;
+  const switcher = <div className="flex flex-wrap items-center gap-3"><OutboundDeskSwitch value={desk} onChange={setDesk} /><Link className="compass-btn-secondary" href="/sales/outbound/calling">Calling</Link><Link className="compass-btn-primary" href="/sales/outbound/rhythm" onMouseEnter={() => { void loadOutboundRhythm(); }} onFocus={() => { void loadOutboundRhythm(); }} onClick={event => { if (!navigation || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); void loadOutboundRhythm(); navigation.navigate("/sales/outbound/rhythm"); }}>Today & follow-ups</Link></div>;
 
   if (!ready) {
     return (

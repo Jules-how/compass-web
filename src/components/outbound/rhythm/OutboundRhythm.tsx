@@ -183,6 +183,7 @@ export function OutboundRhythm({ compact = false }: { compact?: boolean }) {
   );
   return (
     <div className="space-y-5">
+      <Link href="/sales/outbound/calling" className="compass-btn-secondary">Open calling workspace →</Link>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm text-stone-600">Sales / Outbound</p>
