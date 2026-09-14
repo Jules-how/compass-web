@@ -576,11 +576,13 @@ export function verifyPausedCampaign(
     const actual = seq[0].steps[i];
     if (
       actual.delay !== step.delay ||
-      actual.variants?.length !== 1 ||
-      text(actual.variants[0].subject) !== text(step.variants[0].subject) ||
-      bodyText(actual.variants[0].body) !== bodyText(step.variants[0].body) ||
-      canonical(links(actual.variants[0].body)) !==
-        canonical(links(step.variants[0].body))
+      actual.type !== step.type ||
+      actual.variants?.length !== step.variants.length ||
+      step.variants.some((variant, j) =>
+        text(actual.variants[j].subject) !== text(variant.subject) ||
+        bodyText(actual.variants[j].body) !== bodyText(variant.body) ||
+        canonical(links(actual.variants[j].body)) !== canonical(links(variant.body))
+      )
     )
       throw new Error("sequence_mismatch:" + i);
   });

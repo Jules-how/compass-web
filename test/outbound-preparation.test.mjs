@@ -310,7 +310,7 @@ test('current evidence drafts qualify Perth mixed single-split installers withou
 test('installation evidence accepts aircon and HVAC terminology but still requires installation', () => {
   const f = fixture(); f.context.recipe.mode = 'evidence_draft';
   const service = f.candidate.evidence.find(e => e.kind === 'service');
-  for (const value of ['Aircon installation and replacement', 'HVAC installation for local homes']) {
+  for (const value of ['Aircon installation and replacement', 'HVAC installation for local homes', 'installation of air-cons', 'Installing air cons for local homes']) {
     service.value = service.quote = value;
     assert.ok(!p.assessCandidate(f.candidate, f.context, f.ledger).includes('ac_installation_unconfirmed'), value);
   }
@@ -325,3 +325,36 @@ test('timezone aliases compare the whole coming year',()=>{
  assert.equal(p.equivalentTimezone('Australia/Sydney','Australia/Brisbane'),false);
  assert.equal(p.equivalentTimezone('Australia/Perth','Australia/Sydney'),false);
 });
+
+test('TradeHQ hosted tenants do not share a company identity', () => {
+  const mod = loadTypescript('src/lib/outbound-preparation.ts')
+  assert.notEqual(mod.companyKey({company:'Copp The Current',website:'https://tradehq.com.au/coppthecurrent'}, 'Mandurah'), mod.companyKey({company:'Synergy Air Solutions',website:'https://tradehq.com.au/synergyairsolutions'}, 'Sydney'))
+})
+
+test('frozen provider A/B variants compare every body and reject mutation, missing or extra variants', () => {
+  const b = bundle();
+  const seq = structuredClone(p.instantlyExpected(b).sequences);
+  seq[0].steps[0].variants.push({...seq[0].steps[0].variants[0], body:seq[0].steps[0].variants[0].body + '\nA distinct reviewed CTA.'});
+  b.context.sequence.provider_sequences = seq;
+  const r = remote(b);
+  assert.doesNotThrow(()=>server.verifyPausedCampaign(b,r));
+  for (const mutate of [x=>x.sequences[0].steps[0].variants.pop(), x=>x.sequences[0].steps[0].variants[1].body+='changed', x=>x.sequences[0].steps[0].variants.push(x.sequences[0].steps[0].variants[0])]) {
+    const changed=structuredClone(r); mutate(changed);
+    assert.throws(()=>server.verifyPausedCampaign(b,changed), /sequence_mismatch/);
+  }
+  assert.deepEqual(p.contextErrors(b.context), []);
+  b.context.sequence.provider_sequences[0].steps[0].variants[1].body += '{{unknownField}}';
+  assert.ok(p.contextErrors(b.context).some(x=>x.includes('unknown_merge')));
+})
+
+test('physical HVAC fit-out and plant upgrades qualify while maintenance alone does not', () => {
+  const f=fixture(); f.context.recipe.mode='evidence_draft';
+  for (const quote of ['We can satisfy all HVAC needs from preventative maintenance to large fit-out works.', 'Commercial air conditioning, VRV and VRF systems, refrigerant pipework, plant upgrades, testing and commissioning.']) {
+    const candidate=structuredClone(f.candidate);
+    candidate.evidence=candidate.evidence.filter(e=>e.kind!=='service');candidate.evidence.push({kind:'service',value:quote,quote,url:'https://example.com/services',observed_at:new Date().toISOString()});
+    const errors=p.assessCandidate(candidate,f.context,f.ledger);
+    assert.ok(!errors.includes('ac_installation_unconfirmed'));
+  }
+  const candidate=structuredClone(f.candidate);candidate.evidence=candidate.evidence.filter(e=>e.kind!=='service');candidate.evidence.push({kind:'service',value:'HVAC maintenance and testing',quote:'HVAC maintenance and testing',url:'https://example.com/services',observed_at:new Date().toISOString()});
+  assert.ok(p.assessCandidate(candidate,f.context,f.ledger).includes('ac_installation_unconfirmed'));
+})

@@ -151,7 +151,8 @@ export function validUrl(value: unknown): boolean {
 }
 export function domainKey(value: unknown): string {
   try {
-    return new URL(text(value)).hostname.toLowerCase().replace(/^www\./, "");
+    const host = new URL(text(value)).hostname.toLowerCase().replace(/^www\./, "");
+    return host === "tradehq.com.au" ? "" : host;
   } catch {
     return "";
   }
@@ -228,7 +229,7 @@ export function assessCandidate(
   }
   if (emailKey(evidenceValue(row, "email")) !== emailKey(row.email))
     reasons.push("email_not_published");
-  if (current && (!/install|replac/i.test(evidenceValue(row, "service")) || !/air.?condition|\baircon\b|\bhvac\b|\bac\b|split|reverse.cycle|ducted/i.test(evidenceValue(row, "service")))) reasons.push("ac_installation_unconfirmed");
+  if (current && (!/install|replac|\bfit[- ]out\b|\bplant upgrades?\b/i.test(evidenceValue(row, "service")) || !/air.?condition|\bair[- ]?cons?\b|\bhvac\b|\bac\b|split|reverse.cycle|ducted/i.test(evidenceValue(row, "service")))) reasons.push("ac_installation_unconfirmed");
   if (!current && !/ducted/i.test(evidenceValue(row, "service")))
     reasons.push("ducted_service_unconfirmed");
   const areaReview = row.geography_review;
@@ -358,6 +359,25 @@ export function contextErrors(ctx: Context): string[] {
       (!Number.isFinite(step.delay_days) || Number(step.delay_days) < 2)
     )
       errors.push("two_day_gap_required");
+  }
+  const provider = ctx.sequence?.provider_sequences;
+  if (provider !== undefined) {
+    if (!Array.isArray(provider) || provider.length !== 1 || !Array.isArray(provider[0]?.steps) || provider[0].steps.length !== steps.length) errors.push("provider_sequence_invalid");
+    else provider[0].steps.forEach((step, i) => {
+      const native = steps[i];
+      const plain = (body: string) => body.replace(/<br\s*\/?\s*>|<\/div>|<\/p>/gi, " ").replace(/<[^>]*>/g, "").replace(/&nbsp;/g," ").replace(/&amp;/g,"&").replace(/\s+/g," ").trim();
+      if (step.type !== 'email' || step.delay !== (i === steps.length - 1 ? 0 : steps[i+1].delay_days) || !Array.isArray(step.variants) || !step.variants.length || step.variants.length > 2) { errors.push('provider_sequence_invalid:' + i); return; }
+      const nativeBody = compileStepBody(native, {includeCompliance:true});
+      if (typeof step.variants[0]?.body !== 'string' || step.variants[0].subject !== native.subject || plain(step.variants[0].body) !== plain(nativeBody)) errors.push('provider_primary_mismatch:' + i);
+      for (const variant of step.variants) {
+        if (typeof variant.subject !== 'string' || typeof variant.body !== 'string' || !variant.body.trim()) { errors.push('provider_variant_invalid:' + i); continue; }
+        if (variant.subject !== native.subject || (i === 0 && !plain(variant.body).startsWith('{{personalization}}'))) errors.push('provider_variant_merge_mismatch:' + i);
+        const tokens = [...variant.body.matchAll(/\{\{\s*(\w+)\s*\}\}/g)].map(m=>m[1]);
+        const allowed = new Set([...nativeBody.matchAll(/\{\{\s*(\w+)\s*\}\}/g)].map(m=>m[1]));
+        if (tokens.some(t=>!allowed.has(t)) || /[{}]/.test(variant.body.replace(/\{\{\s*\w+\s*\}\}/g,''))) errors.push('provider_variant_unknown_merge:' + i);
+        if (!/reply\s*[“"']?no thanks/i.test(variant.body) && !variant.body.includes('{{unsubscribe}}')) errors.push('provider_variant_unsubscribe_required:' + i);
+      }
+    });
   }
   return errors;
 }
@@ -607,7 +627,7 @@ export function transportCsv(bundle: Bundle): string {
 }
 export function instantlyExpected(bundle: Bundle) {
   return {
-    sequences: [
+    sequences: bundle.context.sequence.provider_sequences ?? [
       {
         steps: bundle.context.sequence.steps.map((step, i) => ({
           type: "email",

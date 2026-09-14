@@ -3,6 +3,7 @@ const GENERIC_EMAIL_HOSTS = new Set([
   'googlemail.com',
   'hotmail.com',
   'outlook.com',
+  'outlook.com.au',
   'yahoo.com',
   'yahoo.com.au',
   'icloud.com',
@@ -18,6 +19,8 @@ const GENERIC_EMAIL_HOSTS = new Set([
   'protonmail.com',
   'aol.com'
 ])
+
+const SHARED_WEBSITE_HOSTS = new Set(['tradehq.com.au'])
 
 const MAX_WEBSITE = 500
 
@@ -64,7 +67,7 @@ export function parseCompanySite(raw: string | null | undefined): {
     url.hostname = domain
     url.hash = ''
     const website = url.toString().replace(/\/$/, '')
-    return { website, company_domain: domain }
+    return { website, company_domain: SHARED_WEBSITE_HOSTS.has(domain) ? null : domain }
   } catch {
     return { website: null, company_domain: null }
   }
