@@ -229,7 +229,7 @@ export function assessCandidate(
   }
   if (emailKey(evidenceValue(row, "email")) !== emailKey(row.email))
     reasons.push("email_not_published");
-  if (current && (!/install|replac/i.test(evidenceValue(row, "service")) || !/air.?condition|\baircon\b|\bhvac\b|\bac\b|split|reverse.cycle|ducted/i.test(evidenceValue(row, "service")))) reasons.push("ac_installation_unconfirmed");
+  if (current && (!/install|replac|\bfit[- ]out\b|\bplant upgrades?\b/i.test(evidenceValue(row, "service")) || !/air.?condition|\baircon\b|\bhvac\b|\bac\b|split|reverse.cycle|ducted/i.test(evidenceValue(row, "service")))) reasons.push("ac_installation_unconfirmed");
   if (!current && !/ducted/i.test(evidenceValue(row, "service")))
     reasons.push("ducted_service_unconfirmed");
   const areaReview = row.geography_review;

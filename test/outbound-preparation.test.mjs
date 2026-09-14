@@ -346,3 +346,15 @@ test('frozen provider A/B variants compare every body and reject mutation, missi
   b.context.sequence.provider_sequences[0].steps[0].variants[1].body += '{{unknownField}}';
   assert.ok(p.contextErrors(b.context).some(x=>x.includes('unknown_merge')));
 })
+
+test('physical HVAC fit-out and plant upgrades qualify while maintenance alone does not', () => {
+  const f=fixture(); f.context.recipe.mode='evidence_draft';
+  for (const quote of ['We can satisfy all HVAC needs from preventative maintenance to large fit-out works.', 'Commercial air conditioning, VRV and VRF systems, refrigerant pipework, plant upgrades, testing and commissioning.']) {
+    const candidate=structuredClone(f.candidate);
+    candidate.evidence=candidate.evidence.filter(e=>e.kind!=='service');candidate.evidence.push({kind:'service',value:quote,quote,url:'https://example.com/services',observed_at:new Date().toISOString()});
+    const errors=p.assessCandidate(candidate,f.context,f.ledger);
+    assert.ok(!errors.includes('ac_installation_unconfirmed'));
+  }
+  const candidate=structuredClone(f.candidate);candidate.evidence=candidate.evidence.filter(e=>e.kind!=='service');candidate.evidence.push({kind:'service',value:'HVAC maintenance and testing',quote:'HVAC maintenance and testing',url:'https://example.com/services',observed_at:new Date().toISOString()});
+  assert.ok(p.assessCandidate(candidate,f.context,f.ledger).includes('ac_installation_unconfirmed'));
+})
