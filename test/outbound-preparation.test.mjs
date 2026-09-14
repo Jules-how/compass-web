@@ -310,7 +310,7 @@ test('current evidence drafts qualify Perth mixed single-split installers withou
 test('installation evidence accepts aircon and HVAC terminology but still requires installation', () => {
   const f = fixture(); f.context.recipe.mode = 'evidence_draft';
   const service = f.candidate.evidence.find(e => e.kind === 'service');
-  for (const value of ['Aircon installation and replacement', 'HVAC installation for local homes']) {
+  for (const value of ['Aircon installation and replacement', 'HVAC installation for local homes', 'installation of air-cons', 'Installing air cons for local homes']) {
     service.value = service.quote = value;
     assert.ok(!p.assessCandidate(f.candidate, f.context, f.ledger).includes('ac_installation_unconfirmed'), value);
   }
