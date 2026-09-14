@@ -30,6 +30,7 @@ async function database() {
     fs.readFileSync('supabase/migrations/0083_outbound_function_privileges.sql', 'utf8')
   )
   await db.exec(fs.readFileSync('supabase/migrations/20260910070000_outbound_australian_installer_policy.sql','utf8'))
+  await db.exec(fs.readFileSync('supabase/migrations/20260914030000_outbound_same_campaign_supersession.sql','utf8'))
   const f = fixture()
   await db.query(
     'INSERT INTO compass_outbound_offers VALUES($1,$2,$3,$4)',
@@ -439,4 +440,22 @@ test('current policy ignores unsent assignment and shared domain but blocks actu
  await db.query("UPDATE lead_contacts SET outbound_status='contacted' WHERE id='test-lead'");
  await assert.rejects(db.query("SELECT outbound_check_preparation('prep-perth')"),/outreach_state_changed/);
  await db.close();
+});
+
+dbtest('new approved same-campaign preparation supersedes atomically and cannot be reclaimed by old approval', async db => {
+  const one=await prepared(db,'supersede'); await approve(db,one);
+  await db.query('SELECT outbound_reserve_load($1,$2)',[one.id,one.campaign]);
+  await db.query(`INSERT INTO compass_outbound_runs(id,campaign_id,source_hash,artifact_path,source_rows,candidates,candidates_hash,context,context_hash,status)
+    SELECT 'new-run',campaign_id,'new-source',artifact_path,source_rows,candidates,candidates_hash,context,context_hash,'ready' FROM compass_outbound_runs WHERE id=$1`,[one.run]);
+  await db.query(`INSERT INTO compass_outbound_preparations(id,run_id,hash,input_hash,context_hash,bundle,created_at)
+    SELECT 'new-prep','new-run',hash,input_hash,context_hash,bundle,created_at+interval '1 second' FROM compass_outbound_preparations WHERE id=$1`,[one.id]);
+  const next={...one,id:'new-prep'};
+  await assert.rejects(db.query('SELECT outbound_reserve_load($1,$2)',[next.id,next.campaign]),/human_approval_required/);
+  await approve(db,next);
+  await assert.rejects(db.query('SELECT outbound_reserve_load($1,$2)',[next.id,'different-provider']),/campaign_binding_mismatch/);
+  await db.query('SELECT outbound_reserve_load($1,$2)',[next.id,next.campaign]);
+  assert.ok((await db.query('SELECT * FROM compass_outbound_reservations')).rows.every(r=>r.preparation_id===next.id));
+  assert.equal((await db.query('SELECT count(*)::int n FROM compass_outbound_loads')).rows[0].n,2);
+  assert.ok((await db.query('SELECT * FROM compass_outbound_receipt_history')).rows.length>0);
+  await assert.rejects(db.query('SELECT outbound_reserve_load($1,$2)',[one.id,one.campaign]),/outreach_reserved_elsewhere/);
 });
