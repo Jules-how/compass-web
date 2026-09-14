@@ -151,7 +151,8 @@ export function validUrl(value: unknown): boolean {
 }
 export function domainKey(value: unknown): string {
   try {
-    return new URL(text(value)).hostname.toLowerCase().replace(/^www\./, "");
+    const host = new URL(text(value)).hostname.toLowerCase().replace(/^www\./, "");
+    return host === "tradehq.com.au" ? "" : host;
   } catch {
     return "";
   }

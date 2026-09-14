@@ -153,10 +153,13 @@ export function decideLeadCommit(
     if (emailOwner && emailOwner.id !== identityMatch.id) return { action: 'skip', key, reason: 'email belongs to another lead' }
     if (identityMatch.email && email && normalizeEmail(identityMatch.email) !== email) {
       const review = parseIdentityReview(incoming.identity_review, now)
-      if (!review || review.kind !== 'replace_invalid_email' || review.existing_id !== explicitId ||
+      const replacementAllowed = review?.kind === 'replace_invalid_email'
+        ? identityMatch.email_verify_status === 'invalid'
+        : review?.kind === 'replace_unverified_email' && [null, undefined, 'none'].includes(identityMatch.email_verify_status)
+      if (!review || !replacementAllowed || review.existing_id !== explicitId ||
           normalizeEmail(review.expected_email) !== normalizeEmail(identityMatch.email) ||
           normalizeCompanyKey(company) !== normalizeCompanyKey(identityMatch.company || '') ||
-          identityMatch.email_verify_status !== 'invalid' || incoming.email_verify_status !== 'valid' ||
+          incoming.email_verify_status !== 'valid' ||
           !identityMatch.updated_at || identityMatch.suppression_reason || identityMatch.recontact_ok === 0 ||
           identityMatch.is_archived || !['uncontacted', null].includes(identityMatch.outbound_status)) {
         return { action: 'skip', key, reason: 'conflicting email; explicit review required' }

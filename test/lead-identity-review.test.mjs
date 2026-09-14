@@ -65,3 +65,14 @@ test('conditional correction cannot overwrite concurrent lead changes', async ()
   assert.deepEqual(db.writes[0].filters, [['id', old.id], ['email', old.email], ['updated_at', old.updated_at]])
   assert.equal(audit[0].payload.previous.email, old.email)
 })
+
+test('reviewed unknown email replacement preserves unknown status and cannot replace verified or risky inboxes', () => {
+  const row = { identity_review: { ...review, kind: 'replace_unverified_email' } }
+  for (const status of [null, undefined, 'none']) {
+    const result = decide(row, { email_verify_status: status })
+    assert.equal(result.action, 'update')
+    assert.equal(result.previous.email_verify_status, status)
+  }
+  for (const status of ['valid', 'invalid', 'catch_all', 'risky']) assert.equal(decide(row, { email_verify_status: status }).action, 'skip')
+  assert.equal(decide(row, { email_verify_status: null, outbound_status: 'sent' }).action, 'skip')
+})

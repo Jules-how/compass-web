@@ -325,3 +325,8 @@ test('timezone aliases compare the whole coming year',()=>{
  assert.equal(p.equivalentTimezone('Australia/Sydney','Australia/Brisbane'),false);
  assert.equal(p.equivalentTimezone('Australia/Perth','Australia/Sydney'),false);
 });
+
+test('TradeHQ hosted tenants do not share a company identity', () => {
+  const mod = loadTypescript('src/lib/outbound-preparation.ts')
+  assert.notEqual(mod.companyKey({company:'Copp The Current',website:'https://tradehq.com.au/coppthecurrent'}, 'Mandurah'), mod.companyKey({company:'Synergy Air Solutions',website:'https://tradehq.com.au/synergyairsolutions'}, 'Sydney'))
+})

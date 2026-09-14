@@ -1,6 +1,6 @@
 /** Explicit source-backed corrections; ordinary import never changes identity. */
 export type IdentityReview = {
-  kind: 'replace_invalid_email' | 'distinct_branch'
+  kind: 'replace_invalid_email' | 'replace_unverified_email' | 'distinct_branch'
   existing_id: string
   expected_email: string
   source_url: string
@@ -14,7 +14,7 @@ export type IdentityReview = {
 export function parseIdentityReview(input: unknown, now: string): IdentityReview | null {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return null
   const r = input as Record<string, unknown>
-  if (!['replace_invalid_email', 'distinct_branch'].includes(String(r.kind))) return null
+  if (!['replace_invalid_email', 'replace_unverified_email', 'distinct_branch'].includes(String(r.kind))) return null
   for (const key of ['existing_id', 'expected_email', 'source_url', 'reason', 'reviewed_at', 'email_verified_at']) {
     if (typeof r[key] !== 'string' || !String(r[key]).trim()) return null
   }
