@@ -307,6 +307,19 @@ test('current evidence drafts qualify Perth mixed single-split installers withou
   assert.equal(p.prepareBundle(f.context,[f.candidate],f.ledger,output).counts.pass,0);
 });
 
+test('installation evidence accepts aircon and HVAC terminology but still requires installation', () => {
+  const f = fixture(); f.context.recipe.mode = 'evidence_draft';
+  const service = f.candidate.evidence.find(e => e.kind === 'service');
+  for (const value of ['Aircon installation and replacement', 'HVAC installation for local homes']) {
+    service.value = service.quote = value;
+    assert.ok(!p.assessCandidate(f.candidate, f.context, f.ledger).includes('ac_installation_unconfirmed'), value);
+  }
+  for (const value of ['Aircon servicing only', 'HVAC maintenance', 'Solar installation']) {
+    service.value = service.quote = value;
+    assert.ok(p.assessCandidate(f.candidate, f.context, f.ledger).includes('ac_installation_unconfirmed'), value);
+  }
+});
+
 test('timezone aliases compare the whole coming year',()=>{
  assert.equal(p.equivalentTimezone('Australia/Sydney','Australia/Melbourne'),true);
  assert.equal(p.equivalentTimezone('Australia/Sydney','Australia/Brisbane'),false);

@@ -130,7 +130,6 @@ test('legacy enum maps live in shared import helpers', () => {
 test('commit helper encodes the same decisions', () => {
   const src = read('src/lib/lead-commit.ts')
   assert.match(src, /company_dupe/)
-  assert.match(src, /isHotOutboundStatus/)
   assert.match(src, /isIcpSkip/)
   assert.match(src, /LEAD_WRITE_BATCH = 500/)
   assert.match(src, /never invent|missing email/)

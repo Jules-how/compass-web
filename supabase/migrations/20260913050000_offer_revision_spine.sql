@@ -252,6 +252,11 @@ alter table public.delivery_accounts
   add column if not exists engagement_id text references public.compass_client_engagements(id) on delete restrict;
 
 -- Attribute runs and campaigns only when frozen preparation evidence is exact and unanimous.
+-- The immutable-preparation trigger predates these lineage columns. Suspend it
+-- only while backfilling the new columns inside this transaction;
+-- frozen context, candidates, bundles and approval/receipt history stay intact.
+alter table public.compass_outbound_preparations disable trigger outbound_output_immutable;
+
 update public.compass_outbound_runs r
 set offer_revision_id = rev.id
 from public.compass_pipeline_campaigns c,
@@ -275,6 +280,8 @@ from public.compass_outbound_runs r
 where r.id=p.run_id
   and p.offer_revision_id is null
   and r.offer_revision_id is not null;
+
+alter table public.compass_outbound_preparations enable trigger outbound_output_immutable;
 
 with attribution as (
   select

@@ -16,6 +16,7 @@ import {
 import { isIcpSkip } from '@/lib/lead-icp'
 import { applySharedMarkFields, type SharedMarkBody } from '@/lib/lead-mark'
 import { appendEvidence } from '@/lib/events'
+import { parseIdentityReview, type IdentityReview } from '@/lib/lead-identity-review'
 
 export const LEAD_WRITE_BATCH = 500
 export const AGENT_LEADS_BODY_MAX_BYTES = 8 * 1024 * 1024
@@ -33,6 +34,12 @@ export type LeadCommitExisting = {
   id: string
   email: string | null
   phone?: string | null
+  updated_at?: string | null
+  email_verify_status?: string | null
+  email_verified_at?: string | null
+  suppression_reason?: string | null
+  recontact_ok?: number | null
+  is_archived?: boolean | null
   contact_source_key?: string | null
   company: string | null
   city: string | null
@@ -80,8 +87,8 @@ export type LeadCommitDefaults = LeadCommitInput
 export type LeadCommitDecision =
   | { action: 'skip'; key: string; reason: string }
   | { action: 'company_dupe'; key: string; reason: 'company_dupe'; existing_id: string }
-  | { action: 'insert'; key: string; row: Record<string, unknown> }
-  | { action: 'update'; key: string; id: string; patch: Record<string, unknown> }
+  | { action: 'insert'; key: string; row: Record<string, unknown>; identityReview?: IdentityReview }
+  | { action: 'update'; key: string; id: string; patch: Record<string, unknown>; identityReview?: IdentityReview; previous?: LeadCommitExisting }
 
 export type LeadCommitResult = {
   ok: boolean
@@ -144,7 +151,20 @@ export function decideLeadCommit(
   if (identityMatch) {
     const emailOwner = email ? lookups.byEmail.get(email) : undefined
     if (emailOwner && emailOwner.id !== identityMatch.id) return { action: 'skip', key, reason: 'email belongs to another lead' }
-    if (identityMatch.email && email && identityMatch.email !== email) return { action: 'skip', key, reason: 'conflicting email; explicit review required' }
+    if (identityMatch.email && email && normalizeEmail(identityMatch.email) !== email) {
+      const review = parseIdentityReview(incoming.identity_review, now)
+      if (!review || review.kind !== 'replace_invalid_email' || review.existing_id !== explicitId ||
+          normalizeEmail(review.expected_email) !== normalizeEmail(identityMatch.email) ||
+          normalizeCompanyKey(company) !== normalizeCompanyKey(identityMatch.company || '') ||
+          identityMatch.email_verify_status !== 'invalid' || incoming.email_verify_status !== 'valid' ||
+          !identityMatch.updated_at || identityMatch.suppression_reason || identityMatch.recontact_ok === 0 ||
+          identityMatch.is_archived || !['uncontacted', null].includes(identityMatch.outbound_status)) {
+        return { action: 'skip', key, reason: 'conflicting email; explicit review required' }
+      }
+      const patch = buildUpdatePatch(incoming, identityMatch, { email, company, site, now })
+      patch.email_verified_at = review.email_verified_at
+      return { action: 'update', key, id: identityMatch.id, patch, identityReview: review, previous: identityMatch }
+    }
     return { action: 'update', key, id: identityMatch.id, patch: buildUpdatePatch(incoming, identityMatch, { email: email || identityMatch.email || '', company, site, now }) }
   }
 
@@ -158,10 +178,19 @@ export function decideLeadCommit(
     }
   }
 
+  let branchReview: IdentityReview | undefined
   if (domain) {
-    const domainMatch = lookups.byDomain.get(domain)
+    const candidateReview = parseIdentityReview(incoming.identity_review, now)
+    const reviewedMatch = candidateReview ? lookups.byId?.get(candidateReview.existing_id) : undefined
+    const domainMatch = reviewedMatch?.company_domain === domain ? reviewedMatch : lookups.byDomain.get(domain)
     if (domainMatch) {
-      return { action: 'company_dupe', key: email, reason: 'company_dupe', existing_id: domainMatch.id }
+      const review = parseIdentityReview(incoming.identity_review, now)
+      if (review?.kind === 'distinct_branch' && review.existing_id === domainMatch.id &&
+          normalizeEmail(review.expected_email) === normalizeEmail(domainMatch.email || '') &&
+          incoming.email_verify_status === 'valid' && city && domainMatch.city &&
+          city.toLowerCase() !== domainMatch.city.toLowerCase() &&
+          normalizeCompanyKey(company) !== normalizeCompanyKey(domainMatch.company || '')) branchReview = review
+      else return { action: 'company_dupe', key: email, reason: 'company_dupe', existing_id: domainMatch.id }
     }
   }
   if (cityKey) {
@@ -174,7 +203,8 @@ export function decideLeadCommit(
   return {
     action: 'insert',
     key: email,
-    row: buildInsertRow(incoming, { email, company, site, now, source: options?.source })
+    row: { ...buildInsertRow(incoming, { email, company, site, now, source: options?.source }), ...(branchReview ? { email_verified_at: branchReview.email_verified_at } : {}) },
+    ...(branchReview ? { identityReview: branchReview } : {})
   }
 }
 
@@ -340,7 +370,7 @@ async function fetchExisting(
   ids: string[],
   sourceKeys: string[]
 ): Promise<LeadCommitExisting[]> {
-  const cols = 'id,email,phone,contact_source_key,company,city,company_domain,outbound_status,icp_status'
+  const cols = 'id,email,phone,contact_source_key,company,city,company_domain,outbound_status,icp_status,updated_at,email_verify_status,email_verified_at,suppression_reason,recontact_ok,is_archived'
   const found = new Map<string, LeadCommitExisting>()
 
   const load = async (column: string, values: string[]) => {
@@ -377,8 +407,8 @@ export async function commitLeadRows(
   const now = new Date().toISOString()
   const skipped: LeadCommitResult['skipped'] = []
   const failed: LeadCommitResult['failed'] = []
-  const inserts: Array<{ key: string; row: Record<string, unknown> }> = []
-  const updates: Array<{ key: string; id: string; patch: Record<string, unknown> }> = []
+  const inserts: Array<{ key: string; row: Record<string, unknown>; identityReview?: IdentityReview }> = []
+  const updates: Array<{ key: string; id: string; patch: Record<string, unknown>; identityReview?: IdentityReview; previous?: LeadCommitExisting }> = []
 
   const mergedRows = input.rows.map((row) => {
     const merged = mergeLeadCommitRow(input.defaults, row)
@@ -393,7 +423,7 @@ export async function commitLeadRows(
     .filter((d): d is string => Boolean(d))
   const companies = mergedRows.map((row) => asText(row.company)).filter(Boolean)
 
-  const existing = await fetchExisting(admin, [...new Set(emails)], [...new Set(domains)], [...new Set(companies)], mergedRows.map(r => asText(r.id)).filter(Boolean), mergedRows.map(r => asText(r.contact_source_key)).filter(Boolean))
+  const existing = await fetchExisting(admin, [...new Set(emails)], [...new Set(domains)], [...new Set(companies)], mergedRows.flatMap(r => [asText(r.id), asText((r.identity_review as IdentityReview | undefined)?.existing_id)]).filter(Boolean), mergedRows.map(r => asText(r.contact_source_key)).filter(Boolean))
   const lookups = {
     byId: new Map<string, LeadCommitExisting>(),
     bySource: new Map<string, LeadCommitExisting>(),
@@ -418,7 +448,7 @@ export async function commitLeadRows(
       continue
     }
     if (decision.action === 'insert') {
-      inserts.push({ key: decision.key, row: decision.row })
+      inserts.push({ key: decision.key, row: decision.row, identityReview: decision.identityReview })
       remember(lookups, {
         id: String(decision.row.id),
         contact_source_key: decision.row.contact_source_key as string | null,
@@ -433,7 +463,10 @@ export async function commitLeadRows(
     }
     const pending = inserts.find(item => item.row.id === decision.id)
     if (pending) Object.assign(pending.row, decision.patch)
-    else updates.push({ key: decision.key, id: decision.id, patch: decision.patch })
+    else {
+      updates.push({ key: decision.key, id: decision.id, patch: decision.patch, identityReview: decision.identityReview, previous: decision.previous })
+      if (decision.identityReview) remember(lookups, { ...decision.previous!, ...decision.patch } as LeadCommitExisting)
+    }
   }
 
   if (input.dryRun) {
@@ -451,6 +484,31 @@ export async function commitLeadRows(
   let updated = 0
   const touchedIds: string[] = []
 
+  for (const collection of [inserts, updates]) {
+    for (let i = collection.length - 1; i >= 0; i--) {
+      const item = collection[i]
+      if (!item.identityReview) continue
+      try {
+        const previous = 'previous' in item ? item.previous : undefined
+        if (previous) {
+          const { data: touches, error: touchError } = await admin.from('lead_outreach_touches').select('id').eq('contact_id', previous.id).limit(1)
+          const { data: reservations, error: reservationError } = await admin.from('compass_outbound_reservations').select('identity_key').in('identity_key', [`email:${previous.email}`, `email:${item.key}`]).limit(1)
+          if (touchError || reservationError) throw new Error(touchError?.message || reservationError?.message)
+          if (touches?.length || reservations?.length) throw new Error('identity_has_outreach_history_or_reservation')
+        }
+        await appendEvidence(admin, {
+          source: 'compass', type: 'lead.identity_review', ts: now,
+          lead_id: previous?.id ?? String('row' in item ? item.row.id : ''),
+          native_id: createHash('sha256').update(JSON.stringify([item.key, item.identityReview])).digest('hex'),
+          payload: { status: 'reviewed_change_requested', review: item.identityReview, previous: previous ?? null, replacement_email: item.key }
+        })
+      } catch (error) {
+        failed.push({ key: item.key, error: error instanceof Error ? error.message : String(error) })
+        collection.splice(i, 1)
+      }
+    }
+  }
+
   for (let i = 0; i < inserts.length; i += LEAD_WRITE_BATCH) {
     const slice = inserts.slice(i, i + LEAD_WRITE_BATCH)
     const { error } = await admin.from('lead_contacts').insert(slice.map((item) => item.row))
@@ -463,11 +521,14 @@ export async function commitLeadRows(
   }
 
   for (const item of updates) {
-    const { error } = await admin.from('lead_contacts').update(item.patch).eq('id', item.id)
+    let query = admin.from('lead_contacts').update(item.patch).eq('id', item.id)
+    if (item.previous) query = query.eq('email', item.previous.email).eq('updated_at', item.previous.updated_at)
+    const { data, error } = await query.select('id')
     if (error) {
       failed.push({ key: item.key, error: error.message })
       continue
     }
+    if (!data?.length) { failed.push({ key: item.key, error: 'lead_changed_since_review' }); continue }
     updated += 1
     touchedIds.push(item.id)
     receipts.push({id:item.id,key:item.key,action:'updated'})
