@@ -155,7 +155,7 @@ export function decideLeadCommit(
       const review = parseIdentityReview(incoming.identity_review, now)
       const replacementAllowed = review?.kind === 'replace_invalid_email'
         ? identityMatch.email_verify_status === 'invalid'
-        : review?.kind === 'replace_unverified_email' && [null, undefined, 'none'].includes(identityMatch.email_verify_status)
+        : review?.kind === 'replace_unverified_email' && [null, undefined, 'none', 'unknown'].includes(identityMatch.email_verify_status)
       if (!review || !replacementAllowed || review.existing_id !== explicitId ||
           normalizeEmail(review.expected_email) !== normalizeEmail(identityMatch.email) ||
           normalizeCompanyKey(company) !== normalizeCompanyKey(identityMatch.company || '') ||

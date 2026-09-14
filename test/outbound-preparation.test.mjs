@@ -330,3 +330,19 @@ test('TradeHQ hosted tenants do not share a company identity', () => {
   const mod = loadTypescript('src/lib/outbound-preparation.ts')
   assert.notEqual(mod.companyKey({company:'Copp The Current',website:'https://tradehq.com.au/coppthecurrent'}, 'Mandurah'), mod.companyKey({company:'Synergy Air Solutions',website:'https://tradehq.com.au/synergyairsolutions'}, 'Sydney'))
 })
+
+test('frozen provider A/B variants compare every body and reject mutation, missing or extra variants', () => {
+  const b = bundle();
+  const seq = structuredClone(p.instantlyExpected(b).sequences);
+  seq[0].steps[0].variants.push({...seq[0].steps[0].variants[0], body:seq[0].steps[0].variants[0].body + '\nA distinct reviewed CTA.'});
+  b.context.sequence.provider_sequences = seq;
+  const r = remote(b);
+  assert.doesNotThrow(()=>server.verifyPausedCampaign(b,r));
+  for (const mutate of [x=>x.sequences[0].steps[0].variants.pop(), x=>x.sequences[0].steps[0].variants[1].body+='changed', x=>x.sequences[0].steps[0].variants.push(x.sequences[0].steps[0].variants[0])]) {
+    const changed=structuredClone(r); mutate(changed);
+    assert.throws(()=>server.verifyPausedCampaign(b,changed), /sequence_mismatch/);
+  }
+  assert.deepEqual(p.contextErrors(b.context), []);
+  b.context.sequence.provider_sequences[0].steps[0].variants[1].body += '{{unknownField}}';
+  assert.ok(p.contextErrors(b.context).some(x=>x.includes('unknown_merge')));
+})

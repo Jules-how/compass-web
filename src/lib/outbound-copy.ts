@@ -106,6 +106,7 @@ export type OutboundStep = {
 
 export type OutboundSequence = {
   structure_id: string
+  provider_sequences?: Array<{ steps: Array<{ type: string; delay: number; variants: Array<{ subject: string; body: string }> }> }>
   offer_key?: string | null
   steps: OutboundStep[]
   updated_at?: string
