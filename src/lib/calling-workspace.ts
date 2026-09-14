@@ -66,6 +66,9 @@ export function sortedCallingQueue(data: CallingQueue, now = new Date()) {
   }
   return [...data.leads].sort((a, b) => rank(a) - rank(b) || (a.company || a.name || '').localeCompare(b.company || b.name || ''))
 }
+export function nextCallingLead(data: CallingQueue, candidateIds: string[], now = new Date()) {
+  return candidateIds.map(id => data.leads.find(lead => lead.id === id)).find(lead => lead && ['ready', 'followup'].includes(callingQueueStatus(lead, data.tasks, data.touches, now).kind))
+}
 export function callingMetrics(touches: RhythmTouch[], now = new Date()) {
   const day = dayKey(now)
   const calls = touches.filter(t => t.channel === 'call' && t.direction === 'outbound' && t.outcome !== 'next_step' && dayKey(t.contacted_at) === day)

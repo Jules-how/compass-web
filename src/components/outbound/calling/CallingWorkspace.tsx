@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Download, FileText, MapPin, NotebookPen, Phone, Plus, RefreshCw, Search, Users } from 'lucide-react'
 import { OUTCOMES, callWindow, isOpen, type RhythmCommand, type RhythmLead } from '@/lib/outbound-rhythm'
-import { CALLING_DRAFT_PREFIX, CALLING_ZONES, callBlockReason, callingCapture, callingFacts, callingMetrics, callingPhone, callingQueueStatus, hasCallingDraft, newCallingDraft, parseStoredCallingDraft, safeCallingUrl, sortedCallingQueue, type CallingDetail, type CallingDraft, type CallingQueue } from '@/lib/calling-workspace'
+import { CALLING_DRAFT_PREFIX, CALLING_ZONES, callBlockReason, callingCapture, callingFacts, callingMetrics, callingPhone, callingQueueStatus, hasCallingDraft, newCallingDraft, nextCallingLead, parseStoredCallingDraft, safeCallingUrl, sortedCallingQueue, type CallingDetail, type CallingDraft, type CallingQueue } from '@/lib/calling-workspace'
 import { onWorkChanged, workFetch } from '@/lib/workspace-change'
 import './calling.css'
 
@@ -79,16 +79,16 @@ export function CallingWorkspace() {
   async function saved(id: string) {
     setNotice('Call saved to the contact history. Follow-up changes are saved in Compass.')
     try {
-      await load()
+      const fresh = await load()
       const at = visible.findIndex(l => l.id === id)
-      const next = visible.slice(at + 1).find(l => !callBlockReason(l))
+      const next = nextCallingLead(fresh, visible.slice(at + 1).map(l => l.id))
       if (next) choose(next.id, true)
     } catch (e) { setError(`Call saved, but the queue could not refresh: ${(e as Error).message}`) }
   }
   return <section className="calling-workspace" aria-label="Calling workspace">
     <header className="calling-toolbar">
       <div className="calling-nav"><Link href="/sales/outbound"><ArrowLeft aria-hidden="true" />Outbound</Link><span className="calling-divider" /><h1>Calling</h1></div>
-      <div className="calling-toolbar-actions"><Link href="/sales/outbound/rhythm" className="calling-btn">Today & follow-ups</Link><button className="calling-btn" onClick={() => void load().catch(e => setError(e.message))}><RefreshCw aria-hidden="true" /><span>Refresh</span></button></div>
+      <div className="calling-toolbar-actions"><Link href="/sales/outbound/rhythm" className="calling-btn">Today & follow-ups</Link><button className="calling-btn" aria-label="Refresh calling queue" onClick={() => void load().catch(e => setError(e.message))}><RefreshCw aria-hidden="true" /><span>Refresh</span></button></div>
     </header>
     <div className="calling-session"><span><Phone aria-hidden="true" />Ads + booking <span className="calling-muted">/ {city || 'Selected contacts'}</span></span><div aria-label="Recorded calls today"><span><b>{metrics?.attempts ?? '—'}</b> calls</span><span><b>{metrics?.conversations ?? '—'}</b> decision-maker conversations</span><span><b>{metrics?.meetings ?? '—'}</b> meetings</span><small>Today · Sydney</small></div></div>
     {error && <ErrorMessage>{error} <button onClick={() => void load().catch(e => setError(e.message))}>Retry</button></ErrorMessage>}

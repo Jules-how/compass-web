@@ -74,6 +74,11 @@ test('recorded call metrics exclude emails, gatekeepers from buyer conversations
   const totals = c.callingMetrics([{ ...touch, outcome: 'no_answer' }, { ...touch, outcome: 'office_reached' }, { ...touch, outcome: 'decision_maker' }, { ...touch, outcome: 'meeting_agreed' }, { ...touch, outcome: 'email_sent', channel: 'email' }, { ...touch, outcome: 'decision_maker', contacted_at: '2026-09-10T01:00Z' }], now)
   assert.deepEqual(totals, { attempts: 4, conversations: 1, meetings: 1 })
 })
+test('save-and-next never automatically returns to a called, closed or held contact', () => {
+  const data = { leads: [lead, { ...lead, id: 'closed', rhythm_disposition: 'closed' }, { ...lead, id: 'held', phone: null }, { ...lead, id: 'next' }], tasks: [], touches: [{ contact_id: lead.id, channel: 'call', direction: 'outbound', outcome: 'no_answer', contacted_at: now.toISOString() }] }
+  assert.equal(c.nextCallingLead(data, [lead.id, 'closed', 'held', 'next'], now).id, 'next')
+  assert.equal(c.nextCallingLead(data, [lead.id, 'closed', 'held'], now), undefined)
+})
 test('research preserves real claims without fabricating size or advertising activity', () => {
   assert.deepEqual(c.callingFacts(null), [])
   const facts = c.callingFacts([{ kind: 'specialty', claim: 'Installs ducted systems.', url: 'https://example.test/services' }, { kind: 'about', claim: 'Five staff', url: 'javascript:alert(1)' }])
