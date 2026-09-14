@@ -1,6 +1,8 @@
 # Compass workspace design
 
-Compass keeps the compact operational proportions selected from the Linear references on 10 September 2026. On 13 September 2026, Jules replaced the cool grey and violet colour treatment with the Switchflow site palette: warm cream surfaces, stone neutrals and orange actions. The supplied Linear Projects and Kanban screenshots still govern proportions and hierarchy; Notion is the writing reference, and Attio is the CRM and Reports reference.
+Jules' instruction on 14 September 2026 is to match Linear with a very slight orange accent. He opened his actual Linear workspace and asked to get the match right. That live light-theme reference supersedes the cream and orange site palette from 13 September. Use Linear as the common visual foundation across Compass, preserving the business workflows and document writing measures.
+
+Reference inspected: `https://linear.app/switchflow1/team/SWI/all` and `https://linear.app/switchflow1/projects/all`, 14 September 2026. The official refresh rationale is `https://linear.app/now/behind-the-latest-design-refresh`. Measurements below come from the live rendered UI, not estimates from its marketing site.
 
 ## Owners
 
@@ -10,17 +12,18 @@ Compass keeps the compact operational proportions selected from the Linear refer
 
 ## Visual language
 
-- One font: the existing self-hosted Geist Sans, exposed through `--workspace-font`. Body and controls use 14px; secondary labels use 12–13px; document writing uses 16px. Use weight and spacing for hierarchy, rather than oversized serif headings.
-- Warm cream navigation and canvas, white working surfaces, stone text and dividers, and restrained orange actions. Filled orange controls use dark ink for readable contrast; darker orange is used for links and focus. Status colours retain their meanings. Real records determine all counts, dates and progress.
-- Desktop sidebar 232px (208px on narrower desktop), 48px toolbar, 20–24px main insets. Compact pages carry their accessible heading without repeating a large visible heading underneath the breadcrumb.
+- Inter Variable is self-hosted in `public/fonts/inter`, with its SIL Open Font License. The console uses `--workspace-font`; public surfaces retain their existing typeface. Navigation and dense controls use 13px, secondary labels 12px, and document writing 16px. Navigation text is weight 500.
+- Measured Linear colours: canvas `lch(97.94 0.5 282)`, sidebar `lch(94.44 0.5 282)`, main text `lch(9.794 0 282)`, navigation text `lch(37.776 1.25 282)`. Cards are white. The main workspace has a 12px radius, an 8px outer inset and a very light shadow. Status colours retain their meanings; they are not brand decoration.
+- Orange `#b85a30` is limited to small emphasis: the Compass mark, selected-navigation dot, checkboxes and keyboard focus. Legacy `--folio-plum` and soft-accent tokens are neutral so retained panels do not turn orange. Primary controls are charcoal, secondary controls neutral.
+- Desktop sidebar 244px (208px on narrower desktop), 28px navigation rows with 14px icons, a 44px location bar and a separate compact view toolbar. Dense boards/timelines run to the workspace edges with small insets. Compact pages retain their accessible heading without repeating a large visible heading under the location bar.
 - Default operational pages fill the available width. Tables, timelines and boards scroll within their working area. Explicit 3xl/4xl reading or form measures remain bounded. Never shrink the whole interface with CSS zoom or transforms.
-- Controls are normally 34px tall, with 40px form/action targets on phones. Cards use an 8px radius and subtle outlines. Main workspaces do not nest ornamental cards merely to contain another toolbar.
+- Controls are normally 28–32px tall, with 40px form/action targets on phones. Cards use an 8px radius and subtle outlines. Task boards use 340px columns and 8px gaps. Main workspaces do not nest ornamental cards merely to contain another toolbar.
 
 ## Navigation and screen families
 
 Projects, Documents, Planning and Reports are first-class destinations. CRM, Outbound, Clients and Installs remain immediately available. Secondary operational routes stay under More workspaces; settings and sign-out remain accessible. Desktop sidebar collapse is optional and stored on the current browser. On tablet/phone, the navigation dialog and bottom navigation provide access to every destination.
 
-Projects opens into a timeline for new preferences and supports real project overview/tasks/activity, date editing, search and alternative list/board views. Task boards use readable cards and columns that scroll horizontally before becoming narrow. Documents uses the existing revision-checked planning notes and preserves saved bodies, unsaved drafts and conflicts. CRM prioritises record identity and separates detailed workflows. Reports selects real-source dashboards; unavailable data never becomes an invented zero.
+Projects opens into a timeline for new preferences and supports real project overview/tasks/activity, date editing, search and alternative list/board views. Task cards have a status icon beside the title, backed by the existing labelled native select and focus restoration after a move. Columns scroll horizontally before becoming narrow. Documents uses the existing revision-checked planning notes and preserves saved bodies, unsaved drafts and conflicts. CRM prioritises record identity and separates detailed workflows. Reports selects real-source dashboards; unavailable data never becomes an invented zero.
 
 ## Interaction and verification
 

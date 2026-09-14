@@ -197,7 +197,7 @@ export function ConsoleHomeInboxKeepAlive() {
       ) : null}
       {seenTasks ? (
         <KeepAlivePane paneKey="tasks" active={showTasks}>
-          <OperatorShell title="Tasks" subtitle="Choose the work you can move. Keep external waits in their own place." width="full">
+          <OperatorShell title="Tasks" width="full" compact>
             <TasksPanel />
           </OperatorShell>
         </KeepAlivePane>

@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Compass UI guidance
 
-Jules selected Linear as the layout foundation across Compass and authorised implementation on 10 September 2026. On 13 September 2026, Jules explicitly replaced its cool grey and violet treatment with the Switchflow site palette. Use a warm off-white working area, cream navigation, stone neutrals, consistent sans-serif typography, orange actions, broad operational views and comfortable writing measures.
+Jules asked on 14 September 2026 for Compass to look and feel exactly like Linear with a very slight orange accent, then opened his Linear workspace as the reference. This supersedes the cream and orange site palette selected on 13 September. Use the measured Linear light interface: Inter Variable, a neutral grey sidebar and near-white canvas, white cards, compact navigation and view controls, and subtle separators. Reserve orange for the Compass mark, a small selected-navigation dot and focus feedback. Preserve broad operational views and comfortable writing measures.
 
 Current design contract: `docs/design/WORKSPACE.md`. Shared owners: `src/app/folio.css` compatibility tokens/styles, `src/app/workspace.css` shared sizing and hierarchy, `src/components/OperatorShell.tsx` and `src/components/folio/FolioChrome.tsx`. Page-specific workspace styles extend these owners. Keep existing data, auth, caching and persistence contracts unless the request includes their behaviour.
 

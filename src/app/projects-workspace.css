@@ -1,16 +1,16 @@
 /* Projects and tasks share the quiet, full-width workspace proportions. */
 .projects-workspace,
-.tasks-workspace { min-width: 0; width: 100%; font-size: 14px; }
+.tasks-workspace { min-width: 0; width: 100%; font-size: 13px; }
 .projects-workspace-toolbar,
 .tasks-workspace-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 2px 0 10px; }
 .projects-view-label { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; font-size: 14px; font-weight: 500; color: var(--folio-ink); }
 .projects-view-label > span { font-size: 12px; color: var(--compass-faint); font-variant-numeric: tabular-nums; }
-.projects-view-switch { display: inline-flex; align-items: center; gap: 3px; width: fit-content; max-width: 100%; padding: 3px; border: 1px solid var(--folio-line); border-radius: 7px; background: var(--folio-surface); }
+.projects-view-switch { display: inline-flex; align-items: center; gap: 2px; width: fit-content; max-width: 100%; padding: 2px; border: 0; border-radius: 6px; background: var(--folio-surface); }
 .projects-view-switch > button { display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-height: 28px; padding: 4px 9px; border: 0; border-radius: 5px; background: transparent; color: var(--folio-muted); font: inherit; font-size: 13px; white-space: nowrap; }
 .projects-view-switch > button[aria-pressed="true"] { background: var(--folio-paper); color: var(--folio-ink); box-shadow: 0 1px 3px #1c191712; }
 .projects-view-switch > button:hover { color: var(--folio-ink); background: var(--folio-selection); }
 .projects-search,
-.tasks-project-filter { height: 34px; width: 172px; min-width: 0; border: 1px solid var(--folio-control); border-radius: 6px; background: var(--folio-paper); padding: 0 10px; color: var(--compass-ink-soft); font: inherit; font-size: 13px; }
+.tasks-project-filter { height: 32px; width: 172px; min-width: 0; border: 1px solid var(--folio-control); border-radius: 5px; background: var(--folio-paper); padding: 0 9px; color: var(--compass-ink-soft); font: inherit; font-size: 13px; }
 .projects-search::placeholder { color: var(--compass-faint); }
 .tasks-project-filter { width: 160px; }
 .projects-new-button { white-space: nowrap; }
@@ -18,23 +18,23 @@
 .projects-workspace :is(button, input, select):focus-visible,
 .tasks-workspace :is(button, input, select):focus-visible,
 .project-detail-workspace :is(button, input, textarea, select):focus-visible,
-.projects-create-dialog :is(button, input, textarea, select):focus-visible { outline: 2px solid var(--folio-plum); outline-offset: 3px; }
+.projects-create-dialog :is(button, input, textarea, select):focus-visible { outline: 2px solid var(--folio-focus); outline-offset: 3px; }
 .projects-timeline { container-type: inline-size; height: max(560px, calc(100dvh - 172px)); background: var(--folio-surface); }
 .projects-timeline-scroll { scrollbar-gutter: stable; }
 .projects-timeline-scroll:focus-visible,
 .projects-board:focus-visible,
-.folio-kanban:focus-visible { outline: 2px solid var(--folio-plum); outline-offset: 2px; }
+.folio-kanban:focus-visible { outline: 2px solid var(--folio-focus); outline-offset: 2px; }
 .projects-timeline-label { background: var(--folio-surface); }
 .projects-timeline-label > :is(button, a) { min-height: 36px; border-radius: 4px; }
 .projects-timeline .group:hover .projects-timeline-label { background: var(--folio-selection); }
-.projects-timeline [role="button"]:focus-visible { outline: 2px solid var(--folio-plum); outline-offset: 3px; }
+.projects-timeline [role="button"]:focus-visible { outline: 2px solid var(--folio-focus); outline-offset: 3px; }
 .projects-board { min-width: 0; max-width: 100%; overscroll-behavior-x: contain; }
 .projects-board-column { min-height: 420px; }
 .projects-board-column > header { min-height: 48px; padding: 10px 14px; }
-.projects-board-column > header h3 { font-size: 14px; }
+.projects-board-column > header h3 { font-size: 13px; }
 .projects-board-card > button { line-height: 1.45; }
 .projects-board-card > p { line-height: 1.5; }
-.projects-board-card button:focus-visible { outline: 2px solid var(--folio-plum); outline-offset: 2px; }
+.projects-board-card button:focus-visible { outline: 2px solid var(--folio-focus); outline-offset: 2px; }
 .projects-create-dialog { max-height: 92dvh; overflow-y: auto; }
 .projects-create-dialog :is(input, textarea, select) { font-size: 14px; }
 .projects-create-dialog input[data-autofocus] { font-size: 24px; }
@@ -47,22 +47,32 @@
 .project-detail-workspace textarea { font-size: 15px; line-height: 1.7; }
 .project-detail-workspace input.project-detail-name { font-size: 24px; letter-spacing: -0.025em; }
 .project-detail-workspace .projects-view-switch button { border: 0; }
-.tasks-workspace .folio-kanban { grid-auto-columns: minmax(312px, 1fr); gap: 12px; align-items: stretch; padding: 2px 2px 14px; }
-.tasks-workspace .folio-kanban-column { padding: 8px; border: 0; border-radius: 8px; background: var(--folio-rail); min-height: min(680px, calc(100dvh - 192px)); }
+.folio-page:has(> .tasks-workspace), .folio-page:has(> .projects-workspace) { padding: 0; }
+.tasks-workspace-toolbar, .projects-workspace-toolbar { min-height: 44px; padding: 6px 12px; margin: 0; border-bottom: .5px solid var(--folio-line); }
+.folio-page .tasks-workspace > .folio-kanban { margin-top: 0; }
+.tasks-workspace .folio-kanban { grid-auto-columns: 340px; gap: 8px; align-items: stretch; padding: 4px 8px 16px; }
+.tasks-workspace .folio-kanban-column { padding: 8px; border: 0; border-radius: 6px; background: var(--folio-surface); min-height: min(680px, calc(100dvh - 128px)); }
 .tasks-workspace .folio-kanban-header { height: auto; min-height: 48px; align-items: center; padding: 6px 7px 12px; }
 .tasks-workspace .folio-kanban-heading { display: flex; align-items: center; gap: 8px; }
 .tasks-workspace .folio-kanban-heading > div:first-child { margin-top: 0; width: 13px; height: 13px; }
-.tasks-workspace .folio-kanban-header h3 { color: var(--compass-ink-soft); font-size: 14px; font-weight: 500; line-height: 20px; font-family: inherit; }
+.tasks-workspace .folio-kanban-header h3 { color: var(--compass-ink-soft); font-size: 13px; font-weight: 500; line-height: 20px; font-family: inherit; }
 .folio-kanban-count { font-size: 13px; font-weight: 400; color: var(--compass-faint); font-variant-numeric: tabular-nums; }
-.tasks-workspace .folio-kanban-cards { gap: 10px; }
-.tasks-workspace .folio-kanban-card { border: 1px solid var(--folio-line); border-radius: 8px; padding: 14px; box-shadow: 0 1px 2px #1c191705; }
+.tasks-workspace .folio-kanban-cards { gap: 8px; }
+.tasks-workspace .folio-kanban-card { border: .5px solid var(--folio-line); border-radius: 8px; padding: 12px; box-shadow: 0 3px 6px -2px #00000005, 0 1px 1px #0000000a; }
 .tasks-workspace .folio-kanban-card:hover { border-color: var(--folio-control); }
 body:has(.folio-shell) .tasks-workspace .folio-kanban-card h4,
-body:has(.folio-shell) .tasks-workspace .folio-kanban-card h4 :is(a, button, span) { color: var(--folio-ink); font-family: inherit; font-size: 14px; font-weight: 500; line-height: 1.45; }
-.tasks-workspace .folio-kanban-status { display: flex; align-items: center; gap: 8px; padding-top: 10px; margin-top: 12px; border-color: var(--folio-line); color: var(--compass-faint); }
+body:has(.folio-shell) .tasks-workspace .folio-kanban-card h4 :is(a, button, span) { color: var(--folio-ink); font-family: inherit; font-size: 13px; font-weight: 500; line-height: 1.5; }
+.tasks-workspace .folio-kanban-status { display: flex; align-items: center; gap: 8px; padding-top: 6px; margin-top: 8px; border-color: transparent; color: var(--compass-faint); }
 .tasks-workspace .folio-kanban-status select { width: auto; min-height: 30px; font-size: 12px; border-color: transparent; padding: 3px 6px; color: var(--folio-muted); background: var(--folio-surface); }
 .tasks-workspace .folio-kanban-status select:hover { border-color: var(--folio-control); }
 .tasks-workspace .folio-kanban-status:focus-within select { border-color: var(--folio-plum); }
+.folio-kanban-status-control { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex: 0 0 24px; margin: -2px -3px -2px -5px; border-radius: 5px; }
+.folio-kanban-status-control:hover { background: var(--folio-selection); }
+.folio-kanban-status-control:focus-within { outline: 2px solid var(--folio-focus); outline-offset: 1px; }
+.folio-kanban-status-control select { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; opacity: 0; cursor: pointer; }
+.folio-kanban-status-control select option { color: var(--folio-ink); background: var(--folio-paper); }
+.folio-kanban-title-row > .lucide-grip-vertical { opacity: 0; }
+.folio-kanban-card:hover .folio-kanban-title-row > .lucide-grip-vertical, .folio-kanban-card:focus-within .folio-kanban-title-row > .lucide-grip-vertical { opacity: 1; }
 .tasks-workspace .folio-task-list .folio-task-open strong { font-family: inherit; font-size: 14px; line-height: 1.5; }
 
 @container (max-width: 639px) {

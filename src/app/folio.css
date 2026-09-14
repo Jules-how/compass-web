@@ -1,22 +1,31 @@
-/* Shared operator presentation. Layout follows the compact workspace reference;
-   colours follow the Switchflow cream, stone and orange palette. */
+/* Shared operator presentation. Linear's neutral workspace, with a small orange
+   accent. Keep colours here so retained page styles share the same foundation. */
+@font-face {
+  font-family: "Inter Variable";
+  src: url("/fonts/inter/InterVariable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
 body:has(.folio-shell) {
-  --workspace-font: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --folio-desk: #faf9f6;
-  --folio-rail: #eeece6;
+  --workspace-font: "Inter Variable", var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --folio-desk: lch(97.94 0.5 282);
+  --folio-rail: lch(94.44 0.5 282);
   --folio-paper: #ffffff;
-  --folio-ink: #1c1917;
-  --folio-muted: #57534e;
-  --folio-line: #e7e5e4;
-  --folio-control: #d6d3d1;
-  /* Compatibility name retained for components that use the old accent token. */
-  --folio-plum: #c2410c;
-  --folio-accent: #f97316;
-  --folio-accent-soft: #fff7ed;
-  --folio-accent-line: #fed7aa;
-  --folio-surface: #fafaf9;
-  --folio-note: #f5f5f4;
-  --folio-selection: #e4e1da;
+  --folio-ink: lch(9.794 0 282);
+  --folio-muted: lch(37.776 1.25 282);
+  --folio-line: #e9e9e9;
+  --folio-control: #d6d6d6;
+  /* Legacy interactive tokens stay neutral; orange is reserved for emphasis. */
+  --folio-plum: #505050;
+  --folio-accent: #b85a30;
+  --folio-accent-soft: #f3f3f3;
+  --folio-accent-line: #dedede;
+  --folio-orange-soft: #fbf2ed;
+  --folio-focus: #b85a30;
+  --folio-surface: lch(96.5 0.5 282);
+  --folio-note: #f5f5f5;
+  --folio-selection: lch(89.84 0 282);
   --folio-success: #365c4b;
   --folio-error: #913e42;
   --folio-radius: 8px;
@@ -24,19 +33,19 @@ body:has(.folio-shell) {
   --folio-space: 8px;
   --folio-motion: 150ms;
   --compass-ink: var(--folio-ink);
-  --compass-ink-soft: #44403c;
+  --compass-ink-soft: #454545;
   --compass-muted: var(--folio-muted);
-  --compass-faint: #78716c;
+  --compass-faint: #737373;
   --compass-panel: var(--folio-paper);
   --compass-line: var(--folio-line);
   --compass-line-strong: var(--folio-control);
   --compass-wash: var(--folio-desk);
   --compass-sidebar: var(--folio-rail);
   --compass-accent: var(--folio-accent);
-  --compass-accent-hover: #ea580c;
+  --compass-accent-hover: #9f4822;
   --compass-accent-soft: var(--folio-accent-soft);
-  --compass-shadow: 0 2px 3px #1c191703, 0 10px 24px -20px #1c191752;
-  --compass-shadow-sm: 0 2px 3px #1c191705;
+  --compass-shadow: 0 2px 8px #00000006;
+  --compass-shadow-sm: 0 1px 2px #00000005;
   font-family:
     var(--workspace-font);
   background: var(--folio-desk);
@@ -216,7 +225,7 @@ body:has(.folio-shell) {
 }
 body:has(.folio-shell)
   :is(button, a, input, textarea, select, summary):focus-visible {
-  outline: 3px solid var(--folio-plum);
+  outline: 3px solid var(--folio-focus);
   outline-offset: 3px;
   box-shadow: none;
 }
@@ -337,10 +346,10 @@ body:has(.folio-shell) [class*="text-orange-"],
 body:has(.folio-shell) [class*="text-sf-orange"] {
   color: var(--folio-plum);
 }
-body:has(.folio-shell) [class*="bg-[#e85d2a]"],
-body:has(.folio-shell) [class*="bg-sf-orange"] {
-  background-color: var(--folio-accent);
-  color: var(--folio-ink);
+body:has(.folio-shell) [class~="bg-[#e85d2a]"],
+body:has(.folio-shell) [class~="bg-sf-orange"] {
+  background-color: #333;
+  color: #fff;
 }
 body:has(.folio-shell) [class*="bg-[#e85d2a]/"],
 body:has(.folio-shell) [class*="bg-orange-50"] {
@@ -2086,7 +2095,7 @@ body:has(.folio-shell) .folio-inbox > .compass-panel {
     min-height: 44px;
   }
   .folio-mobile-records input {
-    accent-color: var(--folio-plum);
+    accent-color: var(--folio-accent);
     width: 17px;
     height: 17px;
   }

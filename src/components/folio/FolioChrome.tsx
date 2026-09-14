@@ -105,7 +105,7 @@ export function FolioNavigation({
   return (
     <nav aria-label="Primary" className="folio-navigation">
       <div>
-        <p className="folio-caption">Your day</p>
+        <p className="sr-only">Your day</p>
         {day.map(link)}
       </div>
       <div>
@@ -143,10 +143,13 @@ export function FolioTopbar({ role, sidebarCollapsed = false, onToggleSidebar }:
   const [open, setOpen] = useState(false)
   const path = useConsoleViewPath(),
     nav = useConsoleNav()
-  const title =
+  const destination =
     [...day, ...workspace, ...work, ...more, { href: '/settings', label: 'Settings' }]
       .filter((i) => path === i.href || path.startsWith(i.href + '/'))
-      .sort((a, b) => b.href.length - a.href.length)[0]?.label ?? 'Workspace'
+      .sort((a, b) => b.href.length - a.href.length)[0]
+  const title = destination?.label ?? 'Workspace'
+  const section = work.some(item => item.href === destination?.href) || more.some(item => item.href === destination?.href)
+    ? 'Business' : workspace.some(item => item.href === destination?.href) ? 'Workspace' : null
   return (
     <>
       <header className="folio-topbar">
@@ -161,7 +164,10 @@ export function FolioTopbar({ role, sidebarCollapsed = false, onToggleSidebar }:
           >
             {sidebarCollapsed ? <PanelLeftOpen size={16} aria-hidden="true" /> : <PanelLeftClose size={16} aria-hidden="true" />}
           </button>
-          <div className="folio-breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong>{title}</strong></div>
+          <div className="folio-breadcrumb">
+            {section ? <><span>{section}</span><span aria-hidden="true">/</span></> : null}
+            <strong>{title}</strong>
+          </div>
         </div>
         <div className="folio-mobile-brand">
           <FolioBrand />

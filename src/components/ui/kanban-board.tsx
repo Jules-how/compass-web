@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, Calendar, GripVertical, MessageCircle, Paperclip, Plus } from 'lucide-react'
+import { ArrowUpRight, Calendar, Circle, CircleCheck, CircleDot, CirclePause, GripVertical, MessageCircle, Paperclip, Plus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
@@ -40,6 +40,13 @@ export type KanbanColumn = {
 type DragPayload = {
   task: KanbanTask
   sourceColumnId: string
+}
+
+function StatusIcon({ column }: { column: KanbanColumn }) {
+  const Icon = column.id === 'completed' || column.id === 'done' ? CircleCheck
+    : column.id === 'in-progress' ? CircleDot
+    : column.id === 'blocked' ? CirclePause : Circle
+  return <Icon size={14} strokeWidth={1.7} style={{ color: column.color || '#999' }} aria-hidden />
 }
 
 export function KanbanBoard({
@@ -117,11 +124,7 @@ export function KanbanBoard({
           <div className="folio-kanban-header">
             <div className="min-w-0">
               <div className="folio-kanban-heading">
-                <div
-                  className="size-3 shrink-0 rounded-full"
-                  style={{ backgroundColor: column.color || '#d6d3d1' }}
-                  aria-hidden
-                />
+                <StatusIcon column={column} />
                 <h3 className="text-[14px] font-medium text-neutral-900">{column.title}</h3>
                 <span className="folio-kanban-count">
                   {column.tasks.length}
@@ -158,8 +161,26 @@ export function KanbanBoard({
                   onDragStart={(event) => handleDragStart(event, task, column.id)}
                   onDragEnd={() => setDropTarget(null)}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="min-w-0 text-[14px] font-medium leading-snug text-neutral-900">
+                  <div className="folio-kanban-title-row flex items-start justify-between gap-2">
+                    {onMove && task.draggable !== false ? (
+                      <label className="folio-kanban-status-control" title={`Status: ${column.title}`} onPointerDown={event => event.stopPropagation()}>
+                        <StatusIcon column={column} />
+                        <select
+                          data-task-id={task.id}
+                          aria-label={`Move ${task.title} to`}
+                          value={column.id}
+                          onChange={(event) => {
+                            if (event.target.value !== column.id) {
+                              keyboardMove.current = { taskId: task.id, targetId: event.target.value }
+                              onMove(task.id, column.id, event.target.value)
+                            }
+                          }}
+                        >
+                          {columns.map((target) => <option key={target.id} value={target.id}>{target.title}</option>)}
+                        </select>
+                      </label>
+                    ) : null}
+                    <h4 className="min-w-0 flex-1 text-[14px] font-medium leading-snug text-neutral-900">
                       {task.href ? (
                         <Link href={task.href} title={task.title} className="break-words hover:text-[#c2410c]">
                           {task.title}
@@ -246,25 +267,6 @@ export function KanbanBoard({
                         </a>
                       ) : null}
                     </div>
-                  ) : null}
-                  {onMove && task.draggable !== false ? (
-                    <label className="folio-kanban-status">
-                      <span>Status</span>
-                      <select
-                        data-task-id={task.id}
-                        aria-label={`Move ${task.title} to`}
-                        value={column.id}
-                        onChange={(event) => {
-                          if (event.target.value !== column.id) {
-                            keyboardMove.current = { taskId: task.id, targetId: event.target.value }
-                            onMove(task.id, column.id, event.target.value)
-                          }
-                        }}
-                        className="min-h-8 min-w-0 flex-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs"
-                      >
-                        {columns.map((target) => <option key={target.id} value={target.id}>{target.title}</option>)}
-                      </select>
-                    </label>
                   ) : null}
                 </div>
               ))
