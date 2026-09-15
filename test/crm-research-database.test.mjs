@@ -79,6 +79,14 @@ test('research migration, atomic writes, ownership separation, query grain and o
       const operations=[op('company',{id:'concurrent',name:'Concurrent'})]
       const receipts=await Promise.all([apply(operations,'concurrent-request'),apply(operations,'concurrent-request')]);assert.deepEqual(receipts[0],receipts[1])
     })
+    await t.test('current primary badge follows legacy address without expanding reader privileges',async()=>{
+      await db.exec("SET test.operator='true'")
+      await apply([op('lead_link',{id:'l',lead_id:'lead',company_id:'c',source_id:'s',match_state:'confirmed',reason:'fixture',expected_lead_updated_at:time,primary_email_candidate_id:'general-route'},1)])
+      assert.equal((await db.query("SELECT legacy_primary FROM crm_candidate_profiles WHERE id='general-route'")).rows[0].legacy_primary,true)
+      await db.exec("UPDATE lead_contacts SET email='new@example.test' WHERE id='lead'; REVOKE SELECT ON lead_contacts FROM authenticated; SET ROLE authenticated")
+      assert.equal((await db.query("SELECT legacy_primary FROM crm_candidate_profiles WHERE id='general-route'")).rows[0].legacy_primary,false)
+      await db.exec('RESET ROLE')
+    })
     await t.test('nonoperator cannot read, operators cannot directly write, anonymous cannot execute',async()=>{
       await db.exec("SET ROLE authenticated; SET test.operator='false'")
       assert.equal((await db.query('SELECT count(*)::int n FROM crm_companies')).rows[0].n,0)

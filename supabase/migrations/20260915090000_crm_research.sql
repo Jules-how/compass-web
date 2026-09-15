@@ -165,12 +165,26 @@ SELECT p.*,
   ELSE 'research_needed' END AS fit_status
 FROM profiles p;
 
+-- A boolean-only bridge avoids granting research readers direct access to the
+-- legacy lead ledger, whose table privileges predate these migrations.
+CREATE FUNCTION public.crm_candidate_is_primary(p_id text) RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public AS $$
+BEGIN
+  IF NOT (coalesce(public.portal_is_operator(),false) OR current_setting('role',true)='service_role') THEN RETURN false; END IF;
+  RETURN EXISTS(SELECT 1 FROM crm_contact_candidates c JOIN crm_contact_methods m ON m.id=c.method_id
+    JOIN crm_lead_links l ON l.match_state='confirmed' AND (l.primary_email_candidate_id=c.id OR l.primary_phone_candidate_id=c.id)
+    JOIN lead_contacts lead ON lead.id=l.lead_id WHERE c.id=p_id AND (
+      (l.primary_email_candidate_id=c.id AND m.method_type='email' AND m.normalized_value=lower(trim(lead.email))) OR
+      (l.primary_phone_candidate_id=c.id AND m.method_type='phone' AND m.normalized_value=regexp_replace(trim(lead.phone),'[[:space:]().-]','','g'))));
+END $$;
+REVOKE ALL ON FUNCTION public.crm_candidate_is_primary(text) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.crm_candidate_is_primary(text) TO authenticated,service_role;
+
 CREATE VIEW public.crm_candidate_profiles WITH (security_invoker=true) AS
 SELECT c.*,m.method_type,m.value,m.normalized_value,a.person_id,a.role,a.state AS affiliation_state,p.name AS person_name,
  CASE WHEN af.state='disputed' THEN 'disputed' ELSE coalesce(af.value#>>'{}',CASE WHEN c.affiliation_id IS NULL THEN 'not_person_specific' ELSE 'unresolved' END) END AS attribution_status,
  latest.id AS latest_attempt_id,latest.attempt_state AS latest_attempt_state,latest.reason AS latest_attempt_reason,
  completed.id AS verification_id,completed.mailbox_result,completed.checked_at AS verified_at,
- EXISTS(SELECT 1 FROM public.crm_lead_links l JOIN public.lead_contacts lead ON lead.id=l.lead_id WHERE l.match_state='confirmed' AND ((l.primary_email_candidate_id=c.id AND m.method_type='email' AND m.normalized_value=lower(trim(lead.email))) OR (l.primary_phone_candidate_id=c.id AND m.method_type='phone' AND m.normalized_value=regexp_replace(trim(lead.phone),'[[:space:]().-]','','g')))) AS legacy_primary
+ public.crm_candidate_is_primary(c.id) AS legacy_primary
 FROM public.crm_contact_candidates c JOIN public.crm_contact_methods m ON m.id=c.method_id
 LEFT JOIN public.crm_company_people a ON a.id=c.affiliation_id LEFT JOIN public.crm_people p ON p.id=a.person_id
 LEFT JOIN public.crm_current_facts af ON af.candidate_id=c.id AND af.fact_key='person_attribution'

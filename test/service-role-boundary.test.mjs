@@ -103,6 +103,7 @@ test('customer and legacy operator data routes never import a service-role clien
     'api/leads/upload/route.ts',
     'api/onboarding/[token]/route.ts',
     'api/operator/crm/capabilities/route.ts',
+    'api/operator/crm/leads/[id]/route.ts',
     'api/operator/crm/research/route.ts',
     'api/operator/invitations/route.ts',
     'api/operator/operating/preparation/[id]/route.ts',

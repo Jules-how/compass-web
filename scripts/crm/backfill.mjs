@@ -11,7 +11,7 @@ const file=args.find(arg=>!arg.startsWith('--'))
 if(!file)throw new Error('Usage: node scripts/crm/backfill.mjs manifest.json [--apply]. Dry-run writes manifest.json.packets.json; apply reads that exact packet file.')
 const config=resolveConfig({...parseEnvFile(await fs.readFile(path.join(root,'.env.local'),'utf8')),...process.env})
 async function api(route,body) {
-  const response=await fetch(config.baseUrl+'/api/agent/crm'+route,{method:body?'POST':'GET',headers:{'x-compass-agent-secret':config.secret,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})})
+  const response=await fetch(config.baseUrl+'/api/agent/crm'+route,{signal:AbortSignal.timeout(45000),method:body?'POST':'GET',headers:{'x-compass-agent-secret':config.secret,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})})
   const data=await response.json()
   if(!response.ok)throw new Error(`${response.status}: ${data.error||'CRM API failure'}`)
   return data
