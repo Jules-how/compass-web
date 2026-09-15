@@ -22,6 +22,15 @@ export function parseLeadListFilters(searchParams: URLSearchParams): LeadListFil
   const suppressed = searchParams.get('suppressed')
   const recontactReady = searchParams.get('recontact_ready')
   return {
+    sort: emptyToUndef(searchParams.get('sort')),
+    sort_dir: emptyToUndef(searchParams.get('sort_dir')),
+    company_customer_mix: emptyToUndef(searchParams.get('company_customer_mix')),
+    company_system: emptyToUndef(searchParams.get('company_system')),
+    company_region: emptyToUndef(searchParams.get('company_region')),
+    company_fit: emptyToUndef(searchParams.get('company_fit')),
+    company_min_rating: emptyToUndef(searchParams.get('company_min_rating')),
+    company_min_age: emptyToUndef(searchParams.get('company_min_age')),
+    company_freshness: emptyToUndef(searchParams.get('company_freshness')),
     vertical: emptyToUndef(searchParams.get('vertical')),
     source: emptyToUndef(searchParams.get('source')),
     outbound_status: emptyToUndef(searchParams.get('outbound_status')),
@@ -373,6 +382,7 @@ function escapePostgrestOrValue(value: string): string {
 
 export function leadFiltersToSearchParams(filters: LeadListFilters, page?: number): URLSearchParams {
   const params = new URLSearchParams()
+  for (const key of ['sort','sort_dir','company_customer_mix','company_system','company_region','company_fit','company_min_rating','company_min_age','company_freshness'] as const) if (filters[key]) params.set(key,filters[key]!)
   if (filters.vertical) params.set('vertical', filters.vertical)
   if (filters.source) params.set('source', filters.source)
   if (filters.outbound_status) params.set('outbound_status', filters.outbound_status)

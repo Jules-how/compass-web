@@ -5,6 +5,7 @@ import type { LeadContact } from '@/lib/types'
 import { formatLeadFactsDetail, parseLeadFacts } from '@/lib/lead-facts'
 import { humanizeEmailOrigin, humanizeIcpStatus } from '@/lib/lead-icp'
 import { RhythmLeadPanel } from '@/components/outbound/rhythm/RhythmLeadPanel'
+import { LeadCompanyResearch } from './LeadCompanyResearch'
 import { LeadRecontactPanel } from '@/components/LeadRecontactPanel'
 
 function humanizeStatus(status: string | null | undefined): string {
@@ -136,6 +137,7 @@ export function LeadSidecar({
         <LeadRecontactPanel lead={lead} />
         </section>
         <section hidden={section !== 'research'} aria-label="Contact research">
+        {section === 'research' ? <LeadCompanyResearch key={lead.id} lead={lead} /> : null}
 
         <h3 className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
           Business fit

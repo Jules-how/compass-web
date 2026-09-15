@@ -3,6 +3,7 @@ import { parseCompanySite } from '@/lib/company-site'
 import { parseLeadFacts } from '@/lib/lead-facts'
 import { portalJson } from '@/lib/portal-http'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { assertKnownFields, LEAD_ICP_KEYS, LEAD_SHARED_MARK_KEYS, LeadWriteValidationError } from './lead-write-validation'
 
 const ENRICH_STATUSES = new Set([
   'none',
@@ -179,6 +180,21 @@ export async function markLeadContacts(
     opener?: unknown
   } & SharedMarkBody
 ): Promise<Response> {
+  try {
+    assertKnownFields(body,new Set(['ids','emails','rows','lead_facts','opener',...LEAD_SHARED_MARK_KEYS,...LEAD_ICP_KEYS]),'body')
+    if (Array.isArray(body.rows)) {
+      assertKnownFields(body,new Set(['rows']),'body')
+      if (body.rows.length>MAX_MARK_ROWS) throw new LeadWriteValidationError([{path:'rows',message:`At most ${MAX_MARK_ROWS} rows; nothing was saved`}])
+      body.rows.forEach((row,index)=>assertKnownFields(row,new Set(['id','email','lead_facts','opener','opener_track','opener_kind','website','company_domain',...LEAD_SHARED_MARK_KEYS,...LEAD_ICP_KEYS]),`rows.${index}`))
+    }
+    for (const key of ['ids','emails'] as const) if (body[key]!==undefined) {
+      const values=body[key]
+      if (!Array.isArray(values) || values.length>MAX_MARK_IDS || values.some(v=>typeof v!=='string' || !v.trim())) throw new LeadWriteValidationError([{path:key,message:`Use 1 to ${MAX_MARK_IDS} nonempty text IDs; nothing was saved`}])
+    }
+  } catch(error) {
+    if (error instanceof LeadWriteValidationError) return portalJson({error:'validation_failed',issues:error.issues},{status:422})
+    throw error
+  }
   if (body.lead_facts !== undefined || body.opener !== undefined) {
     return portalJson({ error: 'use_rows_for_facts' }, { status: 400 })
   }
@@ -192,7 +208,7 @@ export async function markLeadContacts(
   }
 
   if (hasRows) {
-    const rawRows = (body.rows as unknown[]).slice(0, MAX_MARK_ROWS)
+    const rawRows = body.rows as unknown[]
     if (rawRows.length === 0) return portalJson({ error: 'rows_required' }, { status: 400 })
 
     const parsed: { key: string; by: 'id' | 'email'; patch: MarkPatch }[] = []
@@ -258,9 +274,10 @@ export async function markLeadContacts(
     }
 
     let updated = 0
+    const receipts: Array<{key:string;records:unknown[]}> = []
     const failed: { id: string; error: string }[] = []
     for (const row of parsed) {
-      let query = admin.from('lead_contacts').update(row.patch).select('id')
+      let query = admin.from('lead_contacts').update(row.patch).select(['id',...Object.keys(row.patch)].join(','))
       query = row.by === 'id' ? query.eq('id', row.key) : query.eq('email', row.key)
       const { data, error } = await query
       if (error) {
@@ -272,10 +289,12 @@ export async function markLeadContacts(
         continue
       }
       updated += 1
+      receipts.push({key:row.key,records:data})
     }
     return portalJson({
       ok: failed.length === 0,
       updated,
+      receipts,
       deprecated: LEADS_MARK_DEPRECATED,
       failed: failed.length ? failed : undefined
     })
@@ -306,7 +325,7 @@ export async function markLeadContacts(
     return portalJson({ error: 'no_fields' }, { status: 400 })
   }
 
-  let query = admin.from('lead_contacts').update(patch).select('id')
+  let query = admin.from('lead_contacts').update(patch).select(['id',...Object.keys(patch)].join(','))
   query = ids.length ? query.in('id', ids) : query.in('email', emails)
   const { data, error } = await query
   if (error) {
@@ -315,6 +334,7 @@ export async function markLeadContacts(
   return portalJson({
     ok: true,
     updated: (data ?? []).length,
+    records: data ?? [],
     deprecated: LEADS_MARK_DEPRECATED
   })
 }

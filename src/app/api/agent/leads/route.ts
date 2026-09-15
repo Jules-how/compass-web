@@ -1,3 +1,4 @@
+import { CrmValidationError } from '@/lib/crm-research-schema'
 import { requireAgentAuth } from '@/lib/agent-auth'
 import { getPortalAdminClient } from '@/lib/portal-admin'
 import { portalJson, readBoundedJson } from '@/lib/portal-http'
@@ -19,6 +20,7 @@ import {
   streamLeadContacts
 } from '@/lib/lead-search'
 import type { SharedMarkBody } from '@/lib/lead-mark'
+import { assertKnownFields, LeadWriteValidationError } from '@/lib/lead-write-validation'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -138,6 +140,9 @@ export async function GET(request: Request) {
       leads: result.leads
     })
   } catch (err) {
+    if (err instanceof CrmValidationError) return portalJson({error:'validation_failed',issues:err.issues},{status:422})
+    if (err instanceof Error && /crm_research_|crm_schema_/.test(err.message)) return portalJson({error:err.message},{status:503})
+    if (err instanceof Error && /invalid_lead_|invalid_company_filters/.test(err.message)) return portalJson({error:err.message},{status:422})
     console.error('[agent/leads]', err instanceof Error ? err.message : err)
     return portalJson({ error: 'list_failed' }, { status: 500 })
   }
@@ -158,7 +163,9 @@ export async function POST(request: Request) {
   }
   try {
     body = (await readBoundedJson(request, AGENT_LEADS_BODY_MAX_BYTES)) as typeof body
-  } catch {
+    assertKnownFields(body,new Set(['defaults','rows','on_conflict','mark']),'body')
+  } catch (error) {
+    if (error instanceof LeadWriteValidationError) return portalJson({error:'validation_failed',issues:error.issues},{status:422})
     return portalJson({ error: 'invalid_json' }, { status: 400 })
   }
 
@@ -178,6 +185,7 @@ export async function POST(request: Request) {
     })
     return portalJson(result)
   } catch (err) {
+    if (err instanceof LeadWriteValidationError) return portalJson({error:'validation_failed',issues:err.issues},{status:422})
     console.error('[agent/leads POST]', err instanceof Error ? err.message : err)
     return portalJson({ error: 'commit_failed' }, { status: 500 })
   }

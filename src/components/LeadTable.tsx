@@ -35,6 +35,8 @@ import { LeadColumnPicker, useLeadGridColumns } from '@/components/LeadColumnPic
 import { ModalFrame } from '@/components/ui/ModalFrame'
 import { Search, SlidersHorizontal, Download, X } from 'lucide-react'
 import RecordsTable from '@/components/ui/records-table'
+import { LEAD_GRID_SORTS } from '@/lib/lead-sort'
+import type { LeadColumnId as SortableLeadColumnId } from '@/lib/lead-columns'
 import { useUndo } from '@/components/UndoProvider'
 import type { LeadColumnPreset } from '@/lib/lead-columns'
 
@@ -1292,6 +1294,9 @@ export default function LeadTable({
           }
         >
           <RecordsTable
+            serverSort={{key:(Object.entries(LEAD_GRID_SORTS).find(([,value])=>value===filters.sort)?.[0] || 'index') as SortableLeadColumnId|'index',dir:filters.sort_dir==='desc' ? -1 : 1}}
+            sortableColumns={Object.keys(LEAD_GRID_SORTS) as SortableLeadColumnId[]}
+            onServerSort={(key,dir)=>onNavigate({...filters,sort:LEAD_GRID_SORTS[key],sort_dir:dir===1 ? 'asc' : 'desc'},1)}
             leads={leads}
             columns={grid.visible}
             widths={grid.widths}

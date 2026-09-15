@@ -530,6 +530,15 @@ export type LeadSourceService =
 
 // Filters accepted by the /leads page (all optional, combined with AND).
 export interface LeadListFilters {
+  sort?: string
+  sort_dir?: string
+  company_customer_mix?: string
+  company_system?: string
+  company_region?: string
+  company_fit?: string
+  company_min_rating?: string
+  company_min_age?: string
+  company_freshness?: string
   vertical?: string
   source?: string
   /** Pipeline stage (contacted, replied, …) or legacy Instantly status values. */

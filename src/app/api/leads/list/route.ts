@@ -45,6 +45,8 @@ export async function GET(request: NextRequest) {
     const access = portalAccessResponse(err)
     if (access) return access
     const message = err instanceof Error ? err.message : 'fetch_failed'
+    if (/invalid_lead_|invalid_company_filters/.test(message)) return portalJson({error:message},{status:422})
+    if (/crm_research_disabled/.test(message)) return portalJson({error:message},{status:503})
     return portalJson({ error: 'fetch_failed', detail: message }, { status: 500 })
   }
 }

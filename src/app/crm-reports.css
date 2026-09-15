@@ -180,3 +180,39 @@
   .report-record-list li { flex-direction:column; gap:5px; }
 }
 @media (prefers-reduced-motion:reduce) { .crm-detail-overlay, .crm-detail-sheet, .report-bar-fill { animation:none !important; transition:none !important; } }
+
+/* Reusable research extends the existing compact, neutral CRM workspace. */
+.crm-research-workspace,.crm-research-panel { color: #262626; font-size: 13px; }
+.crm-research-workspace>header,.crm-research-panel>header { display:flex; justify-content:space-between; align-items:start; gap:16px; margin-bottom:16px; }
+.crm-research-workspace h1 {font-size:22px;font-weight:600;}
+.crm-research-panel h3 {font-size:16px;font-weight:600;}
+.crm-research-panel h4 {font-weight:600;margin:16px 0 8px;}
+.crm-research-muted,.crm-research-panel small {color:#737373;}
+.crm-research-panel nav,.crm-research-paging {display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;}
+.crm-research-workspace button,.crm-research-panel button,.crm-research-linked button {border:1px solid #e5e5e5;border-radius:5px;padding:5px 9px;background:#fff;cursor:pointer;}
+.crm-research-workspace button[aria-pressed=true],.crm-research-panel button[aria-pressed=true] {background:#f5f5f5;border-color:#a3a3a3;}
+.crm-research-workspace button:disabled,.crm-research-panel button:disabled {opacity:.5;cursor:default;}
+.crm-research-workspace input,.crm-research-workspace select,.crm-research-form input,.crm-research-form select,.crm-research-form textarea,.crm-research-linked input {border:1px solid #d4d4d4;border-radius:5px;padding:6px 8px;background:#fff;max-width:100%;}
+.crm-research-filters {display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+.crm-research-filters label,.crm-research-form label {display:flex;flex-direction:column;gap:4px;}
+.crm-research-filters input {width:145px;}
+.crm-research-layout {display:grid;grid-template-columns:minmax(260px,1fr) minmax(380px,2fr);gap:24px;margin-top:16px;}
+.crm-research-company-list {display:flex;flex-direction:column;gap:4px;}
+.crm-research-company-list button {text-align:left;display:flex;flex-direction:column;gap:5px;padding:10px;}
+.crm-research-panel {border:1px solid #e5e5e5;border-radius:6px;padding:16px;background:#fff;min-width:0;}
+.crm-research-item {border-bottom:1px solid #e5e5e5;padding:10px 0;overflow-wrap:anywhere;}
+.crm-research-item p {margin:5px 0;}
+.crm-research-panel details,.crm-research-linked details {margin:12px 0;}
+.crm-research-panel summary,.crm-research-workspace summary {cursor:pointer;font-weight:500;}
+.crm-research-form fieldset {display:flex;flex-direction:column;gap:10px;border:0;padding:12px 0;}
+.crm-research-form textarea {min-height:70px;}
+.crm-research-form label.crm-research-checkbox {flex-direction:row;align-items:center;}
+.crm-research-facts>div {display:grid;grid-template-columns:minmax(110px,1fr) 2fr;gap:12px;border-bottom:1px solid #eee;padding:9px 0;}
+.crm-research-facts dt {color:#737373;}
+.crm-research-facts small {display:block;margin-top:4px;}
+.crm-research-panel button.crm-evidence-link {border:0;padding:2px 5px;color:#525252;text-decoration:underline;text-underline-offset:3px;}
+.crm-research-tag {display:inline-block;border:1px solid #e5e5e5;border-radius:4px;margin-left:8px;padding:1px 5px;font-size:11px;}
+.crm-research-linked {margin-bottom:24px;}
+.crm-research-panel blockquote {border-left:2px solid #d4d4d4;padding:8px 12px;white-space:pre-wrap;overflow-wrap:anywhere;}
+.crm-research-panel dd {overflow-wrap:anywhere;}
+@media(max-width:850px) {.crm-research-layout {grid-template-columns:1fr;}.crm-research-panel>header {flex-direction:column;}}

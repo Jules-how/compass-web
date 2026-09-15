@@ -219,7 +219,10 @@ export default function RecordsTable({
   phoneSparse = false,
   onColumnsChange,
   onOpenerChange,
-  fill = false
+  fill = false,
+  serverSort,
+  onServerSort,
+  sortableColumns
 }: {
   leads: LeadContact[]
   columns: LeadColumnId[]
@@ -239,14 +242,19 @@ export default function RecordsTable({
   onColumnsChange?: (next: LeadColumnId[]) => void
   onOpenerChange?: (leadId: string, opener: string) => void
   fill?: boolean
+  serverSort?: {key:LeadColumnId|'index';dir:1|-1}
+  onServerSort?: (key:LeadColumnId,dir:1|-1)=>void
+  sortableColumns?: LeadColumnId[]
 }) {
-  const [sort, setSort] = useState<{ key: LeadColumnId | 'index'; dir: 1 | -1 }>({
+  const [localSort, setSort] = useState<{ key: LeadColumnId | 'index'; dir: 1 | -1 }>({
     key: 'company',
     dir: 1
   })
+  const sort=serverSort ?? localSort
   const effectiveWidths = widths
 
   const visibleRows = useMemo(() => {
+    if (onServerSort) return leads
     return [...leads].sort((a, b) => {
       if (sort.key === 'index') return 0
       if (sort.key === 'strength') {
@@ -258,7 +266,7 @@ export default function RecordsTable({
       const bText = leadColumnValue(b, sort.key).text
       return aText.localeCompare(bText) * sort.dir
     })
-  }, [leads, sort])
+  }, [leads, sort, onServerSort])
 
   const allSelected =
     visibleRows.length > 0 && visibleRows.every((row) => selected.has(row.id))
@@ -277,7 +285,7 @@ export default function RecordsTable({
         aria-label={`${entityLabel} table. Scroll horizontally and vertically to view all columns and records.`}
       >
         <table className="records-table" style={{ width: '100%', minWidth, tableLayout: 'fixed' }}>
-          <caption className="sr-only">{entityLabel}. Column sorting applies to this page of records.</caption>
+          <caption className="sr-only">{entityLabel}. {onServerSort ? 'Column sorting applies across all matching records.' : 'Column sorting applies to this page of records.'}</caption>
           <colgroup>
             <col style={{ width: 84 }} />
             {columns.map((id) => (
@@ -336,14 +344,13 @@ export default function RecordsTable({
                     <button
                       type="button"
                       className="records-header-button min-w-0 flex-1"
-                      title="Sort this page"
-                      onClick={() =>
-                        setSort((current) =>
-                          current.key === id
-                            ? { key: id, dir: (current.dir * -1) as 1 | -1 }
-                            : { key: id, dir: 1 }
-                        )
-                      }
+                      title={onServerSort ? sortableColumns?.includes(id) ? 'Sort all matching records' : 'Sorting is unavailable for this column' : 'Sort this page'}
+                      disabled={Boolean(onServerSort && !sortableColumns?.includes(id))}
+                      onClick={() => {
+                        const direction=sort.key===id ? (sort.dir*-1) as 1|-1 : 1
+                        if (onServerSort) onServerSort(id,direction)
+                        else setSort({key:id,dir:direction})
+                      }}
                     >
                       <span className="records-header-icon">{COLUMN_ICONS[id]}</span>
                       <span className="truncate">{def?.label ?? id}</span>

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LeadListFilters } from './types'
+import { crmFilterSchema } from './crm-research-query'
 
 export type LeadScope = { filters: LeadListFilters; listIds?: string[] }
 
@@ -16,6 +17,14 @@ export async function resolveLeadScope(db: SupabaseClient, filters: LeadListFilt
 }
 
 export function scopedLeadQuery(db: SupabaseClient, columns: string, scope: LeadScope, options: { count?: 'exact'; head?: boolean } = {}) {
+  const filters=scope.filters
+  const companyFilters=Object.fromEntries(Object.entries({customer_mix:filters.company_customer_mix,system:filters.company_system,region:filters.company_region,fit_status:filters.company_fit,min_rating:filters.company_min_rating,min_age:filters.company_min_age,freshness:filters.company_freshness}).filter(([,value])=>value!==undefined))
+  if (Object.keys(companyFilters).length) {
+    if (process.env.COMPASS_CRM_RESEARCH!=='1') throw new Error('crm_research_disabled')
+    const parsed=crmFilterSchema.safeParse(companyFilters)
+    if (!parsed.success) throw new Error('invalid_company_filters:'+parsed.error.issues.map(x=>x.message).join('; '))
+    return db.rpc('crm_research_lead_scope',{p_list_ids:scope.listIds ?? null,p_company_filters:parsed.data},options).select(columns)
+  }
   return scope.listIds
     ? db.rpc('compass_list_cohort_leads', { p_list_ids: scope.listIds }, options).select(columns)
     : db.from('lead_contacts').select(columns, options)

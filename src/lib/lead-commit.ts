@@ -17,6 +17,8 @@ import { isIcpSkip } from '@/lib/lead-icp'
 import { applySharedMarkFields, type SharedMarkBody } from '@/lib/lead-mark'
 import { appendEvidence } from '@/lib/events'
 import { parseIdentityReview, type IdentityReview } from '@/lib/lead-identity-review'
+import { assertKnownFields, LEAD_SHARED_MARK_KEYS, LeadWriteValidationError, validateLeadCommitInput } from '@/lib/lead-write-validation'
+import { LEAD_LIST_COLUMNS } from '@/lib/list-columns'
 
 export const LEAD_WRITE_BATCH = 500
 export const AGENT_LEADS_BODY_MAX_BYTES = 8 * 1024 * 1024
@@ -92,7 +94,7 @@ export type LeadCommitDecision =
 
 export type LeadCommitResult = {
   ok: boolean
-  receipts?: Array<{id:string;key:string;action:string}>
+  receipts?: Array<{id:string;key:string;action:string;record?:Record<string,unknown>;applied_fields?:string[]}>
   inserted: number
   updated: number
   skipped: Array<{ key: string; reason: string; existing_id?: string }>
@@ -292,6 +294,7 @@ function buildBaseFields(
   if (incoming.email_verify_status !== undefined) {
     patch.email_verify_status = optionalText(incoming.email_verify_status)
   }
+  if (incoming.email_verified_at !== undefined) patch.email_verified_at = optionalText(incoming.email_verified_at)
   return patch
 }
 
@@ -407,6 +410,13 @@ export async function commitLeadRows(
     dryRun?: boolean
   }
 ): Promise<LeadCommitResult> {
+  if (input.defaults) validateLeadCommitInput(input.defaults,'defaults')
+  input.rows.forEach((row,index)=>validateLeadCommitInput(row,`rows.${index}`))
+  if (input.mark) {
+    assertKnownFields(input.mark,LEAD_SHARED_MARK_KEYS,'mark')
+    const validation=applySharedMarkFields({},input.mark)
+    if (!validation.ok) throw new LeadWriteValidationError([{path:'mark',message:validation.error}])
+  }
   const now = new Date().toISOString()
   const skipped: LeadCommitResult['skipped'] = []
   const failed: LeadCommitResult['failed'] = []
@@ -482,7 +492,7 @@ export async function commitLeadRows(
     }
   }
 
-  const receipts: Array<{id:string;key:string;action:string}> = []
+  const receipts: NonNullable<LeadCommitResult['receipts']> = []
   let inserted = 0
   let updated = 0
   const touchedIds: string[] = []
@@ -520,7 +530,7 @@ export async function commitLeadRows(
       continue
     }
     inserted += slice.length
-    for (const item of slice) { touchedIds.push(String(item.row.id)); receipts.push({id:String(item.row.id),key:item.key,action:'inserted'}) }
+    for (const item of slice) { touchedIds.push(String(item.row.id)); receipts.push({id:String(item.row.id),key:item.key,action:'inserted',applied_fields:Object.keys(item.row)}) }
   }
 
   for (const item of updates) {
@@ -534,7 +544,7 @@ export async function commitLeadRows(
     if (!data?.length) { failed.push({ key: item.key, error: 'lead_changed_since_review' }); continue }
     updated += 1
     touchedIds.push(item.id)
-    receipts.push({id:item.id,key:item.key,action:'updated'})
+    receipts.push({id:item.id,key:item.key,action:'updated',applied_fields:Object.keys(item.patch)})
   }
 
   if (input.mark && touchedIds.length) {
@@ -551,6 +561,17 @@ export async function commitLeadRows(
     }
   }
 
+  for (let i=0;i<touchedIds.length;i+=LEAD_WRITE_BATCH) {
+    const ids=[...new Set(touchedIds.slice(i,i+LEAD_WRITE_BATCH))]
+    const result=await admin.from('lead_contacts').select(LEAD_LIST_COLUMNS).in('id',ids)
+    if (result.error) { failed.push({key:'readback',error:result.error.message}); continue }
+    const records=new Map((result.data ?? []).map(row=>[String(row.id),row as Record<string,unknown>]))
+    for (const receipt of receipts.filter(r=>ids.includes(r.id))) {
+      const record=records.get(receipt.id)
+      if (record) receipt.record=record
+      else failed.push({key:receipt.key,error:'readback_missing'})
+    }
+  }
   if (!input.dryRun && (inserted > 0 || updated > 0)) {
     try {
       await appendEvidence(admin, {

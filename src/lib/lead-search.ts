@@ -1,4 +1,6 @@
 import { resolveLeadScope, scopedLeadQuery } from './lead-scope'
+import { validatedLeadSort } from './lead-sort'
+import { cursorClause, decodeResearchCursor, encodeResearchCursor, queryFingerprint } from './crm-research-query'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LeadListFilters, LeadSummaryCounts } from '@/lib/types'
 import { LEAD_EXPORT_MAX, LEAD_LIST_COLUMNS, LEAD_PAGE_SIZE, LEAD_UI_PAGE_MAX } from '@/lib/list-columns'
@@ -87,6 +89,7 @@ export async function searchLeadContacts(
   const scope = await resolveLeadScope(admin, filters)
   filters = scope.filters
   const mode = options.mode ?? 'agent'
+  const sort=validatedLeadSort(filters.sort,filters.sort_dir,mode)
   if (mode === 'ui' || mode === 'export') {
     const page = options.page && options.page > 0 ? Math.floor(options.page) : 1
     const maxSize = mode === 'export' ? LEAD_EXPORT_MAX : LEAD_UI_PAGE_MAX
@@ -100,8 +103,8 @@ export async function searchLeadContacts(
       filters
     ) as unknown as ReturnType<ReturnType<SupabaseClient['from']>['select']>
     const { data, error, count } = await query
-      .order('mirrored_at', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false, nullsFirst: false })
+      .order(sort.column, { ascending: sort.direction==='asc', nullsFirst: false })
+      .order('id', { ascending: sort.direction==='asc' })
       .range(from, to)
     if (error) throw new Error(error.message)
     const leads = (data ?? []) as unknown as Record<string, unknown>[]
@@ -119,21 +122,29 @@ export async function searchLeadContacts(
   const columns = parseAgentLeadColumns(options.columns, 'lean')
   const limit = clampAgentLeadLimit(options.limit, AGENT_LEAD_PAGE_DEFAULT)
   const cursor = decodeLeadCursor(options.cursor)
-  const offset = !cursor && options.offset && options.offset > 0 ? Math.floor(options.offset) : 0
+  const orderedCursor=(filters.sort || filters.sort_dir) && options.cursor ? decodeResearchCursor(options.cursor,{sort:sort.column,direction:sort.direction,scope:queryFingerprint(filters as Record<string,unknown>)}) : null
+  if (options.cursor && !filters.sort && !filters.sort_dir && !cursor) throw new Error('invalid_lead_cursor')
+  const selectColumns=resolveLeadSelectColumns(columns)
+  const select=selectColumns.split(',').includes(sort.column) ? selectColumns : selectColumns+','+sort.column
+  const totalQuery=applyLeadFilters(scopedLeadQuery(admin,'id',scope,{count:'exact',head:true}) as unknown as LeadFilterQuery,filters) as unknown as ReturnType<ReturnType<SupabaseClient['from']>['select']>
+  const counted=await totalQuery
+  if (counted.error) throw new Error(counted.error.message)
+  const offset = !options.cursor && options.offset && options.offset > 0 ? Math.floor(options.offset) : 0
   let query = applyLeadFilters(
-    scopedLeadQuery(admin, resolveLeadSelectColumns(columns), scope, { count: 'exact' }) as unknown as LeadFilterQuery,
+    scopedLeadQuery(admin, select, scope, { count: 'exact' }) as unknown as LeadFilterQuery,
     filters
   )
-  if (cursor) query = applyLeadKeyset(query, cursor)
+  if (orderedCursor) query=query.or(cursorClause(orderedCursor))
+  else if (cursor) query = applyLeadKeyset(query, cursor)
   const ordered = query as unknown as ReturnType<ReturnType<SupabaseClient['from']>['select']>
   const ranged = offset
     ? ordered
-        .order('email', { ascending: true, nullsFirst: false })
-        .order('id', { ascending: true })
+        .order(sort.column, { ascending: sort.direction==='asc', nullsFirst: false })
+        .order('id', { ascending: sort.direction==='asc' })
         .range(offset, offset + limit - 1)
     : ordered
-        .order('email', { ascending: true, nullsFirst: false })
-        .order('id', { ascending: true })
+        .order(sort.column, { ascending: sort.direction==='asc', nullsFirst: false })
+        .order('id', { ascending: sort.direction==='asc' })
         .limit(limit)
   const { data, error, count } = await ranged
   if (error) throw new Error(error.message)
@@ -141,12 +152,12 @@ export async function searchLeadContacts(
   const last = leads[leads.length - 1]
   const next_cursor =
     leads.length === limit && last
-      ? encodeLeadCursor(last.email == null ? null : String(last.email), String(last.id ?? ''))
+      ? (filters.sort || filters.sort_dir) ? encodeResearchCursor({v:1,sort:sort.column,direction:sort.direction,scope:queryFingerprint(filters as Record<string,unknown>),value:(last[sort.column] ?? null) as string|number|null,id:String(last.id)}) : encodeLeadCursor(last.email == null ? null : String(last.email), String(last.id ?? ''))
       : null
   return {
     leads,
     count: leads.length,
-    total: count ?? 0,
+    total: counted.count ?? 0,
     next_cursor,
     columns
   }
@@ -159,7 +170,9 @@ export async function streamLeadContacts(
 ): Promise<{ total: number; columns: AgentLeadColumnSet; iterator: AsyncGenerator<Record<string, unknown>> }> {
   const scope = await resolveLeadScope(admin, filters)
   filters = scope.filters
-  const select = resolveLeadSelectColumns(columns)
+  const sort=validatedLeadSort(filters.sort,filters.sort_dir,'agent')
+  const baseSelect=resolveLeadSelectColumns(columns)
+  const select=baseSelect.split(',').includes(sort.column) ? baseSelect : baseSelect+','+sort.column
   const countQuery = applyLeadFilters(
     scopedLeadQuery(admin, 'id', scope, { count: 'exact', head: true }) as unknown as LeadFilterQuery,
     filters
@@ -169,18 +182,18 @@ export async function streamLeadContacts(
   const total = count ?? 0
 
   async function* iterator() {
-    let cursor: { email: string | null; id: string } | null = null
+    let cursor: Parameters<typeof cursorClause>[0] | null = null
     while (true) {
       let query = applyLeadFilters(
         scopedLeadQuery(admin, select, scope) as unknown as LeadFilterQuery,
         filters
       )
-      if (cursor) query = applyLeadKeyset(query, cursor)
+      if (cursor) query = query.or(cursorClause(cursor))
       const { data, error } = await (
         query as unknown as ReturnType<ReturnType<SupabaseClient['from']>['select']>
       )
-        .order('email', { ascending: true, nullsFirst: false })
-        .order('id', { ascending: true })
+        .order(sort.column, { ascending: sort.direction==='asc', nullsFirst: false })
+        .order('id', { ascending: sort.direction==='asc' })
         .limit(AGENT_LEAD_STREAM_RANGE)
       if (error) throw new Error(error.message)
       const rows = (data ?? []) as unknown as Record<string, unknown>[]
@@ -188,7 +201,7 @@ export async function streamLeadContacts(
       for (const row of rows) yield row
       if (rows.length < AGENT_LEAD_STREAM_RANGE) return
       const last = rows[rows.length - 1]
-      cursor = { email: last.email == null ? null : String(last.email), id: String(last.id ?? '') }
+      cursor = { v:1,sort:sort.column,direction:sort.direction,scope:queryFingerprint(filters as Record<string,unknown>),value:(last[sort.column] ?? null) as string|number|null,id:String(last.id) }
     }
   }
 

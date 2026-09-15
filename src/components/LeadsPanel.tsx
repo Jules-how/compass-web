@@ -8,6 +8,8 @@ import { LoadingBlock } from '@/components/LoadingBlock'
 import { LEAD_PAGE_SIZE } from '@/lib/list-columns'
 import { leadFiltersToSearchParams, parseLeadListFilters } from '@/lib/leads-query'
 import { prefetchJson, useCachedJson } from '@/lib/use-cached-json'
+import { CompanyResearchWorkspace } from './CompanyResearchWorkspace'
+import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
 import type { CompassLeadList } from '@/lib/lead-lists'
 
@@ -28,6 +30,12 @@ type FacetsPayload = {
 }
 
 export function LeadsPanel() {
+  const params = useSearchParams()
+  if (params.get('view') === 'companies') return <CompanyResearchWorkspace />
+  return <><div className="mb-3 text-sm"><Link href="/leads?view=companies">Company research</Link></div><LeadRecordsPanel /></>
+}
+
+function LeadRecordsPanel() {
   const router = useRouter()
   const searchParams = useSearchParams()
 

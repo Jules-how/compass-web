@@ -44,6 +44,8 @@ export function parseLeadFacts(
   for (const item of input) {
     if (!item || typeof item !== 'object') return { ok: false, error: 'lead_fact_invalid' }
     const row = item as Record<string, unknown>
+    const unknownKeys = Object.keys(row).filter(key => !['kind','claim','url'].includes(key))
+    if (unknownKeys.length) return { ok: false, error: `lead_fact_unknown_fields:${unknownKeys.join(',')}` }
     const kind = typeof row.kind === 'string' ? row.kind.trim() : ''
     if (!isLeadFactKind(kind)) return { ok: false, error: 'lead_fact_kind_invalid' }
     const claim = typeof row.claim === 'string' ? row.claim.trim() : ''

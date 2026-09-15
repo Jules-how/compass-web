@@ -10,6 +10,7 @@ import { parseCompanySite } from '@/lib/company-site'
 import { MAX_LEAD_OPENER } from '@/lib/campaigns'
 import { getPortalAdminClient } from '@/lib/portal-admin'
 import { LEAD_LIST_COLUMNS } from '@/lib/list-columns'
+import { assertKnownFields, LeadWriteValidationError } from '@/lib/lead-write-validation'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,7 +35,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   let body: Record<string, unknown>
   try {
     body = (await readBoundedJson(request, 64 * 1024)) as Record<string, unknown>
-  } catch {
+    assertKnownFields(body,new Set(['opener','lead_facts','pipeline_campaign_id','website','icp_status','review_count','hours_label','after_hours','capture_crack','email_origin']),'body')
+  } catch (error) {
+    if (error instanceof LeadWriteValidationError) return portalJson({error:'validation_failed',issues:error.issues},{status:422})
     return portalJson({ error: 'invalid_request' }, { status: 400 })
   }
 
