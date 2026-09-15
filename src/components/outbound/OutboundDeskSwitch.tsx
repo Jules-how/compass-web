@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils";
 import type { OutboundDeskId } from "@/lib/outbound-desk";
 
 const DESKS: Array<{ id: OutboundDeskId; label: string }> = [
-  { id: "overview", label: "Overview" },
+  { id: "overview", label: "Workspace" },
+  { id: "evidence", label: "Evidence" },
   { id: "notebook", label: "Notebook" },
   { id: "waves", label: "Waves" },
   { id: "calendar", label: "Calendar" },

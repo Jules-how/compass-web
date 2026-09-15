@@ -1,5 +1,6 @@
 "use client";
 
+import { OutboundWorkspace } from "@/components/outbound/OutboundWorkspace";
 import { OutboundOverview } from "@/components/outbound/OutboundOverview";
 import { useConsoleNav } from "@/components/ConsoleNav";
 import { loadOutboundRhythm } from "@/lib/console-destinations";
@@ -89,10 +90,10 @@ export function OutboundDesk() {
   return (
     <OperatorShell title="Outbound" width="full" actions={<div className="flex flex-wrap items-end gap-3">{switcher}<details className="folio-pace"><summary>Weekly pace</summary><div><CadenceControl slots={slots} prefs={prefs} onChange={setPrefs} /></div></details></div>}>
       {campaignsQuery.error && <p role="alert">Could not refresh campaigns. Previously loaded campaigns remain visible.</p>}
-      {(["overview", "notebook", "waves", "calendar", "timeline"] as const).map(tab => visited.has(tab) ? (
+      {(["overview", "evidence", "notebook", "waves", "calendar", "timeline"] as const).map(tab => visited.has(tab) ? (
         <div key={tab} hidden={desk !== tab} inert={desk !== tab ? true : undefined}>
           <ActivePane active={desk === tab}>
-            {tab === "overview" ? <OutboundOverview /> : tab === "notebook" ? <OutboundNotebook campaigns={campaignsQuery.data?.campaigns ?? []} /> : tab === "waves" ? <OfferWavesBoard /> : tab === "calendar" ? <TestPlanner /> : <CampaignPlanner initialView={tab} view={plannerViews[tab]} onViewChange={view => setPlannerViews(previous => ({ ...previous, [tab]: view }))} />}
+            {tab === "overview" ? <OutboundWorkspace onEvidence={() => setDesk("evidence")} /> : tab === "evidence" ? <OutboundOverview /> : tab === "notebook" ? <OutboundNotebook campaigns={campaignsQuery.data?.campaigns ?? []} /> : tab === "waves" ? <OfferWavesBoard /> : tab === "calendar" ? <TestPlanner /> : <CampaignPlanner initialView={tab} view={plannerViews[tab]} onViewChange={view => setPlannerViews(previous => ({ ...previous, [tab]: view }))} />}
           </ActivePane>
         </div>
       ) : null)}

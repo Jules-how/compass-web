@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Outbound · Compass demo</title>
+<style>
+:root {
+  font-family: Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #292b26; background: #fafaf8; font-size: 14px;
+  --ink: #292b26; --muted: #6c7068; --line: #e2e4dc;
+  --orange: #a64b20; --accent: #f2a567; --green: #42664d;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; }
+button:disabled { cursor: default; opacity: .55; }
+button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+button { transition: background .12s, border-color .12s, box-shadow .12s; }
+svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+h1, h2, h3, p { margin: 0; }
+button, h2, h3, strong { font-weight: 560; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); }
+.shell { display: grid; grid-template-columns: 224px minmax(0,1fr); min-height: 100dvh; }
+.sidebar { background: #f0eee7; border-right: 1px solid #e1ded4; padding: 23px 14px 16px; display: flex; flex-direction: column; gap: 31px; }
+.brand { display: flex; align-items: center; gap: 9px; padding: 0 10px; font-size: 18px; font-weight: 650; letter-spacing: -.5px; }
+.brand-icon { width: 27px; height: 27px; display: grid; place-items: center; color: #a9582c; }
+.brand-icon svg { width: 25px; height: 25px; }
+.workspace-name { color: var(--muted); font-size: 12px; margin: 7px 0 0 46px; }
+.nav-group { display: grid; gap: 4px; }
+.nav-label { color: #697064; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; padding: 0 12px 8px; }
+.nav-item { display: flex; align-items: center; gap: 11px; min-height: 37px; padding: 9px 12px; color: #6c675e; border-radius: 6px; font-size: 13px; }
+.nav-item.active { color: #4c402e; background: #e8e4d9; font-weight: 600; box-shadow: inset 2px 0 #b77742; }
+.nav-item.active svg { color: #a55326; }
+.nav-item .nav-dot { width: 5px; height: 5px; border-radius: 50%; margin-left: auto; background: #b96636; }
+.sidebar-foot { margin-top: auto; border-top: 1px solid #ddded4; padding: 17px 8px 0; display: flex; gap: 9px; align-items: center; }
+.avatar { display: grid; place-items: center; border-radius: 50%; width: 31px; height: 31px; background: #e3d9c8; color: #6e5840; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+.sidebar-foot strong { display: block; font-size: 12px; }
+.sidebar-foot span:last-child { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+main { min-width: 0; }
+.topbar { min-height: 53px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 28px; gap: 12px; background: #ffffff; }
+.topbar-title, .topbar-right { display: flex; align-items: center; gap: 11px; }
+.topbar-title>svg { width: 16px; color: #697064; }
+.topbar h1 { font-size: 15px; font-weight: 620; letter-spacing: -.25px; }
+.topbar-right { color: var(--muted); font-size: 12px; gap: 15px; }
+.demo-badge { border: 1px solid #dfd7c8; background: #f3efe5; border-radius: 5px; padding: 4px 7px; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #746348; min-height: 26px; }
+.demo-badge::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #b08951; }
+.workspace { padding: 25px 28px 20px; }
+.workspace-tools { display: flex; gap: 16px; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.view-switch { display: inline-flex; gap: 15px; align-self: stretch; align-items: center; flex-shrink: 0; }
+.view-switch button { position: relative; color: #686e62; font-size: 13px; min-height: 36px; padding: 6px 0; border-radius: 0; font-weight: 500; }
+.view-switch button[aria-pressed="true"] { color: #2e3727; font-weight: 600; }
+.tool-right { display: flex; gap: 9px; align-items: center; }
+.search { display: flex; gap: 7px; align-items: center; height: 35px; border: 1px solid #e0e4d7; padding: 0 10px; border-radius: 6px; background: #fff; color: #686e62; }
+.search input { border: 0; background: transparent; min-width: 0; width: 155px; font-size: 12px; outline: none; }
+.search:focus-within { border-color: #b88055; outline: 2px solid #ead0ba; }
+.search svg { width: 15px; height: 15px; }
+.button { display: inline-flex; gap: 7px; align-items: center; justify-content: center; min-height: 35px; padding: 7px 11px; border-radius: 6px; border: 1px solid #dcd5c8; background: #ffffff; font-size: 12px; font-weight: 550; }
+.button:hover { background: #f0f2e9; }
+.button.primary { background: var(--accent); border-color: #df9457; color: #412915; }
+.button.primary:hover { background: #ec9a59; }
+.button svg { width: 15px; height: 15px; }
+.icon-button { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 5px; color: #697064; }
+.icon-button:hover { background: #eae5da; color: #4f4436; }
+.focus-strip { display: flex; align-items: center; gap: 18px; padding: 13px 16px; border: 1px solid #e6dfd1; border-radius: 8px; background: #f7f3e9; min-height: 53px; }
+.focus-label { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #776348; padding-right: 16px; border-right: 1px solid #e0d8c8; white-space: nowrap; font-weight: 600; }
+.focus-label svg { width: 15px; height: 15px; }
+.focus-items { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #726b5b; }
+.focus-items strong { color: #4e4132; font-variant-numeric: tabular-nums; margin-right: 3px; }
+.text-button { color: #915029; font-size: 12px; font-weight: 550; display: inline-flex; gap: 6px; align-items: center; padding: 4px 0; }
+.text-button:hover { color: #6d3518; text-decoration: underline; text-underline-offset: 3px; }
+.text-button svg { width: 13px; height: 13px; }
+.focus-strip>.text-button { margin-left: auto; flex-shrink: 0; }
+.board { display: grid; grid-template-columns: 1.08fr 1.06fr 1fr 1fr; gap: 23px; margin-top: 28px; align-items: start; }
+.column { min-width: 0; }
+.column-heading { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.column-icon { width: 21px; height: 25px; display: grid; place-items: center; color: #686e62; }
+.column-icon svg { width: 15px; height: 15px; }
+.column h2 { font-size: 15px; font-weight: 620; letter-spacing: -.25px; }
+.count { color: #686e62; font-size: 11px; font-variant-numeric: tabular-nums; background: #edf0e6; border-radius: 5px; padding: 2px 5px; min-width: 19px; text-align: center; font-weight: 500; }
+.column-heading .icon-button { margin-left: auto; }
+.column-desc { color: #686e62; font-size: 12px; line-height: 1.5; margin: 5px 0 20px; }
+.stack { display: grid; gap: 12px; }
+.campaign { background: #ffffff; border: 1px solid #dedfd8; border-radius: 8px; display: block; width: 100%; text-align: left; overflow: hidden; padding: 0; box-shadow: 0 2px 5px #27301604; }
+.campaign:hover { border-color: #bcbfb1; box-shadow: 0 3px 12px #3443190a; }
+.campaign-content { padding: 16px 17px 15px; display: block; }
+.campaign-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 11px; }
+.eyebrow { font-size: 10px; color: #686e62; text-transform: uppercase; letter-spacing: .8px; font-weight: 560; }
+.status { display: inline-flex; gap: 5px; align-items: center; padding: 3px 6px; background: #eff0ea; border-radius: 4px; font-size: 10px; color: #746958; font-weight: 550; white-space: nowrap; }
+.status::before { content: ""; width: 4px; height: 4px; background: currentColor; border-radius: 50%; }
+.status.green { color: #47664c; background: #edf1e8; }
+.status.amber { color: #91682a; background: #f7edda; }
+.campaign-title { display: block; font-size: 18px; line-height: 1.4; font-weight: 590; letter-spacing: -.5px; color: #30342a; }
+.secondary { display: block; color: #69715e; font-size: 12px; line-height: 1.65; font-weight: 400; }
+.campaign .secondary { margin-top: 5px; }
+.campaign-stats { display: flex; gap: 27px; margin-top: 18px; color: #6a745d; font-size: 11px; font-weight: 400; }
+.campaign-stats strong { display: block; color: #445232; font-size: 16px; font-weight: 550; margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+.campaign-action { display: flex; gap: 8px; align-items: center; padding: 11px 16px; border-top: 1px solid #ebeee4; color: #69775a; font-size: 12px; background: #fafbf7; min-height: 40px; }
+.campaign-action.attention { color: #9c592f; background: #fff6ea; }
+.campaign-action svg { width: 13px; height: 13px; margin-left: auto; }
+.queue { border: 1px solid #dfe1d8; border-radius: 8px; background: #fff; overflow: hidden; }
+.queue-group { font-size: 10px; letter-spacing: .65px; font-weight: 600; color: #686e62; background: #f6f7f1; padding: 10px 14px; display: flex; justify-content: space-between; }
+.queue ul { list-style: none; padding: 0; margin: 0; }
+.queue li+li { border-top: 1px solid #eceee6; }
+.call-row { position: relative; display: flex; align-items: flex-start; width: 100%; gap: 10px; padding: 15px 13px; text-align: left; }
+.call-row:hover { background: #f3f5ec; }
+.call-row.next-up { background: #fff9ef; box-shadow: inset 2px 0 #cb8b4e; }
+.call-avatar { width: 29px; height: 29px; border-radius: 7px; background: #eff0e8; color: #686e62; display: grid; place-items: center; font-size: 10px; flex-shrink: 0; font-weight: 500; }
+.call-row.logged .call-avatar { background: #edf0e7; color: #587251; }
+.call-body { min-width: 0; flex: 1; }
+.record-title { font-size: 13px; line-height: 1.5; font-weight: 590; display: block; color: #32382b; }
+.call-body .secondary { font-size: 12px; margin-top: 1px; }
+.call-next { color: #686e62; font-size: 11px; line-height: 1.5; margin-top: 6px; display: block; font-weight: 400; }
+.call-row.logged .call-next { color: #55704f; }
+.row-arrow { margin-top: 4px; color: #b1a28b; width: 12px; height: 12px; }
+.queue-footer { border-top: 1px solid #e9e2d5; padding: 11px 13px; color: #697064; font-size: 11px; background: #f8f9f5; }
+.motion-group { position: relative; padding-left: 18px; margin: 3px 0 24px; }
+.group-title { position: relative; display: flex; align-items: center; gap: 7px; color: #68765b; text-transform: uppercase; font-size: 10px; letter-spacing: .55px; font-weight: 650; margin-bottom: 9px; }
+.group-title .group-count { margin-left: auto; color: #686e62; font-weight: 500; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #b58547; }
+.dot.gray { background: #a09b8e; }
+.dot.green { background: #75906a; }
+.motion-card { display: block; width: 100%; text-align: left; padding: 11px 0 12px; border: 0; border-radius: 0; background: transparent; }
+.motion-card:hover { background: #f2f3ed; }
+.motion-card .secondary { margin-top: 5px; }
+.motion-step { display: flex; align-items: center; gap: 6px; color: #686e62; margin-top: 8px; font-size: 11px; font-weight: 400; line-height: 1.5; }
+.motion-step svg { width: 12px; height: 12px; }
+.task { display: flex; gap: 10px; align-items: flex-start; padding: 14px 12px; background: #fff; border: 1px solid #e0e3d9; border-radius: 7px; }
+.task input { appearance: none; width: 16px; height: 16px; min-width: 16px; border: 1.5px solid #c9bdab; border-radius: 4px; margin: 3px 0 0; background: #ffffff; cursor: pointer; display: grid; place-items: center; }
+.task input:checked { background: #687e57; border-color: #687e57; }
+.task input:checked::after { content: ""; display: block; width: 7px; height: 4px; border-left: 1.5px solid white; border-bottom: 1.5px solid white; transform: translateY(-1px) rotate(-45deg); }
+.task-body { min-width: 0; flex: 1; }
+.task-name { display: block; padding: 0; text-align: left; font-size: 13px; font-weight: 550; line-height: 1.55; color: #33392b; }
+.task-name:hover { color: #a55229; }
+.task.done { background: #f1f3ea; }
+.task.done .task-name { text-decoration: line-through; color: #697064; }
+.task-meta { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; color: #686e62; font-size: 11px; line-height: 1.5; flex-wrap: wrap; }
+.task-meta .tag { color: #686e62; font-size: 11px; line-height: 1.5; max-width: 100%; overflow-wrap: anywhere; }
+.task-meta .due { margin-left: auto; font-size: 11px; color: #686e62; white-space: nowrap; display: inline-flex; gap: 4px; align-items: center; }
+.add-task { display: inline-flex; align-items: center; gap: 7px; padding: 10px 3px; color: #686e62; font-size: 12px; font-weight: 400; margin-top: 4px; }
+.add-task svg { width: 14px; height: 14px; }
+.add-task:hover { color: #9c5127; }
+.completed-toggle { display: block; color: #697064; font-size: 11px; padding: 8px 3px; }
+.empty { padding: 24px 15px; border: 1px dashed #d6dbcc; background: #f6f8f1; border-radius: 8px; color: #697064; font-size: 12px; line-height: 1.6; }
+.empty strong { color: #6e5f48; display: block; margin-bottom: 5px; }
+.workspace-footer { display: flex; align-items: center; gap: 8px; margin-top: 32px; padding-top: 14px; border-top: 1px solid #e4e5dd; font-size: 11px; color: #686e62; }
+.workspace-footer .text-button { margin-left: auto; color: #697064; font-size: 11px; }
+.workspace-footer svg { width: 12px; height: 12px; }
+.search-status { margin-top: 12px; font-size: 12px; color: #81715b; }
+.search-status:empty { display: none; }
+dialog { border: 0; padding: 0; margin: 0 0 0 auto; height: 100dvh; max-height: 100dvh; width: 490px; max-width: 100%; color: var(--ink); background: #fcfcf9; border-left: 1px solid #dce1d2; box-shadow: -15px 0 50px #25301514; }
+dialog::backdrop { background: #302b233d; }
+.drawer-top { position: sticky; top: 0; z-index: 1; padding: 15px 23px; min-height: 55px; border-bottom: 1px solid #e5e8de; display: flex; align-items: center; justify-content: space-between; background: #fcfcf9; }
+.drawer-kind { display: flex; align-items: center; gap: 8px; color: #697064; font-size: 12px; }
+.drawer-kind svg { width: 15px; height: 15px; }
+.drawer-content { padding: 27px 27px 32px; }
+.drawer-content h2 { font-size: 24px; line-height: 1.35; font-weight: 590; letter-spacing: -.6px; outline: none; margin: 12px 0 7px; color: #303928; }
+.drawer-content>p { color: #827158; font-size: 13px; line-height: 1.65; }
+.detail-section { margin-top: 25px; }
+.detail-section h3, .field-label { font-size: 12px; color: #746044; font-weight: 600; margin: 0 0 9px; display: block; }
+.detail-section p { font-size: 13px; line-height: 1.7; color: #7b6a51; }
+.next-step { padding: 14px 15px; background: #f8f1e6; border: 1px solid #e9dcc6; border-radius: 7px; color: #7f613b; font-size: 13px; line-height: 1.65; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #dfe4d6; border-radius: 7px; margin-top: 24px; overflow: hidden; background: #ffffff; }
+.detail-grid>div { padding: 15px; font-size: 12px; color: #697064; }
+.detail-grid>div+div { border-left: 1px solid #e7e9e0; }
+.detail-grid strong { display: block; font-size: 20px; color: #5b4730; margin-bottom: 4px; }
+.form-field { margin-top: 21px; }
+.form-control { width: 100%; padding: 10px 11px; background: #ffffff; border: 1px solid #cdd4c2; border-radius: 6px; font-size: 13px; line-height: 1.5; color: #5a4731; }
+.form-control::placeholder { color: #697064; }
+textarea.form-control { min-height: 104px; resize: vertical; }
+fieldset { padding: 0; border: 0; margin: 24px 0 0; }
+legend { padding: 0; }
+.outcomes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.outcome-option { cursor: pointer; font-size: 12px; border: 1px solid #ded2bd; background: #ffffff; padding: 11px 10px; border-radius: 6px; display: flex; gap: 6px; align-items: center; color: #816d4f; }
+.outcome-option:has(input:checked) { background: #f4e8d6; border-color: #c59c69; color: #72522d; }
+.outcome-option input { accent-color: #a76938; margin: 0; width: 13px; height: 13px; }
+.drawer-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 26px; }
+.drawer-footnote { font-size: 11px; color: #697064; line-height: 1.6; margin-top: 25px; }
+.inline-link { text-align: left; display: block; width: 100%; padding: 13px 14px; border: 1px solid #dce2d1; border-radius: 7px; margin-top: 9px; background: #ffffff; color: #6b5031; }
+.inline-link:hover { background: #f5ecdd; }
+.inline-link .secondary { font-size: 12px; margin-top: 4px; }
+.form-error { font-size: 12px; color: #a33d2d; line-height: 1.5; margin-top: 7px; }
+.toast { position: fixed; left: calc(50% + 108px); bottom: 22px; transform: translateX(-50%); padding: 12px 17px; background: #423a2c; color: #fff9eb; border-radius: 7px; box-shadow: 0 4px 16px #32220c22; font-size: 12px; max-width: calc(100vw - 30px); z-index: 10; }
+.toast:empty { display: none; }
+@media (min-width: 1600px) { .workspace { padding: 30px 32px 20px; } .board { gap: 26px; } .campaign-content { padding: 20px; } .campaign-action { padding: 12px 19px; } }
+@media (max-width: 1270px) { .shell { grid-template-columns: 64px minmax(0,1fr); } .sidebar { padding: 20px 8px 14px; gap: 31px; } .brand { padding: 0; justify-content: center; } .brand>span:last-child, .workspace-name, .nav-label, .nav-item>span, .sidebar-foot>div { display: none; } .nav-item { justify-content: center; padding: 10px; } .sidebar-foot { justify-content: center; padding: 17px 0 0; } .toast { left: calc(50% + 32px); } .board { gap: 16px; } }
+@media (max-width: 1110px) { .board { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 30px 24px; } .campaign-stats { gap: 30px; } .workspace { padding: 23px; } }
+@media (max-width: 760px) { .shell { grid-template-columns: 1fr; } .sidebar { display: none; } .topbar { padding: 0 20px; } .workspace { padding: 20px; } .workspace-tools { align-items: flex-start; flex-direction: column; gap: 15px; } .tool-right { width: 100%; } .search { flex: 1; } .search input { width: 100%; } .focus-strip { flex-wrap: wrap; gap: 10px 14px; } .focus-items { gap: 12px; } .focus-strip>.text-button { margin-left: 0; } .toast { left: 50%; } }
+@media (max-width: 580px) { .board { grid-template-columns: 1fr; gap: 29px; margin-top: 23px; } .topbar-right time { display: none; } .workspace { padding: 19px 17px; } .topbar { padding: 0 17px; } .search, .button { min-height: 40px; } .view-switch button { min-height: 34px; } .focus-label { border: 0; padding-right: 0; } .focus-items { width: calc(100% - 59px); gap: 5px 12px; } .focus-strip>.text-button { margin-left: 59px; } .column h2 { font-size: 15px; } .column-heading .icon-button { width: 40px; height: 40px; } .column-desc { margin: 6px 0 14px; } .task { padding: 16px 14px; } .task input { width: 20px; height: 20px; min-width: 20px; } .task-name { font-size: 14px; } .task-meta .tag { max-width: 185px; } .call-row { padding: 17px 14px; } .campaign-content { padding: 18px; } .campaign-action { padding: 13px 17px; } .record-title { font-size: 14px; } .workspace-footer { align-items: flex-start; line-height: 1.6; } .workspace-footer .text-button { white-space: nowrap; } .drawer-content { padding: 23px 20px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+
+.view-switch button[aria-pressed="true"]::after { content: ""; position: absolute; bottom: -5px; left: 0; right: 0; height: 2px; border-radius: 2px; background: #bc8250; }
+.summary-action { padding: 5px 9px; border-radius: 5px; color: #776c55; font-size: 12px; font-weight: 400; }
+.summary-action:hover { color: #664725; background: #eee5d5; }
+.summary-action strong { font-weight: 600; color: #57462f; }
+.motion-group::before { content: ""; position: absolute; left: 2px; top: 10px; bottom: -14px; width: 1px; background: #dce0d3; }
+.motion-group:last-child::before { bottom: 20px; }
+.group-title .dot { position: absolute; left: -19px; width: 7px; height: 7px; box-shadow: 0 0 0 4px #fafaf8; }
+.motion-card+.motion-card { border-top: 1px solid #e7e9e0; }
+.task-meta .due svg { width: 11px; height: 11px; }
+.reply-list { display: grid; gap: 11px; margin-top: 12px; }
+.reply-card { border: 1px solid #dfe3d6; border-radius: 8px; padding: 15px; background: white; }
+.reply-top { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.reply-top strong { color: #37492b; font-size: 13px; }
+.reply-card p { font-size: 12px; line-height: 1.7; margin-top: 8px; color: #686e62; }
+.reply-actions { display: flex; flex-wrap: wrap; gap: 7px 12px; align-items: center; margin-top: 13px; }
+.reply-actions .text-button { font-size: 11px; }
+.reply-actions .button { min-height: 30px; padding: 5px 9px; font-size: 11px; }
+.reply-card.reviewed { background: #f7f9f2; }
+.reply-progress { display: flex; align-items: center; gap: 7px; color: #686e62; font-size: 12px; margin-bottom: 12px; }
+.reply-progress svg { width: 15px; height: 15px; }
+.drawer-content .secondary, .drawer-footnote { color: #686e62; }
+.drawer-content>p, .detail-section p { color: #646f59; }
+.form-control { color: #3e4833; background: #fff; border-color: #cfd8c2; }
+.form-control::placeholder { color: #686e62; }
+.field-label, .detail-section h3 { color: #686e62; }
+.outcome-option { color: #686e62; border-color: #d6dec9; background: #fff; }
+.outcome-option:has(input:checked) { color: #73512d; border-color: #c59c69; background: #faf0df; }
+.detail-grid { background: #fff; border-color: #dce1d2; }
+.detail-grid strong { color: #45543a; }
+.detail-grid>div { color: #686e62; }
+@media (max-width: 1270px) {
+  .shell { grid-template-columns: 64px minmax(0,1fr); }
+  .sidebar { padding: 20px 8px 14px; }
+  .board { gap: 19px; }
+}
+@media (max-width: 1110px) {
+  .board { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 32px 28px; }
+}
+@media (max-width: 760px) {
+  .shell { grid-template-columns: 1fr; }
+  .workspace { padding: 20px; }
+  .workspace-tools { gap: 21px; }
+  .focus-strip { gap: 7px 12px; }
+  .focus-items { gap: 2px; }
+  .summary-action { padding: 5px 6px; }
+}
+@media (max-width: 580px) {
+  .workspace { padding: 20px 17px; }
+  .board { grid-template-columns: 1fr; gap: 30px; margin-top: 25px; }
+  .focus-strip { padding: 12px; }
+  .focus-label { width: 100%; border: 0; }
+  .focus-items { width: 100%; margin-left: -6px; }
+  .focus-strip>.text-button { margin-left: 0; padding-top: 8px; min-height: 36px; }
+  .column h2 { font-size: 16px; }
+  .column-desc { margin-bottom: 15px; }
+  .campaign-content { padding: 18px; }
+  .task { padding: 17px 14px; }
+  .task-name { font-size: 14px; }
+  .task-meta .tag { max-width: 100%; }
+  .motion-card { padding: 13px 0 15px; }
+  .drawer-content { padding: 24px 20px; }
+  .summary-action, .reply-actions .button, .reply-actions .text-button { min-height: 40px; }
+}
+
+</style>
+</head>
+<body>
+<svg style="display:none" aria-hidden="true"><defs>
+<symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15 9-2 4-4 2 2-4 4-2Z"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><path d="M7 3H4c-2 9 8 19 17 17v-4l-5-2-2 3-7-7 3-2-3-5Z"/></symbol>
+<symbol id="i-motion" viewBox="0 0 24 24"><path d="M3 15h4l4-8 3 11 3-7h4"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 3 3 5-6"/></symbol>
+<symbol id="i-tick" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m2-15a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 5"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6V3Zm9 0v5h4M9 12h7m-7 4h7"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/></symbol>
+<symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 9a8 8 0 1 1 0 7M4 3v6h6"/></symbol>
+</defs></svg>
+<div class="shell">
+<aside class="sidebar" aria-label="Compass navigation preview">
+  <div><div class="brand"><span class="brand-icon"><svg aria-hidden="true"><use href="#i-compass"/></svg></span><span>Compass</span></div><p class="workspace-name">Switchflow workspace</p></div>
+  <div class="nav-group"><div class="nav-label">Workspace</div>
+    <div class="nav-item" title="Overview"><svg aria-hidden="true"><use href="#i-grid"/></svg><span>Overview</span></div>
+    <div class="nav-item" title="Projects"><svg aria-hidden="true"><use href="#i-check"/></svg><span>Projects</span></div>
+    <div class="nav-item" title="Documents"><svg aria-hidden="true"><use href="#i-doc"/></svg><span>Documents</span></div>
+    <div class="nav-item" title="Planning"><svg aria-hidden="true"><use href="#i-clock"/></svg><span>Planning</span></div>
+  </div>
+  <div class="nav-group"><div class="nav-label">Business</div>
+    <div class="nav-item" title="CRM"><svg aria-hidden="true"><use href="#i-users"/></svg><span>CRM</span></div>
+    <div class="nav-item active" aria-current="page" title="Outbound"><svg aria-hidden="true"><use href="#i-arrow"/></svg><span>Outbound</span><span class="nav-dot"></span></div>
+    <div class="nav-item" title="Clients"><svg aria-hidden="true"><use href="#i-users"/></svg><span>Clients</span></div>
+    <div class="nav-item" title="Installs"><svg aria-hidden="true"><use href="#i-grid"/></svg><span>Installs</span></div>
+    <div class="nav-item" title="Reports"><svg aria-hidden="true"><use href="#i-motion"/></svg><span>Reports</span></div>
+  </div>
+  <div class="sidebar-foot"><span class="avatar">D</span><div><strong>Demo workspace</strong><span>Illustrative records</span></div></div>
+</aside>
+<main>
+<header class="topbar">
+  <div class="topbar-title"><svg aria-hidden="true"><use href="#i-arrow"/></svg><h1>Outbound</h1></div>
+  <div class="topbar-right"><time datetime="2026-09-14">Monday, 14 September</time><button class="demo-badge" id="about-demo" aria-label="About this demo">Demo data</button></div>
+</header>
+<div class="workspace">
+  <div class="workspace-tools">
+    <div class="view-switch" aria-label="Filter outbound work" role="group">
+      <button type="button" id="all-work" data-view="all" aria-pressed="true">All work</button>
+      <button type="button" id="attention-work" data-view="attention" aria-pressed="false">Needs attention</button>
+    </div>
+    <div class="tool-right">
+      <label class="search"><svg aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">Search outbound records</span><input id="search" type="search" placeholder="Search outbound…" autocomplete="off"></label>
+      <button type="button" class="button primary" id="new-task"><svg aria-hidden="true"><use href="#i-plus"/></svg>Add task</button>
+    </div>
+  </div>
+  <div class="focus-strip">
+    <span class="focus-label"><svg aria-hidden="true"><use href="#i-sun"/></svg>Today’s focus</span>
+    <div class="focus-items" id="today-summary"></div>
+    <button type="button" class="text-button" id="start-calling">Start calls <svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+  </div>
+  <p class="search-status" id="search-status" role="status" aria-live="polite"></p>
+  <div class="board">
+    <section class="column" aria-labelledby="emails-heading">
+      <div class="column-heading"><span class="column-icon"><svg aria-hidden="true"><use href="#i-mail"/></svg></span><h2 id="emails-heading">Emails</h2><span class="count" id="email-count">3</span></div>
+      <p class="column-desc">Installation campaigns</p><div class="stack" id="emails"></div>
+    </section>
+    <section class="column" aria-labelledby="calls-heading">
+      <div class="column-heading"><span class="column-icon"><svg aria-hidden="true"><use href="#i-phone"/></svg></span><h2 id="calls-heading">Call</h2><span class="count" id="call-count">5</span></div>
+      <p class="column-desc">Today &amp; upcoming</p><div id="calls"></div>
+    </section>
+    <section class="column" aria-labelledby="motion-heading">
+      <div class="column-heading"><span class="column-icon"><svg aria-hidden="true"><use href="#i-motion"/></svg></span><h2 id="motion-heading">Motion</h2><span class="count" id="motion-count">4</span></div>
+      <p class="column-desc">Conversations in progress</p><div id="motion"></div>
+    </section>
+    <section class="column" aria-labelledby="tasks-heading">
+      <div class="column-heading"><span class="column-icon"><svg aria-hidden="true"><use href="#i-check"/></svg></span><h2 id="tasks-heading">Tasks</h2><span class="count" id="task-count">3</span><button type="button" id="add-task-icon" class="icon-button" aria-label="Add task"><svg aria-hidden="true"><use href="#i-plus"/></svg></button></div>
+      <p class="column-desc">Preparation &amp; follow-through</p><div class="stack" id="tasks"></div>
+      <button type="button" class="add-task" id="add-task-bottom"><svg aria-hidden="true"><use href="#i-plus"/></svg>Add a task</button>
+      <button type="button" class="completed-toggle" id="completed-toggle" aria-pressed="false" hidden>Show completed</button>
+    </section>
+  </div>
+  <footer class="workspace-footer"><svg aria-hidden="true"><use href="#i-compass"/></svg><span>Sample workspace · Changes stay in this demo</span><button type="button" class="text-button" id="reset-demo"><svg aria-hidden="true"><use href="#i-reset"/></svg>Reset demo</button></footer>
+</div>
+</main>
+</div>
+<dialog id="detail" aria-labelledby="dialog-title">
+  <div class="drawer-top"><span class="drawer-kind" id="drawer-kind"></span><button type="button" class="icon-button" id="close-detail" aria-label="Close details"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <div class="drawer-content" id="drawer-content"></div>
+</dialog>
+<div class="toast" role="status" aria-live="polite" id="toast"></div>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const icon = (name, cls = '') => '<svg aria-hidden="true" class="' + cls + '"><use href="#i-' + name + '"/></svg>';
+const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const initial = {
+  campaigns: [
+    {id:'e1', city:'Sydney', status:'In progress', tone:'green', total:24, metric:'in sequence', replies:2, replyIds:['m1','m2'], reviewedReplyIds:[], next:'Review 2 replies', attention:true, detail:'Two replies are ready to review. Pick up the existing conversation and decide its next step.'},
+    {id:'e2', city:'Brisbane', status:'Paused', tone:'', total:18, metric:'prepared', replies:0, next:'Review campaign copy', attention:true, task:'t1', detail:'This campaign is paused. Its preparation task holds the copy review, so progress stays in one place.'},
+    {id:'e3', city:'Perth', status:'Draft', tone:'amber', total:12, metric:'to review', replies:0, next:'Check company fit', attention:true, task:'t2', detail:'This cohort is being prepared. Review installation fit and source evidence before moving on to the email copy.'}
+  ],
+  calls: [
+    {id:'c1', title:'Example Air Co.', person:'Alex · Owner', reason:'Requested a call', day:'Today', initials:'EA', motion:'m1'},
+    {id:'c2', title:'Sample Climate', person:'Sam · Director', reason:'Follow up on overview', day:'Today', initials:'SC', motion:'m2'},
+    {id:'c3', title:'Demo Cooling', person:'Casey · Owner', reason:'Return a call', day:'Today', initials:'DC', motion:'m3'},
+    {id:'c4', title:'Example Mechanical', person:'Jordan · Director', reason:'Follow up', day:'Tomorrow', initials:'EM'},
+    {id:'c5', title:'Sample Airworks', person:'Taylor · Owner', reason:'Introduction', day:'Tomorrow', initials:'SA'}
+  ],
+  motions: [
+    {id:'m1', group:'Interested', title:'Example Air Co.', sub:'Asked about the booking process', next:'Talk through the workflow', when:'Call today', call:'c1', tone:''},
+    {id:'m2', group:'Awaiting response', title:'Sample Climate', sub:'Overview shared for review', next:'Follow up on the overview', when:'Follow up today', call:'c2', tone:'gray'},
+    {id:'m3', group:'Awaiting response', title:'Demo Cooling', sub:'Checking availability with the team', next:'Return the call and confirm availability', when:'Return call today', call:'c3', tone:'gray'},
+    {id:'m4', group:'Meeting booked', title:'Example Installations', sub:'Introductory conversation', next:'Prepare questions and context', when:'Tomorrow · 10:30 am', task:'t3', tone:'green'}
+  ],
+  tasks: [
+    {id:'t1', title:'Review Brisbane campaign copy', note:'Opening email and follow-up. Check the message and the next step before the campaign is ready.', tag:'Brisbane campaign', source:'e2', day:'Today', done:false},
+    {id:'t2', title:'Check the next Perth cohort', note:'Review installation fit and the source evidence for each business.', tag:'Perth campaign', source:'e3', day:'Today', done:false},
+    {id:'t3', title:'Prepare for Tuesday’s meeting', note:'Gather questions and the conversation context for Example Installations.', tag:'Meeting preparation', source:'m4', day:'Tomorrow', done:false}
+  ]
+};
+let state = structuredClone(initial), query = '', view = 'all', showCompleted = false;
+let returnFocus = null, toastTimer, nextTaskId = 4;
+const dialog = $('detail');
+const byId = id => [...state.campaigns, ...state.calls, ...state.motions, ...state.tasks].find(item => item.id === id);
+const callPending = record => !record.outcome;
+const taskFor = campaign => state.tasks.find(task => task.id === campaign.task);
+const replyValue = record => record.replyIds ? record.replies : '—';
+const replyLabel = record => record.replyIds ? 'to review' : 'not sending';
+const campaignNext = record => record.replyIds ? (record.replies ? 'Review ' + record.replies + (record.replies === 1 ? ' reply' : ' replies') : 'All replies reviewed') : record.next;
+function needsAttention(record) {
+  if (record.id.startsWith('e')) return record.replies > 0 || Boolean(taskFor(record) && !taskFor(record).done && taskFor(record).day === 'Today');
+  if (record.id.startsWith('c')) return record.day === 'Today' && callPending(record);
+  if (record.id.startsWith('m')) return record.call ? callPending(byId(record.call)) && byId(record.call).day === 'Today' : false;
+  return !record.done && record.day === 'Today';
+}
+function matches(record) {
+  return Object.values(record).join(' ').toLowerCase().includes(query) && (view === 'all' || needsAttention(record));
+}
+function empty(noun) {
+  return '<div class="empty"><strong>' + (query ? 'No matching ' + noun : 'Nothing needs attention') + '</strong>' +
+    (query ? 'Try another search or switch to All work.' : 'The rest is available in All work.') + '</div>';
+}
+function campaignHTML(record) {
+  const task = taskFor(record), complete = task && task.done;
+  return '<button type="button" class="campaign" id="campaign-' + record.id + '" data-record="' + record.id + '">' +
+    '<span class="campaign-content"><span class="campaign-top"><span class="eyebrow">Installation</span><span class="status ' + record.tone + '">' + record.status + '</span></span>' +
+    '<span class="campaign-title">' + record.city + '</span><span class="secondary">AC installers · Email sequence</span>' +
+    '<span class="campaign-stats"><span><strong>' + record.total + '</strong>' + record.metric + '</span><span><strong>' + replyValue(record) + '</strong>' + replyLabel(record) + '</span></span></span>' +
+    '<span class="campaign-action ' + (record.replies ? 'attention' : '') + '">' + (complete ? 'Preparation complete' : campaignNext(record)) + icon(complete || (record.replyIds && !record.replies) ? 'tick' : 'arrow') + '</span></button>';
+}
+function callHTML(record, next) {
+  return '<li><button type="button" class="call-row ' + (record.outcome ? 'logged' : record.id === next ? 'next-up' : '') + '" id="call-' + record.id + '" data-record="' + record.id + '">' +
+    '<span class="call-avatar">' + (record.outcome ? icon('tick') : record.initials) + '</span>' +
+    '<span class="call-body"><span class="record-title">' + record.title + '</span><span class="secondary">' + record.person + '</span>' +
+    '<span class="call-next">' + esc(record.outcome || record.reason) + '</span></span>' + icon('arrow','row-arrow') + '</button></li>';
+}
+function motionHTML(record) {
+  const call = record.call && byId(record.call), task = record.task && byId(record.task);
+  let next = call && call.outcome ? 'Call logged · ' + call.outcome : task && task.done ? 'Meeting notes ready' : record.when;
+  return '<button type="button" class="motion-card" id="motion-' + record.id + '" data-record="' + record.id + '"><span class="record-title">' + record.title + '</span>' +
+    '<span class="secondary">' + record.sub + '</span><span class="motion-step">' + icon(record.group === 'Meeting booked' ? 'clock' : 'arrow') + esc(next) + '</span></button>';
+}
+function taskHTML(record) {
+  return '<div class="task ' + (record.done ? 'done' : '') + '"><input type="checkbox" data-task="' + record.id + '" aria-label="' + esc((record.done ? 'Reopen ' : 'Complete ') + record.title) + '" ' + (record.done ? 'checked' : '') + '>' +
+    '<div class="task-body"><button type="button" class="task-name" id="task-open-' + record.id + '" data-record="' + record.id + '" aria-label="' + esc('Edit task: ' + record.title) + '">' + esc(record.title) + '</button>' +
+    '<div class="task-meta"><span class="tag" title="' + esc(record.tag) + '">' + esc(record.tag) + '</span><span class="due">' + esc(record.done ? 'Done' : record.day) + '</span></div></div></div>';
+}
+function render() {
+  const campaigns = state.campaigns.filter(matches), calls = state.calls.filter(matches);
+  const motions = state.motions.filter(record => !record.call || byId(record.call).outcome !== 'Not interested').filter(matches);
+  const tasks = state.tasks.filter(matches).filter(task => !task.done || showCompleted);
+  const nextCall = state.calls.find(callPending);
+  $('emails').innerHTML = campaigns.map(campaignHTML).join('') || empty('campaigns');
+  let queues = '';
+  ['Today','Tomorrow','Logged'].forEach(group => {
+    const rows = calls.filter(call => group === 'Logged' ? call.outcome : !call.outcome && call.day === group);
+    if (rows.length) queues += '<div class="queue-group"><span>' + group.toUpperCase() + '</span><span>' + rows.length + '</span></div><ul>' + rows.map(call => callHTML(call, nextCall?.id)).join('') + '</ul>';
+  });
+  $('calls').innerHTML = queues ? '<div class="queue">' + queues + '<div class="queue-footer">' + state.calls.filter(call => call.outcome).length + ' of ' + state.calls.length + ' calls logged</div></div>' : empty('calls');
+  $('motion').innerHTML = ['Interested','Awaiting response','Meeting booked'].map(group => {
+    const rows = motions.filter(record => record.group === group);
+    return rows.length ? '<div class="motion-group"><div class="group-title"><span class="dot ' + rows[0].tone + '"></span>' + group + '<span class="group-count">' + rows.length + '</span></div>' + rows.map(motionHTML).join('') + '</div>' : '';
+  }).join('') || empty('conversations');
+  $('tasks').innerHTML = tasks.map(taskHTML).join('') || '<div class="empty"><strong>' + (query ? 'No matching tasks' : 'You’re clear here') + '</strong>' + (query ? 'Try another search.' : 'Add a next step when you need one.') + '</div>';
+  $('email-count').textContent = campaigns.length;
+  $('call-count').textContent = calls.filter(callPending).length;
+  $('call-count').setAttribute('aria-label', calls.filter(callPending).length + ' calls remaining');
+  $('motion-count').textContent = motions.length;
+  $('task-count').textContent = state.tasks.filter(matches).filter(task => !task.done).length;
+  const completed = state.tasks.filter(task => task.done).length;
+  $('completed-toggle').hidden = completed === 0 || view === 'attention';
+  $('completed-toggle').textContent = (showCompleted ? 'Hide' : 'Show') + ' completed (' + completed + ')';
+  $('completed-toggle').setAttribute('aria-pressed', String(showCompleted));
+  const todayCalls = state.calls.filter(call => call.day === 'Today' && callPending(call)).length;
+  const todayTasks = state.tasks.filter(task => task.day === 'Today' && !task.done).length;
+  const replies = state.campaigns.reduce((total, record) => total + record.replies, 0);
+  $('today-summary').innerHTML = '<button type="button" class="summary-action" id="summary-calls"><strong>' + todayCalls + '</strong> calls</button><button type="button" class="summary-action" id="summary-replies" data-record="e1"><strong>' + replies + '</strong> replies to review</button><button type="button" class="summary-action" id="summary-tasks"><strong>' + todayTasks + '</strong> prep tasks</button>';
+  $('summary-calls').onclick = () => { const call = state.calls.find(callPending); if (call) openRecord(call.id); else notify('All calls have been logged.'); };
+  $('summary-tasks').onclick = () => { const task = state.tasks.find(task => task.day === 'Today' && !task.done); if (task) openRecord(task.id); else notify('Today’s preparation is complete.'); };
+  $('start-calling').disabled = !nextCall;
+  $('start-calling').innerHTML = nextCall ? 'Start calls ' + icon('arrow') : 'All calls logged ' + icon('tick');
+  document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.view === view)));
+  const visibleCount = campaigns.length + calls.length + motions.length + tasks.length;
+  $('search-status').textContent = query ? visibleCount + ' results for “' + $('search').value.trim() + '”' : '';
+}
+function notify(message) {
+  clearTimeout(toastTimer);
+  $('toast').textContent = message;
+  toastTimer = setTimeout(() => { $('toast').textContent = ''; }, 3500);
+}
+function rememberFocus() {
+  const active = document.activeElement;
+  returnFocus = active.id ? '#' + active.id : active.dataset.record ? '[data-record="' + active.dataset.record + '"]' : '#all-work';
+}
+function showDetails(kind, name, html, focusInput) {
+  if (!dialog.open) rememberFocus();
+  $('drawer-kind').innerHTML = icon(name) + esc(kind);
+  $('drawer-content').innerHTML = html;
+  if (!dialog.open) dialog.showModal();
+  (focusInput ? $(focusInput) : $('dialog-title')).focus({preventScroll:true});
+}
+function closeDetails() {
+  dialog.close();
+  const target = returnFocus && document.querySelector(returnFocus);
+  (target || $('all-work')).focus({preventScroll:true});
+}
+function detailTitle(title, subtitle, status, tone) {
+  return (status ? '<span class="status ' + (tone || '') + '">' + esc(status) + '</span>' : '<span class="eyebrow">Outbound workspace</span>') +
+    '<h2 id="dialog-title" tabindex="-1">' + esc(title) + '</h2><p>' + esc(subtitle) + '</p>';
+}
+function openCampaign(record) {
+  const task = taskFor(record);
+  let html = detailTitle(record.city + ' · Installation', 'AC installers · Email sequence', record.status, record.tone);
+  html += '<div class="detail-grid"><div><strong>' + record.total + '</strong>' + record.metric + '</div><div><strong>' + replyValue(record) + '</strong>' + replyLabel(record) + '</div></div>';
+  if (record.replyIds) {
+    const reviewed = record.reviewedReplyIds;
+    html += '<section class="detail-section"><h3>Reply review</h3><div class="reply-progress">' + icon(record.replies ? 'mail' : 'tick') +
+      reviewed.length + ' of ' + record.replyIds.length + ' reviewed</div><div class="reply-list">';
+    html += record.replyIds.map(id => {
+      const conversation = byId(id), done = reviewed.includes(id);
+      return '<div class="reply-card ' + (done ? 'reviewed' : '') + '"><div class="reply-top"><strong>' + esc(conversation.title) +
+        '</strong><span class="status ' + (done ? 'green' : 'amber') + '">' + (done ? 'Reviewed' : 'New') + '</span></div>' +
+        '<p>' + esc(conversation.sub) + '</p><div class="reply-actions"><button type="button" class="text-button" data-record="' + id + '">Open conversation ' + icon('arrow') +
+        '</button><button type="button" class="button" id="review-' + id + '" data-review="' + id + '">' + (done ? 'Undo review' : 'Mark reviewed') + '</button></div></div>';
+    }).join('');
+    html += '</div></section>';
+    if (!record.replies) html += '<section class="detail-section"><div class="next-step">All replies reviewed. Follow-ups stay connected to their call records in Motion.</div></section>';
+  } else {
+    html += '<section class="detail-section"><h3>Next step</h3><div class="next-step">' + esc(task?.done ? 'Preparation complete. You can reopen the task to review or amend it.' : record.next) + '</div></section>';
+    html += '<section class="detail-section"><h3>Campaign context</h3><p>' + record.detail + '</p></section>';
+    if (task) html += '<div class="drawer-actions"><button type="button" class="button primary" data-record="' + task.id + '">' + icon('check') + 'Open preparation task</button></div>';
+  }
+  html += '<p class="drawer-footnote">Sample campaign. Sending is not connected in this demo.</p>';
+  showDetails('Email campaign', 'mail', html);
+  if (record.replyIds) {
+    record.replyIds.forEach(id => {
+      $('review-' + id).onclick = () => {
+        const reviewed = record.reviewedReplyIds.includes(id);
+        record.reviewedReplyIds = reviewed ? record.reviewedReplyIds.filter(value => value !== id) : [...record.reviewedReplyIds, id];
+        record.replies = record.replyIds.length - record.reviewedReplyIds.length;
+        render(); openCampaign(record);
+        $('review-' + id).focus({preventScroll:true});
+        notify(reviewed ? 'Reply returned to review' : record.replies ? 'Reply reviewed' : 'All replies reviewed');
+      };
+    });
+  }
+}
+function openCall(record) {
+  let html = detailTitle(record.title, record.person, record.outcome ? 'Outcome logged' : record.day, record.outcome ? 'green' : 'amber');
+  html += '<section class="detail-section"><h3>Reason for calling</h3><div class="next-step">' + record.reason + '</div></section>';
+  html += '<form id="call-form"><fieldset><legend class="field-label">Call outcome</legend><div class="outcomes">' +
+    ['Connected','No answer','Call back requested','Not interested'].map((outcome, index) =>
+      '<label class="outcome-option"><input type="radio" name="outcome" value="' + outcome + '" ' + ((record.outcome || 'Connected') === outcome ? 'checked' : '') + '>' + outcome + '</label>').join('') +
+    '</div></fieldset><div class="form-field"><label class="field-label" for="call-notes">Notes <span style="font-weight:400;color:#6d7564">· optional</span></label><textarea class="form-control" id="call-notes" maxlength="2000" placeholder="What happened, and what comes next?">' + esc(record.notes || '') + '</textarea></div>';
+  html += '<div class="drawer-actions"><button type="submit" class="button primary" name="action" value="save">Save outcome</button>' +
+    (state.calls.some(call => call.id !== record.id && callPending(call)) ? '<button type="submit" class="button" name="action" value="next">Save &amp; next ' + icon('arrow') + '</button>' : '') +
+    '</div></form><p class="drawer-footnote">Demo only. This records an outcome without placing a call.</p>';
+  showDetails('Call queue', 'phone', html);
+  $('call-form').onsubmit = event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    record.outcome = form.querySelector('input[name="outcome"]:checked').value;
+    record.notes = $('call-notes').value.trim();
+    const next = state.calls.find(call => call.id !== record.id && callPending(call));
+    render();
+    notify(record.title + ' · ' + record.outcome);
+    if (event.submitter?.value === 'next' && next) openCall(next); else closeDetails();
+  };
+}
+function openMotion(record) {
+  const call = record.call && byId(record.call), task = record.task && byId(record.task);
+  const closed = call && call.outcome === 'Not interested';
+  let html = detailTitle(record.title, record.sub, closed ? 'Closed' : record.group, record.tone === 'green' ? 'green' : '');
+  html += '<section class="detail-section"><h3>Next step</h3><div class="next-step">' + (closed ? 'No further follow-up planned.' : record.next) + '</div></section>';
+  if (call?.outcome) {
+    html += '<section class="detail-section"><h3>Latest call</h3><p><strong>' + esc(call.outcome) + '</strong>' + (call.notes ? '<br>' + esc(call.notes).replace(/\n/g,'<br>') : '') + '</p></section>';
+  }
+  if (task) html += '<section class="detail-section"><h3>Meeting preparation</h3><p>' + (task.done ? 'Your preparation task is complete.' : 'The preparation task is ready in Tasks.') + '</p></section>';
+  html += '<div class="drawer-actions"><button type="button" class="button primary" data-record="' + (record.call || record.task) + '">' +
+    icon(record.call ? 'phone' : 'check') + (record.call ? 'Open call record' : 'Open preparation task') + '</button></div>';
+  showDetails('Conversation', 'motion', html);
+}
+function editTask(record) {
+  const editing = Boolean(record);
+  let html = detailTitle(editing ? 'Edit task' : 'Add a task', 'A clear next step, with just enough context.');
+  html += '<form id="task-form"><div class="form-field"><label class="field-label" for="task-title">Task name</label><input class="form-control" id="task-title" required maxlength="160" aria-describedby="task-error" value="' + esc(record?.title || '') + '" placeholder="What needs to happen next?"><p class="form-error" id="task-error" aria-live="polite"></p></div>';
+  html += '<div class="form-field"><label class="field-label" for="task-day">When</label><select class="form-control" id="task-day">' +
+    ['Today','Tomorrow','Later'].map(day => '<option ' + ((record?.day || 'Today') === day ? 'selected' : '') + '>' + day + '</option>').join('') + '</select></div>';
+  html += '<div class="form-field"><label class="field-label" for="task-note">Context <span style="font-weight:400;color:#6d7564">· optional</span></label><textarea class="form-control" id="task-note" maxlength="2000" placeholder="What will help you pick this up later?">' + esc(record?.note || '') + '</textarea></div>';
+  if (record) html += '<label class="outcome-option" style="margin-top:18px"><input type="checkbox" id="task-done" ' + (record.done ? 'checked' : '') + '>Mark as complete</label>';
+  html += '<div class="drawer-actions"><button type="submit" class="button primary">' + (editing ? 'Save changes' : 'Add task') + '</button><button type="button" class="button" id="cancel-task">Cancel</button></div></form>';
+  showDetails('Preparation task', 'check', html, 'task-title');
+  $('cancel-task').onclick = closeDetails;
+  $('task-title').oninput = () => { $('task-title').setCustomValidity(''); $('task-title').removeAttribute('aria-invalid'); $('task-error').textContent = ''; };
+  $('task-form').onsubmit = event => {
+    event.preventDefault();
+    const title = $('task-title').value.trim();
+    if (!title) {
+      $('task-title').setCustomValidity('Enter a task name.');
+      $('task-title').setAttribute('aria-invalid','true');
+      $('task-error').textContent = 'Enter a task name.';
+      $('task-title').focus();
+      return;
+    }
+    if (record) Object.assign(record, {title, note:$('task-note').value.trim(), day:$('task-day').value, done:$('task-done').checked});
+    else state.tasks.push({id:'t'+nextTaskId++, title, note:$('task-note').value.trim(), day:$('task-day').value, tag:'Preparation', done:false});
+    if (!editing) { query = ''; view = 'all'; $('search').value = ''; }
+    render(); closeDetails(); notify(editing ? 'Task updated' : 'Task added');
+  };
+}
+function openRecord(id) {
+  const record = byId(id);
+  if (!record) return;
+  if (id.startsWith('e')) openCampaign(record);
+  else if (id.startsWith('c')) openCall(record);
+  else if (id.startsWith('m')) openMotion(record);
+  else editTask(record);
+}
+document.addEventListener('click', event => {
+  const recordButton = event.target.closest('[data-record]');
+  if (recordButton) openRecord(recordButton.dataset.record);
+  const viewButton = event.target.closest('[data-view]');
+  if (viewButton) { view = viewButton.dataset.view; render(); }
+});
+document.addEventListener('change', event => {
+  const id = event.target.dataset.task;
+  if (!id) return;
+  const record = byId(id);
+  record.done = event.target.checked;
+  const previousIds = [...document.querySelectorAll('[data-task]')].map(input => input.dataset.task);
+  const index = previousIds.indexOf(id);
+  render();
+  const target = document.querySelector('[data-task="'+id+'"]') ||
+    document.querySelector('[data-task="'+previousIds[index+1]+'"]') || $('add-task-bottom');
+  target.focus({preventScroll:true});
+  notify(record.done ? 'Task completed' : 'Task reopened');
+});
+$('search').oninput = event => { query = event.target.value.toLowerCase().trim(); render(); };
+['new-task','add-task-icon','add-task-bottom'].forEach(id => { $(id).onclick = () => editTask(); });
+$('completed-toggle').onclick = () => { showCompleted = !showCompleted; render(); };
+$('start-calling').onclick = () => { const call = state.calls.find(callPending); if (call) openCall(call); };
+$('close-detail').onclick = closeDetails;
+dialog.addEventListener('cancel', event => { event.preventDefault(); closeDetails(); });
+$('about-demo').onclick = () => showDetails('About this demo', 'compass',
+  detailTitle('A place to work outbound', 'Four connected views of the same day.') +
+  '<section class="detail-section"><h3>The sketch, brought to life</h3><p>Emails holds campaigns. Call is the queue to work through. Motion shows active conversations and their next steps. Tasks holds supporting preparation.</p></section>' +
+  '<section class="detail-section"><h3>One place for each action</h3><p>Campaigns open their existing preparation tasks. Conversations open the related call or task. Recording an outcome updates the linked conversation.</p></section>' +
+  '<section class="detail-section"><h3>Illustrative data</h3><p>All people, businesses, dates, counts and activity are sample content. “Motion” is an interpretation of the sketch. Changes are held in this page and reset on reload. Nothing is sent, called or synced.</p></section>');
+$('reset-demo').onclick = () => {
+  state = structuredClone(initial); nextTaskId = 4; query = ''; view = 'all'; showCompleted = false;
+  $('search').value = ''; render(); notify('Demo restored');
+};
+render();
+</script>
+</body>
+</html>

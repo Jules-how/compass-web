@@ -18,6 +18,8 @@ interface TaskCreateProps {
   onCreated: () => void | Promise<void>
   defaultProjectId?: string
   defaultBusinessFunctionId?: string
+  defaultSource?: string
+  defaultTaskType?: TaskType
   defaultStatus?: TaskStatus
   hideStatus?: boolean
   onCancel?: () => void
@@ -46,6 +48,8 @@ export default function TaskCreate({
   defaultProjectId = '',
   defaultBusinessFunctionId = '',
   defaultStatus = 'not-started',
+  defaultSource = 'compass-web',
+  defaultTaskType,
   hideStatus = false,
   onCancel
 }: TaskCreateProps) {
@@ -53,7 +57,7 @@ export default function TaskCreate({
   const [status, setStatus] = useState<TaskStatus>(defaultStatus)
   const [projectId, setProjectId] = useState(defaultProjectId)
   const [businessFunctionId, setBusinessFunctionId] = useState(defaultBusinessFunctionId)
-  const [taskType, setTaskType] = useState<TaskType | ''>('')
+  const [taskType, setTaskType] = useState<TaskType | ''>(defaultTaskType || '')
   const [priority, setPriority] = useState(0)
   const [due, setDue] = useState('')
   const [notes, setNotes] = useState('')
@@ -71,6 +75,7 @@ export default function TaskCreate({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(),
+          source: defaultSource,
           status,
           priority,
           due: due || null,
@@ -88,7 +93,7 @@ export default function TaskCreate({
       setStatus(defaultStatus)
       setProjectId(defaultProjectId)
       setBusinessFunctionId(defaultBusinessFunctionId)
-      setTaskType('')
+      setTaskType(defaultTaskType || '')
       setPriority(0)
       setDue('')
       setNotes('')
