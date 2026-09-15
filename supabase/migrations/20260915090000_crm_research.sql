@@ -132,7 +132,8 @@ GROUP BY company_id,location_id,person_id,affiliation_id,candidate_id,fact_key;
 
 CREATE VIEW public.crm_company_profiles WITH (security_invoker=true) AS
 WITH profiles AS (
- SELECT c.*,coalesce(f.facts,'{}'::jsonb) AS facts,f.research_observed_at,
+ SELECT c.*,coalesce(f.facts,'{}'::jsonb) AS facts,
+  CASE WHEN f.research_observed_at IS NULL OR l.unknown_date THEN NULL ELSE least(f.research_observed_at,l.observed_at) END AS research_observed_at,
   coalesce(l.regions,'[]'::jsonb) AS regions,
   (SELECT count(*)::int FROM public.crm_company_people a WHERE a.company_id=c.id) AS people_count,
   (SELECT count(*)::int FROM public.crm_contact_candidates ca WHERE ca.company_id=c.id) AS candidate_count
@@ -142,7 +143,8 @@ WITH profiles AS (
    FROM public.crm_current_facts f WHERE f.company_id=c.id
  ) f ON true
  LEFT JOIN LATERAL (
-   SELECT jsonb_agg(DISTINCT region) AS regions FROM public.crm_company_locations loc CROSS JOIN LATERAL jsonb_array_elements_text(loc.regions) region
+   SELECT jsonb_agg(DISTINCT region) FILTER(WHERE region IS NOT NULL) AS regions, min(loc.observed_at) AS observed_at, coalesce(bool_or(loc.observed_at IS NULL),false) AS unknown_date
+   FROM public.crm_company_locations loc LEFT JOIN LATERAL jsonb_array_elements_text(loc.regions) region ON true
    WHERE loc.company_id=c.id AND loc.status='active'
  ) l ON true
 )

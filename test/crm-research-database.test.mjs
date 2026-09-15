@@ -79,6 +79,13 @@ test('research migration, atomic writes, ownership separation, query grain and o
       const operations=[op('company',{id:'concurrent',name:'Concurrent'})]
       const receipts=await Promise.all([apply(operations,'concurrent-request'),apply(operations,'concurrent-request')]);assert.deepEqual(receipts[0],receipts[1])
     })
+    await t.test('old or undated service areas cannot look fresh beside newer company facts',async()=>{
+      await apply([op('location',{id:'old-area',company_id:'page-000',label:'Sydney',kind:'service_area',source_id:'s',status:'active',regions:['sydney'],observed_at:'2001-01-01T00:00:00Z'})])
+      const profile=(await db.query("SELECT regions,research_observed_at FROM crm_company_profiles WHERE id='page-000'")).rows[0]
+      assert.deepEqual(profile.regions,['sydney']);assert.equal(new Date(profile.research_observed_at).getUTCFullYear(),2001)
+      await apply([op('location',{id:'undated-area',company_id:'page-000',label:'Melbourne',kind:'service_area',source_id:'s',status:'active',regions:['melbourne']})])
+      assert.equal((await db.query("SELECT research_observed_at FROM crm_company_profiles WHERE id='page-000'")).rows[0].research_observed_at,null)
+    })
     await t.test('current primary badge follows legacy address without expanding reader privileges',async()=>{
       await db.exec("SET test.operator='true'")
       await apply([op('lead_link',{id:'l',lead_id:'lead',company_id:'c',source_id:'s',match_state:'confirmed',reason:'fixture',expected_lead_updated_at:time,primary_email_candidate_id:'general-route'},1)])

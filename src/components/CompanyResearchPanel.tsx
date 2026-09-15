@@ -24,7 +24,7 @@ export function CompanyResearchPanel({companyId,writable}:{companyId:string;writ
   if(company.error)return <p role="alert">Company research could not be loaded. <button onClick={()=>void company.reload(true)}>Retry</button></p>
   if(!profile)return <p role="status">Loading company research…</p>
   return <div className="crm-research-panel">
-    <header><div><h3>{profile.name}</h3><p>{profile.fit_status.replaceAll('_',' ')} · Identity {profile.identity_status}</p></div><span className="crm-research-muted">Oldest current evidence: {date(profile.research_observed_at)}</span></header>
+    <header><div><h3>{profile.name}</h3><p>{profile.fit_status.replaceAll('_',' ')} · Identity {profile.identity_status}</p></div><span className="crm-research-muted">Company evidence as of: {date(profile.research_observed_at)}</span></header>
     <nav aria-label="Company research section">{(['research','people','locations'] as const).map(s=><button type="button" key={s} aria-pressed={section===s} onClick={()=>setSection(s)}>{s==='people'?'People & contacts':s==='locations'?'Locations':'Company research'}</button>)}</nav>
     {section==='research'?<>
       <p className="crm-research-muted">Research is shared across linked leads and campaigns. Revenue and spare capacity remain unknown unless sourced.</p>

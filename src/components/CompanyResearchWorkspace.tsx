@@ -39,7 +39,7 @@ export function CompanyResearchWorkspace() {
         <label>Minimum rating<input type="number" min="0" max="5" step="0.1" value={filters.min_rating||''} onChange={event=>filter('min_rating',event.target.value)}/></label>
         <label>Minimum age (years)<input type="number" min="0" value={filters.min_age||''} onChange={event=>filter('min_age',event.target.value)}/></label>
       </form>
-      <p className="crm-research-muted">{results.data?.total_matching??'…'} matching companies. Filters and sorting apply across the full dataset. Freshness uses the oldest current evidence, with a 90 day window.</p>
+      <p className="crm-research-muted">{results.data?.total_matching??'…'} matching companies. Filters and sorting apply across the full dataset. Freshness uses company facts and active locations, with a 90 day window.</p>
       {results.error?<p role="alert">Companies could not be loaded. <button onClick={()=>void results.reload(true)}>Retry</button></p>:null}
       <div className="crm-research-layout"><div>
         <div className="crm-research-company-list">{results.data?.companies.map(company=><button type="button" key={company.id} aria-pressed={selected===company.id} onClick={()=>setSelected(company.id)}><strong>{company.name}</strong><span>{company.fit_status.replaceAll('_',' ')} · {company.people_count} people · {company.candidate_count} routes</span><small>{company.review_count??'Unknown'} reviews · {company.review_rating??'Unknown'} rating · {company.age_years??'Unknown'} years</small></button>)}</div>
