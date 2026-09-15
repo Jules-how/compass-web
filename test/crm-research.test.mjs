@@ -47,3 +47,10 @@ test('legacy commit rejects silent loss of unsupported fields and rich facts',()
   assert.throws(()=>legacy.validateLeadCommitInput({lead_facts:[{kind:'about',claim:'A company',url:null,quote:'Rich evidence'}]},'rows.0'),/unknown_fields/)
   assert.doesNotThrow(()=>legacy.validateLeadCommitInput({company:'Example',phone:'0290000000',phone_source_url:'https://example.test'},'rows.0'))
 })
+
+test('generated and historical claims cannot silently become supported company fit or revenue',()=>{
+  assert.throws(()=>schema.parseCrmCommand(packet([op('observation',{...observation,evidence_type:'generation',quote:'',observed_at:null})])),/cannot establish company facts/)
+  assert.throws(()=>schema.parseCrmCommand(packet([op('observation',{...observation,evidence_type:'legacy_import'})])),/cannot establish company facts/)
+  assert.throws(()=>schema.parseCrmCommand(packet([op('observation',{...observation,fact_key:'revenue',value:{amount:1000000,currency:'AUD',period:'annual'},evidence_type:'inference',rationale:'Guessed from crew size',basis_ids:['crew']})])),/directly reported evidence/)
+  assert.throws(()=>schema.parseCrmCommand(packet([op('observation',{...observation,company_id:null,candidate_id:'ca',fact_key:'contact_origin',value:'published_general',evidence_type:'generation'})])),/Origin must match/)
+})

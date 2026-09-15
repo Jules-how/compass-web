@@ -94,6 +94,12 @@ export function parseCrmCommand(input: unknown): CrmCommand {
       const factSchema = (r.candidate_id ? contactFacts : r.company_id ? companyFacts : { note: companyFacts.note })[String(r.fact_key)]
       if (!factSchema) fail('fact_key', 'Unsupported fact for this subject')
       else { const value = factSchema.safeParse(r.value); if (!value.success) fail('value', value.error.issues.map(x => x.message).join('; ')) }
+      if (r.company_id && r.fact_key !== 'note' && (r.evidence_type === 'generation' || (r.evidence_type === 'legacy_import' && r.review_status === 'reviewed'))) fail('evidence_type', 'Generated or unreviewed legacy material cannot establish company facts')
+      if (['revenue','capacity'].includes(String(r.fact_key)) && ['inference','generation'].includes(String(r.evidence_type))) fail('evidence_type', 'Revenue and capacity require directly reported evidence, not an estimate')
+      if (r.fact_key === 'contact_origin') {
+        const required = { published_general:'published', published_personal_work:'published', provider_enriched:'provider_assertion', generated_hypothesis:'generation', legacy_unknown:'legacy_import' }[String(r.value)]
+        if (r.evidence_type !== required) fail('evidence_type', 'Origin must match its published, provider, generated or legacy evidence')
+      }
       if (r.evidence_type !== 'legacy_import' && r.evidence_type !== 'generation' && (!r.observed_at || (!r.quote && !r.locator))) fail('quote', 'New research requires observation date and exact quote or locator')
       if (r.evidence_type === 'inference' && (!(r.basis_ids as string[]).length || !r.rationale)) fail('basis_ids', 'Inference requires evidence and rationale')
       if (r.fact_key === 'established_status' && r.value === 'supported' && (!(r.basis_ids as string[]).length || !r.rationale)) fail('basis_ids', 'Established assessment requires explicit evidence and rationale')

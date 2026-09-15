@@ -54,6 +54,9 @@ CREATE TABLE public.crm_research_observations (
   rationale text NOT NULL DEFAULT '', researcher text NOT NULL DEFAULT '', model text NOT NULL DEFAULT '', extraction_version text NOT NULL DEFAULT '',
   basis_ids jsonb NOT NULL DEFAULT '[]', supersedes_ids jsonb NOT NULL DEFAULT '[]',
   CHECK(num_nonnulls(company_id,location_id,person_id,affiliation_id,candidate_id)=1),
+  CHECK(NOT(company_id IS NOT NULL AND fact_key<>'note' AND (evidence_type='generation' OR (evidence_type='legacy_import' AND review_status='reviewed')))),
+  CHECK(NOT(fact_key IN ('revenue','capacity') AND evidence_type IN ('inference','generation'))),
+  CHECK(fact_key<>'contact_origin' OR evidence_type=CASE value#>>'{}' WHEN 'published_general' THEN 'published' WHEN 'published_personal_work' THEN 'published' WHEN 'provider_enriched' THEN 'provider_assertion' WHEN 'generated_hypothesis' THEN 'generation' WHEN 'legacy_unknown' THEN 'legacy_import' ELSE 'invalid' END),
   CHECK(evidence_type IN ('legacy_import','generation') OR (observed_at IS NOT NULL AND (quote<>'' OR locator<>''))),
   CHECK(evidence_type<>'inference' OR (jsonb_array_length(basis_ids)>0 AND rationale<>'')),
   CHECK(NOT(fact_key='person_attribution' AND value='"supported"'::jsonb AND evidence_type IN ('provider_assertion','generation','legacy_import')))
