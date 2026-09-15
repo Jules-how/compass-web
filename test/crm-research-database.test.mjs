@@ -62,6 +62,23 @@ test('research migration, atomic writes, ownership separation, query grain and o
       assert.equal((await db.query(`SELECT count(*)::int n FROM crm_search_companies('{"customer_mix":"mixed"}')`)).rows[0].n,1)
       assert.equal((await db.query(`SELECT count(*)::int n FROM crm_research_lead_scope(NULL,'{"customer_mix":"mixed"}')`)).rows[0].n,1)
     })
+    await t.test('numeric sorting spans pages, nulls last, and contact filters share a candidate',async()=>{
+      for(let start=0;start<61;start+=20){const operations=[];for(let i=start;i<Math.min(start+20,61);i++){
+        const id='page-'+String(i).padStart(3,'0');operations.push(op('company',{id,name:'Page '+i}));
+        if(i<60)operations.push(obs('reviews-'+i,{count:[100,9,10][i%3],rating:4.5,profile_id:id,platform:'Fixture',scope:'company'},{company_id:id,fact_key:'reviews'}))
+      }await apply(operations)}
+      const ordered=(await db.query(`SELECT id,review_count FROM crm_search_companies('{"q":"Page"}') ORDER BY review_count ASC NULLS LAST,id ASC`)).rows
+      assert.equal(ordered.length,61);assert.equal(ordered[0].review_count,9);assert.equal(ordered[20].review_count,10);assert.equal(ordered[40].review_count,100);assert.equal(ordered[60].review_count,null)
+      const first=(await db.query(`SELECT id,review_count FROM crm_search_companies('{"q":"Page"}') ORDER BY review_count ASC NULLS LAST,id ASC LIMIT 50`)).rows
+      const last=first.at(-1)
+      const next=(await db.query(`SELECT id,review_count FROM crm_search_companies('{"q":"Page"}') WHERE review_count>$1 OR (review_count=$1 AND id>$2) OR review_count IS NULL ORDER BY review_count ASC NULLS LAST,id ASC`,[last.review_count,last.id])).rows
+      assert.deepEqual([...first,...next],ordered)
+      await apply([op('method',{id:'general-method',method_type:'email',value:'office@example.test',normalized_value:'office@example.test'}),op('candidate',{id:'general-route',company_id:'c',method_id:'general-method',first_origin:'published_general'}),obs('general-origin','published_general',{company_id:null,candidate_id:'general-route',fact_key:'contact_origin'}),op('verification',{id:'general-valid',method_id:'general-method',provider:'Fixture',provider_request_id:'general-check',submitted_address:'office@example.test',checked_at:time,attempt_state:'completed',mailbox_result:'valid'})])
+      assert.equal((await db.query(`SELECT count(*)::int n FROM crm_search_companies('{"origin":"generated_hypothesis","mailbox":"valid"}')`)).rows[0].n,0)
+      assert.equal((await db.query(`SELECT count(*)::int n FROM crm_search_companies('{"origin":"published_general","mailbox":"valid"}')`)).rows[0].n,1)
+      const operations=[op('company',{id:'concurrent',name:'Concurrent'})]
+      const receipts=await Promise.all([apply(operations,'concurrent-request'),apply(operations,'concurrent-request')]);assert.deepEqual(receipts[0],receipts[1])
+    })
     await t.test('nonoperator cannot read, operators cannot directly write, anonymous cannot execute',async()=>{
       await db.exec("SET ROLE authenticated; SET test.operator='false'")
       assert.equal((await db.query('SELECT count(*)::int n FROM crm_companies')).rows[0].n,0)

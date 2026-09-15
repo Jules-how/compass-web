@@ -39,7 +39,7 @@ export async function searchCrmCompanies(db: SupabaseClient, query: CrmCompanyQu
   const filters = crmQueryFilters(query)
   const scope = queryFingerprint(filters)
   const cursor = query.cursor ? decodeResearchCursor(query.cursor, { sort: query.sort, direction: query.direction, scope }) : null
-  const total = await db.rpc('crm_search_companies', { p_filters: filters }).select('id',{ count: 'exact', head: true })
+  const total = await db.rpc('crm_search_companies', { p_filters: filters },{ count: 'exact', head: true }).select('id')
   crmDatabaseError(total.error)
   let request = db.rpc('crm_search_companies', { p_filters: filters }).select('*')
   if (cursor) request = request.or(cursorClause(cursor))

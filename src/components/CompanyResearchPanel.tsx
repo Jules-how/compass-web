@@ -74,7 +74,7 @@ function ResearchEntryForm({companyId,mode,method}:{companyId:string;mode:EntryM
   const people=useCrmResource<Collection>(open&&mode==='candidate'?`/collections?collection=people&company_id=${encodeURIComponent(companyId)}&limit=100`:null)
   const fact=draft.fact||'customer_mix'
   const [message,setMessage]=useState('')
-  const sourceFields=<>{mode!=='verification'?<><Field label="Source URL" name="url" draft={draft} set={set} type="url" required={mode!=='verification'}/><label>Exact source quote<textarea value={draft.quote||''} onChange={e=>set('quote',e.target.value)} required={mode!=='verification'} rows={3}/></label></>:null}<Field label="Observed / checked date and time" name="observed" draft={draft} set={set} type="datetime-local" required/></>
+  const sourceFields=<>{mode!=='verification'?<><Field label="Source URL" name="url" draft={draft} set={set} type="url" required/><label>Exact source quote<textarea value={draft.quote||''} onChange={e=>set('quote',e.target.value)} required rows={3}/></label></>:null}<Field label="Observed / checked date and time" name="observed" draft={draft} set={set} type="datetime-local" required/></>
   const makeObservation=(sourceId:string,extra:Record<string,unknown>)=>crmOperation('observation',{id:crmId('observation'),source_id:sourceId,quote:draft.quote||'',observed_at:new Date(draft.observed).toISOString(),evidence_type:'published',review_status:'reviewed',...extra})
   async function submit() {
     setLocalError('');setMessage('')
@@ -93,7 +93,7 @@ function ResearchEntryForm({companyId,mode,method}:{companyId:string;mode:EntryM
         if(!found.method)ops.push(crmOperation('method',{id:methodId,method_type:methodType,value:draft.value,normalized_value:draft.value}))
         const candidateId=crmId('candidate')
         const origin=draft.origin||'published_general'
-        ops.push(crmOperation('candidate',{id:candidateId,company_id:companyId,method_id:methodId,affiliation_id:draft.affiliation||null,purpose:draft.affiliation?'personal_work':'general',first_origin:origin,state:'retained'}),makeObservation(sourceId,{candidate_id:candidateId,fact_key:'contact_origin',value:origin}))
+        ops.push(crmOperation('candidate',{id:candidateId,company_id:companyId,method_id:methodId,affiliation_id:draft.affiliation||null,purpose:origin==='published_personal_work'?'personal_work':'general',first_origin:origin,state:'retained'}),makeObservation(sourceId,{candidate_id:candidateId,fact_key:'contact_origin',value:origin}))
         if(origin==='published_personal_work')ops.push(makeObservation(sourceId,{candidate_id:candidateId,fact_key:'person_attribution',value:'supported'}))
       }else if(mode==='verification') {
         ops.push(crmOperation('verification',{id:crmId('verification'),method_id:method!.id,provider:draft.provider,provider_request_id:draft.request,submitted_address:method!.value,checked_at:new Date(draft.observed).toISOString(),received_at:new Date().toISOString(),attempt_state:'completed',mailbox_result:draft.result||'unknown',raw_status:draft.raw||draft.result||'unknown',reason:draft.reason||''}))

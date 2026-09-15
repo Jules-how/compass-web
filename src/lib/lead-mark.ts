@@ -182,6 +182,8 @@ export async function markLeadContacts(
 ): Promise<Response> {
   try {
     assertKnownFields(body,new Set(['ids','emails','rows','lead_facts','opener',...LEAD_SHARED_MARK_KEYS,...LEAD_ICP_KEYS]),'body')
+    if (body.rows!==undefined && !Array.isArray(body.rows)) throw new LeadWriteValidationError([{path:'rows',message:'Array required; nothing was saved'}])
+    if (body.ids!==undefined && body.emails!==undefined) throw new LeadWriteValidationError([{path:'emails',message:'Use ids or emails, not both; nothing was saved'}])
     if (Array.isArray(body.rows)) {
       assertKnownFields(body,new Set(['rows']),'body')
       if (body.rows.length>MAX_MARK_ROWS) throw new LeadWriteValidationError([{path:'rows',message:`At most ${MAX_MARK_ROWS} rows; nothing was saved`}])
