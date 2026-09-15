@@ -27,6 +27,11 @@ test('research migration, atomic writes, ownership separation, query grain and o
       assert.equal((await db.query('SELECT count(*)::int n FROM crm_companies')).rows[0].n,2)
       await assert.rejects(apply([op('company',{id:'c',name:'Example',domains:['shared.test'],identity_status:'reviewed'},1)]),/identity_review_evidence/)
     })
+    await t.test('published claims and provider assertions require correctly attributed sources',async()=>{
+      await apply([op('source',{id:'no-url',source_type:'legacy_import'})])
+      await assert.rejects(apply([obs('unattributed-public','mixed',{source_id:'no-url'})]),/published_source_url_required/)
+      await assert.rejects(apply([obs('unattributed-provider','mixed',{evidence_type:'provider_assertion'})]),/provider_source_required/)
+    })
     await t.test('conflict is disputed; explicit supersession retains history',async()=>{
       await apply([obs('o1','mixed'),obs('o2','commercial_only')])
       assert.equal((await db.query("SELECT customer_mix,fit_status FROM crm_company_profiles WHERE id='c'")).rows[0].customer_mix,null)

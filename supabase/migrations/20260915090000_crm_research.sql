@@ -238,6 +238,8 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM crm_contact_methods WHERE id=r->>'method_id' AND method_type='email' AND normalized_value=r->>'submitted_address') THEN RAISE EXCEPTION 'crm_verification_address_mismatch'; END IF;
   ELSIF p_kind='observation' THEN
     SELECT * INTO other FROM crm_research_observations WHERE id=p_id;
+    IF other.evidence_type='published' AND NOT EXISTS(SELECT 1 FROM crm_research_sources WHERE id=other.source_id AND url IS NOT NULL) THEN RAISE EXCEPTION 'crm_published_source_url_required'; END IF;
+    IF other.evidence_type='provider_assertion' AND NOT EXISTS(SELECT 1 FROM crm_research_sources WHERE id=other.source_id AND source_type='provider' AND provider IS NOT NULL) THEN RAISE EXCEPTION 'crm_provider_source_required'; END IF;
     old_subject:=coalesce(other.company_id,other.location_id,other.person_id,other.affiliation_id,other.candidate_id);
     IF EXISTS(WITH RECURSIVE chain AS (
       SELECT id,supersedes_ids,ARRAY[id] path,false cycle FROM crm_research_observations WHERE id=p_id
