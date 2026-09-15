@@ -97,7 +97,7 @@ export function parseCrmCommand(input: unknown): CrmCommand {
       if (r.company_id && r.fact_key !== 'note' && (r.evidence_type === 'generation' || (r.evidence_type === 'legacy_import' && r.review_status === 'reviewed'))) fail('evidence_type', 'Generated or unreviewed legacy material cannot establish company facts')
       if (['revenue','capacity'].includes(String(r.fact_key)) && ['inference','generation'].includes(String(r.evidence_type))) fail('evidence_type', 'Revenue and capacity require directly reported evidence, not an estimate')
       if (r.fact_key === 'contact_origin') {
-        const required = { published_general:'published', published_personal_work:'published', provider_enriched:'provider_assertion', generated_hypothesis:'generation', legacy_unknown:'legacy_import' }[String(r.value)]
+        const required = ({ published_general:'published', published_personal_work:'published', provider_enriched:'provider_assertion', generated_hypothesis:'generation', legacy_unknown:'legacy_import' } as Record<string,string>)[String(r.value)]
         if (r.evidence_type !== required) fail('evidence_type', 'Origin must match its published, provider, generated or legacy evidence')
       }
       if (r.evidence_type !== 'legacy_import' && r.evidence_type !== 'generation' && (!r.observed_at || (!r.quote && !r.locator))) fail('quote', 'New research requires observation date and exact quote or locator')
