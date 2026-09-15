@@ -563,7 +563,8 @@ export async function commitLeadRows(
 
   for (let i=0;i<touchedIds.length;i+=LEAD_WRITE_BATCH) {
     const ids=[...new Set(touchedIds.slice(i,i+LEAD_WRITE_BATCH))]
-    const result=await admin.from('lead_contacts').select(LEAD_LIST_COLUMNS).in('id',ids)
+    const readbackColumns=[...new Set([...LEAD_LIST_COLUMNS.split(','),...receipts.filter(r=>ids.includes(r.id)).flatMap(r=>r.applied_fields??[])])]
+    const result=await admin.from('lead_contacts').select(readbackColumns.join(',')).in('id',ids)
     if (result.error) { failed.push({key:'readback',error:result.error.message}); continue }
     const records=new Map((result.data ?? []).map(row=>[String(row.id),row as Record<string,unknown>]))
     for (const receipt of receipts.filter(r=>ids.includes(r.id))) {

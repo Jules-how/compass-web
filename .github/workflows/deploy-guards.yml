@@ -49,6 +49,7 @@ jobs:
           SWITCHFLOW_WORKSPACE: ${{ github.workspace }}/workers/outbound
       - run: node --test --test-concurrency=2 test/delivery-engine.test.mjs test/delivery-route-access.test.mjs test/lead-lists.test.mjs test/campaign-workspace.test.mjs test/campaign-reconcile.test.mjs test/service-role-boundary.test.mjs test/wave-publication.test.mjs
       - name: Production build
+        if: ${{ !cancelled() }}
         env:
           # Build-time placeholders so Next can compile without real secrets.
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co

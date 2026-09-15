@@ -61,7 +61,7 @@ export async function getCrmLeadLinks(db: SupabaseClient, leadId: string) {
   requireCrmResearch()
   const result = await db.from('crm_lead_links').select('*,company:crm_companies(id,name,identity_status)').eq('lead_id',leadId).order('id').limit(100)
   crmDatabaseError(result.error)
-  const lead=await db.from('lead_contacts').select('id,company,email,phone,name,role,website,city,state,lead_facts,email_verify_status,email_verified_at,updated_at').eq('id',leadId).maybeSingle()
+  const lead=await db.from('lead_contacts').select('id,company,email,phone,name,role,website,city,state,lead_facts,email_verify_status,email_verified_at,contact_source_key,contact_phone_source_url,updated_at').eq('id',leadId).maybeSingle()
   crmDatabaseError(lead.error)
   if (!lead.data) throw new Error('crm_not_found')
   return { links: result.data ?? [], lead:lead.data }

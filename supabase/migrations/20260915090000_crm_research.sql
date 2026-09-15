@@ -166,11 +166,11 @@ SELECT p.*,
 FROM profiles p;
 
 CREATE VIEW public.crm_candidate_profiles WITH (security_invoker=true) AS
-SELECT c.*,m.method_type,m.value,m.normalized_value,a.person_id,a.role,p.name AS person_name,
+SELECT c.*,m.method_type,m.value,m.normalized_value,a.person_id,a.role,a.state AS affiliation_state,p.name AS person_name,
  CASE WHEN af.state='disputed' THEN 'disputed' ELSE coalesce(af.value#>>'{}',CASE WHEN c.affiliation_id IS NULL THEN 'not_person_specific' ELSE 'unresolved' END) END AS attribution_status,
  latest.id AS latest_attempt_id,latest.attempt_state AS latest_attempt_state,latest.reason AS latest_attempt_reason,
  completed.id AS verification_id,completed.mailbox_result,completed.checked_at AS verified_at,
- EXISTS(SELECT 1 FROM public.crm_lead_links l WHERE l.match_state='confirmed' AND (l.primary_email_candidate_id=c.id OR l.primary_phone_candidate_id=c.id)) AS legacy_primary
+ EXISTS(SELECT 1 FROM public.crm_lead_links l JOIN public.lead_contacts lead ON lead.id=l.lead_id WHERE l.match_state='confirmed' AND ((l.primary_email_candidate_id=c.id AND m.method_type='email' AND m.normalized_value=lower(trim(lead.email))) OR (l.primary_phone_candidate_id=c.id AND m.method_type='phone' AND m.normalized_value=regexp_replace(trim(lead.phone),'[[:space:]().-]','','g')))) AS legacy_primary
 FROM public.crm_contact_candidates c JOIN public.crm_contact_methods m ON m.id=c.method_id
 LEFT JOIN public.crm_company_people a ON a.id=c.affiliation_id LEFT JOIN public.crm_people p ON p.id=a.person_id
 LEFT JOIN public.crm_current_facts af ON af.candidate_id=c.id AND af.fact_key='person_attribution'
@@ -323,7 +323,7 @@ CREATE FUNCTION public.crm_company_matches(p public.crm_company_profiles,f jsonb
       AND (coalesce(f->>'origin','')='' OR c.first_origin=f->>'origin' OR EXISTS(SELECT 1 FROM crm_research_observations cf WHERE cf.candidate_id=c.id AND cf.fact_key='contact_origin' AND cf.value=to_jsonb(f->>'origin') AND cf.review_status='reviewed' AND NOT EXISTS(SELECT 1 FROM crm_research_observations newer WHERE newer.review_status='reviewed' AND newer.supersedes_ids ? cf.id)))
       AND (coalesce(f->>'attribution','')='' OR c.attribution_status=f->>'attribution')
       AND (coalesce(f->>'mailbox','')='' OR c.mailbox_result=f->>'mailbox')
-      AND (coalesce(f->>'role','')='' OR position(lower(f->>'role') IN lower(c.role))>0)
+      AND (coalesce(f->>'role','')='' OR (c.affiliation_state='current' AND position(lower(f->>'role') IN lower(c.role))>0))
   ))
 $$;
 CREATE FUNCTION public.crm_search_companies(p_filters jsonb DEFAULT '{}') RETURNS SETOF public.crm_company_profiles LANGUAGE sql STABLE SECURITY INVOKER SET search_path=public AS $$
