@@ -1,0 +1,329 @@
+[
+  {
+    "id": 0,
+    "name": "HHT Air Conditioning",
+    "domain": "hhtairconditioning.com.au",
+    "website": "https://hhtairconditioning.com.au/",
+    "city": "Sydney",
+    "email": "hhtairconservices@gmail.com",
+    "contactSource": "https://hhtairconditioning.com.au/",
+    "contactPublished": false,
+    "verification": "ok",
+    "verifiedAt": "2026-09-10T14:05:43.411Z",
+    "verificationProvider": "Million Verifier via Apify",
+    "priorOutreach": [
+      "in_instantly"
+    ],
+    "evidence": [],
+    "opener": "",
+    "signal": "",
+    "researchIssue": "Website unavailable",
+    "fetchError": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+  },
+  {
+    "id": 1,
+    "name": "AK Air Conditioning & Electrical",
+    "domain": "akaircon.com.au",
+    "website": "https://akaircon.com.au/?utm_source=Google_Business_Page&utm_medium=GBP&utm_campaign=AK%20Air%20Conditioning%20%26%20Electrical",
+    "city": "Sydney",
+    "email": "info@akaircon.com.au",
+    "contactSource": "https://akaircon.com.au/ceiling-fan-installation/",
+    "contactPublished": true,
+    "verification": "ok",
+    "verifiedAt": "2026-09-10T14:05:43.411Z",
+    "verificationProvider": "Million Verifier via Apify",
+    "priorOutreach": [
+      "in_instantly"
+    ],
+    "evidence": [
+      {
+        "label": "Service",
+        "quote": "Ducted Air Conditioning Installation",
+        "url": "https://akaircon.com.au/?utm_source=Google_Business_Page&utm_medium=GBP&utm_campaign=AK%20Air%20Conditioning%20%26%20Electrical",
+        "checkedAt": "2026-09-16"
+      },
+      {
+        "label": "Service area",
+        "quote": "Licenced electricians and air conditioning installers serving Sydney and suburbs with same-day quotes, 5-year installation warranties, and honest, upfront pricing.",
+        "url": "https://akaircon.com.au/?utm_source=Google_Business_Page&utm_medium=GBP&utm_campaign=AK%20Air%20Conditioning%20%26%20Electrical",
+        "checkedAt": "2026-09-16"
+      }
+    ],
+    "opener": "Saw you offer a five year installation warranty on your Sydney air conditioning work.",
+    "signal": "Ducted installs",
+    "researchIssue": "",
+    "fetchError": null
+  },
+  {
+    "id": 2,
+    "name": "HunterCON Electrical & Air",
+    "domain": "hunterconair.com.au",
+    "website": "https://hunterconair.com.au/",
+    "city": "Sydney",
+    "email": "daniel@hunterconair.com.au",
+    "contactSource": "http://hunterconair.com.au/",
+    "contactPublished": false,
+    "verification": "catch_all",
+    "verifiedAt": "2026-09-10T13:24:23.690Z",
+    "verificationProvider": "Million Verifier via Apify",
+    "priorOutreach": [
+      "uncontacted"
+    ],
+    "evidence": [
+      {
+        "label": "Service",
+        "quote": "We supply, install and service these types of air conditioners:",
+        "url": "https://hunterconair.com.au/",
+        "checkedAt": "2026-09-16"
+      },
+      {
+        "label": "Service area",
+        "quote": "We are fully-licensed specialists located with operations spanning the greater metro area, including the Eastern Suburbs, Lower North Shore, Inner West and South Western Sydney.",
+        "url": "https://hunterconair.com.au/",
+        "checkedAt": "2026-09-16"
+      },
+      {
+        "label": "Warranty",
+        "quote": "HunterCON Electrical and Air covers you on parts and labour for 5 years for no extra cost!",
+        "url": "https://hunterconair.com.au/",
+        "checkedAt": "2026-09-16"
+      }
+    ],
+    "opener": "Saw you cover air conditioning parts and labour for five years.",
+    "signal": "Installation",
+    "researchIssue": "",
+    "fetchError": null
+  },
+  {
+    "id": 3,
+    "name": "A1 Aussie Cool",
+    "domain": "a1aussiecool.com.au",
+    "website": "https://a1aussiecool.com.au/contact-us/",
+    "city": "Sydney",
+    "email": "a1aussiecool@gmail.com",
+    "contactSource": "https://a1aussiecool.com.au/about-us/",
+    "contactPublished": true,
+    "verification": "ok",
+    "verifiedAt": "2026-09-10T14:05:43.411Z",
+    "verificationProvider": "Million Verifier via Apify",
+    "priorOutreach": [
+      "in_instantly"
+    ],
+    "evidence": [
+      {
+        "label": "Service area",
+        "quote": "We serve Sydneywide",
+        "url": "https://a1aussiecool.com.au/contact-us/",
+        "checkedAt": "2026-09-16"
+      }
+    ],
+    "opener": "",
+    "signal": "",
+    "researchIssue": "Installation evidence missing",
+    "fetchError": null
+  },
+  {
+    "id": 4,
+    "name": "Blue Valley Heating & Air",
+    "domain": "bluevalleyheating.com.au",
+    "website": "https://bluevalleyheating.com.au",
+    "city": "Lithgow / Blue Mountains",
+    "email": "aaron@bluevalleyheating.com.au",
+    "contactSource": "https://bluevalleyheating.com.au/",
+    "contactPublished": true,
+    "verification": "unknown",
+    "verifiedAt": "2026-09-10T14:05:43.411Z",
+    "verificationProvider": "Million Verifier via Apify",
+    "priorOutreach": [
+      "uncontacted"
+    ],
+    "evidence": [
+      {
+        "label": "Service",
+        "quote": "Quality installed air-conditioning is the key to having the most optimal temperatures in your home all year round!",
+        "url": "https://bluevalleyheating.com.au",
+        "checkedAt": "2026-09-16"
+      },
+      {
+        "label": "Service area",
+        "quote": "That demonstrates why we are the best family business in the Lithgow and Blue Mountains region to carry out all of your heating and air-conditioning needs, and tailor our services specifically to your home.",
+        "url": "https://bluevalleyheating.com.au",
+        "checkedAt": "2026-09-16"
+      }
+    ],
+    "opener": "",
+    "signal": "Installation",
+    "researchIssue": "Sydney service area unconfirmed",
+    "fetchError": null
+  },
+  {
+    "id": 5,
+    "name": "Air On Temp",
+    "domain": "airontemp.com.au",
+    "website": "https://airontemp.com.au",
+    "city": "Sydney",
+    "email": "admin@airontemp.com.au",
+    "contactSource": "https://airontemp.com.au/",
+    "contactPublished": true,
+    "verification": "ok",
+    "verifiedAt": "2026-09-10T13:24:23.690Z",
+    "verificationProvider": "Million Verifier via Apify",
+    "priorOutreach": [
+      "in_instantly"
+    ],
+    "evidence": [
+      {
+        "label": "Service",
+        "quote": "Ducted air conditioning supply, installation, and service across Sydney. Air On Temp designs and installs whole-home ducted systems with zoning, smart controls, and quiet performance for residential and commercial properties.",
+        "url": "https://airontemp.com.au",
+        "checkedAt": "2026-09-16"
+      },
+      {
+        "label": "Service area",
+        "quote": "Complete domestic air conditioning services for Sydney homes.",
+        "url": "https://airontemp.com.au",
+        "checkedAt": "2026-09-16"
+      }
+    ],
+    "opener": "Saw you design ducted systems with zoning and smart controls for Sydney homes.",
+    "signal": "Ducted installs",
+    "researchIssue": "",
+    "fetchError": null
+  },
+  {
+    "id": 6,
+    "name": "Constant Cooling Group",
+    "domain": "constantcoolinggroup.com.au",
+    "website": "https://constantcoolinggroup.com.au",
+    "city": "Sydney",
+    "email": "admin@constantcoolinggroup.com.au",
+    "contactSource": "https://constantcoolinggroup.com.au/",
+    "contactPublished": true,
+    "verification": "catch_all",
+    "verifiedAt": "2026-09-10T14:05:43.411Z",
+    "verificationProvider": "Million Verifier via Apify",
+    "priorOutreach": [
+      "uncontacted"
+    ],
+    "evidence": [
+      {
+        "label": "Service",
+        "quote": "We also perform installation of all types of heating and cooling systems from the most trusted brands.",
+        "url": "https://constantcoolinggroup.com.au",
+        "checkedAt": "2026-09-16"
+      },
+      {
+        "label": "Service area",
+        "quote": "We service Sydney Metropolitan and Blue Mountains areas",
+        "url": "https://constantcoolinggroup.com.au",
+        "checkedAt": "2026-09-16"
+      }
+    ],
+    "opener": "Saw you handle air conditioning and refrigeration across Sydney and the Blue Mountains.",
+    "signal": "Installation",
+    "researchIssue": "",
+    "fetchError": null
+  },
+  {
+    "id": 7,
+    "name": "Correct Connect Air",
+    "domain": "correctconnectair.com.au",
+    "website": "https://correctconnectair.com.au",
+    "city": "Sydney",
+    "email": "admin@correctconnectair.com.au",
+    "contactSource": "https://correctconnectair.com.au/",
+    "contactPublished": true,
+    "verification": "catch_all",
+    "verifiedAt": "2026-09-10T14:05:43.411Z",
+    "verificationProvider": "Million Verifier via Apify",
+    "priorOutreach": [
+      "uncontacted"
+    ],
+    "evidence": [
+      {
+        "label": "Service",
+        "quote": "We provide professional air conditioning installation Sydney-wide for residential, commercial, and industrial projects.",
+        "url": "https://correctconnectair.com.au",
+        "checkedAt": "2026-09-16"
+      },
+      {
+        "label": "Service area",
+        "quote": "FREE QUOTES \u2013 SYDNEY WIDE",
+        "url": "https://correctconnectair.com.au",
+        "checkedAt": "2026-09-16"
+      }
+    ],
+    "opener": "Saw you offer free quotes for air conditioning installations across Sydney.",
+    "signal": "Ducted installs",
+    "researchIssue": "",
+    "fetchError": null
+  },
+  {
+    "id": 8,
+    "name": "Dynamax Air",
+    "domain": "dynamaxair.com.au",
+    "website": "https://dynamaxair.com.au",
+    "city": "Sydney",
+    "email": "admin@dynamaxair.com.au",
+    "contactSource": "https://dynamaxair.com.au/installation.html",
+    "contactPublished": true,
+    "verification": "ok",
+    "verifiedAt": "2026-09-10T02:22:23.513Z",
+    "verificationProvider": "Million Verifier via Apify",
+    "priorOutreach": [
+      "in_instantly"
+    ],
+    "evidence": [
+      {
+        "label": "Service",
+        "quote": "From split systems for studio apartments to underfloor ducted systems for architect-designed homes, we engineer each project around your load profile, power constraints, and aesthetic goals.",
+        "url": "https://dynamaxair.com.au",
+        "checkedAt": "2026-09-16"
+      },
+      {
+        "label": "Service area",
+        "quote": "Sydney",
+        "url": "https://dynamaxair.com.au",
+        "checkedAt": "2026-09-16"
+      }
+    ],
+    "opener": "Saw you install underfloor ducted systems for architect designed homes.",
+    "signal": "Ducted installs",
+    "researchIssue": "",
+    "fetchError": null
+  },
+  {
+    "id": 9,
+    "name": "Fitzgerald Air Conditioning",
+    "domain": "fitzgeraldair.com.au",
+    "website": "https://www.fitzgeraldair.com.au/",
+    "city": "Sydney",
+    "email": "admin@fitzgeraldair.com.au",
+    "contactSource": "https://www.fitzgeraldair.com.au/",
+    "contactPublished": true,
+    "verification": "ok",
+    "verifiedAt": "2026-09-10T14:05:43.411Z",
+    "verificationProvider": "Million Verifier via Apify",
+    "priorOutreach": [
+      "in_instantly"
+    ],
+    "evidence": [
+      {
+        "label": "Service",
+        "quote": "Fitzgerald Air Conditioning specialises in residential and commercial air conditioning sales, maintenance and installation.",
+        "url": "https://www.fitzgeraldair.com.au/",
+        "checkedAt": "2026-09-16"
+      },
+      {
+        "label": "Service area",
+        "quote": "Fitzgerald Air Conditioning is situated in Kellyville servicing the Hills District, Sydney and surrounding areas.",
+        "url": "https://www.fitzgeraldair.com.au/",
+        "checkedAt": "2026-09-16"
+      }
+    ],
+    "opener": "Saw you handle residential air conditioning supply and installation in the Hills District.",
+    "signal": "Installation",
+    "researchIssue": "",
+    "fetchError": null
+  }
+]

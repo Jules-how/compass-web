@@ -1,5 +1,6 @@
 export const OUTBOUND_DESK_IDS = [
   "overview",
+  "workflow",
   "evidence",
   "notebook",
   "waves",

@@ -5,6 +5,7 @@ import type { OutboundDeskId } from "@/lib/outbound-desk";
 
 const DESKS: Array<{ id: OutboundDeskId; label: string }> = [
   { id: "overview", label: "Workspace" },
+  { id: "workflow", label: "Workflow" },
   { id: "evidence", label: "Evidence" },
   { id: "notebook", label: "Notebook" },
   { id: "waves", label: "Waves" },
