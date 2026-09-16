@@ -56,6 +56,7 @@ export type Batch = {
   id: string;
   config: Config;
   rows: Company[];
+  excludedRows?: Company[];
   phase: "define" | "research" | "review";
   history: { id: string; time: string; title: string; detail: string }[];
 };
@@ -130,7 +131,7 @@ export function createBatch(
     event(
       b,
       "Saved example loaded",
-      "10 companies; website evidence from 16 Sep 2026 and recorded email results from 10 Sep. No fresh provider calls.",
+      `${b.rows.length} companies; website evidence from 16 Sep 2026 and recorded email results from 10 Sep. No fresh provider calls.`,
     );
   }
   return b;
@@ -200,4 +201,23 @@ export function approve(b: Batch, r: Company) {
     `${r.name} · v${r.version}. Contact eligibility unchanged.`,
   );
   return true;
+}
+
+/** Membership edits must not erase research notes or previously reviewed copy. */
+export function configureBatch(b: Batch, config: Config) {
+  const copyChanged = b.config.offer !== config.offer || b.config.icp !== config.icp || b.config.model !== config.model;
+  const previous = [...b.rows, ...(b.excludedRows || [])];
+  const inventory = createBatch(config).rows;
+  b.rows = inventory.map(x => previous.find(old => old.id === x.id) || x);
+  const included = new Set(b.rows.map(x => x.id));
+  b.excludedRows = previous.filter(x => !included.has(x.id));
+  b.config = { ...config, size: b.rows.length };
+  if (copyChanged) {
+    b.phase = "define";
+    for (const x of [...b.rows, ...b.excludedRows]) {
+      if (x.body) revise(b, x, x.subject, "");
+      x.approved = null;
+    }
+  }
+  event(b, "Batch configuration changed", `${b.rows.length} companies selected. Removed records retained with their edits; changed copy criteria invalidate dependent approvals.`);
 }

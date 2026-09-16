@@ -26,6 +26,7 @@ import {
 import { ModalFrame } from "@/components/ui/ModalFrame";
 import {
   createBatch,
+  configureBatch,
   defaults,
   hasIssue,
   prepare,
@@ -239,22 +240,7 @@ export function WorkflowWorkspace() {
     if (!config?.name.trim() || !config.companyIds?.length) return;
     if (editingConfig) {
       update((b) => {
-        const copyChanged = b.config.offer !== config.offer || b.config.icp !== config.icp || b.config.model !== config.model;
-        const inventory = createBatch(config).rows;
-        b.rows = inventory.map(x => b.rows.find(old => old.id === x.id) || x);
-        b.config = config;
-        if (copyChanged) {
-          b.phase = "define";
-          for (const x of b.rows) {
-            if (x.body) revise(b, x, x.subject, "");
-            x.approved = null;
-          }
-        }
-        event(
-          b,
-          "Batch configuration changed",
-          "Company selection updated. Existing record edits retained; copy changes invalidate dependent approvals.",
-        );
+        configureBatch(b, config);
       });
     } else {
       const next = createBatch(config);

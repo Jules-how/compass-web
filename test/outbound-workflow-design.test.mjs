@@ -24,3 +24,13 @@ test('explicit inventory selection determines membership, including non-leading 
  assert.equal(M.createBatch({...M.defaults,companyIds:[]}).rows.length,0);
  assert.equal(M.createBatch({...M.defaults,companyIds:[ids[0],ids[0],-99]}).rows.length,1);
 });
+
+test('membership edits preserve drafts and removed records; changed criteria invalidate approval',()=>{
+ const b=M.createBatch(M.defaults,true), r=b.rows.find(r=>r.body);M.approve(b,r);r.note='Keep this evidence';const original=r.body;
+ M.configureBatch(b,{...b.config,companyIds:b.rows.filter(x=>x.id!==r.id).map(x=>x.id)});
+ assert.equal(b.excludedRows.find(x=>x.id===r.id).body,original);
+ M.configureBatch(b,{...b.config,companyIds:[r.id]});
+ assert.equal(b.rows[0].note,'Keep this evidence');assert.equal(b.rows[0].approved,r.version);
+ M.configureBatch(b,{...b.config,offer:'Changed offer'});
+ assert.equal(b.rows[0].body,'');assert.equal(b.rows[0].approved,null);assert.equal(b.rows[0].revisions[0].body,original);
+});
