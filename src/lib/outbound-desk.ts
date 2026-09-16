@@ -5,14 +5,13 @@ export const OUTBOUND_DESK_IDS = [
   "notebook",
   "waves",
   "calendar",
-  "timeline",
 ] as const;
 
 export type OutboundDeskId = (typeof OUTBOUND_DESK_IDS)[number];
 
 export const OUTBOUND_DESK_STORAGE_KEY = "compass.outbound.desk.v5";
 
-export const DEFAULT_OUTBOUND_DESK: OutboundDeskId = "overview";
+export const DEFAULT_OUTBOUND_DESK: OutboundDeskId = "workflow";
 
 const LEGACY_DESKS = new Set(["pathways", "cassette", "runway", "factory"]);
 
@@ -47,4 +46,17 @@ export function writeOutboundDesk(desk: OutboundDeskId): OutboundDeskId {
     }
   }
   return next;
+}
+
+/** URL is authoritative, including navigation back to the normal lead table. */
+export function outboundDeskFromSearch(search: string): OutboundDeskId {
+  const params = new URLSearchParams(search);
+  return params.has("campaign") ? "overview" : parseOutboundDesk(params.get("desk"));
+}
+
+/** Capability-controlled cutover keeps the real overview usable before migration/backfill. */
+export function resolveOutboundDesk(search:string,pipelineReady:boolean):OutboundDeskId {
+  const params=new URLSearchParams(search);
+  if(!params.has('desk')&&!params.has('campaign')&&!pipelineReady)return 'overview';
+  return outboundDeskFromSearch(search);
 }

@@ -6,14 +6,34 @@ import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, C
 import { OUTCOMES, callWindow, isOpen, type RhythmCommand, type RhythmLead } from '@/lib/outbound-rhythm'
 import { CALLING_DRAFT_PREFIX, CALLING_ZONES, callBlockReason, callingCapture, callingFacts, callingMetrics, callingPhone, callingQueueStatus, hasCallingDraft, newCallingDraft, nextCallingLead, parseStoredCallingDraft, safeCallingUrl, sortedCallingQueue, type CallingDetail, type CallingDraft, type CallingQueue } from '@/lib/calling-workspace'
 import { onWorkChanged, workFetch } from '@/lib/workspace-change'
+import { createCallingDetailCache } from '@/lib/calling-detail-cache'
 import './calling.css'
 
+const detailCache = createCallingDetailCache<CallingDetail>()
+let detailGeneration = 0
+const detailRequests = new Map<string, symbol>()
 const endpoint = '/api/operator/outbound/rhythm'
 async function read<T>(url: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, { cache: 'no-store', signal })
   const body = await response.json()
   if (!response.ok) throw new Error(body.error || 'Unable to load calling data.')
   return body
+}
+async function readDetail(id: string, signal?: AbortSignal, cached = false) {
+  const existing = cached ? detailCache.get(id) : null
+  if (existing) return existing
+  const generation = detailGeneration
+  const request = Symbol(id)
+  detailRequests.set(id, request)
+  try {
+    const fresh = await read<CallingDetail>(`${endpoint}?lead=${encodeURIComponent(id)}`, signal)
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    if (fresh.lead.id !== id) throw new Error('Calling detail identity does not match the requested contact.')
+    if (generation === detailGeneration && detailRequests.get(id) === request) detailCache.set(id, fresh)
+    return fresh
+  } finally {
+    if (detailRequests.get(id) === request) detailRequests.delete(id)
+  }
 }
 const company = (lead: RhythmLead) => lead.company || lead.name || 'Unnamed business'
 const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()
@@ -48,7 +68,7 @@ export function CallingWorkspace() {
   }, [])
   useEffect(() => {
     let live = true
-    const refresh = () => { if (live) void load().catch(e => { if (live) setError(e.message) }) }
+    const refresh = () => { detailGeneration++; detailCache.clear(); if (live) void load().catch(e => { if (live) setError(e.message) }) }
     refresh()
     const off = onWorkChanged(refresh)
     const tick = () => setClock(new Date())
@@ -59,6 +79,19 @@ export function CallingWorkspace() {
   const matches = (lead: RhythmLead) => (!city || lead.city === city) && `${company(lead)} ${lead.name || ''} ${lead.city || ''}`.toLowerCase().includes(query.toLowerCase())
   const visible = findMode ? found : sorted.filter(lead => matches(lead) && (filter === 'all' || callingQueueStatus(lead, data!.tasks, data!.touches, clock || new Date()).kind === filter))
   const index = visible.findIndex(l => l.id === selected)
+  const previousId = index > 0 ? visible[index - 1].id : ''
+  const nextId = index >= 0 ? visible[index + 1]?.id || '' : ''
+  useEffect(() => {
+    const controller = new AbortController()
+    // Sequential, bounded look-ahead avoids a queue-sized network burst.
+    void (async () => {
+      for (const id of [previousId, nextId].filter(Boolean)) {
+        if (controller.signal.aborted) return
+        try { await readDetail(id, controller.signal, true) } catch { /* Selected detail exposes errors. */ }
+      }
+    })()
+    return () => controller.abort()
+  }, [previousId, nextId])
   const metrics = data ? callingMetrics(data.touches, clock || new Date()) : null
   function choose(id: string, afterSave = false) {
     if (locked && !afterSave) { setNotice('Finish saving or retry the pending outcome before changing contacts.'); return }
@@ -118,7 +151,7 @@ function CallingContact({ leadId, isSelected, position, onPrevious, onNext, onSa
   leadId: string; isSelected: boolean; position: string; onPrevious?: () => void; onNext?: () => void;
   onSaved: (id: string) => Promise<void>; onQueueChanged: () => Promise<CallingQueue>; onLocked: (value: boolean) => void;
 }) {
-  const [data, setData] = useState<CallingDetail | null>(null)
+  const [data, setData] = useState<CallingDetail | null>(() => detailCache.get(leadId))
   const [draft, setDraft] = useState<CallingDraft>(newCallingDraft())
   const [ready, setReady] = useState(false)
   const [error, setError] = useState('')
@@ -134,13 +167,13 @@ function CallingContact({ leadId, isSelected, position, onPrevious, onNext, onSa
   const phoneLink = useRef<HTMLAnchorElement>(null)
   const noteInput = useRef<HTMLTextAreaElement>(null)
   const load = useCallback(async () => {
-    const fresh = await read<CallingDetail>(`${endpoint}?lead=${encodeURIComponent(leadId)}`)
+    const fresh = await readDetail(leadId)
     setData(fresh)
     return fresh
   }, [leadId])
   useEffect(() => {
     const controller = new AbortController()
-    read<CallingDetail>(`${endpoint}?lead=${encodeURIComponent(leadId)}`, controller.signal).then(fresh => {
+    readDetail(leadId, controller.signal, true).then(fresh => {
       if (controller.signal.aborted) return
       setData(fresh)
       let saved = null
@@ -258,6 +291,7 @@ function CallingContact({ leadId, isSelected, position, onPrevious, onNext, onSa
       <div className="calling-contact-card"><div><Users aria-hidden="true"/><span><strong>{lead.name && lead.name !== lead.company ? lead.name : 'Contact name not verified'}</strong><small>{lead.role || 'Role not recorded'}</small></span></div><div className="calling-dial"><span><strong>{callingPhone(lead.phone)}</strong><small>{localTime ? `${localTime} · ${zone?.replace('Australia/', '')}` : 'Timezone not recorded'}</small></span><button className="calling-btn primary" onClick={() => void dial()} disabled={disable || Boolean(blocked)} aria-describedby={blocked ? 'calling-blocked' : undefined}><Phone aria-hidden="true"/>Call</button><a ref={phoneLink} hidden aria-hidden="true" tabIndex={-1}>Phone handoff</a></div>{blocked && <p id="calling-blocked" className="calling-muted">{blocked}</p>}{zone && callWindow(zone) && <p className="calling-muted">{callWindow(zone)}</p>}{handedOff && <p role="status">Phone app opened. Record the actual outcome after the call.</p>}</div>
       {!isSelected && <div className="calling-add"><label>Contact timezone<select value={draft.timezone} disabled={disable} onChange={e => change('timezone', e.target.value)}><option value="">Choose timezone</option>{CALLING_ZONES.map(z => <option key={z} value={z}>{z.replace('Australia/', '')}</option>)}</select></label><button className="calling-btn" disabled={disable} onClick={() => void addToQueue()}><Plus aria-hidden="true"/>Add to calling queue</button></div>}
       <section className="calling-profile-section"><h3>Business at a glance</h3><dl className="calling-facts"><div><dt>Estimated team size</dt><dd>{factText(/team size|employees|headcount/i)}</dd></div><div><dt>Estimated revenue</dt><dd>{factText(/revenue|turnover/i)}</dd></div><div><dt>Established</dt><dd>{factText(/tenure|established/i)}</dd></div><div><dt>Research checked</dt><dd>{lead.lead_context_updated_at ? when(lead.lead_context_updated_at) : 'Not recorded'}</dd></div></dl></section>
+      {facts.length === 0 && <section className="calling-profile-section"><h3>Research missing</h3><p className="calling-muted">Open this contact in the shared research workflow to review evidence and queue research.</p><Link className="calling-btn" href={`/sales/outbound?desk=workflow&stage=research&lead_id=${encodeURIComponent(leadId)}`}>Open research</Link></section>}
       <FactSection title="Services" facts={services} empty="Installation services have not been researched for this contact." />
       <FactSection title="Marketing notes" facts={marketing} empty="Google and Meta advertising have not been researched." />
       {other.length > 0 && <FactSection title="Saved research" facts={other} empty="" />}

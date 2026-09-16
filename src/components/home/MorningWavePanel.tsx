@@ -17,7 +17,6 @@ import {
   type HomeGlance,
   type HomeLeverageTask
 } from '@/lib/home-setup'
-import { writeOutboundDesk } from '@/lib/outbound-desk'
 import type { CompassTask, TaskStatus, TaskType } from '@/lib/types'
 import type { MorningNextCard, MorningSendingCard, MorningWavePayload } from '@/lib/wave-morning'
 import { cn } from '@/lib/utils'
@@ -471,8 +470,7 @@ export function MorningWavePanel({
             <p className="mt-1 text-xs text-neutral-500">{buildLabel(wave.briefStatus)}</p>
           </div>
           <Link
-            href="/sales/outbound"
-            onClick={() => writeOutboundDesk('waves')}
+            href="/sales/outbound?desk=waves"
             className="text-xs font-medium text-[#c2410c] hover:underline"
           >
             Waves

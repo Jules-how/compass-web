@@ -14,7 +14,19 @@ const DEFAULT_LIMIT = 50
 const EXPORT_MAX_LIMIT = 200
 const SEARCH_DEFAULT_LIMIT = 2000
 
+const pipelineReadProperties = Object.fromEntries(['collection','list_id','company_id','run_id','recipient_id','item_id','workflow_version_id','id','after','q','city','suburb','country','fit','stage','status','fields','changed_since','request_id'].map(key => [key, {type:'string'}]))
+const commandSchema = {type:'object',required:['command'],properties:{command:{type:'object',additionalProperties:true}},additionalProperties:false}
+
 export const TOOLS = [
+  {name:'outbound.pipeline.capabilities',description:'Check durable pipeline API/schema readiness, available execution adapters and constraints before starting work. Never spends or sends.',inputSchema:{type:'object',properties:{},additionalProperties:false}},
+  {name:'outbound.pipeline.executor',description:'Read connected-agent adapter readiness, or register/heartbeat/attach an executor session using command. Register only actual read-only probes or confirmed recent successful tool execution, without secrets. Claim a work item then attach its lease before reserving provider calls. No automatic tool substitution.',inputSchema:{type:'object',properties:{command:{type:'object',additionalProperties:true}},additionalProperties:false}},
+  {name:'outbound.pipeline',description:'Read the real company/list workflow ledger, versions, evidence, recipients, drafts, runs, items or uncertain-write receipts. Up to100 rows with scope-bound cursor. Defaults lists. Use saved policy and retained hold reasons.',inputSchema:{type:'object',properties:{...pipelineReadProperties,limit:{type:'integer',minimum:1,maximum:100}},additionalProperties:false}},
+  {name:'outbound.pipeline.write',description:'Atomic revision-checked pipeline packet. Pass schema_version outbound.pipeline.v1, stable request_id, source and operations. Creates immutable workflow/template/draft versions and durable research records. Retry an uncertain command identically; never invent evidence or approvals.',inputSchema:commandSchema},
+  {name:'outbound.pipeline.jobs',description:'Read frozen template/export jobs or submit revision-checked preview/apply/export chunk commands. Preview freezes affected list/recipient/draft versions, including manual edits. Export data is distinct from approved paused delivery. Use exact request IDs and resume cursor; CSV artifacts download over HTTP.',inputSchema:{type:'object',properties:{job_id:{type:'string'},items:{type:'boolean'},after:{type:'string'},command:{type:'object',additionalProperties:true}},additionalProperties:false}},
+  {name:'outbound.pipeline.run',description:'Control a saved workflow run: start, claim, heartbeat, reserve/report attempt, finish item, checkpoint, cancel or resume. Saved tools/order/fallback, budget, leases and immutable scope enforced. Agents cannot approve checkpoints. No automatic paid dispatch or activation.',inputSchema:commandSchema},
+  {name:'crm.legacy',description:'Preview or apply a bounded, revision-checked legacy-to-company bridge. Preserves source snapshots, ambiguous records and historical lead state. Preview returns <=25 rows; import requires stable request_id and exact preview row IDs/updated_at. No outreach or qualification is inferred.',inputSchema:commandSchema},
+  {name:'crm.read',description:'Read canonical CRM companies, evidence/contact collections, a company, lead links, method identity, exact record or command receipt. Real source-backed records; named-contact attribution and mailbox verification remain separate.',inputSchema:{type:'object',required:['action'],properties:{action:{type:'string',enum:['companies','company','collection','lead','receipt','method','record','capabilities']},id:{type:'string'},kind:{type:'string'},query:{type:'object',additionalProperties:{type:['string','number','boolean']}}},additionalProperties:false}},
+  {name:'crm.write',description:'Atomic CRM research packet with schema_version crm.research.v1, stable request_id, source and <=100 revision-checked operations. Preserve sources and uncertain evidence. No direct lead mutation, sending or approval.',inputSchema:commandSchema},
   { name: 'outbound.sourcing', description: 'Read available and recommended company sourcing methods, when to use each, cost basis, performance limits and agent handoff. Read-only; never starts a paid run.', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
   {
     name: 'goals.actions',
@@ -346,6 +358,47 @@ export async function callTool(name, args = {}, { cfg, fetchImpl }) {
   if (!cfg.secret) return toolError('missing COMPASS_AGENT_SECRET')
 
   switch (name) {
+    case 'outbound.pipeline.jobs': {
+      if (args.command !== undefined && (!args.command || typeof args.command !== 'object' || Array.isArray(args.command))) return toolError('command must be an object');
+      const query=new URLSearchParams(['job_id','items','after'].filter(k=>args[k]!==undefined).map(k=>[k,k==='items'?(args[k]?'1':'0'):String(args[k])]));
+      const r=await compassFetch(cfg,{method:args.command ? 'POST' : 'GET',path:'/api/agent/outbound/pipeline/jobs'+(!args.command&&query.size?'?'+query:''),...(args.command ? {body:args.command} : {}),fetchImpl});
+      return r.status>=400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);
+    }
+    case 'outbound.pipeline.executor': {
+      if (args.command !== undefined && (!args.command || typeof args.command !== 'object' || Array.isArray(args.command))) return toolError('command must be an object');
+      const r=await compassFetch(cfg,{method:args.command ? 'POST' : 'GET',path:'/api/agent/outbound/pipeline/executor',...(args.command ? {body:args.command} : {}),fetchImpl});
+      return r.status>=400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);
+    }
+    case 'outbound.pipeline.capabilities':
+    case 'outbound.pipeline':
+    case 'outbound.pipeline.write':
+    case 'outbound.pipeline.run': {
+      const write = name.endsWith('.write') || name.endsWith('.run');
+      if (write && (!args.command || typeof args.command !== 'object' || Array.isArray(args.command))) return toolError('command must be an object');
+      if (!write && name === 'outbound.pipeline' && Object.keys(args).some(key => ![...Object.keys(pipelineReadProperties),'limit'].includes(key))) return toolError('Unknown pipeline filter');
+      if (args.limit !== undefined && (!Number.isInteger(args.limit) || args.limit < 1 || args.limit > 100)) return toolError('limit must be 1 to100');
+      const suffix = name.endsWith('.capabilities') ? '/capabilities' : name.endsWith('.run') ? '/runs' : '';
+      const query = name === 'outbound.pipeline' ? new URLSearchParams(Object.entries(args).filter(([,v]) => v !== undefined).map(([k,v]) => [k,String(v)])) : new URLSearchParams();
+      const r = await compassFetch(cfg,{method:write ? 'POST' : 'GET',path:'/api/agent/outbound/pipeline'+suffix+(query.size ? '?'+query : ''),...(write ? {body:args.command} : {}),fetchImpl});
+      return r.status >= 400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);
+    }
+    case 'crm.legacy': {
+      if (!args.command || typeof args.command !== 'object' || Array.isArray(args.command)) return toolError('command must be an object');
+      const r=await compassFetch(cfg,{method:'POST',path:'/api/agent/crm/legacy',body:args.command,fetchImpl});
+      return r.status>=400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);
+    }
+    case 'crm.read':
+    case 'crm.write': {
+      if (name === 'crm.write' && (!args.command || typeof args.command !== 'object' || Array.isArray(args.command))) return toolError('command must be an object');
+      const id = encodeURIComponent(args.id || '');
+      const paths = {companies:'/companies',company:'/companies/'+id,collection:'/collections',lead:'/leads/'+id,receipt:'/receipts/'+id,method:'/methods',record:'/records/'+encodeURIComponent(args.kind || '')+'/'+id,capabilities:'/capabilities'};
+      if (name === 'crm.read' && (!Object.hasOwn(paths,args.action) || (['company','lead','receipt','record'].includes(args.action) && !args.id) || (args.action === 'record' && !args.kind))) return toolError('Valid CRM action and required identity needed');
+      if (args.query && (typeof args.query !== 'object' || Array.isArray(args.query) || Object.values(args.query).some(v => !['string','number','boolean'].includes(typeof v)))) return toolError('query must contain scalar filters');
+      const query = new URLSearchParams(Object.entries(args.query || {}).map(([k,v]) => [k,String(v)]));
+      const write = name === 'crm.write';
+      const r = await compassFetch(cfg,{method:write ? 'POST' : 'GET',path:'/api/agent/crm'+(write ? '/research' : paths[args.action]+(query.size ? '?'+query : '')),...(write ? {body:args.command} : {}),fetchImpl});
+      return r.status >= 400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);
+    }
     case 'outbound.sourcing': {
       const r = await compassFetch(cfg, { method: 'GET', path: '/api/agent/outbound/sourcing', fetchImpl });
       return r.status >= 400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);

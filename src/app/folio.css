@@ -14,8 +14,8 @@ body:has(.folio-shell) {
   --folio-paper: #ffffff;
   --folio-ink: #262626;
   --folio-muted: #262626a3;
-  --folio-line: #ededed;
-  --folio-control: #e8e8e8;
+  --folio-line: #dedede;
+  --folio-control: #c8c8c8;
   /* Plum remains a compatibility name; the current accent is Firecrawl orange. */
   --folio-plum: #262626;
   --folio-accent: #fa5d19;

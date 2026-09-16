@@ -1,1428 +1,1264 @@
 "use client";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUpRight,
-  Building2,
-  Check,
-  CheckCheck,
-  ChevronRight,
-  Clock3,
-  FileText,
-  GitBranch,
-  History,
-  Layers3,
-  Mail,
-  Play,
-  Plus,
-  Search,
-  Settings2,
-  ShieldCheck,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { runScopeFilters } from "./pipeline-ui-state";
 import { ModalFrame } from "@/components/ui/ModalFrame";
 import {
-  createBatch,
-  configureBatch,
-  defaults,
-  hasIssue,
-  prepare,
-  revise,
-  approve,
-  checks,
-  event,
-  steps,
-  type Batch,
-  type Company,
-  type Config,
-} from "./model";
-import "./workflow.css";
-import cohort from "./example-cohort.json";
-import { WorkflowSelect } from "./WorkflowSelect";
-import { BatchInventory } from "./BatchInventory";
-import { SourcingMethods } from "./SourcingMethods";
-const storage = "compass.outbound.workflow.design.v1";
-type View = "companies" | "copy" | "execution" | "history";
-type Detail = "research" | "email" | "contact" | "history";
-function Pill({
-  children,
-  tone = "neutral",
-}: {
-  children: ReactNode;
-  tone?: "neutral" | "good" | "warn" | "bad";
-}) {
-  return (
-    <span className={`wf-pill wf-${tone}`}>
-      <i />
-      {children}
-    </span>
-  );
-}
-function Button({
-  children,
-  onClick,
-  primary = false,
-  disabled = false,
-  label,
-}: {
-  children: ReactNode;
-  onClick: () => void;
-  primary?: boolean;
-  disabled?: boolean;
-  label?: string;
-}) {
-  return (
-    <button
-      type="button"
-      className={primary ? "compass-btn-primary" : "compass-btn-secondary"}
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-    >
-      {children}
-    </button>
-  );
-}
-function Contact({ r }: { r: Company }) {
-  return (
-    <Pill
-      tone={r.contactPublished && r.verification === "ok" ? "good" : "warn"}
-    >
-      {!r.contactPublished
-        ? "Source unresolved"
-        : r.verification === "ok"
-          ? "Recorded valid"
-          : r.verification === "catch_all"
-            ? "Catch-all"
-            : "Unknown"}
-    </Pill>
-  );
-}
-function CopyState({ r }: { r: Company }) {
-  return (
-    <Pill
-      tone={r.approved === r.version ? "good" : r.body ? "warn" : "neutral"}
-    >
-      {r.approved === r.version
-        ? `Approved · v${r.version}`
-        : r.body
-          ? "Needs review"
-          : "Not drafted"}
-    </Pill>
-  );
-}
+  PIPELINE_VERSION,
+  type PipelineCapabilities,
+  type PipelineCompany,
+  type PipelineList,
+  type PipelinePage,
+  type PipelineRun,
+  type PipelineStage,
+  type Recipient,
+  type SignalObservation,
+  type TemplateVersion,
+  type WorkflowVersion,
+} from "@/lib/outbound-pipeline";
+import { RunDetails } from "./RunDetails";
+import { MembershipJobPanel } from "./MembershipJobPanel";
+import { PipelineDeliveryPanel } from "./PipelineDeliveryPanel";
+import { PipelineJobsPanel } from "./PipelineJobsPanel";
+import { CompanyContacts } from "./CompanyContacts";
+import { EvidenceSource } from "./EvidenceSource";
+import { CommandNotice, Field, Status, label } from "./PipelineForms";
+import {
+  pipelineRead,
+  queryPath,
+  usePipelineCommand,
+  usePipelineRead,
+  usePipelineCatalogue,
+} from "./pipeline-client";
+import { ResearchEditor } from "./ResearchEditor";
+import { WriteEditor } from "./WriteEditor";
+import "./pipeline.css";
+const stages: PipelineStage[] = [
+  "list",
+  "research",
+  "contacts",
+  "verify",
+  "write",
+];
+type RecipientRow = Recipient & {
+  company_name?: string;
+  stage_status?: string;
+  draft_status?: string;
+};
+type Filters = {
+  q: string;
+  city: string;
+  suburb: string;
+  country: string;
+  fit: string;
+  status: string;
+};
+const emptyFilters: Filters = {
+  q: "",
+  city: "",
+  suburb: "",
+  country: "",
+  fit: "",
+  status: "",
+};
 export function WorkflowWorkspace() {
-  const [db, setDb] = useState<{ active: string; batches: Batch[] } | null>(
+  const tableScroll = useRef(0);
+  const router = useRouter(),
+    params = useSearchParams();
+  const stage = stages.includes(params.get("stage") as PipelineStage)
+    ? (params.get("stage") as PipelineStage)
+    : "list";
+  const listId = params.get("list_id") || "";
+  const [revision, setRevision] = useState(0),
+    [filters, setFilters] = useState<Filters>(emptyFilters),
+    [search, setSearch] = useState("");
+  const [after, setAfter] = useState(""),
+    [history, setHistory] = useState<string[]>([]),
+    [selected, setSelected] = useState<Set<string>>(new Set()),
+    [allMatching, setAllMatching] = useState(false);
+  const [view, setView] = useState<"table" | "research" | "write">("table"),
+    [dirty, setDirty] = useState(false);
+  const [company, setCompany] = useState<PipelineCompany | null>(null),
+    [recipient, setRecipient] = useState<RecipientRow | null>(null),
+    [detailOpen, setDetailOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false),
+    [listName, setListName] = useState(""),
+    [listNotes, setListNotes] = useState(""),
+    [targetList, setTargetList] = useState("");
+  const [recipientFilters, setRecipientFilters] = useState({
+    draft_status: "",
+    verification_status: "",
+  });
+  const [verificationRunId, setVerificationRunId] = useState("");
+  const [templateId, setTemplateId] = useState(""),
+    [notice, setNotice] = useState(""),
+    [membershipMode, setMembershipMode] = useState<"add" | "remove" | null>(
       null,
     ),
-    [view, setView] = useState<View>("companies"),
-    [filter, setFilter] = useState("all"),
-    [search, setSearch] = useState(""),
-    [page, setPage] = useState(0),
-    [size, setSize] = useState(10),
-    [sort, setSort] = useState<"source" | "name">("source"),
-    [selected, setSelected] = useState<number[]>([]),
-    [detail, setDetail] = useState<number | null>(null),
-    [detailTab, setDetailTab] = useState<Detail>("research"),
-    [config, setConfig] = useState<Config | null>(null),
-    [editingConfig, setEditingConfig] = useState(false),
-    [sourcing, setSourcing] = useState(false),
-    [subject, setSubject] = useState(""),
-    [body, setBody] = useState(""),
-    [opener, setOpener] = useState(""),
-    [message, setMessage] = useState(""),
-    [dialog, setDialog] = useState<"bulk" | "load" | "reset" | null>(null);
+    [runsOpen, setRunsOpen] = useState(false);
+  const refresh = useCallback(() => setRevision((value) => value + 1), []);
+  const command = usePipelineCommand(refresh);
+  const capabilities = usePipelineRead<PipelineCapabilities>(
+    "/capabilities",
+    revision,
+  );
+  const readable =
+    capabilities.data?.enabled && capabilities.data?.schema_ready;
+  const writable = Boolean(readable && capabilities.data?.writable);
+  const lists = usePipelineCatalogue<PipelineList>("lists", readable, revision);
+  const workflows = usePipelineCatalogue<WorkflowVersion>(
+    "workflows",
+    readable,
+    revision,
+  );
+  const templates = usePipelineCatalogue<TemplateVersion>(
+    "templates",
+    readable,
+    revision,
+  );
+  const selectedList = usePipelineRead<PipelinePage<PipelineList>>(
+    readable && listId ? queryPath("lists", { id: listId }) : null,
+    revision,
+  );
+  const list =
+    selectedList.data?.records[0] ||
+    lists.data?.records.find((value) => value.id === listId) ||
+    null;
+  const selectedWorkflow = usePipelineRead<PipelinePage<WorkflowVersion>>(
+    readable && list?.workflow_version_id
+      ? queryPath("workflows", { id: list.workflow_version_id })
+      : null,
+    revision,
+  );
+  const workflow =
+    selectedWorkflow.data?.records[0] ||
+    workflows.data?.records.find(
+      (value) => value.id === list?.workflow_version_id,
+    ) ||
+    null;
+  const selectedTemplate = usePipelineRead<PipelinePage<TemplateVersion>>(
+    readable && templateId ? queryPath("templates", { id: templateId }) : null,
+    revision,
+  );
+  const template =
+    selectedTemplate.data?.records[0] ||
+    templates.data?.records.find((value) => value.id === templateId) ||
+    null;
+  const listOptions = [
+    ...new Map(
+      [...(lists.data?.records || []), ...(list ? [list] : [])].map((value) => [
+        value.id,
+        value,
+      ]),
+    ).values(),
+  ];
+  const workflowOptions = [
+    ...new Map(
+      [...(workflows.data?.records || []), ...(workflow ? [workflow] : [])].map(
+        (value) => [value.id, value],
+      ),
+    ).values(),
+  ];
+  const templateOptions = [
+    ...new Map(
+      [...(templates.data?.records || []), ...(template ? [template] : [])].map(
+        (value) => [value.id, value],
+      ),
+    ).values(),
+  ];
+  const companyPath = queryPath("companies", {
+    list_id: listId,
+    ...filters,
+    stage: stage === "list" ? undefined : stage,
+    after,
+  });
+  const rows = usePipelineRead<PipelinePage<PipelineCompany | RecipientRow>>(
+    readable
+      ? stage === "write"
+        ? queryPath("recipients", {
+            list_id: listId,
+            ...filters,
+            ...recipientFilters,
+            stage: "write",
+            after,
+          })
+        : companyPath
+      : null,
+    revision,
+  );
+  const runs = usePipelineRead<PipelinePage<PipelineRun>>(
+    readable && runsOpen ? queryPath("runs", { list_id: listId }) : null,
+    revision,
+  );
+  const verificationRuns = usePipelineCatalogue<PipelineRun>(
+    "runs",
+    Boolean(readable && listId && stage === "write"),
+    revision,
+    { list_id: listId, status: "completed" },
+  );
+  const signals = usePipelineRead<PipelinePage<SignalObservation>>(
+    readable && company
+      ? queryPath("signals", { company_id: company.id })
+      : null,
+    revision,
+  );
+  const rowValues = rows.data?.records || [];
+  const pageSelected =
+    rowValues.length > 0 && rowValues.every((row) => selected.has(row.id));
+  const scopeKey = JSON.stringify({ listId, stage, filters, recipientFilters });
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(storage) || "null");
-      if (
-        saved?.batches?.length &&
-        saved.batches.some((b: Batch) => b.id === saved.active)
-      ) {
-        setDb(saved);
-        return;
-      }
-    } catch {}
-    const b = createBatch(defaults, true);
-    setDb({ active: b.id, batches: [b] });
-  }, []);
+    setAfter("");
+    setHistory([]);
+    setSelected(new Set());
+    setAllMatching(false);
+  }, [scopeKey]);
+  const linkedSelection = params.get("company_id");
   useEffect(() => {
-    if (!db) return;
-    try {
-      localStorage.setItem(storage, JSON.stringify(db));
-    } catch {
-      setMessage(
-        "Browser storage is unavailable. Keep this page open to retain your changes.",
-      );
-    }
-  }, [db]);
-  const b = db?.batches.find((x) => x.id === db.active),
-    r = b?.rows.find((x) => x.id === detail);
+    if (linkedSelection) setSelected(new Set([linkedSelection]));
+  }, [linkedSelection, listId, stage]);
   useEffect(() => {
-    setSubject(r?.subject || "");
-    setBody(r?.body || "");
-    setOpener(r?.opener || "");
-  }, [r?.id, r?.version, r?.subject, r?.body, r?.opener, db?.active]);
-  const rows = useMemo(() => {
-    let list = (b?.rows || []).filter(
-      (r) =>
-        (r.name + " " + r.domain + " " + r.email)
-          .toLowerCase()
-          .includes(search.toLowerCase()) &&
-        (filter === "all" ||
-          (filter === "attention" && hasIssue(r)) ||
-          (filter === "review" && r.body && r.approved !== r.version) ||
-          (filter === "approved" && r.approved === r.version)),
-    );
-    if (sort === "name")
-      list = [...list].sort((a, b) => a.name.localeCompare(b.name));
-    return list;
-  }, [b, search, filter, sort]);
-  if (!b || !db)
-    return (
-      <div className="wf-loading" role="status">
-        Loading workflow…
-      </div>
-    );
-  const batch = b,
-    store = db,
-    offset = Math.min(page, Math.max(0, Math.ceil(rows.length / size) - 1)),
-    visible = rows.slice(offset * size, (offset + 1) * size),
-    approvedCount = batch.rows.filter((x) => x.approved === x.version).length,
-    issueCount = batch.rows.filter(hasIssue).length,
-    drafts = batch.rows.filter((x) => x.body).length;
-  const update = (fn: (batch: Batch) => void) =>
-    setDb((current) => {
-      if (!current) return current;
-      const next = structuredClone(current);
-      fn(next.batches.find((x) => x.id === next.active)!);
+    setView("table");
+    setRecipient(null);
+    setVerificationRunId("");
+  }, [listId, stage]);
+  useEffect(() => {
+    const leadId = params.get("lead_id");
+    if (!leadId || !readable) return;
+    const controller = new AbortController();
+    void fetch(`/api/operator/crm/leads/${encodeURIComponent(leadId)}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok)
+          throw new Error("Could not resolve this contact’s company link.");
+        return response.json();
+      })
+      .then(async (body) => {
+        const links = (body.links || []).filter(
+          (link: { match_state?: string }) => link.match_state === "confirmed",
+        );
+        if (links.length !== 1) {
+          setNotice(
+            "This contact needs one confirmed company link in CRM before research can be queued.",
+          );
+          return;
+        }
+        const companyId = links[0].company_id;
+        const result = await pipelineRead<PipelinePage<PipelineCompany>>(
+          queryPath("companies", { id: companyId }),
+          controller.signal,
+        );
+        if (!controller.signal.aborted) {
+          setCompany(result.records[0] || null);
+          setDetailOpen(true);
+          setNotice(
+            "Contact linked to this company. Select a list and saved workflow to queue shared research.",
+          );
+        }
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setNotice(error.message);
+      });
+    return () => controller.abort();
+  }, [params, readable]);
+  function navigate(next: Record<string, string>) {
+    if (
+      dirty &&
+      !window.confirm(
+        "Leave the editor? Unsaved changes remain in this browser tab.",
+      )
+    )
+      return;
+    setDirty(false);
+    const query = new URLSearchParams(params.toString());
+    query.set("desk", "workflow");
+    query.delete("lead_id");
+    query.delete("company_id");
+    for (const [key, value] of Object.entries(next))
+      value ? query.set(key, value) : query.delete(key);
+    router.push(`/sales/outbound?${query}`, { scroll: false });
+  }
+  function edit(next: "research" | "write") {
+    if (
+      dirty &&
+      view !== next &&
+      !window.confirm(
+        "Leave the editor? Unsaved changes remain in this browser tab.",
+      )
+    )
+      return;
+    const main = document.getElementById("compass-main");
+    if (view === "table") tableScroll.current = main?.scrollTop || 0;
+    setView(next);
+    requestAnimationFrame(() => {
+      if (main) main.scrollTop = 0;
+    });
+  }
+  function returnToTable() {
+    if (
+      dirty &&
+      !window.confirm(
+        "Leave the editor? Unsaved changes remain in this browser tab.",
+      )
+    )
+      return;
+    setDirty(false);
+    setView("table");
+    requestAnimationFrame(() => {
+      const main = document.getElementById("compass-main");
+      if (main) main.scrollTop = tableScroll.current;
+    });
+  }
+  function toggle(id: string) {
+    setAllMatching(false);
+    setSelected((previous) => {
+      const next = new Set(previous);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  const mutateRow = (fn: (batch: Batch, row: Company) => void) =>
-    update((b) => {
-      const x = b.rows.find((x) => x.id === detail);
-      if (x) fn(b, x);
-    });
-  const dirty = Boolean(
-    r && (r.subject !== subject || r.body !== body || r.opener !== opener),
-  );
-  const closeDetail = () => {
-    if (!dirty || window.confirm("Discard unsaved changes to this company?"))
-      setDetail(null);
-  };
-  const openCompany = (
-    id: number,
-    tab: Detail = view === "copy" ? "email" : "research",
-  ) => {
-    setDetail(id);
-    setDetailTab(tab);
-  };
-  const select = (id: number) =>
-    setSelected((x) =>
-      x.includes(id) ? x.filter((i) => i !== id) : [...x, id],
-    );
-  const selectedRows = batch.rows.filter((x) => selected.includes(x.id)),
-    approvable = selectedRows.filter(
-      (x) => x.body && x.approved !== x.version && !checks(x).length,
-    );
-  const stageHasIssues = (n: string | number) =>
-    n === 4
-      ? batch.rows.some((x) => x.researchIssue)
-      : n === 6
-        ? batch.rows.some((x) => !x.contactPublished || x.verification !== "ok")
-        : false;
-  const currentStep =
-    batch.phase === "define" ? 0 : batch.phase === "research" ? 4 : 9;
-  const saveConfig = () => {
-    if (!config?.name.trim() || !config.companyIds?.length) return;
-    if (editingConfig) {
-      update((b) => {
-        configureBatch(b, config);
-      });
-    } else {
-      const next = createBatch(config);
-      setDb({ ...store, active: next.id, batches: [...store.batches, next] });
-      setSelected([]);
-      setPage(0);
-      setFilter("all");
-      setSearch("");
+  }
+  async function createList() {
+    const result = await command.save([
+      {
+        kind: "list",
+        expected_revision: 0,
+        record: {
+          id: crypto.randomUUID(),
+          name: listName.trim(),
+          notes: listNotes || null,
+          workflow_version_id: null,
+          offer_version_id: null,
+          icp_version_id: null,
+        },
+      },
+    ]);
+    if (result) {
+      setCreateOpen(false);
+      setListName("");
+      setListNotes("");
+      navigate({ list_id: result.results[0].id, stage: "list" });
     }
-    setSelected([]);
-    setPage(0);
-    setConfig(null);
-  };
-  return (
-    <section className="wf" aria-label="Outbound workflow">
-      <div className="wf-top">
-        <div className="wf-batch-title">
-          <span className="wf-batch-icon">
-            <Layers3 size={17} />
-          </span>
-          <div>
-            <label className="wf-eyebrow" htmlFor="wf-batches">
-              Batch
-            </label>
-            <WorkflowSelect id="wf-batches" label="Batch" value={batch.id}
-              onChange={value => { setDb({ ...store, active: value }); setSelected([]); setPage(0); setFilter("all"); setSearch(""); }}
-              options={store.batches.map(x => ({value:x.id,label:x.config.name}))} />
-          </div>
-          <Pill>
-            {batch.phase === "define"
-              ? "Ready to prepare"
-              : batch.phase === "research"
-                ? "Research review"
-                : "Copy review"}
-          </Pill>
-        </div>
-        <div className="wf-actions">
-          <Button onClick={() => setSourcing(true)}><Search size={14} /> Source leads</Button>
-          <Button
-            onClick={() => {
-              setEditingConfig(true);
-              setConfig({ ...batch.config, companyIds: batch.rows.map(r => r.id) });
-            }}
-          >
-            <Settings2 size={14} /> Configure
-          </Button>
-          <Button
-            onClick={() => {
-              setEditingConfig(false);
-              setConfig({ ...defaults, name: "New batch", companyIds: [] });
-            }}
-          >
-            <Plus size={14} /> New batch
-          </Button>
-        </div>
-      </div>
-      <div className="wf-context">
-        <span>{batch.config.geography}</span>
-        <span>{batch.rows.length} companies</span>
-        <span>{batch.config.offer}</span>
-        <span className="wf-context-end">
-          Design workspace · saved example data · browser-local changes
-        </span>
-      </div>
-      <div className="wf-stagebar" aria-label="Workflow progress">
-        {[
-          ["Define", 0],
-          ["Research", 4],
-          ["Contacts", 6],
-          ["Write", 8],
-          ["Review", 9],
-          ["Load", 10],
-          ["Observe", 11],
-        ].map(([name, n]) => (
-          <button
-            key={name}
-            aria-current={currentStep === n ? "step" : undefined}
-            onClick={() => {
-              if (n === 0) {
-                setEditingConfig(true);
-                setConfig({ ...batch.config, companyIds: batch.rows.map(r => r.id) });
-              } else if (n === 10 || n === 11) setDialog("load");
-              else {
-                setView(
-                  n === 8 || n === 9
-                    ? "copy"
-                    : n === 4 || n === 6
-                      ? "companies"
-                      : "execution",
-                );
-                setFilter(n === 6 ? "attention" : "all");
-              }
-            }}
-            className={
-              stageHasIssues(n) && Number(n) < currentStep
-                ? "wf-stage-issues"
-                : Number(n) < currentStep
-                  ? "wf-stage-done"
-                  : ""
+  }
+  async function attachWorkflow(id: string) {
+    if (!list) return;
+    const chosen = workflows.data?.records.find((value) => value.id === id);
+    if (!chosen) return;
+    await command.save([
+      {
+        kind: "list",
+        expected_revision: list.revision,
+        record: {
+          id: list.id,
+          name: list.name,
+          notes: list.notes,
+          workflow_version_id: chosen.id,
+          offer_version_id: chosen.policy.offer_version_id,
+          icp_version_id: chosen.policy.icp_version_id,
+        },
+      },
+    ]);
+  }
+  async function startRun() {
+    if (!list || !workflow) return;
+    await command.command("/runs", {
+      schema_version: PIPELINE_VERSION,
+      request_id: crypto.randomUUID(),
+      source: "compass.outbound.ui",
+      action: "start",
+      run_id: crypto.randomUUID(),
+      expected_revision: 0,
+      data: {
+        list_id: list.id,
+        workflow_version_id: workflow.id,
+        stage,
+        company_ids:
+          allMatching || stage === "write" ? undefined : [...selected],
+        recipient_ids:
+          !allMatching && stage === "write" ? [...selected] : undefined,
+        filters: allMatching
+          ? {
+              ...runScopeFilters(filters),
+              stage,
+              ...(stage === "write" ? runScopeFilters(recipientFilters) : {}),
             }
-          >
-            <span>
-              {stageHasIssues(n) && Number(n) < currentStep ? (
-                <span aria-label="Unresolved issues">!</span>
-              ) : Number(n) < currentStep ? (
-                <Check size={12} />
-              ) : Number(n) === currentStep ? (
-                <span className="wf-dot" />
-              ) : null}
-            </span>
-            {name}
-            <ChevronRight size={13} />
+          : undefined,
+        template_version_id: stage === "write" ? templateId : undefined,
+        verification_run_id:
+          stage === "write" && verificationRunId
+            ? verificationRunId
+            : undefined,
+      },
+    });
+    setRunsOpen(true);
+  }
+  async function copyRunHandoff(run: PipelineRun) {
+    const text = `Continue Compass outbound run ${run.id}. Read its frozen scope and saved workflow/template. Claim a work item, register a connected executor session with actually probed adapters through MCP, and attach the session to the lease. Follow saved tools, fallback order, spending limits and checkpoints. Persist source evidence, attempt outcomes and stage receipts. The UI has queued work; it has not started an agent.`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setNotice(
+        "Agent handoff copied. Paste it into the connected agent task.",
+      );
+    } catch {
+      setNotice(
+        `Clipboard unavailable. Ask the connected agent to continue run ${run.id} using its saved workflow and registered adapters.`,
+      );
+    }
+  }
+  async function runAction(
+    run: PipelineRun,
+    action: "resume" | "cancel" | "approve",
+  ) {
+    await command.command("/runs", {
+      schema_version: PIPELINE_VERSION,
+      request_id: crypto.randomUUID(),
+      source: "compass.outbound.ui",
+      action,
+      run_id: run.id,
+      expected_revision: run.revision,
+      data: {},
+    });
+  }
+  const blocked = command.busy || command.uncertain;
+  return (
+    <section className="op-pipeline" aria-label="Outbound lead pipeline">
+      <header className="op-toolbar">
+        <div className="op-inline">
+          <Field label="Working list">
+            <select
+              value={listId}
+              onChange={(e) => navigate({ list_id: e.target.value })}
+            >
+              <option value="">All companies</option>
+              {listOptions.map((value) => (
+                <option key={value.id} value={value.id}>
+                  {value.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <button onClick={() => setCreateOpen(true)} disabled={!writable}>
+            New list
           </button>
-        ))}
-      </div>
-      <div className="wf-checkpoint">
-        <ShieldCheck size={18} />
-        <div>
-          <strong>
-            {batch.phase === "define"
-              ? "Ready to prepare this batch"
-              : batch.phase === "research"
-                ? "Research is ready for your review"
-                : `${drafts} drafts ready · ${approvedCount} approved`}
-          </strong>
-          <p>
-            {batch.phase === "define"
-              ? "Preparation stops at your configured review checkpoints."
-              : batch.phase === "research"
-                ? "Review company evidence and unknowns before moving to contacts and copy."
-                : `${issueCount} companies have research or contact issues. Copy approval and sending eligibility are separate.`}
-          </p>
         </div>
-        <Button
-          primary
-          onClick={() => {
-            if (batch.phase === "define") update((b) => prepare(b));
-            else if (batch.phase === "research") {
-              update((b) => prepare(b, true));
-              setView("copy");
-            } else if (view !== "copy") setView("copy");
-            else setDialog("load");
-          }}
-        >
-          {batch.phase === "define" ? (
-            <Play size={13} />
-          ) : (
-            <ArrowRight size={14} />
-          )}{" "}
-          {batch.phase === "define"
-            ? "Prepare batch"
-            : batch.phase === "research"
-              ? "Continue to drafts"
-              : view === "copy"
-                ? "Review loading"
-                : "Review drafts"}
-        </Button>
-      </div>
-      <div className="wf-tabs" role="group" aria-label="Workflow views">
-        {(
-          [
-            ["companies", "Companies", Building2],
-            ["copy", "Copy review", Mail],
-            ["execution", "Execution", GitBranch],
-            ["history", "Activity", History],
-          ] as const
-        ).map(([key, title, Icon]) => (
+        <div className="op-inline">
           <button
-            key={key}
-            aria-pressed={view === key}
-            onClick={() => setView(key)}
+            onClick={() => {
+              setRunsOpen(!runsOpen);
+              refresh();
+            }}
+            aria-expanded={runsOpen}
           >
-            <Icon size={14} />
-            {title}
-            {key === "companies" && <span>{batch.rows.length}</span>}
+            Runs
           </button>
-        ))}
-      </div>
-      {(view === "companies" || view === "copy") && (
+          <button onClick={refresh} disabled={rows.loading}>
+            Refresh
+          </button>
+        </div>
+      </header>
+      {capabilities.loading && (
+        <p role="status" className="op-empty">
+          Checking the shared database…
+        </p>
+      )}
+      {(capabilities.error || (!capabilities.loading && !readable)) && (
+        <div className="op-empty" role="alert">
+          <h2>Outbound database unavailable</h2>
+          <p>
+            {capabilities.error ||
+              capabilities.data?.reason ||
+              "The pipeline schema or feature flag is not ready. Ask the connected agent to complete the database preflight."}
+          </p>
+          <button onClick={refresh}>Check again</button>
+        </div>
+      )}
+      {readable && (
         <>
-          <div className="wf-toolbar">
-            <div className="wf-filters">
-              {[
-                ["all", "All companies", batch.rows.length],
-                ["attention", "Needs attention", issueCount],
-                [
-                  "review",
-                  "To review",
-                  batch.rows.filter((x) => x.body && x.approved !== x.version)
-                    .length,
-                ],
-                ["approved", "Approved", approvedCount],
-              ].map(([value, label, count]) => (
-                <button
-                  key={value}
-                  aria-pressed={filter === value}
-                  onClick={() => {
-                    setFilter(String(value));
-                    setPage(0);
+          <nav className="op-stages" aria-label="Pipeline stage">
+            {stages.map((value) => (
+              <button
+                key={value}
+                aria-current={stage === value ? "page" : undefined}
+                onClick={() => navigate({ stage: value })}
+              >
+                {label(value)}
+              </button>
+            ))}
+          </nav>
+          {!writable && (
+            <p className="op-notice">
+              The shared database is read-only. Existing records remain
+              inspectable.
+            </p>
+          )}
+          <div className="op-inline op-catalogue-pages">
+            {lists.data?.next_after && (
+              <button disabled={lists.loading} onClick={lists.loadMore}>
+                Load more lists
+              </button>
+            )}
+            {workflows.data?.next_after && (
+              <button disabled={workflows.loading} onClick={workflows.loadMore}>
+                Load more workflows
+              </button>
+            )}
+            {templates.data?.next_after && (
+              <button disabled={templates.loading} onClick={templates.loadMore}>
+                Load more templates
+              </button>
+            )}
+          </div>
+          <CommandNotice state={command} />
+          {notice && (
+            <p className="op-notice" role="status">
+              {notice}
+            </p>
+          )}
+          {[lists.error, workflows.error, templates.error]
+            .filter(Boolean)
+            .map((error) => (
+              <p className="op-error" role="alert" key={error}>
+                {error}
+              </p>
+            ))}
+          <div className="op-toolbar op-context-toolbar">
+            <div className="op-inline">
+              <Field label="Saved workflow">
+                <select
+                  value={list?.workflow_version_id || ""}
+                  disabled={!list || !writable || blocked}
+                  onChange={(e) => void attachWorkflow(e.target.value)}
+                >
+                  <option value="">Choose a workflow</option>
+                  {workflowOptions.map((value) => (
+                    <option key={value.id} value={value.id}>
+                      {value.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <button onClick={() => edit("research")}>Edit research</button>
+              <Field label="Writing template">
+                <select
+                  value={templateId}
+                  onChange={(e) => {
+                    if (
+                      !dirty ||
+                      window.confirm(
+                        "Switch template? Unsaved changes remain in this browser tab.",
+                      )
+                    ) {
+                      setDirty(false);
+                      setTemplateId(e.target.value);
+                    }
                   }}
                 >
-                  {label}
-                  <span>{count}</span>
-                </button>
-              ))}
+                  <option value="">New template</option>
+                  {templateOptions.map((value) => (
+                    <option key={value.id} value={value.id}>
+                      {value.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <button onClick={() => edit("write")}>Edit writing</button>
             </div>
-            <div className="wf-search">
-              <Search size={14} />
-              <input
-                aria-label="Search companies"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(0);
-                }}
-                placeholder="Search companies…"
-              />
-            </div>
-            <label className="wf-sort">
-              <ArrowDown size={13} />
-              <WorkflowSelect label="Sort companies" value={sort} onChange={value => setSort(value as "source" | "name")} options={[{value:"source",label:"Source order"},{value:"name",label:"Company A–Z"}]} />
-            </label>
+            {view !== "table" && (
+              <button onClick={returnToTable}>Back to table</button>
+            )}
           </div>
-          {selected.length > 0 && (
-            <div className="wf-selection" role="region" aria-label="Selected company actions">
-              <strong>{selected.length} selected</strong>
-              <Button
-                onClick={() => setDialog("bulk")}
-                disabled={!approvable.length}
-              >
-                <CheckCheck size={14} /> Review approvals
-              </Button>
-              <Button
-                onClick={() => {
-                  update((b) => {
-                    for (const x of b.rows.filter((x) =>
-                      selected.includes(x.id),
-                    ))
-                      x.held = !x.held;
-                    event(
-                      b,
-                      "Review holds updated",
-                      `${selected.length} selected records updated. Original research and contact evidence retained.`,
-                    );
-                  });
-                  setSelected([]);
-                }}
-              >
-                Toggle hold
-              </Button>
-              <button
-                onClick={() => setSelected([])}
-                aria-label="Clear selection"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-          <div
-            className="wf-table-scroll"
-            tabIndex={0}
-            aria-label="Companies; scroll horizontally for more columns"
-          >
-            <table
-              className={
-                view === "copy" ? "wf-table wf-copy-table" : "wf-table"
-              }
+          <div hidden={view !== "table"}>
+            <form
+              className="op-filters"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setFilters({ ...filters, q: search });
+              }}
             >
-              <thead>
-                <tr>
-                  <th className="wf-select">
-                    <input
-                      type="checkbox"
-                      aria-label="Select visible companies"
-                      checked={
-                        visible.length > 0 &&
-                        visible.every((x) => selected.includes(x.id))
-                      }
-                      ref={(el) => {
-                        if (el)
-                          el.indeterminate =
-                            visible.some((x) => selected.includes(x.id)) &&
-                            !visible.every((x) => selected.includes(x.id));
-                      }}
-                      onChange={(e) =>
-                        setSelected(
-                          e.target.checked
-                            ? [
-                                ...new Set([
-                                  ...selected,
-                                  ...visible.map((x) => x.id),
-                                ]),
-                              ]
-                            : selected.filter(
-                                (id) => !visible.some((x) => x.id === id),
-                              ),
-                        )
-                      }
-                    />
-                  </th>
-                  <th>Company</th>
-                  {view === "copy" ? (
-                    <>
-                      <th>Subject</th>
-                      <th>Opener</th>
-                      <th>Approval</th>
-                      <th>Contact</th>
-                    </>
-                  ) : (
-                    <>
-                      <th>Company fit</th>
-                      <th>Contact & email</th>
-                      <th>Draft</th>
-                      <th>Sending</th>
-                      <th>Next action</th>
-                    </>
+              <Field label="Search companies">
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Company name or website"
+                />
+              </Field>
+              <button disabled={false}>Search</button>
+              {(["country", "city", "suburb"] as const).map((key) => (
+                <Field
+                  key={key}
+                  label={key === "country" ? "Country code" : label(key)}
+                >
+                  <input
+                    value={filters[key]}
+                    maxLength={key === "country" ? 2 : undefined}
+                    placeholder={key === "country" ? "AU, NZ, US…" : undefined}
+                    onChange={(e) =>
+                      setFilters({
+                        ...filters,
+                        [key]:
+                          key === "country"
+                            ? e.target.value.toUpperCase()
+                            : e.target.value,
+                      })
+                    }
+                  />
+                </Field>
+              ))}
+              <Field label="ICP match">
+                <select
+                  value={filters.fit}
+                  onChange={(e) =>
+                    setFilters({ ...filters, fit: e.target.value })
+                  }
+                >
+                  <option value="">All fit outcomes</option>
+                  {[
+                    "unknown",
+                    "anti_icp",
+                    "non_fit",
+                    "likely_fit",
+                    "sure_fit",
+                  ].map((value) => (
+                    <option key={value} value={value}>
+                      {label(value)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Stage outcome">
+                <select
+                  value={filters.status}
+                  onChange={(e) =>
+                    setFilters({ ...filters, status: e.target.value })
+                  }
+                >
+                  <option value="">All outcomes</option>
+                  {["ready", "held", "completed", "failed", "stale"].map(
+                    (value) => (
+                      <option key={value}>{value}</option>
+                    ),
                   )}
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((x) => (
-                  <tr key={x.id} data-selected={selected.includes(x.id)}>
-                    <td className="wf-select">
+                </select>
+              </Field>
+              {stage === "write" && (
+                <>
+                  <Field label="Draft status">
+                    <select
+                      value={recipientFilters.draft_status}
+                      onChange={(e) =>
+                        setRecipientFilters({
+                          ...recipientFilters,
+                          draft_status: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">All drafts</option>
+                      <option value="drafted">Drafted</option>
+                      <option value="undrafted">Not drafted</option>
+                    </select>
+                  </Field>
+                  <Field label="Mailbox verification">
+                    <select
+                      value={recipientFilters.verification_status}
+                      onChange={(e) =>
+                        setRecipientFilters({
+                          ...recipientFilters,
+                          verification_status: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">All verification outcomes</option>
+                      {[
+                        "valid",
+                        "invalid",
+                        "catch_all",
+                        "unknown",
+                        "risky",
+                        "unverified",
+                      ].map((value) => (
+                        <option key={value} value={value}>
+                          {label(value)}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </>
+              )}
+            </form>
+            <div className="op-selection">
+              <span>
+                {allMatching
+                  ? `${rows.data?.total_matching ?? "…"} matching ${stage === "write" ? "recipients" : "companies"}`
+                  : `${selected.size} selected`}
+                {rows.data
+                  ? ` · ${rows.data.total_matching.toLocaleString()} matching ${stage === "write" ? "recipients" : "companies"}`
+                  : ""}
+              </span>
+              <div className="op-inline">
+                {selected.size > 0 && !allMatching && (
+                  <button onClick={() => setAllMatching(true)}>
+                    Select all matching
+                  </button>
+                )}
+                {(selected.size > 0 || allMatching) && (
+                  <button
+                    onClick={() => {
+                      setSelected(new Set());
+                      setAllMatching(false);
+                    }}
+                  >
+                    Clear selection
+                  </button>
+                )}
+                <button
+                  disabled={
+                    !writable ||
+                    blocked ||
+                    !list ||
+                    !workflow ||
+                    stage === "list" ||
+                    (stage === "write" &&
+                      (!templateId ||
+                        (workflow.policy.verification.reuse_days === 0 &&
+                          !verificationRunId))) ||
+                    (!selected.size && !allMatching)
+                  }
+                  onClick={() => void startRun()}
+                >
+                  Queue {stage === "list" ? "research" : stage}
+                </button>
+              </div>
+            </div>
+            {stage === "write" && (
+              <div className="op-inline">
+                <Field label="Completed verification run">
+                  <select
+                    value={verificationRunId}
+                    onChange={(e) => setVerificationRunId(e.target.value)}
+                  >
+                    <option value="">Choose verification scope</option>
+                    {verificationRuns.data?.records
+                      .filter((run) => run.stage === "verify")
+                      .map((run) => (
+                        <option key={run.id} value={run.id}>
+                          {new Date(run.created_at).toLocaleString("en-AU")} ·{" "}
+                          {run.scope_count} records
+                        </option>
+                      ))}
+                  </select>
+                </Field>
+                {verificationRuns.data?.next_after && (
+                  <button onClick={verificationRuns.loadMore}>
+                    Load more verification runs
+                  </button>
+                )}
+                <small>
+                  {workflow?.policy.verification.reuse_days === 0
+                    ? "A completed verification run is required before Write."
+                    : "Saved verification reuse policy applies."}
+                </small>
+              </div>
+            )}
+            {stage === "write" && (
+              <p className="op-muted">
+                Recipient grain · suitable, held and phone-only outcomes remain
+                in their company’s contact history. Select a recipient to
+                inspect its exact draft.
+              </p>
+            )}
+            {rows.error && (
+              <p className="op-error" role="alert">
+                {rows.error}
+              </p>
+            )}
+            <div className="op-table-scroll" aria-busy={rows.loading}>
+              <table className="op-table">
+                <thead>
+                  <tr>
+                    <th scope="col">
                       <input
                         type="checkbox"
-                        aria-label={`Select ${x.name}`}
-                        checked={selected.includes(x.id)}
-                        onChange={() => select(x.id)}
+                        aria-label="Select this page"
+                        checked={pageSelected || allMatching}
+                        disabled={!rowValues.length}
+                        onChange={() => {
+                          setAllMatching(false);
+                          setSelected((previous) => {
+                            const next = new Set(previous);
+                            for (const row of rowValues)
+                              pageSelected
+                                ? next.delete(row.id)
+                                : next.add(row.id);
+                            return next;
+                          });
+                        }}
                       />
-                    </td>
-                    <td>
-                      <button
-                        className="wf-company"
-                        onClick={() => openCompany(x.id)}
-                      >
-                        <span className="wf-avatar">{x.name.slice(0, 1)}</span>
-                        <span>
-                          <strong>{x.name}</strong>
-                          <small>{x.domain}</small>
-                        </span>
-                      </button>
-                    </td>
-                    {view === "copy" ? (
+                    </th>
+                    {stage === "write" ? (
                       <>
-                        <td className="wf-subject">
-                          <button onClick={() => openCompany(x.id, "email")}>
-                            {x.body ? (
-                              x.subject
-                            ) : (
-                              <span className="wf-muted">Not drafted</span>
-                            )}
-                          </button>
-                        </td>
-                        <td className="wf-opener">
-                          <button onClick={() => openCompany(x.id, "email")}>
-                            {x.body ? (
-                              x.opener
-                            ) : (
-                              <span className="wf-muted">
-                                Research required before drafting
-                              </span>
-                            )}
-                          </button>
-                        </td>
-                        <td>
-                          <CopyState r={x} />
-                        </td>
-                        <td>
-                          <Contact r={x} />
-                        </td>
+                        <th scope="col">Recipient</th>
+                        <th scope="col">Company</th>
+                        <th scope="col">Suitability</th>
+                        <th scope="col">Draft / reason</th>
                       </>
                     ) : (
                       <>
-                        <td>
-                          <Pill
-                            tone={x.held || x.researchIssue ? "warn" : "good"}
-                          >
-                            {x.held
-                              ? "On hold"
-                              : x.researchIssue
-                                ? "Needs research"
-                                : "Service / area fit"}
-                          </Pill>
-                          <small className="wf-subtext">
-                            {x.signal || "Identity unresolved"}
-                          </small>
-                        </td>
-                        <td>
-                          <Contact r={x} />
-                          <small className="wf-subtext">{x.email}</small>
-                        </td>
-                        <td>
-                          <CopyState r={x} />
-                        </td>
-                        <td>
-                          <span className="wf-muted">Not connected</span>
-                        </td>
-                        <td>
-                          <button
-                            className="wf-next"
-                            onClick={() =>
-                              openCompany(
-                                x.id,
-                                x.researchIssue
-                                  ? "research"
-                                  : hasIssue(x)
-                                    ? "contact"
-                                    : "email",
-                              )
-                            }
-                          >
-                            {x.held
-                              ? "Review hold"
-                              : x.researchIssue
-                                ? "Review evidence"
-                                : hasIssue(x)
-                                  ? "Resolve contact"
-                                  : x.approved === x.version
-                                    ? "Review loading"
-                                    : "Review draft"}
-                            <ArrowUpRight size={13} />
-                          </button>
-                        </td>
+                        <th scope="col">Company</th>
+                        <th scope="col">Location</th>
+                        <th scope="col">ICP match</th>
+                        <th scope="col">Stage</th>
+                        <th scope="col">Reason</th>
+                        <th scope="col">Membership</th>
                       </>
                     )}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {!rows.length && (
-              <div className="wf-empty">
-                <Search size={24} />
-                <strong>No matching companies</strong>
-                <p>Try another search or filter.</p>
-                <Button
-                  onClick={() => {
-                    setSearch("");
-                    setFilter("all");
-                  }}
-                >
-                  Clear filters
-                </Button>
-              </div>
-            )}
-          </div>
-          <div className="wf-pagination">
-            <span>
-              {rows.length ? offset * size + 1 : 0}–
-              {Math.min((offset + 1) * size, rows.length)} of {rows.length}{" "}
-              companies
-            </span>
-            <div>
-              <label>
-                Rows{" "}
-                <WorkflowSelect label="Rows per page" value={String(size)} onChange={value => {setSize(Number(value));setPage(0);}} options={[5,10,25,50].map(n => ({value:String(n),label:String(n)}))} />
-              </label>
-              <Button
-                label="Previous page"
-                onClick={() => setPage(offset - 1)}
-                disabled={offset === 0}
-              >
-                <ArrowLeft size={14} />
-              </Button>
-              <span>
-                {offset + 1} / {Math.max(1, Math.ceil(rows.length / size))}
-              </span>
-              <Button
-                label="Next page"
-                onClick={() => setPage(offset + 1)}
-                disabled={(offset + 1) * size >= rows.length}
-              >
-                <ArrowRight size={14} />
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
-      {view === "execution" && (
-        <div className="wf-execution">
-          <div className="wf-section-heading">
-            <div>
-              <h2>Execution plan</h2>
-              <p>
-                Inputs, tools and outputs at every step. Human checkpoints stay
-                explicit.
-              </p>
-            </div>
-            <span className="wf-cost">
-              Planned cap <strong>A${batch.config.budget}</strong> · actual
-              spend <strong>A$0</strong>
-            </span>
-          </div>
-          <div className="wf-execution-table">
-            {steps.map(([title, description], i) => (
-              <div className="wf-execution-row" key={title}>
-                <span className="wf-step-index">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <strong>{title}</strong>
-                  <p>{description}</p>
-                </div>
-                <span className="wf-muted">
-                  {i < 2
-                    ? batch.config.source
-                    : i < 5
-                      ? batch.config.research
-                      : i < 7
-                        ? "Saved contact + verification"
-                        : i < 9
-                          ? batch.config.model
-                          : i === 9
-                            ? "You + local checks"
-                            : "Instantly · not connected"}
-                </span>
-                <Pill
-                  tone={
-                    (i === 4 && batch.config.checkpoint) || i === 9
-                      ? "warn"
-                      : "neutral"
-                  }
-                >
-                  {(i === 4 && batch.config.checkpoint) || i === 9
-                    ? "Human review"
-                    : i >= 10
-                      ? "Unavailable"
-                      : i === 8
-                        ? "Local assembly"
-                        : "Saved input"}
-                </Pill>
-              </div>
-            ))}
-          </div>
-          <div className="wf-footnote">
-            <Sparkles size={14} />
-            <span>
-              Provider and model selections describe the intended workflow. No
-              research, verification or AI service runs from this design
-              workspace.
-            </span>
-          </div>
-        </div>
-      )}
-      {view === "history" && (
-        <div className="wf-activity">
-          <div className="wf-section-heading">
-            <div>
-              <h2>Batch activity</h2>
-              <p>
-                Attempts, decisions and corrections stay attached to this batch.
-              </p>
-            </div>
-            <Button onClick={() => setDialog("reset")}>Reset examples</Button>
-          </div>
-          {batch.history.map((h) => (
-            <div className="wf-event" key={h.id}>
-              <span className="wf-event-icon">
-                <Clock3 size={14} />
-              </span>
-              <div>
-                <strong>{h.title}</strong>
-                <p>{h.detail}</p>
-              </div>
-              <time>
-                {new Date(h.time).toLocaleString("en-AU", {
-                  day: "numeric",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </time>
-            </div>
-          ))}
-          {!batch.history.length && (
-            <div className="wf-empty">
-              <History size={24} />
-              <strong>No activity yet</strong>
-              <p>Prepare the batch to begin.</p>
-            </div>
-          )}
-        </div>
-      )}
-      <div className="wf-footnote">
-        <History size={13} />
-        <span>
-          Website snapshots · 16 Sep 2026. Verification records · 10 Sep 2026.
-          Historical inputs do not establish current sending eligibility.
-        </span>
-      </div>
-      {message && (
-        <div className="wf-message" role="status">
-          {message}
-          <button aria-label="Dismiss message" onClick={() => setMessage("")}>
-            <X size={14} />
-          </button>
-        </div>
-      )}
-      <ModalFrame
-        open={detail !== null}
-        onClose={closeDetail}
-        label={r?.name || "Company details"}
-        overlayClassName="wf-overlay"
-        contentClassName="wf-panel"
-      >
-        {r && (
-          <>
-            <div className="wf-panel-top">
-              <div className="wf-panel-navigation">
-                <span>
-                  Company {batch.rows.findIndex((x) => x.id === r.id) + 1} of{" "}
-                  {batch.rows.length}
-                </span>
-                <button
-                  onClick={closeDetail}
-                  aria-label="Close company details"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              <div className="wf-panel-company">
-                <span className="wf-avatar">{r.name.slice(0, 1)}</span>
-                <div>
-                  <h2>{r.name}</h2>
-                  <a href={r.website} target="_blank" rel="noreferrer">
-                    {r.domain}
-                    <ArrowUpRight size={12} />
-                  </a>
-                </div>
-              </div>
-              <div className="wf-panel-pills">
-                <Pill tone={r.researchIssue ? "warn" : "good"}>
-                  {r.researchIssue ? "Research needed" : "Partial company fit"}
-                </Pill>
-                <Contact r={r} />
-                <CopyState r={r} />
-              </div>
-            </div>
-            <div className="wf-tabs wf-detail-tabs">
-              {(
-                [
-                  ["research", "Evidence"],
-                  ["email", "Email"],
-                  ["contact", "Contact"],
-                  ["history", "History"],
-                ] as const
-              ).map(([key, title]) => (
-                <button
-                  key={key}
-                  aria-pressed={detailTab === key}
-                  onClick={() => setDetailTab(key)}
-                >
-                  {title}
-                </button>
-              ))}
-            </div>
-            <div className="wf-panel-body">
-              {detailTab === "research" && (
-                <>
-                  <div className="wf-section-heading">
-                    <h3>Company assessment</h3>
-                    <span className="wf-muted">Saved evidence</span>
-                  </div>
-                  <dl className="wf-facts">
-                    <div>
-                      <dt>Installation services</dt>
-                      <dd>{r.signal || "Unconfirmed"}</dd>
-                    </div>
-                    <div>
-                      <dt>Service area</dt>
-                      <dd>
-                        {r.researchIssue.includes("area") ||
-                        !r.evidence.some((e) => e.label === "Service area")
-                          ? "Unconfirmed"
-                          : "Sydney · saved assessment"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Company maturity</dt>
-                      <dd>Unknown</dd>
-                    </div>
-                    <div>
-                      <dt>Quoting process</dt>
-                      <dd>Unknown</dd>
-                    </div>
-                    <div>
-                      <dt>Decision-maker authority</dt>
-                      <dd>Unknown</dd>
-                    </div>
-                  </dl>
-                  {r.researchIssue && (
-                    <div className="wf-warning">
-                      <strong>{r.researchIssue}</strong>
-                      <p>
-                        {r.fetchError
-                          ? "Saved website request failed. Identity requires review."
-                          : "More source evidence is required before establishing fit."}
-                      </p>
-                    </div>
+                </thead>
+                <tbody>
+                  {rowValues.map((row) =>
+                    stage === "write" ? (
+                      <tr key={row.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${(row as RecipientRow).mailbox}`}
+                            checked={selected.has(row.id) || allMatching}
+                            onChange={() => toggle(row.id)}
+                          />
+                        </td>
+                        <td>
+                          <button
+                            className="op-record-link"
+                            onClick={() => {
+                              setRecipient(row as RecipientRow);
+                              edit("write");
+                            }}
+                          >
+                            {(row as RecipientRow).mailbox}
+                          </button>
+                        </td>
+                        <td>
+                          {(row as RecipientRow).company_name ||
+                            "Linked company"}
+                        </td>
+                        <td>
+                          <Status
+                            value={
+                              (row as RecipientRow).suitable
+                                ? "suitable"
+                                : "held"
+                            }
+                          />
+                        </td>
+                        <td>
+                          {(row as RecipientRow).draft_status ||
+                            row.reason ||
+                            "Not drafted"}
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={row.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${(row as PipelineCompany).name}`}
+                            checked={selected.has(row.id) || allMatching}
+                            onChange={() => toggle(row.id)}
+                          />
+                        </td>
+                        <td>
+                          <button
+                            className="op-record-link"
+                            onClick={() => {
+                              setCompany(row as PipelineCompany);
+                              setDetailOpen(true);
+                            }}
+                          >
+                            {(row as PipelineCompany).name}
+                          </button>
+                          {(row as PipelineCompany).website && (
+                            <small>{(row as PipelineCompany).website}</small>
+                          )}
+                        </td>
+                        <td>
+                          {[
+                            (row as PipelineCompany).suburb,
+                            (row as PipelineCompany).city,
+                            (row as PipelineCompany).country,
+                          ]
+                            .filter(Boolean)
+                            .join(", ") || "Not recorded"}
+                        </td>
+                        <td>
+                          <Status value={(row as PipelineCompany).fit} />
+                        </td>
+                        <td>
+                          <Status
+                            value={(row as PipelineCompany).stage_status}
+                          />
+                        </td>
+                        <td className="op-reason">
+                          {row.reason || "No result recorded"}
+                        </td>
+                        <td>
+                          {(row as PipelineCompany).membership_id
+                            ? "In this list"
+                            : listId
+                              ? "Not a member"
+                              : "Database record"}
+                        </td>
+                      </tr>
+                    ),
                   )}
-                  <h3 className="wf-subheading">
-                    Sources & evidence <span>{r.evidence.length}</span>
-                  </h3>
-                  {r.evidence.map((e, i) => (
-                    <article className="wf-evidence" key={i}>
-                      <div>
-                        <FileText size={14} />
-                        <strong>{e.label}</strong>
-                        <span>{e.checkedAt}</span>
-                      </div>
-                      <blockquote>{e.quote}</blockquote>
-                      <a href={e.url} target="_blank" rel="noreferrer">
-                        View source
-                        <ArrowUpRight size={12} />
-                      </a>
-                    </article>
-                  ))}
-                  <label className="wf-label" htmlFor="wf-opener">
-                    Selected writing fact
-                  </label>
-                  <textarea
-                    id="wf-opener"
-                    value={opener}
-                    onChange={(e) => setOpener(e.target.value)}
-                    rows={4}
-                  />
-                  <p className="wf-help">
-                    A changed fact invalidates the dependent draft and its
-                    approval. Review every correction against the saved source.
-                  </p>
-                </>
-              )}
-              {detailTab === "email" && (
-                <>
-                  <div className="wf-section-heading">
-                    <h3>Email · version {r.version}</h3>
-                    <CopyState r={r} />
-                  </div>
-                  {!r.body && (
-                    <div className="wf-warning">
-                      <strong>No current draft</strong>
-                      <p>
-                        Resolve the saved research holds, then prepare the
-                        batch. Contact holds alone do not prevent research
-                        drafting.
-                      </p>
-                    </div>
-                  )}
-                  <label className="wf-label" htmlFor="wf-subject">
-                    Subject
-                  </label>
-                  <input
-                    id="wf-subject"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    maxLength={150}
-                  />
-                  <label className="wf-label" htmlFor="wf-body">
-                    Email
-                  </label>
-                  <textarea
-                    id="wf-body"
-                    className="wf-email-editor"
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                  />
-                  <details className="wf-inline-evidence">
-                    <summary>
-                      <FileText size={13} /> Selected writing evidence
-                    </summary>
-                    <p>{r.opener || "No writing evidence selected"}</p>
-                  </details>
-                  {checks(r).length > 0 && (
-                    <div className="wf-warning">
-                      {checks(r).map((x) => (
-                        <p key={x}>{x}</p>
-                      ))}
-                    </div>
-                  )}
-                  <p className="wf-help">
-                    Approval covers this exact subject and body. It does not
-                    verify a contact or authorise sending.
-                  </p>
-                </>
-              )}
-              {detailTab === "contact" && (
-                <>
-                  <h3>Contact record</h3>
-                  <dl className="wf-facts">
-                    <div>
-                      <dt>Email</dt>
-                      <dd>{r.email}</dd>
-                    </div>
-                    <div>
-                      <dt>Contact published</dt>
-                      <dd>
-                        {r.contactPublished
-                          ? "Found in saved website text"
-                          : "Not found in saved website text"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Recorded verification</dt>
-                      <dd>{r.verification.replace("_", " ")} · 10 Sep 2026</dd>
-                    </div>
-                    <div>
-                      <dt>Provider</dt>
-                      <dd>{r.verificationProvider}</dd>
-                    </div>
-                    <div>
-                      <dt>Prior outreach</dt>
-                      <dd>{r.priorOutreach.join(", ")} · historical</dd>
-                    </div>
-                  </dl>
-                  <a
-                    className="wf-source-link"
-                    href={r.contactSource}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Contact source
-                    <ArrowUpRight size={13} />
-                  </a>
-                  <div className="wf-warning">
-                    <strong>Current eligibility is unknown</strong>
-                    <p>
-                      Fresh verification, suppression and sending state are not
-                      connected. This record cannot be loaded or activated from
-                      this workspace.
-                    </p>
-                  </div>
-                  <label className="wf-label" htmlFor="wf-note">
-                    Review note
-                  </label>
-                  <textarea
-                    id="wf-note"
-                    value={r.note}
-                    onChange={(e) => {
-                      const note = e.target.value;
-                      mutateRow((_b, x) => {
-                        x.note = note;
-                      });
-                    }}
-                    rows={4}
-                  />
-                  <p className="wf-help">
-                    Notes save automatically in this browser.
-                  </p>
-                </>
-              )}
-              {detailTab === "history" && (
-                <>
-                  <h3>Previous copy versions</h3>
-                  {r.revisions.map((v, i) => (
-                    <details className="wf-revision" key={i}>
-                      <summary>
-                        Version {v.version}{" "}
-                        <Pill tone={v.approved ? "good" : "neutral"}>
-                          {v.approved ? "Previously approved" : "Unapproved"}
-                        </Pill>
-                      </summary>
-                      <strong>{v.subject}</strong>
-                      <p>{v.body || "No email in this version"}</p>
-                    </details>
-                  ))}
-                  {!r.revisions.length && (
-                    <p className="wf-help">
-                      No earlier versions. Saving a correction preserves the
-                      current version here.
-                    </p>
-                  )}
-                  <h3 className="wf-subheading">Record activity</h3>
-                  {batch.history
-                    .filter((h) => h.detail.includes(r.name))
-                    .map((h) => (
-                      <div className="wf-event" key={h.id}>
-                        <div>
-                          <strong>{h.title}</strong>
-                          <p>{h.detail}</p>
-                        </div>
-                      </div>
-                    ))}
-                </>
+                </tbody>
+              </table>
+              {!rowValues.length && (
+                <p className="op-empty">
+                  {rows.loading
+                    ? "Loading records…"
+                    : "No records match this scope. Change the filters or add existing companies to a list."}
+                </p>
               )}
             </div>
-            {(detailTab === "email" || detailTab === "research") && (
-              <div className="wf-panel-footer">
-                <span>
-                  {dirty
-                    ? "Unsaved changes"
-                    : r.approved === r.version
-                      ? `Version ${r.version} approved`
-                      : "Changes saved locally"}
-                </span>
-                <Button
-                  disabled={!dirty || !subject.trim()}
-                  onClick={() => {
-                    mutateRow((b, x) => revise(b, x, subject, body, opener));
-                    setMessage(
-                      "Saved a new version. Previous approval invalidated.",
-                    );
-                  }}
-                >
-                  Save changes
-                </Button>
-                {detailTab === "email" && (
-                  <Button
-                    primary
-                    disabled={
-                      dirty || checks(r).length > 0 || r.approved === r.version
-                    }
-                    onClick={() => mutateRow((b, x) => approve(b, x))}
-                  >
-                    <Check size={14} /> Approve v{r.version}
-                  </Button>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </ModalFrame>
-      <ModalFrame open={sourcing} onClose={() => setSourcing(false)} label="Source leads" overlayClassName="wf-overlay" contentClassName="wf-dialog">
-        <div className="wf-dialog-title"><h2>Source leads</h2><button type="button" aria-label="Close sourcing methods" onClick={() => setSourcing(false)}><X size={18} /></button></div>
-        <SourcingMethods />
-      </ModalFrame>
-      <ModalFrame
-        open={config !== null}
-        onClose={() => setConfig(null)}
-        label={editingConfig ? "Configure batch" : "New batch"}
-        overlayClassName="wf-overlay"
-        contentClassName="wf-dialog wf-config-dialog"
-      >
-        {config && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              saveConfig();
-            }}
-          >
-            <div className="wf-dialog-title">
-              <div>
-                <h2>{editingConfig ? "Configure batch" : "New batch"}</h2>
-                <p>Define the criteria and execution checkpoints.</p>
-              </div>
+            <div className="op-pagination">
               <button
-                type="button"
-                onClick={() => setConfig(null)}
-                aria-label="Close configuration"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <BatchInventory ids={config.companyIds || []} onChange={companyIds => setConfig({ ...config, companyIds, size:companyIds.length, geography: [...new Set(cohort.filter(r => companyIds.includes(r.id)).map(r => r.city))].join(", ") })} />
-            <label className="wf-field">Batch name<input required maxLength={300} value={config.name} onChange={e => setConfig({...config,name:e.target.value})} /></label>
-            <details className="wf-config-settings"><summary>Copy criteria & review settings</summary>
-            {(["offer", "icp"] as const).map((key, i) => (
-              <label className="wf-field" key={key}>
-                {
-                  [
-                    "Offer",
-                    "Company criteria / ICP",
-                    "Geography",
-                  ][i]
-                }
-                {key === "icp" ? (
-                  <textarea
-                    value={config[key]}
-                    onChange={(e) =>
-                      setConfig({ ...config, [key]: e.target.value })
-                    }
-                    required
-                    rows={3}
-                  />
-                ) : (
-                  <input
-                    value={config[key]}
-                    onChange={(e) =>
-                      setConfig({ ...config, [key]: e.target.value })
-                    }
-                    required
-                    maxLength={300}
-                  />
-                )}
-              </label>
-            ))}
-            <div className="wf-form-grid">
-              <div className="wf-field">Batch size<output>{config.companyIds?.length || 0} selected companies</output></div>
-              <label className="wf-field">
-                Tool budget · AUD
-                <input
-                  type="number"
-                  min={0}
-                  max={1000}
-                  step="0.01"
-                  required
-                  value={config.budget}
-                  onChange={(e) =>
-                    setConfig({ ...config, budget: Number(e.target.value) })
-                  }
-                />
-              </label>
-            </div>
-            {(
-              [
-                [
-                  "source",
-                  "Company source",
-                  [
-                    "Saved company register",
-
-                  ],
-                ],
-                [
-                  "research",
-                  "Research provider",
-                  [
-                    "Saved website evidence",
-
-                  ],
-                ],
-                [
-                  "model",
-                  "Writing profile",
-                  [
-                    "Saved copy + local checks",
-
-                  ],
-                ],
-              ] as const
-            ).map(([key, label, options]) => (
-              <label className="wf-field" key={key}>
-                {label}
-                <WorkflowSelect label={label} value={config[key]} onChange={value => setConfig({ ...config, [key]: value })} options={options.map(value => ({value,label:value}))} />
-              </label>
-            ))}
-            <label className="wf-checkbox">
-              <input
-                type="checkbox"
-                checked={config.checkpoint}
-                onChange={(e) =>
-                  setConfig({ ...config, checkpoint: e.target.checked })
-                }
-              />
-              <span>
-                <strong>Review research before drafting</strong>
-                <small>
-                  Copy review and activation always remain explicit.
-                </small>
-              </span>
-            </label>
-            <p className="wf-help">
-              Selection determines which saved companies enter this batch. Offer and criteria guide copy review; they do not establish fit. Use Source leads for additional discovery methods and an agent handoff.
-            </p>
-            </details>
-            <div className="wf-dialog-footer">
-              <Button onClick={() => setConfig(null)}>Cancel</Button>
-              <button className="compass-btn-primary" type="submit" disabled={!config.companyIds?.length}>
-                {editingConfig ? "Save configuration" : "Create batch"}
-              </button>
-            </div>
-          </form>
-        )}
-      </ModalFrame>
-      <ModalFrame
-        open={dialog !== null}
-        onClose={() => setDialog(null)}
-        label={
-          dialog === "bulk"
-            ? "Review selected emails"
-            : dialog === "reset"
-              ? "Reset examples"
-              : "Load & reconcile"
-        }
-        overlayClassName="wf-overlay"
-        contentClassName="wf-dialog"
-      >
-        <div className="wf-dialog-title">
-          <h2>
-            {dialog === "bulk"
-              ? "Review selected emails"
-              : dialog === "reset"
-                ? "Reset saved examples"
-                : "Load & reconcile"}
-          </h2>
-          <button onClick={() => setDialog(null)} aria-label="Close">
-            <X size={18} />
-          </button>
-        </div>
-        {dialog === "bulk" ? (
-          <>
-            <p className="wf-help">
-              Approve only after reviewing each exact subject and full email.
-              Contact holds stay separate.
-            </p>
-            {approvable.map((x) => (
-              <article className="wf-bulk-email" key={x.id}>
-                <strong>
-                  {x.name} · v{x.version}
-                </strong>
-                <h3>{x.subject}</h3>
-                <p>{x.body}</p>
-              </article>
-            ))}
-            <Button
-              primary
-              disabled={!approvable.length}
-              onClick={() => {
-                update((b) => {
-                  for (const x of b.rows.filter((x) => selected.includes(x.id)))
-                    approve(b, x);
-                });
-                setDialog(null);
-                setSelected([]);
-              }}
-            >
-              Approve {approvable.length} exact versions
-            </Button>
-          </>
-        ) : dialog === "reset" ? (
-          <>
-            <p>
-              Remove browser-local batches and edits, then restore the original
-              ten-company example?
-            </p>
-            <div className="wf-dialog-footer">
-              <Button onClick={() => setDialog(null)}>Keep changes</Button>
-              <Button
+                disabled={!history.length || rows.loading}
                 onClick={() => {
-                  const b = createBatch(defaults, true);
-                  setDb({ active: b.id, batches: [b] });
-                  setSelected([]);
-                  setFilter("all");
-                  setSearch("");
-                  setPage(0);
-                  setDialog(null);
+                  setAfter(history.at(-1) || "");
+                  setHistory(history.slice(0, -1));
+                  if (stage === "write") setSelected(new Set());
                 }}
               >
-                Reset examples
-              </Button>
+                Previous page
+              </button>
+              <span>Page {history.length + 1} · up to 100 records</span>
+              <button
+                disabled={!rows.data?.next_after || rows.loading}
+                onClick={() => {
+                  setHistory([...history, after]);
+                  if (stage === "write") setSelected(new Set());
+                  setAfter(rows.data?.next_after || "");
+                }}
+              >
+                Next page
+              </button>
             </div>
-          </>
-        ) : (
-          <>
-            <Pill tone="warn">Provider not connected</Pill>
-            <div className="wf-load-summary">
-              <div>
-                <strong>{approvedCount}</strong>
-                <span>Copy approved</span>
+            {stage !== "write" && (
+              <div className="op-membership">
+                <Field label="Add selected companies to">
+                  <select
+                    value={targetList}
+                    onChange={(e) => setTargetList(e.target.value)}
+                  >
+                    <option value="">Choose a list</option>
+                    {listOptions.map((value) => (
+                      <option key={value.id} value={value.id}>
+                        {value.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <button
+                  disabled={
+                    !writable ||
+                    blocked ||
+                    (!allMatching && !selected.size) ||
+                    !targetList
+                  }
+                  onClick={() => setMembershipMode("add")}
+                >
+                  Add membership
+                </button>
+                <button
+                  disabled={
+                    !writable ||
+                    blocked ||
+                    (!allMatching && !selected.size) ||
+                    !listId
+                  }
+                  onClick={() => setMembershipMode("remove")}
+                >
+                  Remove from this list
+                </button>
+                {membershipMode && (
+                  <MembershipJobPanel
+                    key={`${membershipMode}.${membershipMode === "add" ? targetList : listId}`}
+                    listId={membershipMode === "add" ? targetList : listId}
+                    listName={
+                      listOptions.find(
+                        (value) =>
+                          value.id ===
+                          (membershipMode === "add" ? targetList : listId),
+                      )?.name || "selected list"
+                    }
+                    operation={membershipMode}
+                    filters={{
+                      ...runScopeFilters(filters),
+                      ...(listId ? { list_id: listId } : {}),
+                      ...(stage !== "list" ? { stage } : {}),
+                    }}
+                    companyIds={allMatching ? undefined : [...selected]}
+                    writable={writable && (allMatching || selected.size > 0)}
+                    onSaved={refresh}
+                  />
+                )}
               </div>
-              <div>
-                <strong>{issueCount}</strong>
-                <span>Research / contact issues</span>
-              </div>
-              <div>
-                <strong>0</strong>
-                <span>Loaded recipients</span>
-              </div>
-            </div>
-            <div className="wf-checklist">
-              {[
-                "Current contact verification",
-                "Suppression and duplicate checks",
-                "Paused campaign creation",
-                "Recipient and exact-copy readback",
-                "Separate activation approval",
-              ].map((x) => (
-                <div key={x}>
-                  <span className="wf-empty-check" />
-                  {x}
-                  <span>Required</span>
-                </div>
-              ))}
-            </div>
-            <p className="wf-help">
-              This interface is ready for refinement. Loading, reconciliation
-              and activation are unavailable until connected to current Compass
-              and Instantly state. No receipt or successful send is simulated.
+            )}
+            <section className="op-output">
+              <PipelineJobsPanel
+                key={`export.${listId}`}
+                kind="export"
+                listId={listId}
+                writable={writable}
+                filters={{
+                  ...runScopeFilters(filters),
+                  ...(stage === "write"
+                    ? runScopeFilters(recipientFilters)
+                    : {}),
+                  ...(stage !== "list" ? { stage } : {}),
+                }}
+                companyIds={
+                  stage !== "write" && !allMatching ? [...selected] : undefined
+                }
+                onSaved={refresh}
+              />
+              {stage === "write" ? (
+                <PipelineDeliveryPanel
+                  key={`delivery.${listId}`}
+                  listId={listId}
+                  workflowId={workflow?.id || ""}
+                  templateId={templateId}
+                  verificationRunId={verificationRunId}
+                  recipientIds={
+                    !allMatching && selected.size ? [...selected] : undefined
+                  }
+                  filters={{
+                    ...runScopeFilters(filters),
+                    stage,
+                    ...runScopeFilters(recipientFilters),
+                  }}
+                  writable={writable}
+                  onSaved={refresh}
+                />
+              ) : (
+                <button onClick={() => navigate({ stage: "write" })}>
+                  Open Write to prepare a paused campaign
+                </button>
+              )}
+            </section>
+          </div>
+          {view === "research" && list?.workflow_version_id && !workflow && (
+            <p role="status">
+              {selectedWorkflow.error || "Loading saved workflow…"}
             </p>
-            <div className="wf-dialog-footer">
-              <Button onClick={() => setDialog(null)}>Back to review</Button>
-              <Button primary disabled onClick={() => {}}>
-                Load paused campaign
-              </Button>
+          )}
+          {view === "research" && (!list?.workflow_version_id || workflow) && (
+            <ResearchEditor
+              key={`${listId}:${workflow?.id || "new"}`}
+              version={workflow}
+              workflows={workflowOptions}
+              list={list}
+              company={company}
+              writable={writable}
+              onSaved={refresh}
+              onDirty={setDirty}
+            />
+          )}
+          {view === "write" && templateId && !template && (
+            <p role="status">
+              {selectedTemplate.error || "Loading saved template…"}
+            </p>
+          )}
+          {view === "write" && (!templateId || template) && (
+            <WriteEditor
+              key={`${listId}:${templateId}:${recipient?.id || "none"}`}
+              version={template}
+              onVersionSaved={setTemplateId}
+              lists={listOptions}
+              list={list}
+              recipient={recipient}
+              signals={workflow?.policy.signals || []}
+              writable={writable}
+              onSaved={refresh}
+              onDirty={setDirty}
+            />
+          )}
+          {runsOpen && (
+            <section className="op-runs">
+              <div className="op-section-heading">
+                <h2>Agent runs</h2>
+                <button onClick={refresh}>Refresh run status</button>
+              </div>
+              <p>
+                Queued work waits for a connected agent. Copy its handoff into
+                an agent task to claim work with registered, probed tools. This
+                interface does not start an agent automatically.
+              </p>
+              {runs.error && <p role="alert">{runs.error}</p>}
+              {runs.loading && <p role="status">Loading runs…</p>}
+              {runs.data?.records.map((run) => (
+                <article className="op-run" key={run.id}>
+                  <strong>
+                    {label(run.stage)} · {run.scope_count} records
+                  </strong>
+                  <Status value={run.status} />
+                  <button onClick={() => void copyRunHandoff(run)}>
+                    Copy agent handoff
+                  </button>
+                  <RunDetails run={run} revision={revision} />
+                  <span>
+                    {run.status === "queued"
+                      ? "Awaiting connected agent"
+                      : run.checkpoint_reason || "No exception recorded"}
+                  </span>
+                  <div className="op-inline">
+                    {["blocked", "failed"].includes(run.status) && (
+                      <button
+                        disabled={!writable || blocked}
+                        onClick={() => void runAction(run, "resume")}
+                      >
+                        Resume
+                      </button>
+                    )}
+                    {run.status === "checkpoint" && (
+                      <button
+                        disabled={!writable || blocked}
+                        onClick={() => void runAction(run, "approve")}
+                      >
+                        Continue checkpoint
+                      </button>
+                    )}
+                    {!["completed", "cancelled"].includes(run.status) && (
+                      <button
+                        disabled={!writable || blocked}
+                        onClick={() => void runAction(run, "cancel")}
+                      >
+                        Cancel remaining work
+                      </button>
+                    )}
+                  </div>
+                </article>
+              ))}
+              {runs.data && !runs.data.records.length && (
+                <p>No runs recorded for this scope.</p>
+              )}
+            </section>
+          )}
+        </>
+      )}
+      <ModalFrame
+        open={createOpen}
+        onClose={() => {
+          if (!command.busy && !command.uncertain) setCreateOpen(false);
+        }}
+        label="Create outbound list"
+        overlayClassName="op-overlay"
+        contentClassName="op-modal"
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void createList();
+          }}
+        >
+          <h2>New list</h2>
+          <Field label="List name">
+            <input
+              data-autofocus
+              required
+              value={listName}
+              onChange={(e) => setListName(e.target.value)}
+            />
+          </Field>
+          <Field label="Notes">
+            <textarea
+              value={listNotes}
+              onChange={(e) => setListNotes(e.target.value)}
+            />
+          </Field>
+          <p>Creating a list does not copy, research or contact companies.</p>
+          <CommandNotice state={command} />
+          <div className="op-inline">
+            <button
+              type="button"
+              disabled={blocked}
+              onClick={() => setCreateOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="compass-btn-primary"
+              disabled={!writable || blocked || !listName.trim()}
+            >
+              Create list
+            </button>
+          </div>
+        </form>
+      </ModalFrame>
+      <ModalFrame
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        label={company?.name || "Company detail"}
+        overlayClassName="op-overlay"
+        contentClassName="op-modal op-detail"
+      >
+        <div className="op-section-heading">
+          <h2>{company?.name}</h2>
+          <button onClick={() => setDetailOpen(false)}>Close</button>
+        </div>
+        {company && (
+          <>
+            <Status value={company.fit} />
+            <p>{company.reason || "No fit assessment recorded."}</p>
+            <p>
+              {[company.suburb, company.city, company.country]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
+            <CompanyContacts key={company.id} companyId={company.id} />
+            <h3>Research evidence</h3>
+            {signals.error && <p role="alert">{signals.error}</p>}
+            {signals.data?.records.map((signal) => (
+              <article className="op-evidence" key={signal.id}>
+                <strong>
+                  {workflow?.policy.signals.find(
+                    (value) => value.id === signal.signal_id,
+                  )?.label || "Saved signal"}
+                </strong>
+                <blockquote>{signal.quote}</blockquote>
+                <EvidenceSource id={signal.source_id} />
+                <p>
+                  Evidence {signal.evidence_strength} · Usefulness{" "}
+                  {signal.usefulness}
+                </p>
+                <small>
+                  {new Date(signal.observed_at).toLocaleDateString("en-AU")}
+                </small>
+              </article>
+            ))}
+            {signals.data && !signals.data.records.length && (
+              <p>
+                No signal observations recorded. Choose this company and queue
+                research in the shared workflow.
+              </p>
+            )}
+            <div className="op-inline">
+              <button
+                onClick={() => {
+                  setSelected(new Set([company.id]));
+                  setAllMatching(false);
+                  setDetailOpen(false);
+                  navigate({ stage: "research", company_id: company.id });
+                }}
+              >
+                Select for research
+              </button>
+              <button
+                onClick={() => {
+                  setDetailOpen(false);
+                  edit("research");
+                }}
+              >
+                View research configuration
+              </button>
             </div>
           </>
         )}

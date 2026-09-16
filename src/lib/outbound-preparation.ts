@@ -66,6 +66,7 @@ export type Settings = {
   match_lead_esp?: boolean;
 };
 export type Context = {
+  pipeline?: {manifest_id:string;list_id:string;workflow_version_id:string;template_version_id:string};
   campaign_id: string;
   offer_revision_id: string;
   market_test_id: string | null;
@@ -651,7 +652,7 @@ export function instantlyExpected(bundle: Bundle) {
     insert_unsubscribe_header: true,
     daily_limit: bundle.context.settings.daily_limit,
     email_list: bundle.context.settings.email_list,
-    ...(bundle.context.recipe.mode === "evidence_draft" ? {
+    ...((bundle.context.recipe.mode === "evidence_draft" || bundle.context.pipeline) ? {
       email_gap: bundle.context.settings.email_gap ?? 8,
       random_wait_max: bundle.context.settings.random_wait_max ?? 5,
       match_lead_esp: bundle.context.settings.match_lead_esp ?? true,

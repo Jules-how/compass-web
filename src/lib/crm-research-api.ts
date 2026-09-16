@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { portalJson, readBoundedJson } from './portal-http'
-import { CRM_BODY_LIMIT, CrmValidationError, normalizeCrmMethod } from './crm-research-schema'
+import { CRM_BODY_LIMIT, CRM_METHOD_TYPES, CrmValidationError, normalizeCrmMethod } from './crm-research-schema'
 import { parseCrmCompanyQuery } from './crm-research-query'
 import { applyCrmResearch, CRM_TABLES, crmDatabaseError, getCrmCompany, getCrmLeadLinks, readCrmCollection, readCrmReceipt, requireCrmResearch, searchCrmCompanies } from './crm-research-server'
 
@@ -22,7 +22,7 @@ export async function handleCrmRead(db: SupabaseClient, action: CrmReadAction, r
   if (action==='method') {
     if ([...params.keys()].some(k=>!['type','value'].includes(k))) throw new CrmValidationError([{path:'query',message:'Unknown method parameter'}])
     const type=params.get('type') || ''
-    if (!['email','phone','linkedin','contact_form'].includes(type) || !params.get('value')) throw new CrmValidationError([{path:'type',message:'Method type and value required'}])
+    if (!(CRM_METHOD_TYPES as readonly string[]).includes(type) || !params.get('value')) throw new CrmValidationError([{path:'type',message:'Method type and value required'}])
     let normalized: string
     try { normalized=normalizeCrmMethod(type,params.get('value')!) } catch { throw new CrmValidationError([{path:'value',message:'Invalid route'}]) }
     const result=await db.from('crm_contact_methods').select('*').eq('method_type',type).eq('normalized_value',normalized).maybeSingle()

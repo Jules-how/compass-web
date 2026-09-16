@@ -1,0 +1,636 @@
+.op-pipeline {
+  font: 14px/1.5 var(--workspace-font);
+  color: var(--folio-ink);
+  min-width: 0;
+}
+.op-pipeline *,
+.op-modal * {
+  box-sizing: border-box;
+}
+.op-pipeline :is(h2, h3, h4, p),
+.op-modal :is(h2, h3, p) {
+  margin: 0;
+}
+.op-pipeline h2,
+.op-modal h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.op-pipeline h3,
+.op-modal h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.op-pipeline h4 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--folio-muted);
+}
+.op-pipeline :is(button, input, select, textarea),
+.op-modal :is(button, input, select, textarea) {
+  font: inherit;
+}
+.op-pipeline button,
+.op-modal button {
+  cursor: pointer;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid var(--folio-control);
+  border-radius: 5px;
+  background: var(--folio-paper);
+  color: var(--folio-ink);
+  white-space: nowrap;
+}
+.op-pipeline button:hover:not(:disabled),
+.op-modal button:hover:not(:disabled) {
+  background: var(--folio-surface);
+}
+.op-pipeline button:disabled,
+.op-modal button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.op-pipeline .compass-btn-primary,
+.op-modal .compass-btn-primary {
+  background: var(--folio-accent);
+  color: var(--folio-ink);
+  border-color: var(--folio-accent);
+}
+.op-pipeline :is(button, input, select, textarea, a, summary):focus-visible,
+.op-modal :is(button, input, select, textarea, a, summary):focus-visible {
+  outline: 2px solid var(--folio-focus);
+  outline-offset: 2px;
+}
+.op-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--folio-line);
+}
+.op-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.op-inline > .op-field {
+  margin: 0;
+}
+.op-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+  min-width: 0;
+}
+.op-field > span {
+  font-size: 12px;
+  font-weight: 600;
+}
+.op-field :is(input:not([type="checkbox"]), select, textarea) {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 9px;
+  background: var(--folio-paper);
+  border: 1px solid var(--folio-control);
+  border-radius: 5px;
+  color: var(--folio-ink);
+}
+.op-field textarea {
+  resize: vertical;
+  min-height: 70px;
+  line-height: 1.65;
+}
+.op-field small,
+.op-muted {
+  color: var(--folio-muted);
+  font-size: 13px;
+}
+.op-stages {
+  display: flex;
+  gap: 20px;
+  overflow: auto;
+  border-bottom: 1px solid var(--folio-line);
+  padding: 0 2px;
+}
+.op-stages button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 12px 3px;
+  text-transform: capitalize;
+  color: var(--folio-muted);
+  position: relative;
+}
+.op-stages button[aria-current="page"] {
+  color: var(--folio-ink);
+  font-weight: 600;
+}
+.op-stages button[aria-current="page"]:after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--folio-accent);
+}
+.op-context-toolbar {
+  align-items: center;
+}
+.op-context-toolbar .op-field {
+  max-width: 230px;
+}
+.op-filters {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 0;
+}
+.op-filters .op-field {
+  flex: 1 1 130px;
+  max-width: 220px;
+  margin: 0;
+}
+.op-selection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 48px;
+  padding: 9px 12px;
+  background: var(--folio-desk);
+  border: 1px solid var(--folio-line);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  font-size: 13px;
+}
+.op-table-scroll {
+  overflow: auto;
+  border: 1px solid var(--folio-line);
+}
+.op-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 850px;
+  text-align: left;
+}
+.op-table th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--folio-muted);
+  background: var(--folio-desk);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--folio-control);
+}
+.op-table td {
+  font-size: 14px;
+  padding: 12px;
+  border-bottom: 1px solid var(--folio-line);
+  vertical-align: top;
+}
+.op-table td:first-child,
+.op-table th:first-child {
+  width: 38px;
+}
+.op-table tr:last-child td {
+  border-bottom: 0;
+}
+.op-table td small {
+  display: block;
+  color: var(--folio-muted);
+  font-size: 12px;
+  max-width: 230px;
+  overflow-wrap: anywhere;
+  margin-top: 3px;
+}
+.op-table .op-record-link {
+  padding: 0;
+  border: 0;
+  min-height: 24px;
+  text-align: left;
+  white-space: normal;
+  font-weight: 600;
+  background: transparent;
+  max-width: 280px;
+}
+.op-record-link:hover {
+  text-decoration: underline;
+}
+.op-reason {
+  max-width: 330px;
+  min-width: 180px;
+  overflow-wrap: anywhere;
+}
+.op-status {
+  display: inline-block;
+  padding: 2px 6px;
+  border: 1px solid var(--folio-control);
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  text-transform: capitalize;
+  color: var(--folio-ink);
+}
+.op-status-sure_fit,
+.op-status-completed,
+.op-status-suitable {
+  color: var(--folio-success-text);
+}
+.op-status-held,
+.op-status-failed,
+.op-status-anti_icp,
+.op-status-non_fit {
+  color: var(--folio-error-text);
+}
+.op-pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  font-size: 13px;
+  color: var(--folio-muted);
+}
+.op-empty {
+  padding: 32px 16px;
+  color: var(--folio-muted);
+}
+.op-empty h2 {
+  color: var(--folio-ink);
+  margin-bottom: 10px;
+}
+.op-empty button {
+  margin-top: 14px;
+}
+.op-notice,
+.op-error {
+  padding: 10px 12px;
+  margin: 10px 0 !important;
+  border: 1px solid var(--folio-line);
+  border-radius: 5px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  background: var(--folio-desk);
+}
+.op-notice button {
+  margin-left: 10px;
+}
+.op-error {
+  color: var(--folio-error-text);
+  border-color: currentColor;
+}
+.op-membership {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--folio-line);
+  padding: 12px 0;
+}
+.op-membership .op-field {
+  margin: 0;
+}
+.op-membership small {
+  flex-basis: 100%;
+  color: var(--folio-muted);
+}
+.op-output {
+  border-top: 1px solid var(--folio-line);
+  padding: 18px 0;
+}
+.op-output p {
+  margin: 8px 0;
+}
+.op-output fieldset {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  border: 0;
+  padding: 10px 0;
+}
+.op-output fieldset legend {
+  font-size: 12px;
+  font-weight: 600;
+}
+.op-output label {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.op-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 32%);
+  gap: 32px;
+  padding: 24px 0;
+}
+.op-document {
+  min-width: 0;
+  max-width: 850px;
+}
+.op-document > fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.op-document section {
+  padding: 20px 0;
+  border-top: 1px solid var(--folio-line);
+}
+.op-editor-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+.op-editor-heading p {
+  color: var(--folio-muted);
+  font-size: 13px;
+  margin-top: 6px;
+}
+.op-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.op-grid-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.op-config-row {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--folio-line);
+}
+.op-config-row:last-child {
+  border-bottom: 0;
+}
+.op-config-row .op-inline label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+}
+.op-context {
+  border-left: 1px solid var(--folio-line);
+  padding-left: 24px;
+  min-width: 0;
+}
+.op-context h3 {
+  margin: 0 0 12px;
+}
+.op-context h3:not(:first-child) {
+  margin-top: 28px;
+}
+.op-context p {
+  margin: 8px 0;
+  color: var(--folio-muted);
+  overflow-wrap: anywhere;
+}
+.op-email-document {
+  margin: 20px 0;
+}
+.op-email-document .op-field {
+  margin: 20px 0;
+}
+.op-email-document textarea {
+  font-size: 16px;
+  border: 0;
+  border-bottom: 1px solid var(--folio-line);
+  border-radius: 0;
+  background: transparent;
+  padding: 8px 0;
+  resize: vertical;
+}
+.op-email-document textarea:focus {
+  box-shadow: none;
+}
+.op-copy-text {
+  font-size: 16px !important;
+  line-height: 1.75;
+  color: var(--folio-ink) !important;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.op-email-preview section {
+  margin: 18px 0;
+}
+.op-slot-order {
+  padding-left: 22px;
+}
+.op-slot-order li {
+  padding: 6px 0;
+}
+.op-slot-order button {
+  font-size: 12px;
+  margin-left: 6px;
+}
+.op-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.op-evidence {
+  border-top: 1px solid var(--folio-line);
+  padding: 12px 0;
+  font-size: 13px;
+}
+.op-evidence blockquote {
+  margin: 8px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.op-evidence small {
+  color: var(--folio-muted);
+}
+.op-runs {
+  border-top: 1px solid var(--folio-line);
+  padding: 20px 0;
+}
+.op-run {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--folio-line);
+}
+.op-run > span:not(.op-status) {
+  flex: 1;
+}
+.op-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0005;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.op-modal {
+  font: 14px/1.5 var(--workspace-font);
+  color: var(--folio-ink);
+  background: var(--folio-paper);
+  border: 1px solid var(--folio-control);
+  border-radius: 10px;
+  max-height: 90dvh;
+  overflow: auto;
+  width: 560px;
+  max-width: 100%;
+  padding: 24px;
+  box-shadow: 0 20px 60px #0002;
+}
+.op-detail {
+  width: 720px;
+}
+.op-modal h3 {
+  margin-top: 24px;
+}
+.op-modal p {
+  margin: 10px 0;
+}
+.op-pipeline details {
+  margin-top: 16px;
+}
+.op-pipeline summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 8px 0;
+}
+.op-pipeline input[type="checkbox"],
+.op-modal input[type="checkbox"] {
+  accent-color: var(--folio-accent);
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+@media (max-width: 1000px) {
+  .op-editor-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .op-context {
+    border-left: 0;
+    border-top: 1px solid var(--folio-line);
+    padding: 20px 0;
+  }
+  .op-document {
+    max-width: none;
+  }
+  .op-filters .op-field {
+    max-width: none;
+  }
+  .op-toolbar .op-inline {
+    flex: 1;
+  }
+  .op-context-toolbar .op-field {
+    max-width: none;
+    flex: 1;
+  }
+}
+@media (max-width: 600px) {
+  .op-pipeline button,
+  .op-modal button {
+    min-height: 40px;
+  }
+  .op-field :is(input, select, textarea) {
+    font-size: 16px;
+  }
+  .op-toolbar {
+    gap: 10px;
+  }
+  .op-grid-two {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .op-editor-heading {
+    flex-direction: column;
+  }
+  .op-stages {
+    gap: 14px;
+  }
+  .op-selection {
+    align-items: start;
+  }
+  .op-pagination {
+    font-size: 12px;
+  }
+  .op-overlay {
+    padding: 12px;
+  }
+  .op-modal {
+    padding: 18px;
+  }
+  .op-editor-layout {
+    padding-top: 16px;
+  }
+  .op-filters .op-field {
+    flex-basis: 140px;
+  }
+  .op-output fieldset {
+    gap: 10px;
+  }
+  .op-run {
+    align-items: start;
+  }
+  .op-run .op-inline {
+    width: 100%;
+  }
+}
+.op-export-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  border: 0;
+  padding: 12px 0;
+}
+.op-export-columns legend {
+  font-weight: 600;
+  font-size: 12px;
+}
+.op-export-columns label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.op-job-panel {
+  margin: 12px 0;
+}
+.op-job-panel > p {
+  margin: 8px 0;
+}
+.op-job-result {
+  margin-top: 16px;
+  padding: 16px 0;
+  border-top: 1px solid var(--folio-line);
+}
+.op-job-result > button,
+.op-job-result > a {
+  margin: 8px 8px 8px 0;
+}
+.op-source a {
+  color: var(--folio-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.op-run-details {
+  width: 100%;
+  min-width: 0;
+}
+.op-run-details > summary {
+  font-size: 13px;
+  font-weight: 500;
+}

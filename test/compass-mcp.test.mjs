@@ -55,6 +55,15 @@ test('search, commit, ledger, and export tools', () => {
   assert.deepEqual(
     TOOLS.map((t) => t.name),
     [
+      'outbound.pipeline.capabilities',
+      'outbound.pipeline.executor',
+      'outbound.pipeline',
+      'outbound.pipeline.write',
+      'outbound.pipeline.jobs',
+      'outbound.pipeline.run',
+      'crm.legacy',
+      'crm.read',
+      'crm.write',
       'outbound.sourcing',
       'goals.actions',
       'planning.notebook',
@@ -312,3 +321,21 @@ test('sourcing discovery uses the authenticated read endpoint and preserves erro
   const denied = await callTool('outbound.sourcing', {}, {cfg, fetchImpl: async () => new Response(JSON.stringify({error:'unauthorized'}), {status:401})});
   assert.equal(denied.isError, true);
 });
+
+test('pipeline and CRM tools retain exact command identity and bounded read scopes', async () => {
+  const seen=[]
+  const fetchImpl=async (url,init)=>{seen.push({url,init});return new Response(JSON.stringify({ok:true}),{status:200,headers:{'content-type':'application/json'}})}
+  const cfg={baseUrl:'https://compass.test',secret:'fixture'}
+  const command={schema_version:'outbound.pipeline.v1',request_id:'stable',source:'Fixture',operations:[]}
+  await callTool('outbound.pipeline.write',{command},{cfg,fetchImpl})
+  assert.equal(String(seen[0].url),'https://compass.test/api/agent/outbound/pipeline')
+  assert.deepEqual(JSON.parse(seen[0].init.body),command)
+  await callTool('outbound.pipeline',{collection:'companies',list_id:'list with spaces',after:'opaque',limit:50},{cfg,fetchImpl})
+  assert.equal(new URL(seen[1].url).searchParams.get('list_id'),'list with spaces')
+  assert.equal((await callTool('outbound.pipeline',{limit:100001},{cfg,fetchImpl})).isError,true)
+  assert.equal(seen.length,2)
+  await callTool('crm.read',{action:'record',kind:'location',id:'x/y'},{cfg,fetchImpl})
+  assert.ok(String(seen[2].url).endsWith('/records/location/x%2Fy'))
+  assert.equal((await callTool('crm.read',{action:'anything'},{cfg,fetchImpl})).isError,true)
+  assert.equal(seen.length,3)
+})

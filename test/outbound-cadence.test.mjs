@@ -118,13 +118,13 @@ test('offer wave decision desk badges follow send and reply thresholds', () => {
   assert.match(read('src/app/api/agent/outbound/waves/route.ts'), /suggestWaveMoves/)
 })
 
-test('live outbound desk switcher offers waves, calendar, and timeline', () => {
+test('outbound retains secondary workspaces and removes the retired Timeline entry', () => {
   const desk = read('src/lib/outbound-desk.ts')
   assert.match(desk, /OUTBOUND_DESK_STORAGE_KEY = [\"']compass.outbound.desk.v5[\"']/)
-  assert.match(desk, /DEFAULT_OUTBOUND_DESK: OutboundDeskId = [\"']overview[\"']/)
+  assert.match(desk, /DEFAULT_OUTBOUND_DESK: OutboundDeskId = [\"']workflow[\"']/)
   assert.match(desk, /waves/)
   assert.match(desk, /calendar/)
-  assert.match(desk, /timeline/)
+  assert.doesNotMatch(desk, /"timeline"/)
   assert.match(desk, /LEGACY_DESKS/)
 
   const landing = read('src/components/outbound/OutboundDesk.tsx')
@@ -133,8 +133,7 @@ test('live outbound desk switcher offers waves, calendar, and timeline', () => {
   assert.doesNotMatch(landing, /CassettePreview/)
   assert.doesNotMatch(landing, /RunwayPreview/)
   assert.doesNotMatch(landing, /FactoryPreview/)
-  assert.match(landing, /CampaignPlanner/)
-  assert.match(landing, /initialView/)
+  assert.doesNotMatch(landing, /CampaignPlanner/)
   assert.match(landing, /CadenceControl/)
   assert.doesNotMatch(landing, /QUEUE_WEEK_SLOT/)
   assert.doesNotMatch(landing, /3–5/)

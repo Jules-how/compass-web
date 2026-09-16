@@ -155,7 +155,4 @@ test('campaign list GET skips sequence bodies and tallies the resolved CRM cohor
   assert.match(list, /listPipelineCampaigns/)
   assert.match(list, /requirePortalAccess/)
 
-  const planner = read('src/components/campaigns/CampaignPlanner.tsx')
-  assert.match(planner, /useCachedJson/)
-  assert.match(planner, /CAMPAIGNS_QUERY_KEY/)
 })

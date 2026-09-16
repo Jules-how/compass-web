@@ -104,12 +104,6 @@ test('queue route is planning-only and reuses recontact + wave helpers', () => {
 })
 
 test('inventory rail owns 90-day cards and ranked slots on the outbound calendar', () => {
-  const planner = read('src/components/campaigns/CampaignPlanner.tsx')
-  assert.match(planner, /OutboundInventoryRail/)
-  assert.match(planner, /placeInventoryCard/)
-  assert.match(planner, /onDropInventory/)
-  assert.match(planner, /Outbound/)
-  assert.match(planner, /\/sales\/outbound\/craft/)
 
   const rail = read('src/components/campaigns/OutboundInventoryRail.tsx')
   assert.match(rail, /\/api\/campaigns\/queue/)

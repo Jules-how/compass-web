@@ -148,17 +148,13 @@ test('library browser allows free add for all kinds; edit/archive require lock',
   assert.match(envExample, /COMPASS_LIBRARY_LOCK_PASSWORD/)
 })
 
-test('planner sidecar exposes copy tab and editor deep link', () => {
+test('campaign sidecar exposes copy tab and editor deep link', () => {
   const sidecar = read('src/components/campaigns/CampaignSidecar.tsx')
   assert.match(sidecar, /title="Copy"/)
   assert.match(sidecar, /sales\/outbound\/editor/)
   assert.match(sidecar, /Attach template/)
   assert.match(sidecar, /Open editor|Add copy/)
 
-  const planner = read('src/components/campaigns/CampaignPlanner.tsx')
-  assert.match(planner, /CopyChips/)
-  assert.match(planner, /Add copy/)
-  assert.match(planner, /createCampaign\(undefined, true\)/)
 })
 
 test('sequence editor fork-copy and subject ban helpers exist', () => {

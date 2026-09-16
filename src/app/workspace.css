@@ -4,7 +4,7 @@
   grid-template-columns: 244px minmax(0, 1fr);
   padding: 8px 8px 8px 0;
   font-family: var(--workspace-font);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   background: var(--folio-rail);
 }
@@ -25,15 +25,15 @@ body:has(.folio-shell) :is(h1, h2, h3, h4, h5, h6, button, input, select) { font
 .folio-navigation { gap: 20px; }
 body:has(.folio-shell) .folio-caption { font-size: 12px !important; line-height: 1.5; letter-spacing: 0; text-transform: none; font-weight: 500; }
 .folio-navigation > div > .folio-caption { padding: 0 10px; margin: 0 0 7px; }
-.folio-nav-link { min-height: 28px; padding: 4px 8px; gap: 7px; font-size: 13px; font-weight: 500; line-height: 20px; margin: 1px 0; color: var(--folio-muted); border-radius: 8px; }
+.folio-nav-link { min-height: 30px; padding: 4px 8px; gap: 7px; font-size: 14px; font-weight: 500; line-height: 20px; margin: 1px 0; color: var(--folio-muted); border-radius: 8px; }
 .folio-nav-link:hover { background: color-mix(in srgb, var(--folio-accent-soft) 72%, white); }
-.folio-nav-link[aria-current="page"] { background: var(--folio-accent-soft); color: var(--folio-accent); font-weight: 500; }
+.folio-nav-link[aria-current="page"] { background: var(--folio-accent-soft); color: var(--folio-ink); font-weight: 500; }
 .folio-nav-link svg { width: 14px; height: 14px; color: var(--folio-muted); }
 .folio-nav-link[aria-current="page"] svg { color: var(--folio-accent); }
 .folio-nav-dot { display: block; width: 4px; height: 4px; background: var(--folio-accent); }
-.folio-more { font-size: 13px; }
+.folio-more { font-size: 14px; }
 .folio-more summary { padding: 7px 10px; min-height: 34px; }
-.folio-more .folio-nav-link { font-size: 13px; padding-left: 12px; }
+.folio-more .folio-nav-link { font-size: 14px; padding-left: 12px; }
 .folio-nav-settings { padding-top: 4px; }
 .folio-signout { margin-top: 8px; font-size: 12px; padding: 8px 8px 0; }
 .folio-signout button { font-size: 12px; }
@@ -68,26 +68,26 @@ body:has(.folio-shell) :is(.compass-btn, .compass-btn-primary, .compass-btn-seco
   min-height: 30px;
   padding: 4px 10px;
   gap: 6px;
-  font: 500 13px/20px var(--workspace-font);
+  font: 500 14px/20px var(--workspace-font);
   border-radius: 5px;
 }
-body:has(.folio-shell) .compass-btn-primary { border: 1px solid var(--folio-accent); background: var(--folio-accent); color: #fff; box-shadow: 0 1px 2px #fa5d1933, inset 0 -1px 0 #00000014; }
-body:has(.folio-shell) .compass-btn-primary:hover:not(:disabled) { border-color: var(--compass-accent-hover); background: var(--compass-accent-hover); }
+body:has(.folio-shell) .compass-btn-primary { border: 1px solid var(--folio-accent); background: var(--folio-accent); color: var(--folio-ink); box-shadow: 0 1px 2px #fa5d1933, inset 0 -1px 0 #00000014; }
+body:has(.folio-shell) .compass-btn-primary:hover:not(:disabled) { border-color: var(--compass-accent-hover); background: var(--folio-accent); box-shadow: 0 1px 3px #00000024, inset 0 -1px 0 #00000014; }
 /* The old Linear-neutral treatment remains one edit away for a safe revert. */
 body:has(.folio-shell[data-palette="linear"]) .folio-nav-link:hover { background: color-mix(in srgb, var(--folio-selection) 72%, white); }
 body:has(.folio-shell[data-palette="linear"]) .folio-nav-link[aria-current="page"] { background: var(--folio-selection); color: var(--folio-ink); }
 body:has(.folio-shell[data-palette="linear"]) .folio-nav-link[aria-current="page"] svg { color: var(--folio-ink); }
-body:has(.folio-shell[data-palette="linear"]) .compass-btn-primary { border-color: #333; background: #333; box-shadow: 0 1px 2px #0000000a; }
+body:has(.folio-shell[data-palette="linear"]) .compass-btn-primary { border-color: #333; background: #333; color: #fff; box-shadow: 0 1px 2px #0000000a; }
 body:has(.folio-shell[data-palette="linear"]) .compass-btn-primary:hover:not(:disabled) { border-color: #454545; background: #454545; }
 body:has(.folio-shell) .compass-btn-secondary { border-color: var(--folio-control); background: #fff; color: var(--folio-ink); }
 body:has(.folio-shell) .compass-btn-secondary:hover:not(:disabled) { background: var(--folio-surface); }
 body:has(.folio-shell) .compass-btn-ghost { color: var(--folio-muted); }
-body:has(.folio-shell) .compass-input { padding: 5px 9px; min-height: 32px; font-size: 13px; line-height: 20px; box-shadow: none; }
+body:has(.folio-shell) .compass-input { padding: 5px 9px; min-height: 34px; font-size: 14px; line-height: 20px; box-shadow: none; }
 body:has(.folio-shell) .compass-input:hover { border-color: #bcbcbc; }
 body:has(.folio-shell) .compass-input:focus { border-color: var(--folio-focus); box-shadow: none; }
 body:has(.folio-shell) :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid var(--folio-focus); outline-offset: 2px; }
 body:has(.folio-shell) .compass-seg { border: 0; background: transparent; padding: 2px; gap: 4px; border-radius: 6px; }
-body:has(.folio-shell) .compass-seg-btn { min-height: 28px; padding: 4px 10px; font-size: 13px; line-height: 20px; border-radius: 14px; }
+body:has(.folio-shell) .compass-seg-btn { min-height: 30px; padding: 4px 10px; font-size: 14px; line-height: 20px; border-radius: 14px; }
 body:has(.folio-shell) .compass-seg-btn-active { color: var(--folio-ink); background: var(--folio-selection); box-shadow: none; }
 body:has(.folio-shell) :is(.compass-panel, .folio-card) { border-radius: 8px; box-shadow: none; }
 body:has(.folio-shell) [data-slot="card-header"] { min-height: 46px; padding: 12px 18px; }
@@ -99,7 +99,7 @@ body:has(.folio-shell) [data-slot="card-title"] { font: 600 15px/1.4 var(--works
 .folio-folders button span { background: var(--folio-line); color: var(--folio-muted); font-size: 11px; }
 .folio-paper, .folio-record-surface { border-radius: 8px; box-shadow: none; padding: 20px 24px; }
 .folio-record-surface { padding: 16px 20px; }
-.folio-shell table { font-size: 13px; }
+.folio-shell table { font-size: 14px; }
 .folio-shell th { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; background: var(--folio-surface); }
 .folio-shell td { padding-top: 8px; padding-bottom: 8px; }
 .folio-status { font-size: 11px; padding: 2px 6px; font-weight: 500; border-radius: 4px; }

@@ -37,7 +37,9 @@ test('customer and legacy operator data routes never import a service-role clien
     .map((file) => relative(appRoot.pathname, file))
 
   assert.deepEqual(offenders, [])
+})
 
+test('service-role route inventory remains explicit', () => {
   const serviceRoleRoutes = filesUnder(appRoot)
     .filter((file) => /\/api\/.*\/route\.ts$/.test(file))
     .filter((file) => /getSupabaseServiceClient|getPortalAdminClient|SUPABASE_SERVICE_ROLE_KEY/.test(readFileSync(file, 'utf8')))
@@ -51,6 +53,7 @@ test('customer and legacy operator data routes never import a service-role clien
     'api/agent/crm/companies/[id]/route.ts',
     'api/agent/crm/companies/route.ts',
     'api/agent/crm/leads/[id]/route.ts',
+    'api/agent/crm/legacy/route.ts',
     'api/agent/crm/methods/route.ts',
     'api/agent/crm/receipts/[id]/route.ts',
     'api/agent/crm/records/[kind]/[id]/route.ts',
@@ -77,6 +80,14 @@ test('customer and legacy operator data routes never import a service-role clien
     'api/agent/outbound/campaigns/[campaignId]/copy/route.ts',
     'api/agent/outbound/pathway/route.ts',
     'api/agent/outbound/pathway/runs/route.ts',
+    'api/agent/outbound/pipeline/capabilities/route.ts',
+    'api/agent/outbound/pipeline/delivery/artifact/route.ts',
+    'api/agent/outbound/pipeline/delivery/route.ts',
+    'api/agent/outbound/pipeline/executor/route.ts',
+    'api/agent/outbound/pipeline/jobs/artifact/route.ts',
+    'api/agent/outbound/pipeline/jobs/route.ts',
+    'api/agent/outbound/pipeline/route.ts',
+    'api/agent/outbound/pipeline/runs/route.ts',
     'api/agent/outbound/preparation/route.ts',
     'api/agent/outbound/rhythm/route.ts',
     'api/agent/outbound/summary/route.ts',
@@ -104,9 +115,18 @@ test('customer and legacy operator data routes never import a service-role clien
     'api/onboarding/[token]/route.ts',
     'api/operator/crm/capabilities/route.ts',
     'api/operator/crm/leads/[id]/route.ts',
+    'api/operator/crm/legacy/route.ts',
     'api/operator/crm/research/route.ts',
     'api/operator/invitations/route.ts',
     'api/operator/operating/preparation/[id]/route.ts',
+    'api/operator/outbound/pipeline/capabilities/route.ts',
+    'api/operator/outbound/pipeline/delivery/artifact/route.ts',
+    'api/operator/outbound/pipeline/delivery/route.ts',
+    'api/operator/outbound/pipeline/executor/route.ts',
+    'api/operator/outbound/pipeline/jobs/artifact/route.ts',
+    'api/operator/outbound/pipeline/jobs/route.ts',
+    'api/operator/outbound/pipeline/route.ts',
+    'api/operator/outbound/pipeline/runs/route.ts',
     'api/operator/outbound/preparation/[id]/route.ts',
     'api/operator/outbound/snapshot/route.ts',
     'api/qbo/webhook/route.ts',
@@ -115,7 +135,7 @@ test('customer and legacy operator data routes never import a service-role clien
     'api/voice/postcall/route.ts',
     'api/voice/sms/route.ts',
     'api/voice/tools/route.ts',
-    'api/webhooks/instantly/route.ts'
+    'api/webhooks/instantly/route.ts',
   ])
 })
 

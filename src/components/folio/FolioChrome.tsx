@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { outboundDeskFromSearch } from '@/lib/outbound-desk'
 import { useState } from 'react'
 import {
   ArrowUpRight,
@@ -48,6 +50,9 @@ const work = [
   { href: '/operations/installs', label: 'Installs', icon: Layers },
 ]
 const more = [
+  { href: '/sales/outbound?desk=evidence', label: 'Outbound evidence' },
+  { href: '/sales/outbound?desk=notebook', label: 'Outbound notebook' },
+  { href: '/sales/outbound?desk=waves', label: 'Outbound waves' },
   { href: '/functions', label: 'Functions' },
   { href: '/sales', label: 'Sales overview' },
   { href: '/sales/offers', label: 'Offers & tests' },
@@ -74,11 +79,15 @@ export function FolioNavigation({
 }) {
   const nav = useConsoleNav(),
     path = useConsoleViewPath()
+  const searchParams = useSearchParams()
+  const currentDesk = outboundDeskFromSearch(searchParams.toString())
   const link = (item: { href: string; label: string; icon?: typeof Home }) => {
     const Icon = item.icon ?? FolderOpen
-    const active =
-      path === item.href ||
-      (item.href !== '/sales' && path.startsWith(item.href + '/'))
+    const active = item.href.includes('?desk=')
+      ? path === '/sales/outbound' && currentDesk === item.href.split('?desk=')[1]
+      : item.href === '/sales/outbound' && path === '/sales/outbound'
+        ? !['evidence', 'notebook', 'waves'].includes(currentDesk)
+        : path === item.href || (item.href !== '/sales' && path.startsWith(item.href + '/'))
     return (
       <Link
         key={item.href}

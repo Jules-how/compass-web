@@ -486,6 +486,8 @@ export async function currentBundle(
   });
   check(result.error);
   const bundle = result.data as Bundle;
+  // Canonical pipeline manifests are validated by the same SQL check dispatcher.
+  if (bundle.context.pipeline) return bundle;
   const ctx = await preparationContext(db, bundle.context.campaign_id);
   if (digest(ctx) !== digest(bundle.context))
     throw new Error("preparation_stale");
@@ -505,6 +507,7 @@ async function approvedBundle(db: SupabaseClient, id: string) {
 }
 export async function preparationExport(db: SupabaseClient, id: string) {
   const bundle = await approvedBundle(db, id);
+  if (bundle.context.pipeline) throw new Error("pipeline_delivery_artifact_route_required");
   const load = await db
     .from("compass_outbound_loads")
     .select("preparation_id")
@@ -553,7 +556,7 @@ export function verifyPausedCampaign(
   ] as const)
     if (remote[field] !== expected[field])
       throw new Error("campaign_setting_mismatch:" + field);
-  if (bundle.context.recipe.mode === "evidence_draft") {
+  if (bundle.context.recipe.mode === "evidence_draft" || bundle.context.pipeline) {
     for (const field of ["email_gap", "random_wait_max", "match_lead_esp"] as const) {
       if (remote[field] !== expected[field]) throw new Error("campaign_setting_mismatch:"+field);
     }
@@ -652,6 +655,8 @@ export async function reserveBrowserLoad(db: SupabaseClient, id: string) {
 }
 export async function reconcileBrowserLoad(db: SupabaseClient, id: string) {
   const bundle = await approvedBundle(db, id);
+  if (bundle.context.pipeline) throw new Error("pipeline_delivery_reconciliation_route_required");
+  if (bundle.context.pipeline) throw new Error("pipeline_delivery_artifact_route_required");
   const load = await db
     .from("compass_outbound_loads")
     .select("instantly_campaign_id")

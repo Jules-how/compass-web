@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useSearchParams, useRouter } from "next/navigation";
 const WorkflowWorkspace = dynamic(
   () =>
     import("@/components/outbound/workflow/WorkflowWorkspace").then(
@@ -17,7 +18,6 @@ import { ActivePane } from "@/components/ActivePane";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { TestPlanner } from "@/components/outbound/TestPlanner";
-import { CampaignPlanner } from "@/components/campaigns/CampaignPlanner";
 import { OperatorShell } from "@/components/OperatorShell";
 import {
   CadenceControl,
@@ -31,11 +31,11 @@ import { dateOnlyInZone, type CompassCampaign } from "@/lib/campaigns";
 import { mondayOfWeek, mondayWeeksAhead } from "@/lib/campaign-queue";
 import {
   DEFAULT_OUTBOUND_DESK,
-  readOutboundDesk,
-  parseOutboundDesk,
+  resolveOutboundDesk,
   writeOutboundDesk,
   type OutboundDeskId,
 } from "@/lib/outbound-desk";
+import type { PipelineCapabilities } from "@/lib/outbound-pipeline";
 import { useCachedJson } from "@/lib/use-cached-json";
 
 type CampaignsPayload = { campaigns: CompassCampaign[] };
@@ -49,10 +49,8 @@ function campaignDateOnly(campaign: CompassCampaign): string | null {
 export function OutboundDesk() {
   const navigation = useConsoleNav();
   const [desk, setDeskState] = useState<OutboundDeskId>(DEFAULT_OUTBOUND_DESK);
-  const [plannerViews, setPlannerViews] = useState<{
-    calendar: "calendar" | "timeline" | "list" | "board";
-    timeline: "calendar" | "timeline" | "list" | "board";
-  }>({ calendar: "calendar", timeline: "timeline" });
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [visited, setVisited] = useState<Set<OutboundDeskId>>(new Set());
   const [ready, setReady] = useState(false);
   const [prefs, setPrefs] = useCadencePrefs();
@@ -64,22 +62,21 @@ export function OutboundDesk() {
     },
   );
 
+  const capabilities=useCachedJson<PipelineCapabilities>("/api/operator/outbound/pipeline/capabilities","/api/operator/outbound/pipeline/capabilities",{staleMs:30_000});
+  const pipelineReady=Boolean(capabilities.data?.enabled&&capabilities.data?.schema_ready&&capabilities.data?.surface_ready);
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const saved = params.has("campaign")
-      ? "overview"
-      : params.has("desk")
-        ? parseOutboundDesk(params.get("desk"))
-        : readOutboundDesk();
+    if(capabilities.loading)return;
+    const saved = resolveOutboundDesk(searchParams.toString(),pipelineReady);
     setDeskState(saved);
-    setVisited(new Set([saved]));
+    setVisited(previous => new Set([...previous, saved]));
     setReady(true);
-  }, []);
+  }, [searchParams,pipelineReady,capabilities.loading]);
 
   const setDesk = useCallback((next: OutboundDeskId) => {
     setDeskState(writeOutboundDesk(next));
     setVisited((previous) => new Set([...previous, next]));
-  }, []);
+    router.push(`/sales/outbound?desk=${next}`, { scroll: false });
+  }, [router]);
 
   const slots = useMemo(() => {
     const today = dateOnlyInZone(new Date().toISOString());
@@ -95,10 +92,10 @@ export function OutboundDesk() {
 
   const switcher = (
     <div
-      className={`flex flex-wrap items-center gap-3 ${desk === "workflow" ? "wf-outbound-switcher" : ""}`}
+      className="flex flex-wrap items-center gap-3"
     >
       <OutboundDeskSwitch value={desk} onChange={setDesk} />
-      {desk !== "workflow" && (
+      {(
         <>
           <Link
             className="compass-btn-secondary"
@@ -148,11 +145,10 @@ export function OutboundDesk() {
     <OperatorShell
       title="Outbound"
       width="full"
-      hideRelatedLinks={desk === "workflow"}
       actions={
         <div className="flex flex-wrap items-end gap-3">
           {switcher}
-          {desk !== "workflow" && (
+          {(
             <details className="folio-pace">
               <summary>Weekly pace</summary>
               <div>
@@ -167,6 +163,7 @@ export function OutboundDesk() {
         </div>
       }
     >
+      {!pipelineReady&&desk==='overview'&&<p className="mb-4 flex flex-wrap items-center gap-3 text-sm" role="status">{capabilities.error?"Lead table readiness could not be confirmed. The operational overview remains available.":"The lead table rollout is not enabled yet. The existing operational overview remains available."} <button className="compass-btn-secondary" onClick={()=>void capabilities.reload(true)}>Check rollout</button></p>}
       {campaignsQuery.error && (
         <p role="alert">
           Could not refresh campaigns. Previously loaded campaigns remain
@@ -181,7 +178,6 @@ export function OutboundDesk() {
           "notebook",
           "waves",
           "calendar",
-          "timeline",
         ] as const
       ).map((tab) =>
         visited.has(tab) ? (
@@ -203,19 +199,8 @@ export function OutboundDesk() {
                 />
               ) : tab === "waves" ? (
                 <OfferWavesBoard />
-              ) : tab === "calendar" ? (
-                <TestPlanner />
               ) : (
-                <CampaignPlanner
-                  initialView={tab}
-                  view={plannerViews[tab]}
-                  onViewChange={(view) =>
-                    setPlannerViews((previous) => ({
-                      ...previous,
-                      [tab]: view,
-                    }))
-                  }
-                />
+                <TestPlanner />
               )}
             </ActivePane>
           </div>

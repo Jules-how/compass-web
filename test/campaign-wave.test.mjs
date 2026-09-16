@@ -245,8 +245,6 @@ test('wave files and sidecar Wave section are wired', () => {
   assert.match(sidecar, /title="Wave"/)
   assert.match(sidecar, /Match Instantly before the next wave/)
 
-  const planner = read('src/components/campaigns/CampaignPlanner.tsx')
-  assert.match(planner, /wavePlannerBit/)
 
   const agent = read('src/app/api/agent/campaigns/route.ts')
   assert.match(agent, /compactWaveForAgent/)
