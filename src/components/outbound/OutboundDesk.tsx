@@ -1,7 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-const WorkflowWorkspace = dynamic(() => import("@/components/outbound/workflow/WorkflowWorkspace").then(m => m.WorkflowWorkspace), { ssr: false });
+const WorkflowWorkspace = dynamic(
+  () =>
+    import("@/components/outbound/workflow/WorkflowWorkspace").then(
+      (m) => m.WorkflowWorkspace,
+    ),
+  { ssr: false },
+);
 
 import { OutboundWorkspace } from "@/components/outbound/OutboundWorkspace";
 import { OutboundOverview } from "@/components/outbound/OutboundOverview";
@@ -43,7 +49,10 @@ function campaignDateOnly(campaign: CompassCampaign): string | null {
 export function OutboundDesk() {
   const navigation = useConsoleNav();
   const [desk, setDeskState] = useState<OutboundDeskId>(DEFAULT_OUTBOUND_DESK);
-  const [plannerViews, setPlannerViews] = useState<{ calendar: "calendar" | "timeline" | "list" | "board"; timeline: "calendar" | "timeline" | "list" | "board" }>({ calendar: "calendar", timeline: "timeline" });
+  const [plannerViews, setPlannerViews] = useState<{
+    calendar: "calendar" | "timeline" | "list" | "board";
+    timeline: "calendar" | "timeline" | "list" | "board";
+  }>({ calendar: "calendar", timeline: "timeline" });
   const [visited, setVisited] = useState<Set<OutboundDeskId>>(new Set());
   const [ready, setReady] = useState(false);
   const [prefs, setPrefs] = useCadencePrefs();
@@ -57,7 +66,11 @@ export function OutboundDesk() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const saved = params.has("campaign") ? "overview" : params.has("desk") ? parseOutboundDesk(params.get("desk")) : readOutboundDesk();
+    const saved = params.has("campaign")
+      ? "overview"
+      : params.has("desk")
+        ? parseOutboundDesk(params.get("desk"))
+        : readOutboundDesk();
     setDeskState(saved);
     setVisited(new Set([saved]));
     setReady(true);
@@ -65,7 +78,7 @@ export function OutboundDesk() {
 
   const setDesk = useCallback((next: OutboundDeskId) => {
     setDeskState(writeOutboundDesk(next));
-    setVisited(previous => new Set([...previous, next]));
+    setVisited((previous) => new Set([...previous, next]));
   }, []);
 
   const slots = useMemo(() => {
@@ -80,7 +93,48 @@ export function OutboundDesk() {
     }).length;
   }, [campaignsQuery.data]);
 
-  const switcher = <div className="flex flex-wrap items-center gap-3"><OutboundDeskSwitch value={desk} onChange={setDesk} /><Link className="compass-btn-secondary" href="/sales/outbound/calling">Calling</Link><Link className="compass-btn-primary" href="/sales/outbound/rhythm" onMouseEnter={() => { void loadOutboundRhythm(); }} onFocus={() => { void loadOutboundRhythm(); }} onClick={event => { if (!navigation || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); void loadOutboundRhythm(); navigation.navigate("/sales/outbound/rhythm"); }}>Today & follow-ups</Link></div>;
+  const switcher = (
+    <div
+      className={`flex flex-wrap items-center gap-3 ${desk === "workflow" ? "wf-outbound-switcher" : ""}`}
+    >
+      <OutboundDeskSwitch value={desk} onChange={setDesk} />
+      {desk !== "workflow" && (
+        <>
+          <Link
+            className="compass-btn-secondary"
+            href="/sales/outbound/calling"
+          >
+            Calling
+          </Link>
+          <Link
+            className="compass-btn-primary"
+            href="/sales/outbound/rhythm"
+            onMouseEnter={() => {
+              void loadOutboundRhythm();
+            }}
+            onFocus={() => {
+              void loadOutboundRhythm();
+            }}
+            onClick={(event) => {
+              if (
+                !navigation ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey
+              )
+                return;
+              event.preventDefault();
+              void loadOutboundRhythm();
+              navigation.navigate("/sales/outbound/rhythm");
+            }}
+          >
+            Today & follow-ups
+          </Link>
+        </>
+      )}
+    </div>
+  );
 
   if (!ready) {
     return (
@@ -91,15 +145,82 @@ export function OutboundDesk() {
   }
 
   return (
-    <OperatorShell title="Outbound" width="full" actions={<div className="flex flex-wrap items-end gap-3">{switcher}<details className="folio-pace"><summary>Weekly pace</summary><div><CadenceControl slots={slots} prefs={prefs} onChange={setPrefs} /></div></details></div>}>
-      {campaignsQuery.error && <p role="alert">Could not refresh campaigns. Previously loaded campaigns remain visible.</p>}
-      {(["overview", "workflow", "evidence", "notebook", "waves", "calendar", "timeline"] as const).map(tab => visited.has(tab) ? (
-        <div key={tab} hidden={desk !== tab} inert={desk !== tab ? true : undefined}>
-          <ActivePane active={desk === tab}>
-            {tab === "workflow" ? <WorkflowWorkspace /> : tab === "overview" ? <OutboundWorkspace onEvidence={() => setDesk("evidence")} /> : tab === "evidence" ? <OutboundOverview /> : tab === "notebook" ? <OutboundNotebook campaigns={campaignsQuery.data?.campaigns ?? []} /> : tab === "waves" ? <OfferWavesBoard /> : tab === "calendar" ? <TestPlanner /> : <CampaignPlanner initialView={tab} view={plannerViews[tab]} onViewChange={view => setPlannerViews(previous => ({ ...previous, [tab]: view }))} />}
-          </ActivePane>
+    <OperatorShell
+      title="Outbound"
+      width="full"
+      hideRelatedLinks={desk === "workflow"}
+      actions={
+        <div className="flex flex-wrap items-end gap-3">
+          {switcher}
+          {desk !== "workflow" && (
+            <details className="folio-pace">
+              <summary>Weekly pace</summary>
+              <div>
+                <CadenceControl
+                  slots={slots}
+                  prefs={prefs}
+                  onChange={setPrefs}
+                />
+              </div>
+            </details>
+          )}
         </div>
-      ) : null)}
+      }
+    >
+      {campaignsQuery.error && (
+        <p role="alert">
+          Could not refresh campaigns. Previously loaded campaigns remain
+          visible.
+        </p>
+      )}
+      {(
+        [
+          "overview",
+          "workflow",
+          "evidence",
+          "notebook",
+          "waves",
+          "calendar",
+          "timeline",
+        ] as const
+      ).map((tab) =>
+        visited.has(tab) ? (
+          <div
+            key={tab}
+            hidden={desk !== tab}
+            inert={desk !== tab ? true : undefined}
+          >
+            <ActivePane active={desk === tab}>
+              {tab === "workflow" ? (
+                <WorkflowWorkspace />
+              ) : tab === "overview" ? (
+                <OutboundWorkspace onEvidence={() => setDesk("evidence")} />
+              ) : tab === "evidence" ? (
+                <OutboundOverview />
+              ) : tab === "notebook" ? (
+                <OutboundNotebook
+                  campaigns={campaignsQuery.data?.campaigns ?? []}
+                />
+              ) : tab === "waves" ? (
+                <OfferWavesBoard />
+              ) : tab === "calendar" ? (
+                <TestPlanner />
+              ) : (
+                <CampaignPlanner
+                  initialView={tab}
+                  view={plannerViews[tab]}
+                  onViewChange={(view) =>
+                    setPlannerViews((previous) => ({
+                      ...previous,
+                      [tab]: view,
+                    }))
+                  }
+                />
+              )}
+            </ActivePane>
+          </div>
+        ) : null,
+      )}
     </OperatorShell>
   );
 }

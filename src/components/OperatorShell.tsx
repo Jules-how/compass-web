@@ -161,6 +161,7 @@ function PageMain({
   width = '6xl',
   flush = false,
   compact = false,
+  hideRelatedLinks = false,
   actions,
   children,
 }: {
@@ -169,6 +170,7 @@ function PageMain({
   width?: keyof typeof WIDTH
   flush?: boolean
   compact?: boolean
+  hideRelatedLinks?: boolean
   actions?: ReactNode
   children: ReactNode
 }) {
@@ -224,7 +226,7 @@ function PageMain({
           ) : null}
         </header>
       )}
-      {links.length ? <FolioWorkspaceLinks links={links} /> : null}
+      {!hideRelatedLinks && links.length ? <FolioWorkspaceLinks links={links} /> : null}
       {children}
     </main>
   )
@@ -239,6 +241,7 @@ export function OperatorShell({
   width = '6xl',
   flush = false,
   compact = false,
+  hideRelatedLinks = false,
   actions,
   children,
 }: {
@@ -249,6 +252,7 @@ export function OperatorShell({
   width?: keyof typeof WIDTH
   flush?: boolean
   compact?: boolean
+  hideRelatedLinks?: boolean
   actions?: ReactNode
   children: ReactNode
 }) {
@@ -260,6 +264,7 @@ export function OperatorShell({
       width={width}
       flush={flush}
       compact={compact}
+      hideRelatedLinks={hideRelatedLinks}
       actions={actions}
     >
       {children}

@@ -222,6 +222,12 @@ export function WorkflowWorkspace() {
     approvable = selectedRows.filter(
       (x) => x.body && x.approved !== x.version && !checks(x).length,
     );
+  const stageHasIssues = (n: string | number) =>
+    n === 4
+      ? batch.rows.some((x) => x.researchIssue)
+      : n === 6
+        ? batch.rows.some((x) => !x.contactPublished || x.verification !== "ok")
+        : false;
   const currentStep =
     batch.phase === "define" ? 0 : batch.phase === "research" ? 4 : 9;
   const saveConfig = () => {
@@ -343,10 +349,18 @@ export function WorkflowWorkspace() {
                 setFilter(n === 6 ? "attention" : "all");
               }
             }}
-            className={Number(n) < currentStep ? "wf-stage-done" : ""}
+            className={
+              stageHasIssues(n) && Number(n) < currentStep
+                ? "wf-stage-issues"
+                : Number(n) < currentStep
+                  ? "wf-stage-done"
+                  : ""
+            }
           >
             <span>
-              {Number(n) < currentStep ? (
+              {stageHasIssues(n) && Number(n) < currentStep ? (
+                <span aria-label="Unresolved issues">!</span>
+              ) : Number(n) < currentStep ? (
                 <Check size={12} />
               ) : Number(n) === currentStep ? (
                 <span className="wf-dot" />
@@ -929,7 +943,8 @@ export function WorkflowWorkspace() {
                     <div>
                       <dt>Service area</dt>
                       <dd>
-                        {r.researchIssue.includes("area")
+                        {r.researchIssue.includes("area") ||
+                        !r.evidence.some((e) => e.label === "Service area")
                           ? "Unconfirmed"
                           : "Sydney · saved assessment"}
                       </dd>

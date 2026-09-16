@@ -1104,3 +1104,21 @@
     padding: 20px;
   }
 }
+.wf-outbound-switcher {
+  min-width: 0;
+  max-width: 100%;
+}
+.wf-outbound-switcher .compass-seg {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.wf-outbound-switcher .compass-seg-btn {
+  flex-shrink: 0;
+}
+.wf-stage-issues > span {
+  color: #8b681b;
+  border-color: #e4cf9e !important;
+  background: #fff8e9;
+  font-size: 10px;
+}
