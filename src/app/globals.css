@@ -8,20 +8,20 @@
 */
 :root {
   color-scheme: light;
-  --compass-ink: #1c1917;
-  --compass-ink-soft: #44403c;
-  --compass-muted: #57534e;
-  --compass-faint: #78716c;
+  --compass-ink: #262626;
+  --compass-ink-soft: #262626b8;
+  --compass-muted: #262626a3;
+  --compass-faint: #2626267a;
   --compass-panel: #ffffff;
-  --compass-line: #e7e5e4;
-  --compass-line-strong: #d6d3d1;
-  --compass-wash: #faf9f6;
-  --compass-sidebar: #eeece6;
-  --compass-accent: #f97316;
-  --compass-accent-hover: #ea580c;
-  --compass-accent-soft: rgba(249, 115, 22, 0.1);
-  --compass-shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 8px 24px rgba(28, 25, 23, 0.04);
-  --compass-shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05);
+  --compass-line: #ededed;
+  --compass-line-strong: #e8e8e8;
+  --compass-wash: #f9f9f9;
+  --compass-sidebar: #fbfbfb;
+  --compass-accent: #fa5d19;
+  --compass-accent-hover: #eb4f0f;
+  --compass-accent-soft: #fa5d1914;
+  --compass-shadow: 0 1px 2px #0000000a, 0 8px 24px #0000000a;
+  --compass-shadow-sm: 0 1px 2px #0000000d;
   --destructive-foreground: #ffffff;
   --color-destructive-foreground: var(--destructive-foreground);
 }
@@ -34,10 +34,7 @@ body {
 body {
   @apply text-neutral-900 antialiased;
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  background:
-    radial-gradient(1000px 520px at 8% -8%, rgba(249, 115, 22, 0.07), transparent 55%),
-    radial-gradient(800px 480px at 96% 0%, rgba(28, 25, 23, 0.035), transparent 48%),
-    var(--compass-wash);
+  background: var(--compass-wash);
   color: var(--compass-ink);
 }
 
@@ -55,9 +52,7 @@ body {
 }
 
 .compass-sidebar {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.28) 42%, var(--compass-sidebar) 100%),
-    var(--compass-sidebar);
+  background: var(--compass-sidebar);
 }
 
 .compass-panel {
@@ -74,7 +69,7 @@ body {
   }
 
   .compass-input:hover {
-    border-color: #c4c0bb;
+    border-color: #d4d4d4;
   }
 
   .compass-input:focus {
@@ -332,7 +327,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #faf9f7;
+  background: var(--compass-wash);
   color: var(--compass-muted);
   font-size: 11px;
   font-weight: 550;
@@ -565,7 +560,7 @@ body {
 }
 
 .records-calculation-row .records-cell {
-  background: #faf9f7;
+  background: var(--compass-wash);
   color: var(--compass-muted);
   font-size: 12px;
 }

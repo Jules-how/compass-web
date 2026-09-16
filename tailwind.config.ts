@@ -14,13 +14,28 @@ const config: Config = {
         lift: '0 2px 4px rgba(15, 18, 23, 0.04), 0 12px 32px rgba(15, 18, 23, 0.06)'
       },
       colors: {
-        // Switchflow orange accent
+        // Firecrawl-inspired orange accent used by the current Compass shell.
         sf: {
+          orange: '#FA5D19',
+          'orange-dark': '#EB4F0F',
+          'orange-light': '#FFE5D8'
+        },
+        // Previous Switchflow palette retained for pages or experiments that
+        // deliberately opt into the legacy treatment.
+        'sf-legacy': {
           orange: '#E85D2A',
           'orange-dark': '#C94A1F',
           'orange-light': '#F8D9CB'
         },
         compass: {
+          ink: '#262626',
+          muted: '#262626a3',
+          line: '#EDEDED',
+          wash: '#F9F9F9',
+          sidebar: '#FBFBFB',
+          accent: '#FA5D19'
+        },
+        'compass-legacy': {
           ink: '#0f1217',
           muted: '#6b7280',
           line: '#e8e6e3',

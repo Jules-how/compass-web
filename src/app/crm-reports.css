@@ -21,7 +21,7 @@
 .crm-active-filters button span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .crm-active-filters button strong { font-weight:500; color:var(--folio-ink); }
 .crm-active-filters button:last-child { border-color:transparent; background:transparent; }
-.crm-data-notice { display:flex; flex-wrap:wrap; gap:8px; align-items:center; border:1px solid #e8d3ad; background:#fffbf4; border-radius:7px; padding:10px 12px; font-size:13px; color:#72542c; }
+.crm-data-notice { display:flex; flex-wrap:wrap; gap:8px; align-items:center; border:1px solid var(--folio-warning-line); background:var(--folio-warning-soft); border-radius:7px; padding:10px 12px; font-size:13px; color:var(--folio-warning-text); }
 .crm-data-notice button { text-decoration:underline; }
 .crm-records-layout .folio-crm-lists { border:0; border-bottom:1px solid var(--folio-line); border-radius:0; background:transparent; padding:0 0 10px; }
 .crm-records-layout .folio-crm-lists > summary { display:list-item; font-size:13px; font-weight:500; color:var(--folio-muted); padding:0; cursor:pointer; }

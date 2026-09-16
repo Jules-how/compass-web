@@ -1,8 +1,8 @@
 # Compass workspace design
 
-Jules' instruction on 14 September 2026 is to match Linear with a very slight orange accent. He opened his actual Linear workspace and asked to get the match right. That live light-theme reference supersedes the cream and orange site palette from 13 September. Use Linear as the common visual foundation across Compass, preserving the business workflows and document writing measures.
+Jules' instruction on 16 September 2026 is to keep Compass's compact Linear-like workspace while moving the palette closer to Firecrawl's dashboard. He opened Firecrawl in the browser as the live reference. This supersedes the earlier cream/orange and Linear-neutral palette directions while preserving the business workflows, navigation geometry and document writing measures.
 
-Reference inspected: `https://linear.app/switchflow1/team/SWI/all` and `https://linear.app/switchflow1/projects/all`, 14 September 2026. The official refresh rationale is `https://linear.app/now/behind-the-latest-design-refresh`. Measurements below come from the live rendered UI, not estimates from its marketing site.
+References inspected: the open Firecrawl dashboard on 16 September 2026 and the earlier Linear workspace on 14 September 2026. Measurements below come from live rendered interfaces, not estimates from marketing pages.
 
 ## Owners
 
@@ -13,8 +13,8 @@ Reference inspected: `https://linear.app/switchflow1/team/SWI/all` and `https://
 ## Visual language
 
 - Inter Variable is self-hosted in `public/fonts/inter`, with its SIL Open Font License. The console uses `--workspace-font`; public surfaces retain their existing typeface. Navigation and dense controls use 13px, secondary labels 12px, and document writing 16px. Navigation text is weight 500.
-- Measured Linear colours: canvas `lch(97.94 0.5 282)`, sidebar `lch(94.44 0.5 282)`, main text `lch(9.794 0 282)`, navigation text `lch(37.776 1.25 282)`. Cards are white. The main workspace has a 12px radius, an 8px outer inset and a very light shadow. Status colours retain their meanings; they are not brand decoration.
-- Orange `#b85a30` is limited to small emphasis: the Compass mark, selected-navigation dot, checkboxes and keyboard focus. Legacy `--folio-plum` and soft-accent tokens are neutral so retained panels do not turn orange. Primary controls are charcoal, secondary controls neutral.
+- Firecrawl-inspired light palette: canvas `#f9f9f9`, sidebar `#fbfbfb`, cards `#ffffff`, main text `#262626`, muted text `#262626a3`, separators `#ededed` and controls `#e8e8e8`. The main workspace keeps a 12px radius, an 8px outer inset and a very light shadow. Status colours retain their meanings; they are not brand decoration.
+- Orange `#fa5d19` is the active signal: Compass mark, selected navigation, links, checkboxes, primary controls and keyboard focus. Selected navigation uses a light orange wash; secondary controls remain neutral. The earlier Linear-neutral palette is retained as the `data-palette="linear"` compatibility option on `.folio-shell`.
 - Desktop sidebar 244px (208px on narrower desktop), 28px navigation rows with 14px icons, a 44px location bar and a separate compact view toolbar. Dense boards/timelines run to the workspace edges with small insets. Compact pages retain their accessible heading without repeating a large visible heading under the location bar.
 - Default operational pages fill the available width. Tables, timelines and boards scroll within their working area. Explicit 3xl/4xl reading or form measures remain bounded. Never shrink the whole interface with CSS zoom or transforms.
 - Controls are normally 28–32px tall, with 40px form/action targets on phones. Cards use an 8px radius and subtle outlines. Task boards use 340px columns and 8px gaps. Main workspaces do not nest ornamental cards merely to contain another toolbar.

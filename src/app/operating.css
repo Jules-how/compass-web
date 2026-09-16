@@ -129,7 +129,7 @@
 .operating-home textarea:focus-visible,
 .operating-home select:focus-visible,
 .operating-home summary:focus-visible {
-  outline: 2px solid var(--folio-plum, #c2410c);
+  outline: 2px solid var(--folio-focus, #fa5d19);
   outline-offset: 4px;
 }
 .operating-home .folio-dialog-copy {

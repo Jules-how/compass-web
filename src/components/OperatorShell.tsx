@@ -115,7 +115,11 @@ function OperatorConsoleLayoutInner({
 
   return (
     <ConsoleChromeContext.Provider value={true}>
-      <div className="compass-shell folio-shell" data-sidebar-collapsed={sidebarCollapsed}>
+      <div
+        className="compass-shell folio-shell"
+        data-palette="firecrawl"
+        data-sidebar-collapsed={sidebarCollapsed}
+      >
         <a
           href="#compass-main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[110] focus:rounded-xl focus:bg-white focus:px-3.5 focus:py-2 focus:text-sm focus:font-medium focus:text-neutral-900 focus:shadow-soft"

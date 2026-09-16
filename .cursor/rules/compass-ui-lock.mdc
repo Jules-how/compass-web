@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Compass UI guidance
 
-Jules asked on 14 September 2026 for Compass to look and feel exactly like Linear with a very slight orange accent, then opened his Linear workspace as the reference. This supersedes the cream and orange site palette selected on 13 September. Use the measured Linear light interface: Inter Variable, a neutral grey sidebar and near-white canvas, white cards, compact navigation and view controls, and subtle separators. Reserve orange for the Compass mark, a small selected-navigation dot and focus feedback. Preserve broad operational views and comfortable writing measures.
+Jules asked on 16 September 2026 to keep Compass's compact Linear-like workspace while making its palette feel closer to Firecrawl's dashboard. Use the measured light interface: Inter Variable, a near-white sidebar and canvas, white cards, crisp neutral separators, compact navigation and view controls, charcoal text, and vivid orange `#fa5d19` for active and primary states. Preserve broad operational views and comfortable writing measures. The previous Linear-neutral palette remains available through `data-palette="linear"` on `.folio-shell`.
 
 Current design contract: `docs/design/WORKSPACE.md`. Shared owners: `src/app/folio.css` compatibility tokens/styles, `src/app/workspace.css` shared sizing and hierarchy, `src/components/OperatorShell.tsx` and `src/components/folio/FolioChrome.tsx`. Page-specific workspace styles extend these owners. Keep existing data, auth, caching and persistence contracts unless the request includes their behaviour.
 

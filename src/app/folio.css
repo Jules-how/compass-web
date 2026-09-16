@@ -1,5 +1,5 @@
-/* Shared operator presentation. Linear's neutral workspace, with a small orange
-   accent. Keep colours here so retained page styles share the same foundation. */
+/* Shared operator presentation. Firecrawl-inspired light workspace with a vivid
+   orange signal. Keep colours here so retained page styles share one foundation. */
 @font-face {
   font-family: "Inter Variable";
   src: url("/fonts/inter/InterVariable.woff2") format("woff2");
@@ -9,6 +9,63 @@
 }
 body:has(.folio-shell) {
   --workspace-font: "Inter Variable", var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --folio-desk: #f9f9f9;
+  --folio-rail: #fbfbfb;
+  --folio-paper: #ffffff;
+  --folio-ink: #262626;
+  --folio-muted: #262626a3;
+  --folio-line: #ededed;
+  --folio-control: #e8e8e8;
+  /* Plum remains a compatibility name; the current accent is Firecrawl orange. */
+  --folio-plum: #262626;
+  --folio-accent: #fa5d19;
+  --folio-accent-soft: #fa5d1914;
+  --folio-accent-line: #fa5d1952;
+  --folio-orange-soft: #fa5d1914;
+  --folio-focus: #fa5d19;
+  --folio-surface: #f9f9f9;
+  --folio-note: #fbfbfb;
+  --folio-selection: #f3f3f3;
+  --folio-success: #42c366;
+  --folio-success-soft: #42c3661f;
+  --folio-success-line: #42c36652;
+  --folio-success-text: #287843;
+  --folio-error: #eb3424;
+  --folio-error-soft: #eb34241f;
+  --folio-error-line: #eb342452;
+  --folio-error-text: #b52b20;
+  --folio-warning: #ecb730;
+  --folio-warning-soft: #ecb7301f;
+  --folio-warning-line: #ecb73052;
+  --folio-warning-text: #8a6500;
+  --folio-info: #2a6dfb;
+  --folio-radius: 8px;
+  --folio-control-radius: 7px;
+  --folio-space: 8px;
+  --folio-motion: 150ms;
+  --compass-ink: var(--folio-ink);
+  --compass-ink-soft: #262626b8;
+  --compass-muted: var(--folio-muted);
+  --compass-faint: #2626267a;
+  --compass-panel: var(--folio-paper);
+  --compass-line: var(--folio-line);
+  --compass-line-strong: var(--folio-control);
+  --compass-wash: var(--folio-desk);
+  --compass-sidebar: var(--folio-rail);
+  --compass-accent: var(--folio-accent);
+  --compass-accent-hover: #eb4f0f;
+  --compass-accent-soft: var(--folio-accent-soft);
+  --compass-shadow: 0 2px 8px #00000006;
+  --compass-shadow-sm: 0 1px 2px #00000005;
+  font-family:
+    var(--workspace-font);
+  background: var(--folio-desk);
+  color: var(--folio-ink);
+}
+
+/* Reversible compatibility palette. Change the shell to data-palette="linear"
+   to restore the measured Linear-neutral palette that preceded this refresh. */
+body:has(.folio-shell[data-palette="linear"]) {
   --folio-desk: lch(97.94 0.5 282);
   --folio-rail: lch(94.44 0.5 282);
   --folio-paper: #ffffff;
@@ -16,7 +73,6 @@ body:has(.folio-shell) {
   --folio-muted: lch(37.776 1.25 282);
   --folio-line: #e9e9e9;
   --folio-control: #d6d6d6;
-  /* Legacy interactive tokens stay neutral; orange is reserved for emphasis. */
   --folio-plum: #505050;
   --folio-accent: #b85a30;
   --folio-accent-soft: #f3f3f3;
@@ -27,11 +83,17 @@ body:has(.folio-shell) {
   --folio-note: #f5f5f5;
   --folio-selection: lch(89.84 0 282);
   --folio-success: #365c4b;
+  --folio-success-soft: #edf3e9;
+  --folio-success-line: #becfbd;
+  --folio-success-text: #365c4b;
   --folio-error: #913e42;
-  --folio-radius: 8px;
-  --folio-control-radius: 7px;
-  --folio-space: 8px;
-  --folio-motion: 150ms;
+  --folio-error-soft: #fcf0ed;
+  --folio-error-line: #dbbbb0;
+  --folio-error-text: #913e42;
+  --folio-warning: #b88a47;
+  --folio-warning-soft: #f6efd9;
+  --folio-warning-line: #e8d3ad;
+  --folio-warning-text: #705824;
   --compass-ink: var(--folio-ink);
   --compass-ink-soft: #454545;
   --compass-muted: var(--folio-muted);
@@ -44,12 +106,6 @@ body:has(.folio-shell) {
   --compass-accent: var(--folio-accent);
   --compass-accent-hover: #9f4822;
   --compass-accent-soft: var(--folio-accent-soft);
-  --compass-shadow: 0 2px 8px #00000006;
-  --compass-shadow-sm: 0 1px 2px #00000005;
-  font-family:
-    var(--workspace-font);
-  background: var(--folio-desk);
-  color: var(--folio-ink);
 }
 .folio-shell {
   font-family:
@@ -344,18 +400,21 @@ body:has(.folio-shell) [class*="text-[#e85d2a]"],
 body:has(.folio-shell) [class*="text-[#c2410c]"],
 body:has(.folio-shell) [class*="text-orange-"],
 body:has(.folio-shell) [class*="text-sf-orange"] {
-  color: var(--folio-plum);
+  color: var(--folio-accent);
 }
 body:has(.folio-shell) [class~="bg-[#e85d2a]"],
 body:has(.folio-shell) [class~="bg-sf-orange"] {
-  background-color: #333;
+  background-color: var(--folio-accent);
   color: #fff;
 }
 body:has(.folio-shell) [class*="bg-[#e85d2a]/"],
+body:has(.folio-shell) [class*="bg-sf-orange/"],
+body:has(.folio-shell) [class*="bg-[#fff7ed]"],
 body:has(.folio-shell) [class*="bg-orange-50"] {
   background-color: var(--compass-accent-soft);
 }
 body:has(.folio-shell) [class*="border-[#e85d2a]"],
+body:has(.folio-shell) [class*="border-sf-orange"],
 body:has(.folio-shell) [class*="border-orange-"] {
   border-color: var(--folio-accent-line);
 }
@@ -367,6 +426,30 @@ body:has(.folio-shell) [class*="text-neutral-500"],
 body:has(.folio-shell) [class*="text-stone-500"],
 body:has(.folio-shell) [class*="text-neutral-400"] {
   color: var(--folio-muted);
+}
+/* Restore the previous neutral treatment for retained utility classes when
+   the shell uses data-palette="linear". */
+body:has(.folio-shell[data-palette="linear"]) [class*="text-[#e85d2a]"],
+body:has(.folio-shell[data-palette="linear"]) [class*="text-[#c2410c]"],
+body:has(.folio-shell[data-palette="linear"]) [class*="text-orange-"],
+body:has(.folio-shell[data-palette="linear"]) [class*="text-sf-orange"] {
+  color: var(--folio-plum);
+}
+body:has(.folio-shell[data-palette="linear"]) [class~="bg-[#e85d2a]"],
+body:has(.folio-shell[data-palette="linear"]) [class~="bg-sf-orange"] {
+  background-color: #333;
+  color: #fff;
+}
+body:has(.folio-shell[data-palette="linear"]) [class*="bg-[#e85d2a]/"],
+body:has(.folio-shell[data-palette="linear"]) [class*="bg-sf-orange/"],
+body:has(.folio-shell[data-palette="linear"]) [class*="bg-[#fff7ed]"],
+body:has(.folio-shell[data-palette="linear"]) [class*="bg-orange-50"] {
+  background-color: var(--compass-accent-soft);
+}
+body:has(.folio-shell[data-palette="linear"]) [class*="border-[#e85d2a]"],
+body:has(.folio-shell[data-palette="linear"]) [class*="border-sf-orange"],
+body:has(.folio-shell[data-palette="linear"]) [class*="border-orange-"] {
+  border-color: var(--folio-accent-line);
 }
 .folio-shell .bg-white {
   background-color: var(--folio-paper);
@@ -445,8 +528,8 @@ body:has(.folio-shell) [class*="text-neutral-400"] {
   white-space: nowrap;
 }
 .folio-status-pending {
-  background: #f6efd9;
-  color: #705824;
+  background: var(--folio-warning-soft);
+  color: var(--folio-warning-text);
 }
 .folio-paper h2 {
   font:
@@ -575,7 +658,7 @@ body:has(.folio-shell) [class*="text-neutral-400"] {
   width: 30px;
   height: 4px;
   border-radius: 5px;
-  background: #e8a285;
+  background: var(--folio-accent);
   margin-bottom: 19px;
 }
 .folio-pinned h2 {
@@ -811,16 +894,16 @@ body:has(.folio-shell) [class*="text-neutral-400"] {
   font-size: 12px;
   line-height: 1.7;
   padding: 13px 16px;
-  border: 1px solid #becfbd;
-  background: #edf3e9;
-  color: #365c4b;
+  border: 1px solid var(--folio-success-line);
+  background: var(--folio-success-soft);
+  color: var(--folio-success-text);
   border-radius: 7px;
   margin-bottom: 20px;
 }
 .folio-notice-error {
-  background: #fcf0ed;
-  border-color: #dbbbb0;
-  color: #913e42;
+  background: var(--folio-error-soft);
+  border-color: var(--folio-error-line);
+  color: var(--folio-error-text);
 }
 .folio-notice button {
   font-weight: 600;
@@ -1203,7 +1286,7 @@ body:has(.folio-shell) [class*="text-neutral-400"] {
     justify-content: space-around;
     padding: 7px 18px calc(7px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--folio-line);
-    background: #fffefaf5;
+    background: #fffffff5;
     backdrop-filter: blur(10px);
   }
   .folio-mobile-nav > a,
@@ -1221,7 +1304,7 @@ body:has(.folio-shell) [class*="text-neutral-400"] {
   }
   .folio-mobile-nav > [aria-current="page"] {
     background: var(--folio-accent-soft);
-    color: var(--folio-plum);
+    color: var(--folio-accent);
     font-weight: 600;
   }
   .folio-page,
@@ -2264,7 +2347,8 @@ body:has(.folio-shell) .folio-inbox > .compass-panel {
   }
 }
 
-/* Operational workspaces retain the Switchflow palette with readable, contained boards. */
+/* Operational workspaces share the Firecrawl-inspired palette with readable,
+   contained boards. */
 .folio-page[data-width="full"] { max-width: none; padding: 24px clamp(20px, 2vw, 40px) 32px; }
 .folio-kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(290px, 1fr); grid-template-columns: none; gap: 16px; overflow-x: auto; max-width: 100%; min-width: 0; padding: 2px 2px 12px; align-items: start; }
 .folio-kanban-column { min-width: 0; border: 1px solid var(--folio-line); background: var(--folio-rail); border-radius: 12px; padding: 12px; }
