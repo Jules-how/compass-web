@@ -55,6 +55,7 @@ test('search, commit, ledger, and export tools', () => {
   assert.deepEqual(
     TOOLS.map((t) => t.name),
     [
+      'outbound.sourcing',
       'goals.actions',
       'planning.notebook',
       'instructions',
@@ -298,4 +299,16 @@ test('goal tools preserve revisioned documents and signed envelopes through the 
   assert.equal(capture.method, 'POST');
   await callTool('instructions', {}, { cfg, fetchImpl: mockFetch(capture) });
   assert.equal(capture.method, 'GET');
+});
+
+test('sourcing discovery uses the authenticated read endpoint and preserves errors', async () => {
+  const cfg = { baseUrl: 'https://compass.example', secret: 'test-secret' };
+  const result = await callTool('outbound.sourcing', {}, { cfg, fetchImpl: async (url, options) => {
+    assert.equal(new URL(url).pathname, '/api/agent/outbound/sourcing');
+    assert.equal(options.method, 'GET');
+    return new Response(JSON.stringify({ methods: [{ id: 'ledger' }] }), {status:200});
+  }});
+  assert.match(JSON.stringify(result), /ledger/);
+  const denied = await callTool('outbound.sourcing', {}, {cfg, fetchImpl: async () => new Response(JSON.stringify({error:'unauthorized'}), {status:401})});
+  assert.equal(denied.isError, true);
 });

@@ -41,6 +41,7 @@ export type Company = {
 };
 export type Config = {
   name: string;
+  companyIds?: number[];
   offer: string;
   icp: string;
   geography: string;
@@ -111,7 +112,7 @@ export function createBatch(
     phase: prepared ? "review" : "define",
     history: [],
     rows: cohort
-      .slice(0, config.size)
+      .filter((c, i) => config.companyIds ? config.companyIds.includes(c.id) : i < config.size)
       .map((c) => ({
         ...c,
         subject: "Installation enquiries",

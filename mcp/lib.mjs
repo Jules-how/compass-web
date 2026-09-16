@@ -15,6 +15,7 @@ const EXPORT_MAX_LIMIT = 200
 const SEARCH_DEFAULT_LIMIT = 2000
 
 export const TOOLS = [
+  { name: 'outbound.sourcing', description: 'Read available and recommended company sourcing methods, when to use each, cost basis, performance limits and agent handoff. Read-only; never starts a paid run.', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
   {
     name: 'goals.actions',
     description: 'Read the shared weekly goals/actions workspace, a city session, existing prospects or goal evidence. A session command creates a proposal or revision-checked agent-owned session; it never calls or sends.',
@@ -345,6 +346,10 @@ export async function callTool(name, args = {}, { cfg, fetchImpl }) {
   if (!cfg.secret) return toolError('missing COMPASS_AGENT_SECRET')
 
   switch (name) {
+    case 'outbound.sourcing': {
+      const r = await compassFetch(cfg, { method: 'GET', path: '/api/agent/outbound/sourcing', fetchImpl });
+      return r.status >= 400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);
+    }
     case 'goals.actions':
     case 'planning.notebook':
     case 'instructions': {

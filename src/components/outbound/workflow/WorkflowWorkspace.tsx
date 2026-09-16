@@ -39,6 +39,10 @@ import {
   type Config,
 } from "./model";
 import "./workflow.css";
+import cohort from "./example-cohort.json";
+import { WorkflowSelect } from "./WorkflowSelect";
+import { BatchInventory } from "./BatchInventory";
+import { SourcingMethods } from "./SourcingMethods";
 const storage = "compass.outbound.workflow.design.v1";
 type View = "companies" | "copy" | "execution" | "history";
 type Detail = "research" | "email" | "contact" | "history";
@@ -124,6 +128,7 @@ export function WorkflowWorkspace() {
     [detailTab, setDetailTab] = useState<Detail>("research"),
     [config, setConfig] = useState<Config | null>(null),
     [editingConfig, setEditingConfig] = useState(false),
+    [sourcing, setSourcing] = useState(false),
     [subject, setSubject] = useState(""),
     [body, setBody] = useState(""),
     [opener, setOpener] = useState(""),
@@ -231,19 +236,24 @@ export function WorkflowWorkspace() {
   const currentStep =
     batch.phase === "define" ? 0 : batch.phase === "research" ? 4 : 9;
   const saveConfig = () => {
-    if (!config?.name.trim()) return;
+    if (!config?.name.trim() || !config.companyIds?.length) return;
     if (editingConfig) {
       update((b) => {
+        const copyChanged = b.config.offer !== config.offer || b.config.icp !== config.icp || b.config.model !== config.model;
+        const inventory = createBatch(config).rows;
+        b.rows = inventory.map(x => b.rows.find(old => old.id === x.id) || x);
         b.config = config;
-        b.phase = "define";
-        for (const x of b.rows) {
-          if (x.body) revise(b, x, x.subject, "");
-          x.approved = null;
+        if (copyChanged) {
+          b.phase = "define";
+          for (const x of b.rows) {
+            if (x.body) revise(b, x, x.subject, "");
+            x.approved = null;
+          }
         }
         event(
           b,
           "Batch configuration changed",
-          "Preparation reset. Historical example inputs remain unchanged.",
+          "Company selection updated. Existing record edits retained; copy changes invalidate dependent approvals.",
         );
       });
     } else {
@@ -254,6 +264,8 @@ export function WorkflowWorkspace() {
       setFilter("all");
       setSearch("");
     }
+    setSelected([]);
+    setPage(0);
     setConfig(null);
   };
   return (
@@ -267,23 +279,9 @@ export function WorkflowWorkspace() {
             <label className="wf-eyebrow" htmlFor="wf-batches">
               Batch
             </label>
-            <select
-              id="wf-batches"
-              value={batch.id}
-              onChange={(e) => {
-                setDb({ ...store, active: e.target.value });
-                setSelected([]);
-                setPage(0);
-                setFilter("all");
-                setSearch("");
-              }}
-            >
-              {store.batches.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.config.name}
-                </option>
-              ))}
-            </select>
+            <WorkflowSelect id="wf-batches" label="Batch" value={batch.id}
+              onChange={value => { setDb({ ...store, active: value }); setSelected([]); setPage(0); setFilter("all"); setSearch(""); }}
+              options={store.batches.map(x => ({value:x.id,label:x.config.name}))} />
           </div>
           <Pill>
             {batch.phase === "define"
@@ -294,10 +292,11 @@ export function WorkflowWorkspace() {
           </Pill>
         </div>
         <div className="wf-actions">
+          <Button onClick={() => setSourcing(true)}><Search size={14} /> Source leads</Button>
           <Button
             onClick={() => {
               setEditingConfig(true);
-              setConfig({ ...batch.config });
+              setConfig({ ...batch.config, companyIds: batch.rows.map(r => r.id) });
             }}
           >
             <Settings2 size={14} /> Configure
@@ -305,7 +304,7 @@ export function WorkflowWorkspace() {
           <Button
             onClick={() => {
               setEditingConfig(false);
-              setConfig({ ...defaults, name: "New batch" });
+              setConfig({ ...defaults, name: "New batch", companyIds: [] });
             }}
           >
             <Plus size={14} /> New batch
@@ -336,7 +335,7 @@ export function WorkflowWorkspace() {
             onClick={() => {
               if (n === 0) {
                 setEditingConfig(true);
-                setConfig({ ...batch.config });
+                setConfig({ ...batch.config, companyIds: batch.rows.map(r => r.id) });
               } else if (n === 10 || n === 11) setDialog("load");
               else {
                 setView(
@@ -476,18 +475,11 @@ export function WorkflowWorkspace() {
             </div>
             <label className="wf-sort">
               <ArrowDown size={13} />
-              <select
-                aria-label="Sort companies"
-                value={sort}
-                onChange={(e) => setSort(e.target.value as "source" | "name")}
-              >
-                <option value="source">Source order</option>
-                <option value="name">Company A–Z</option>
-              </select>
+              <WorkflowSelect label="Sort companies" value={sort} onChange={value => setSort(value as "source" | "name")} options={[{value:"source",label:"Source order"},{value:"name",label:"Company A–Z"}]} />
             </label>
           </div>
           {selected.length > 0 && (
-            <div className="wf-selection">
+            <div className="wf-selection" role="region" aria-label="Selected company actions">
               <strong>{selected.length} selected</strong>
               <Button
                 onClick={() => setDialog("bulk")}
@@ -717,17 +709,7 @@ export function WorkflowWorkspace() {
             <div>
               <label>
                 Rows{" "}
-                <select
-                  value={size}
-                  onChange={(e) => {
-                    setSize(Number(e.target.value));
-                    setPage(0);
-                  }}
-                >
-                  {[5, 10, 25, 50].map((n) => (
-                    <option key={n}>{n}</option>
-                  ))}
-                </select>
+                <WorkflowSelect label="Rows per page" value={String(size)} onChange={value => {setSize(Number(value));setPage(0);}} options={[5,10,25,50].map(n => ({value:String(n),label:String(n)}))} />
               </label>
               <Button
                 label="Previous page"
@@ -1193,12 +1175,16 @@ export function WorkflowWorkspace() {
           </>
         )}
       </ModalFrame>
+      <ModalFrame open={sourcing} onClose={() => setSourcing(false)} label="Source leads" overlayClassName="wf-overlay" contentClassName="wf-dialog">
+        <div className="wf-dialog-title"><h2>Source leads</h2><button type="button" aria-label="Close sourcing methods" onClick={() => setSourcing(false)}><X size={18} /></button></div>
+        <SourcingMethods />
+      </ModalFrame>
       <ModalFrame
         open={config !== null}
         onClose={() => setConfig(null)}
         label={editingConfig ? "Configure batch" : "New batch"}
         overlayClassName="wf-overlay"
-        contentClassName="wf-dialog"
+        contentClassName="wf-dialog wf-config-dialog"
       >
         {config && (
           <form
@@ -1220,7 +1206,8 @@ export function WorkflowWorkspace() {
                 <X size={18} />
               </button>
             </div>
-            {(["name", "offer", "icp", "geography"] as const).map((key, i) => (
+            <BatchInventory ids={config.companyIds || []} onChange={companyIds => setConfig({ ...config, companyIds, size:companyIds.length, geography: [...new Set(cohort.filter(r => companyIds.includes(r.id)).map(r => r.city))].join(", ") })} />
+            {(["name", "offer", "icp"] as const).map((key, i) => (
               <label className="wf-field" key={key}>
                 {
                   [
@@ -1252,20 +1239,7 @@ export function WorkflowWorkspace() {
               </label>
             ))}
             <div className="wf-form-grid">
-              <label className="wf-field">
-                Batch size
-                <input
-                  type="number"
-                  min={1}
-                  max={10}
-                  readOnly={editingConfig}
-                  required
-                  value={config.size}
-                  onChange={(e) =>
-                    setConfig({ ...config, size: Number(e.target.value) })
-                  }
-                />
-              </label>
+              <div className="wf-field">Batch size<output>{config.companyIds?.length || 0} selected companies</output></div>
               <label className="wf-field">
                 Tool budget · AUD
                 <input
@@ -1288,8 +1262,7 @@ export function WorkflowWorkspace() {
                   "Company source",
                   [
                     "Saved company register",
-                    "Google Maps / Outscraper",
-                    "Imported list",
+
                   ],
                 ],
                 [
@@ -1297,8 +1270,7 @@ export function WorkflowWorkspace() {
                   "Research provider",
                   [
                     "Saved website evidence",
-                    "Direct website research",
-                    "Parallel research",
+
                   ],
                 ],
                 [
@@ -1306,24 +1278,14 @@ export function WorkflowWorkspace() {
                   "Writing profile",
                   [
                     "Saved copy + local checks",
-                    "Economical AI model",
-                    "Reasoning AI model",
+
                   ],
                 ],
               ] as const
             ).map(([key, label, options]) => (
               <label className="wf-field" key={key}>
                 {label}
-                <select
-                  value={config[key]}
-                  onChange={(e) =>
-                    setConfig({ ...config, [key]: e.target.value })
-                  }
-                >
-                  {options.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
+                <WorkflowSelect label={label} value={config[key]} onChange={value => setConfig({ ...config, [key]: value })} options={options.map(value => ({value,label:value}))} />
               </label>
             ))}
             <label className="wf-checkbox">
@@ -1342,13 +1304,11 @@ export function WorkflowWorkspace() {
               </span>
             </label>
             <p className="wf-help">
-              This design uses the ten saved Sydney companies. Changed criteria,
-              sources and models are configuration only; they do not call
-              services or refresh the example assessment.
+              Selection determines which saved companies enter this batch. Offer and criteria guide copy review; they do not establish fit. Use Source leads for additional discovery methods and an agent handoff.
             </p>
             <div className="wf-dialog-footer">
               <Button onClick={() => setConfig(null)}>Cancel</Button>
-              <button className="compass-btn-primary" type="submit">
+              <button className="compass-btn-primary" type="submit" disabled={!config.companyIds?.length}>
                 {editingConfig ? "Save configuration" : "Create batch"}
               </button>
             </div>
