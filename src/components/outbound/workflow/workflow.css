@@ -1182,3 +1182,10 @@
   .wf-inventory-list label > small { display:none; }
   .wf-select-trigger { min-height:40px; }
 }
+
+.wf-field output { display:block; }
+.wf-config-settings { margin-top:16px; border-block:1px solid #eee; padding:12px 0; }
+.wf-config-settings summary { cursor:pointer; font-weight:500; }
+.wf-config-settings[open] summary { margin-bottom:14px; }
+.wf-dialog .wf-config-settings summary:focus-visible { outline:2px solid #fa5d19; outline-offset:3px; }
+@media(max-width:900px) { .wf-selection { bottom:80px; } }

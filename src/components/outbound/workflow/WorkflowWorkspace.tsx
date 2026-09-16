@@ -1193,11 +1193,12 @@ export function WorkflowWorkspace() {
               </button>
             </div>
             <BatchInventory ids={config.companyIds || []} onChange={companyIds => setConfig({ ...config, companyIds, size:companyIds.length, geography: [...new Set(cohort.filter(r => companyIds.includes(r.id)).map(r => r.city))].join(", ") })} />
-            {(["name", "offer", "icp"] as const).map((key, i) => (
+            <label className="wf-field">Batch name<input required maxLength={300} value={config.name} onChange={e => setConfig({...config,name:e.target.value})} /></label>
+            <details className="wf-config-settings"><summary>Copy criteria & review settings</summary>
+            {(["offer", "icp"] as const).map((key, i) => (
               <label className="wf-field" key={key}>
                 {
                   [
-                    "Batch name",
                     "Offer",
                     "Company criteria / ICP",
                     "Geography",
@@ -1292,6 +1293,7 @@ export function WorkflowWorkspace() {
             <p className="wf-help">
               Selection determines which saved companies enter this batch. Offer and criteria guide copy review; they do not establish fit. Use Source leads for additional discovery methods and an agent handoff.
             </p>
+            </details>
             <div className="wf-dialog-footer">
               <Button onClick={() => setConfig(null)}>Cancel</Button>
               <button className="compass-btn-primary" type="submit" disabled={!config.companyIds?.length}>

@@ -20,7 +20,7 @@ export function BatchInventory({ ids, onChange }: { ids: number[]; onChange: (id
       <WorkflowSelect label="Inventory evidence" value={evidence} onChange={setEvidence} options={[{value:"all",label:"Any evidence"},{value:"supported",label:"Service / area supported"},{value:"gaps",label:"Needs research"}]} />
       <WorkflowSelect label="Inventory contact" value={contact} onChange={setContact} options={[{value:"all",label:"Any contact"},{value:"published",label:"Published contact"},{value:"unresolved",label:"Source unresolved"}]} />
     </div>
-    <div className="wf-inventory-summary"><span aria-live="polite">{rows.length} matching · {ids.length} selected</span><button type="button" disabled={!rows.length} onClick={() => onChange([...new Set([...ids,...rows.map(r => r.id)])])}>Select matching</button><button type="button" disabled={!ids.length} onClick={() => onChange([])}>Clear</button></div>
+    <div className="wf-inventory-summary"><span aria-live="polite">{rows.length} matching · {ids.length} selected</span><button type="button" disabled={!rows.length} onClick={() => onChange(rows.map(r => r.id))}>Use matching</button><button type="button" disabled={!ids.length} onClick={() => onChange([])}>Clear</button></div>
     <div className="wf-inventory-list">{rows.map(r => <label key={r.id}><input type="checkbox" checked={ids.includes(r.id)} onChange={e => onChange(e.target.checked ? [...ids,r.id] : ids.filter(id => id !== r.id))} /><span><strong>{r.name}</strong><small>{r.domain} · {r.city}</small></span><small>{r.researchIssue ? "Needs research" : "Service / area fit"}</small></label>)}
       {!rows.length && <p>No companies match. Adjust the filters.</p>}
     </div>
