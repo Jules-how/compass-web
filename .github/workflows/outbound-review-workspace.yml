@@ -1,0 +1,31 @@
+name: Outbound review workspace
+on:
+  push:
+    branches: [fix/outbound-video-feedback]
+    paths: [.github/workflows/outbound-review-workspace.yml]
+permissions:
+  contents: read
+jobs:
+  review-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Package tracked source and dependency workspace (no credentials)
+        run: |
+          git archive --format=tar HEAD | gzip > /tmp/compass-source.tar.gz
+          tar -czf /tmp/compass-dependencies.tar.gz node_modules
+      - uses: actions/upload-artifact@v4
+        with:
+          name: outbound-review-workspace
+          path: |
+            /tmp/compass-source.tar.gz
+            /tmp/compass-dependencies.tar.gz
+          retention-days: 1
