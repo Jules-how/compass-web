@@ -29,12 +29,20 @@ const workflow = z.strictObject({
     }), concurrency: z.number().int().min(1).max(20)
 });
 const template = copy.extend({
-    mode: z.enum(['deterministic', 'ai']), slots: z.record(z.string().regex(/^[a-zA-Z0-9_]+$/), z.strictObject({
+    mode: z.enum(['deterministic', 'ai']),
+    variations: z.array(z.strictObject({
+        id, name: short, enabled: z.boolean(), match: z.enum(['all', 'any']),
+        when: z.array(z.strictObject({signal_id: id, operator: z.enum(['present', 'equals', 'contains']), value: text})
+            .refine(rule => rule.operator === 'present' || Boolean(rule.value.trim()), 'A comparison value is required')).min(1).max(20),
+        copy: copy.omit({followups: true})
+    })).max(20).optional(), slots: z.record(z.string().regex(/^[a-zA-Z0-9_]+$/), z.strictObject({
         signal_ids: z.array(id).max(100), required: z.boolean(), fallback: text
     })), ai: z.strictObject({
         model: short, prompt: short
     }).optional()
-}).refine(v => v.mode !== 'ai' || !!v.ai, 'AI policy required');
+}).refine(v => v.mode !== 'ai' || !!v.ai, 'AI policy required')
+  .refine(v => v.mode !== 'ai' || !v.variations?.length, 'Signal variations require deterministic mode')
+  .refine(v => new Set(v.variations?.map(item => item.id)).size === (v.variations?.length || 0), 'Variation IDs must be unique');
 const recordSchemas = {
     location: z.strictObject({
         id, company_id: id, country_code: z.string().regex(/^[A-Z]{2}$/).nullable(), administrative_region: text.nullable(), city: text.nullable(), suburb: text.nullable(), postcode: text.nullable(), timezone: z.string().refine(v => {

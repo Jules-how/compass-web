@@ -51,6 +51,7 @@ export function normalizeCrmMethod(kind: string, value: string): string {
 }
 
 const companyFacts: Record<string, z.ZodType> = {
+  services: z.array(text).max(40), business_types: z.array(text).max(40),
   operating_status: z.enum(['active', 'closed', 'unknown']), customer_mix: z.enum(['residential_only', 'mixed', 'commercial_only', 'unknown']),
   installs_air_conditioning: z.boolean(), installs_ducted: z.boolean(), installs_multi_split: z.boolean(), installs_single_split: z.boolean(),
   established_status: z.enum(['supported', 'contradicted', 'unresolved']),

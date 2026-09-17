@@ -55,8 +55,17 @@ export type WorkflowPolicy = {
     };
     concurrency: number;
 };
+export type SignalVariation = {
+    id: string;
+    name: string;
+    enabled: boolean;
+    match: 'all' | 'any';
+    when: { signal_id: string; operator: 'present' | 'equals' | 'contains'; value: string }[];
+    copy: Pick<Copy, 'subject' | 'opener' | 'body' | 'cta' | 'unsubscribe'>;
+};
 export type TemplatePolicy = {
     mode: 'deterministic' | 'ai';
+    variations?: SignalVariation[];
     subject: string;
     opener: string;
     body: string;
@@ -274,12 +283,30 @@ export function assessFit(criteria: Criterion[]): Fit {
         return 'sure_fit';
     return criteria.some(c => !c.exclusion && c.outcome === 'supported') ? 'likely_fit' : 'unknown';
 }
+/** Input values must already have passed the evidence/conflict filter. Array order is priority. */
+export function selectPipelineVariation(policy: TemplatePolicy, signals: Record<string, string>): SignalVariation | null {
+    if (policy.mode !== 'deterministic') return null;
+    return policy.variations?.find(variation => {
+        if (!variation.enabled || !variation.when.length) return false;
+        const matches = variation.when.map(rule => {
+            const actual = signals[rule.signal_id];
+            if (typeof actual !== 'string' || !actual.trim()) return false;
+            if (rule.operator === 'present') return true;
+            const expected = rule.value.trim().toLocaleLowerCase();
+            if (!expected) return false;
+            const normal = actual.trim().toLocaleLowerCase();
+            return rule.operator === 'equals' ? normal === expected : normal.includes(expected);
+        });
+        return variation.match === 'all' ? matches.every(Boolean) : matches.some(Boolean);
+    }) || null;
+}
 export function renderPipelineTemplate(policy: TemplatePolicy, signals: Record<string, string>): {
     copy: Copy;
     missing: string[];
 } {
     if (policy.mode !== 'deterministic')
         throw new Error('pipeline_ai_executor_required');
+    const content = selectPipelineVariation(policy, signals)?.copy || policy;
     const missing = new Set<string>();
     const render = (text: string) => text.replace(/\[\[([a-zA-Z0-9_]+)\]\]/g, (_, key: string) => {
         const slot = policy.slots[key];
@@ -296,7 +323,7 @@ export function renderPipelineTemplate(policy: TemplatePolicy, signals: Record<s
     });
     return {
         copy: {
-            subject: render(policy.subject), opener: render(policy.opener), body: render(policy.body), cta: render(policy.cta), unsubscribe: render(policy.unsubscribe), followups: policy.followups.map(f => ({
+            subject: render(content.subject), opener: render(content.opener), body: render(content.body), cta: render(content.cta), unsubscribe: render(content.unsubscribe), followups: policy.followups.map(f => ({
                 ...f, subject: render(f.subject), body: render(f.body)
             }))
         }, missing: [...missing]

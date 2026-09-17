@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   renderPipelineTemplate,
+  selectPipelineVariation,
   type Copy,
   type Draft,
   type PipelineList,
@@ -12,6 +13,8 @@ import {
   type TemplatePolicy,
   type TemplateVersion,
 } from "@/lib/outbound-pipeline";
+import { SignalVariations } from "./SignalVariations";
+import { useDraftHistory } from "./useDraftHistory";
 import { previewSignalValues } from "./pipeline-ui-state";
 import { PipelineJobsPanel } from "./PipelineJobsPanel";
 import { EvidenceSource } from "./EvidenceSource";
@@ -66,12 +69,14 @@ export function WriteEditor({
       `compass.pipeline.write.${list?.id || "new"}.${version?.id || "new"}.name`,
       version?.name || "",
     ),
-    [policy, setPolicy] = useEditorBuffer<TemplatePolicy>(
+    [policy, persistPolicy] = useEditorBuffer<TemplatePolicy>(
       `compass.pipeline.write.${list?.id || "new"}.${version?.id || "new"}.policy`,
       structuredClone(version?.policy || emptyTemplate()),
     ),
     [dirty, setDirty] = useState(false),
     [slotName, setSlotName] = useState("");
+  const history = useDraftHistory(policy, persistPolicy);
+  const setPolicy = history.change;
   const previousTemplate = usePipelineRead<PipelinePage<TemplateVersion>>(
     version?.parent_id
       ? queryPath("templates", { id: version.parent_id })
@@ -115,12 +120,7 @@ export function WriteEditor({
     null,
   );
   useEffect(() => {
-    if (
-      name !== (version?.name || "") ||
-      JSON.stringify(policy) !==
-        JSON.stringify(version?.policy || emptyTemplate())
-    )
-      setDirty(true);
+    setDirty(name !== (version?.name || "") || JSON.stringify(policy) !== JSON.stringify(version?.policy || emptyTemplate()));
   }, [name, policy, version]);
   useEffect(() => {
     onDirty(dirty || Boolean(manual));
@@ -150,6 +150,7 @@ export function WriteEditor({
     setPolicy((old) => ({ ...old, ...patch }));
     setDirty(true);
   }
+  const selectedVariation = selectPipelineVariation(policy, previewSignalValues(evidence, signals).values);
   async function saveTemplate() {
     const result = await command.save([
       {
@@ -204,7 +205,7 @@ export function WriteEditor({
       <div className="op-document">
         <div className="op-editor-heading">
           <div>
-            <h2>Write</h2>
+            <h2>Write your outreach</h2>
             <p>
               Draft recipients retain their company, evidence and exact previous
               copy.
@@ -215,12 +216,14 @@ export function WriteEditor({
             disabled={
               !writable || command.busy || command.uncertain || !name.trim()
             }
-            onClick={() => void saveTemplate()}
+            type="submit" form="op-writing-config"
           >
             Save template version
           </button>
         </div>
+        <div className="op-editor-history"><span>{dirty ? "Draft kept in this browser tab" : "Saved template"}</span><div className="op-inline"><button type="button" disabled={!history.canUndo || command.busy || command.uncertain} onClick={history.undo}>Undo</button><button type="button" disabled={!history.canRedo || command.busy || command.uncertain} onClick={history.redo}>Redo</button><button type="button" disabled={!dirty || command.busy || command.uncertain} onClick={() => { if (window.confirm("Revert the template to its saved version? Undo can recover this draft. Recipient revisions are unchanged.")) { setPolicy(structuredClone(version?.policy || emptyTemplate())); setName(version?.name || ""); } }}>Revert to saved</button></div></div>
         <CommandNotice state={command} />
+        <form id="op-writing-config" onSubmit={event => { event.preventDefault(); void saveTemplate(); }}>
         <fieldset disabled={!writable || command.busy || command.uncertain}>
           <Field label="Template name">
             <input
@@ -235,11 +238,12 @@ export function WriteEditor({
             <select
               value={policy.mode}
               onChange={(e) =>
-                update({ mode: e.target.value as TemplatePolicy["mode"] })
+                (e.target.value !== "ai" || !policy.variations?.length || window.confirm("AI mode cannot use deterministic variations. Remove the variations and switch? Undo restores them.")) &&
+                update({ mode: e.target.value as TemplatePolicy["mode"], ...(e.target.value === "ai" ? { variations: [] } : {}) })
               }
             >
               <option value="deterministic">
-                Deterministic signal substitution
+                Signal-based variations and slots
               </option>
               <option value="ai">AI writing from recorded evidence</option>
             </select>
@@ -278,17 +282,7 @@ export function WriteEditor({
               </Field>
             </>
           )}
-          <div className="op-email-document">
-            {parts.map((part) => (
-              <Field key={part} label={names[part]}>
-                <textarea
-                  rows={part === "body" ? 6 : part === "opener" ? 3 : 2}
-                  value={policy[part]}
-                  onChange={(e) => update({ [part]: e.target.value })}
-                />
-              </Field>
-            ))}
-          </div>
+          <SignalVariations policy={policy} signals={signals} onChange={update} />
           <section>
             <div className="op-section-heading">
               <h3>Signal slots</h3>
@@ -348,8 +342,8 @@ export function WriteEditor({
                         {signals.find((v) => v.id === id)?.label ||
                           "Previously configured signal"}
                       </span>
-                      <button
-                        type="button"
+                      <button type="button"
+
                         disabled={index === 0}
                         onClick={() => {
                           const ids = [...slot.signal_ids];
@@ -367,8 +361,8 @@ export function WriteEditor({
                       >
                         Move up
                       </button>
-                      <button
-                        type="button"
+                      <button type="button"
+
                         onClick={() =>
                           update({
                             slots: {
@@ -526,6 +520,7 @@ export function WriteEditor({
             ))}
           </section>
         </fieldset>
+        </form>
         <section>
           <h3>Apply to lists</h3>
           <p>
@@ -588,7 +583,8 @@ export function WriteEditor({
         )}
       </div>
       <aside className="op-context">
-        <h3>Recipient preview</h3>
+        <h3>{recipient ? "Recipient preview" : "Default message preview"}</h3>
+        <p className="op-muted">{recipient ? `Matched: ${selectedVariation?.name || "Default message"}. Only supported, non-conflicting evidence fills slots.` : "No recipient selected. This shows the fallback copy, not researched personalisation. Open Recipients above to choose a real lead."}</p>
         {recipient ? (
           <>
             <strong>{recipient.mailbox}</strong>
@@ -666,7 +662,7 @@ export function WriteEditor({
                     />
                   </Field>
                 ))}
-                <button
+                <button type="button"
                   disabled={
                     !manual ||
                     !version ||
@@ -706,7 +702,7 @@ export function WriteEditor({
                             .filter(Boolean)
                             .join("\n\n")}
                         </p>
-                        <button
+                        <button type="button"
                           disabled={
                             !writable || command.busy || command.uncertain
                           }
@@ -732,10 +728,9 @@ export function WriteEditor({
             )}
           </>
         ) : (
-          <p>
-            Open a recipient from the Write table to preview real copy and
-            evidence.
-          </p>
+          <div className="op-email-preview">
+            {parts.map(part => <section key={part}><h4>{names[part]}</h4><p className="op-copy-text">{policy[part] || "—"}</p></section>)}
+          </div>
         )}
       </aside>
     </div>
