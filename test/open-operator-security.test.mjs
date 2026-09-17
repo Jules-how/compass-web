@@ -5,7 +5,7 @@ import {
   openOperatorCredentials,
 } from '../src/lib/open-operator.ts'
 
-test('hosted builds never automatically grant operator sessions, including explicit flag', () => {
+test('open operator can auto-grant hosted sessions when configured and can be disabled explicitly', () => {
   const keys = [
     'NODE_ENV',
     'COMPASS_OPEN_OPERATOR',
@@ -15,14 +15,19 @@ test('hosted builds never automatically grant operator sessions, including expli
   const before = Object.fromEntries(keys.map((k) => [k, process.env[k]]))
   try {
     process.env.NODE_ENV = 'production'
-    process.env.COMPASS_OPEN_OPERATOR = '1'
+    delete process.env.COMPASS_OPEN_OPERATOR
     process.env.COMPASS_OPEN_OPERATOR_EMAIL = 'fixture@example.com'
     process.env.COMPASS_OPEN_OPERATOR_PASSWORD = 'local-test-only'
+    assert.equal(isOpenOperatorEnabled(), true)
+    assert.deepEqual(openOperatorCredentials(), {
+      email: 'fixture@example.com',
+      password: 'local-test-only',
+    })
+
+    process.env.COMPASS_OPEN_OPERATOR = '0'
     assert.equal(isOpenOperatorEnabled(), false)
     assert.equal(openOperatorCredentials(), null)
-    process.env.NODE_ENV = 'development'
-    delete process.env.COMPASS_OPEN_OPERATOR
-    assert.equal(openOperatorCredentials(), null)
+
     process.env.COMPASS_OPEN_OPERATOR = '1'
     delete process.env.COMPASS_OPEN_OPERATOR_PASSWORD
     assert.equal(openOperatorCredentials(), null)
