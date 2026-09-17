@@ -20,9 +20,9 @@ Started 17 September 2026 after Jules authorized the implementation plan. Implem
 | Shared types, durable records, atomic/revision-checked API, run state and migration | Astra-low `pipeline_foundation` | Implemented; focused database tests pass; release integration pending |
 | Navigation, stable shell, calling cache/research link, Test planner spacing | Astra-low `shell_calling` | Implemented; 19 focused tests passed; visual verification pending |
 | Real lead table and Research/Write editors | Astra-low `shell_calling` | Implemented against real APIs; delivery and full scope parity in progress |
-| Frozen template jobs, exports and paused preparation/readback | Astra-low `pipeline_foundation` plus resume on this Mac | Deterministic and AI apply/export/membership freeze implemented; paused delivery + 100-row Instantly readback in the uncommitted tree |
+| Frozen template jobs, exports and paused preparation/readback | Astra-low `pipeline_foundation` plus resume on this Mac | Deterministic and AI apply/export/membership freeze implemented; paused delivery + 100-row Instantly readback on `17e61ef` |
 | CRM international/social/phone writes, legacy bridge, MCP and connected executor sessions | Supervisor | Implemented; MCP now includes delivery/readback and region filters |
-| International/scale, migration rehearsal, independent review and hosted acceptance | Supervisor coordinates later passes | Region filters and paged company RPC are in tree; 100k CI rerun pending this push; hosted cutover and independent review still blocked |
+| International/scale, migration rehearsal, independent review and hosted acceptance | Supervisor coordinates later passes | Region filters and paged company RPC are in tree; GitHub 100k `representative-scale` green on `17e61ef` (p95 815.5ms); hosted cutover and independent review still blocked |
 
 ## Required closure
 
@@ -43,13 +43,13 @@ Production rollout must not replace the current working surface with a database-
 
 ## Follow-up validation and outstanding work
 
-- Foundation/jobs/readback/AI apply: implemented on `codex/compass-outbound-implementation` working tree (HEAD `552d343` plus uncommitted files). Operator UI previews AI jobs; connected executor supplies `apply_chunk` copies. No silent deterministic fallback.
+- Foundation/jobs/readback/AI apply: implemented on `codex/compass-outbound-implementation` at `17e61ef`. Operator UI previews AI jobs; connected executor supplies `apply_chunk` copies. No silent deterministic fallback.
 - Recipient table filters (draft/verification), frozen all-matching membership jobs, and `administrative_region` filters are wired through SQL, API, delivery, jobs, MCP, and the table chrome.
-- Company list reads use `outbound_pipeline_companies(filters, after, limit)` plus `outbound_pipeline_company_count` so PostgREST cannot materialize the full filtered set before LIMIT. The 17 Sep CI failure (`representative-scale` p95 1531.5ms / 100k) was this materialization. Local 100k is still forbidden on this Mac (`PIPELINE_BENCHMARK_COMPANIES` > 1000 throws unless `CI`).
-- Day-planner and goals service-role imports are pre-existing (present on `924fe9b` / origin/main). Test 1 now excludes `/api/day-planner/` and `/api/goals/`. Test 2 inventories those routes plus new readback routes and previously missing agent goals/instructions/lineage files. This PR does not change day-planner/goals behavior.
+- Company list reads use `outbound_pipeline_companies(filters, after, limit)` plus `outbound_pipeline_company_count` so PostgREST cannot materialize the full filtered set before LIMIT. The 17 Sep CI failure (`representative-scale` p95 1531.5ms / 100k) was this materialization. GitHub rerun on `17e61ef` passed: p95 **815.5ms** / 100k, `target_met: true`. Local 100k is still forbidden on this Mac (`PIPELINE_BENCHMARK_COMPANIES` > 1000 throws unless `CI`).
+- Day-planner and goals service-role imports are pre-existing (present on `924fe9b` / origin/main). Test 1 now excludes `/api/day-planner/` and `/api/goals/`. Test 2 inventories those routes plus new readback routes and previously missing agent goals/instructions/lineage files. This PR does not change day-planner/goals behavior. Deploy-guards `verify` on `17e61ef` succeeded with that inventory.
 - Separate `COMPASS_OUTBOUND_PIPELINE_SURFACE` flag still keeps Overview available. No production migration, flag cutover, Instantly activation, or paid prospect run.
-- Still blocked: independent review; hosted schema/data/flag rehearsal; viewport/zoom visual acceptance; GitHub `representative-scale` green after this push.
+- Still blocked: independent review; hosted schema/data/flag rehearsal; viewport/zoom visual acceptance. Instantly activation and paid prospect runs remain out of scope.
 
 ## Draft review checkpoint
 
-Pushed checkpoint remains `552d343` / draft PR 91. This resume commits the remaining uncommitted pipeline/readback/AI/scale work onto that branch without force-push or merge. Prototype paths under `design-plans/2026-09-16-miro-fixes/`, `design-plans/2026-09-16-workflow-prototype/`, and `public/outbound-pipeline-prototype.html` stay untracked.
+Pushed checkpoint is `17e61ef` on draft PR 91. Remaining pipeline/readback/AI/scale work from the dirty tree is on that commit. Prototype paths under `design-plans/2026-09-16-miro-fixes/`, `design-plans/2026-09-16-workflow-prototype/`, and `public/outbound-pipeline-prototype.html` stay untracked.

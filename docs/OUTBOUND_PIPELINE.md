@@ -53,7 +53,7 @@ Every action returns `{request_id,run,item,attempt}`. Use its new run revision f
 
 ## Remaining release work and extension points
 
-This branch now includes frozen template/export/membership jobs, paused Instantly delivery, resumable provider readback (100-row pages, repeated-cursor detection), AI bulk apply via connected-executor copies, recipient/region filters, and MCP tools for pipeline/jobs/delivery/readback. Remaining before production: independent review; hosted migration/flag rehearsal and cutover; viewport/zoom visual acceptance; live 100k CI confirmation after this push. Do not activate campaigns or run paid prospecting from this work.
+This branch now includes frozen template/export/membership jobs, paused Instantly delivery, resumable provider readback (100-row pages, repeated-cursor detection), AI bulk apply via connected-executor copies, recipient/region filters, and MCP tools for pipeline/jobs/delivery/readback. GitHub `representative-scale` on `17e61ef` met the 100k p95 target (815.5ms). Remaining before production: independent review; hosted migration/flag rehearsal and cutover; viewport/zoom visual acceptance. Do not activate campaigns or run paid prospecting from this work.
 
 Run item completion records durable evidence, not campaign sends. Historical assignments do not establish past outreach. Preparation must still enforce actual prior sends and fresh suppression, exact copy, sender/settings policy and approval independently.
 
