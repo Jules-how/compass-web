@@ -1,0 +1,49 @@
+name: Copy Control
+
+on:
+  push:
+    branches: [feat/write-copy-control-studio]
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - 'mcp/**'
+      - '.github/workflows/copy-control.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: copy-control-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Snapshot tracked source for implementation review
+        run: git archive --format=tar.gz HEAD > /tmp/compass-source.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compass-source-${{ github.sha }}
+          path: /tmp/compass-source.tar.gz
+          retention-days: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - name: Copy Control unit and integration tests
+        run: |
+          if compgen -G 'test/copy-control*.test.mjs' > /dev/null; then
+            node --test test/copy-control*.test.mjs
+          fi
+      - name: Production build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: public-anon-key
+          COMPASS_OPEN_OPERATOR: '1'
+        run: npm run build
