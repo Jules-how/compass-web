@@ -5,7 +5,7 @@ import {PGlite} from '@electric-sql/pglite'
 test('pipeline migration and atomic company-first scope',async()=>{
  const db=new PGlite();try{
  await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role BYPASSRLS;CREATE FUNCTION portal_is_operator() RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
- CREATE TABLE lead_contacts(id text PRIMARY KEY,email text,phone text,company text,updated_at timestamptz,outbound_status text,suppression_reason text,is_archived boolean DEFAULT false,recontact_ok integer DEFAULT 1,instantly_campaign_id text);
+ CREATE TABLE lead_contacts(id text PRIMARY KEY,email text,phone text,company text,updated_at timestamptz,outbound_status text,suppression_reason text,is_archived boolean DEFAULT false,recontact_ok integer DEFAULT 1,instantly_campaign_id text,instantly_lead_id text,enrich_status text);
  CREATE TABLE compass_offer_revisions(id text PRIMARY KEY);INSERT INTO compass_offer_revisions VALUES('offer-v1');
  CREATE TABLE compass_outbound_companies(id text PRIMARY KEY);CREATE TABLE compass_lead_list_members(lead_id text,list_id text);
  CREATE TABLE compass_lead_lists(id text PRIMARY KEY,name text NOT NULL,notes text,created_at timestamptz DEFAULT now(),updated_at timestamptz DEFAULT now());`)
@@ -18,12 +18,13 @@ test('pipeline migration and atomic company-first scope',async()=>{
  CREATE TABLE compass_outbound_runs(id text PRIMARY KEY,campaign_id text,source_hash text,artifact_path text,source_rows jsonb,candidates jsonb,candidates_hash text,context jsonb,context_hash text,status text);
  CREATE TABLE compass_outbound_preparations(id text PRIMARY KEY,run_id text,hash text,input_hash text,context_hash text,bundle jsonb,created_at timestamptz DEFAULT now());
  CREATE TABLE compass_outbound_approvals(preparation_id text PRIMARY KEY,hash text,actor_id uuid,approved_at timestamptz DEFAULT now());
- CREATE TABLE compass_outbound_loads(preparation_id text PRIMARY KEY,instantly_campaign_id text);
+ CREATE TABLE compass_outbound_loads(preparation_id text PRIMARY KEY,instantly_campaign_id text,status text,snapshot jsonb,updated_at timestamptz);
  CREATE TABLE compass_outbound_reservations(identity_key text PRIMARY KEY,preparation_id text);
  CREATE TABLE compass_outbound_receipt_history(preparation_id text,receipt_hash text,receipt jsonb);
  CREATE FUNCTION outbound_check_preparation(text,boolean DEFAULT false) RETURNS jsonb LANGUAGE sql AS $$ SELECT '{"legacy":true}'::jsonb $$;
  CREATE FUNCTION outbound_reserve_load(text,text) RETURNS void LANGUAGE sql AS $$ SELECT $$;`)
  await db.exec(fs.readFileSync('supabase/migrations/20260917110000_outbound_pipeline_delivery.sql','utf8'))
+ await db.exec(fs.readFileSync('supabase/migrations/20260917130000_outbound_pipeline_readback.sql','utf8'))
 
  await db.exec(`INSERT INTO crm_companies(id,name,actor) VALUES('company','No email company','fixture')`)
  let n=0;const apply=async(operations,request='request-'+(++n))=>{const c={schema_version:'outbound.pipeline.v1',request_id:request,source:'fixture',operations};return(await db.query('SELECT outbound_pipeline_apply($1,$2,$3) result',[c,JSON.stringify(c),'agent'])).rows[0].result}
@@ -91,6 +92,16 @@ test('pipeline migration and atomic company-first scope',async()=>{
  await db.exec("UPDATE crm_companies SET name='Changed after freeze' WHERE id='company'");assert.equal((await db.query("SELECT payload#>>'{row,name}' name FROM outbound_pipeline_job_items WHERE id=$1",[exportItem.id])).rows[0].name,'No email company');
  const exportChunk=jobCommand('export_chunk','export-job',{},exportJob.job.revision);
  const exported=(await db.query('SELECT outbound_pipeline_job_commit($1,$2,$3,$4,$5) result',[exportChunk,JSON.stringify(exportChunk),'agent',[{item_id:exportItem.id,status:'applied'}],'"company","No email company"\r\n'])).rows[0].result;assert.equal(exported.job.status,'completed');assert.equal(exported.job.applied_count,1);
+ const memPreview=await createJob(jobCommand('preview_membership','mem-job',{list_id:'list',operation:'remove',filters:{list_id:'list'}}));assert.equal(memPreview.job.total_count,1);
+ await apply([op('membership',{id:'member-foreign',list_id:'list',company_id:'foreign',active:true,origin:'after freeze'})]);
+ assert.equal((await db.query("SELECT count(*)::int n FROM outbound_pipeline_job_items WHERE job_id='mem-job'")).rows[0].n,1);
+ await db.exec(`INSERT INTO crm_companies(id,name,actor) VALUES('region-co','Region co','fixture')`);
+ await apply([op('membership',{id:'member-region',list_id:'list',company_id:'region-co',active:true,origin:'region'})]);
+ await db.exec(`INSERT INTO crm_company_locations(id,company_id,label,kind,city,administrative_region,country_code,source_id,actor) VALUES('loc','region-co','HQ','premises','Sydney','NSW','AU','source','fixture')`);
+ assert.equal((await db.query(`SELECT count(*)::int n FROM outbound_pipeline_companies('{"list_id":"list","administrative_region":"NSW"}')`)).rows[0].n,1);
+ assert.equal((await db.query(`SELECT count(*)::int n FROM outbound_pipeline_companies('{"list_id":"list","administrative_region":"VIC"}')`)).rows[0].n,0);
+ assert.equal(Number((await db.query(`SELECT outbound_pipeline_company_count('{"list_id":"list","administrative_region":"NSW"}') n`)).rows[0].n),1);
+ assert.equal((await db.query(`SELECT count(*)::int n FROM outbound_pipeline_companies('{"list_id":"list","administrative_region":"NSW"}','',10)`)).rows[0].n,1);
 
  await db.exec(`INSERT INTO lead_contacts(id,email,company,outbound_status) VALUES('delivery-lead','office@example.test','Changed after freeze','uncontacted');INSERT INTO crm_lead_links(id,lead_id,company_id,match_state,reason,source_id,actor) VALUES('delivery-link','delivery-lead','company','confirmed','Exact source match','source','fixture')`);
  const deliveryContext={campaign_id:'campaign',offer_revision_id:'offer-v1',market_test_id:null,offer:{},vertical:'',city:'',recipe:{mode:'evidence_draft',subject:'{{subject}}',opener:'{{opener}}'},settings:{timezone:'Europe/London',email_list:['sender@example.test'],from:'09:00',to:'17:00',daily_limit:10},sequence:{steps:[]},pipeline:{manifest_id:'manifest',list_id:'list',workflow_version_id:'workflow',template_version_id:'template'}};
@@ -104,7 +115,40 @@ test('pipeline migration and atomic company-first scope',async()=>{
  assert.equal((await db.query("SELECT outbound_check_preparation('legacy',false) result")).rows[0].result.legacy,true);
  await db.query("SELECT outbound_approve_preparation('manifest',$1)",[built.manifest.hash]);
  await db.query("SELECT outbound_reserve_load('manifest','provider-campaign')");assert.equal((await db.query("SELECT count(*)::int n FROM compass_outbound_reservations WHERE preparation_id='manifest'")).rows[0].n,2);
- await apply([op('draft',{id:'changed-after-approval',list_id:'list',recipient_id:'recipient',template_version_id:'template',copy,provenance:'manual',input_refs:[],previous_id:'draft-concurrent'})]);
+ let rbCounter=0;
+ const rb=async(id,action,revision,payload={},actor='agent')=>{const command={schema_version:'outbound.pipeline.v1',request_id:'readback-'+(++rbCounter),source:'fixture',manifest_id:'manifest',readback_id:id,expected_revision:revision,action,data:{}};return(await db.query('SELECT outbound_pipeline_readback_command($1,$2,$3,$4) result',[command,JSON.stringify(command),actor,payload])).rows[0].result.readback};
+ await rb('pager','start_baseline',0);
+ let pagerLease=(await db.query("SELECT outbound_pipeline_readback_claim('pager',1) r")).rows[0].r;
+ const tooBig=Array.from({length:101},(_,i)=>({id:'p'+i,email:'p'+i+'@example.test'}));
+ await assert.rejects(rb('pager','page',1,{lease_token:pagerLease.lease_token,cursor:null,rows:tooBig,next_cursor:'c1'}),/page_too_large/);
+ const page1=await rb('pager','page',1,{lease_token:pagerLease.lease_token,cursor:null,rows:[{id:'p1',email:'a@example.test'}],next_cursor:'c1'});
+ assert.equal(page1.page_count,1);assert.equal(page1.status,'scanning');
+ pagerLease=(await db.query("SELECT outbound_pipeline_readback_claim('pager',2) r")).rows[0].r;
+ const repeated=await rb('pager','page',2,{lease_token:pagerLease.lease_token,cursor:'c1',rows:[{id:'p2',email:'b@example.test'}],next_cursor:''});
+ assert.equal(repeated.status,'attention');
+ await rb('baseline','start_baseline',0);
+ let readbackLease=(await db.query("SELECT outbound_pipeline_readback_claim('baseline',1) r")).rows[0].r;
+ await rb('baseline','page',1,{lease_token:readbackLease.lease_token,cursor:null,rows:[],next_cursor:null});
+ await rb('baseline','compare_chunk',2,{results:[{item_id:di.id,recipient_id:'recipient',email:'office@example.test',status:'missing'}],last_item_id:di.id});
+ const baseline=await rb('baseline','finish',3);assert.equal(baseline.approved,true);assert.equal(baseline.summary.missing,1);
+ await assert.rejects(rb('new-baseline','start_baseline',0),/original_baseline_frozen/);
+ assert.equal((await db.query("SELECT count(*)::int n FROM outbound_pipeline_delivery_delta('manifest')")).rows[0].n,1);
+ await rb('reconcile','start_reconcile',0);
+ readbackLease=(await db.query("SELECT outbound_pipeline_readback_claim('reconcile',1) r")).rows[0].r;
+ await rb('reconcile','page',1,{lease_token:readbackLease.lease_token,cursor:null,rows:[{id:'provider-lead',email:'office@example.test'}],next_cursor:null});
+ await rb('reconcile','compare_chunk',2,{results:[{item_id:di.id,recipient_id:'recipient',email:'office@example.test',status:'confirmed',provider_id:'provider-lead'}],last_item_id:di.id});
+ const reconciled=await rb('reconcile','finish',3);assert.equal(reconciled.status,'complete');assert.equal(reconciled.summary.unexpected,0);
+ assert.equal((await db.query("SELECT instantly_lead_id FROM lead_contacts WHERE id='delivery-lead'")).rows[0].instantly_lead_id,'provider-lead');
+ assert.equal((await db.query("SELECT count(*)::int n FROM outbound_pipeline_delivery_delta('manifest')")).rows[0].n,0);
+ await apply([op('draft',{id:'changed-after-approval',list_id:'list',recipient_id:'recipient',template_version_id:'template',copy,provenance:'manual',input_refs:[],previous_id:(await db.query("SELECT current_draft_id id FROM outbound_pipeline_recipient_profiles WHERE id='recipient'")).rows[0].id})]);
  await assert.rejects(db.query("SELECT outbound_check_preparation('manifest',true)"),/draft_changed/);
+ const aiPolicy={mode:'ai',subject:'Hello',opener:'Published fact',body:'Body',cta:'Reply',unsubscribe:'Opt out',slots:{},followups:[],ai:{model:'connected.write',prompt:'Use recorded evidence'}};
+ await apply([op('template',{id:'ai-template',name:'AI template',policy:aiPolicy})]);
+ const aiPreview=await createJob(jobCommand('preview_apply','ai-job',{current_list_id:'list',template_version_id:'ai-template'}));assert.equal(aiPreview.job.total_count,1);assert.equal(aiPreview.job.config.policy.mode,'ai');
+ const aiItem=(await db.query("SELECT * FROM outbound_pipeline_job_items WHERE job_id='ai-job'")).rows[0];
+ const aiChunk=jobCommand('apply_chunk','ai-job',{},aiPreview.job.revision);
+ const aiApplied=(await db.query('SELECT outbound_pipeline_job_commit($1,$2,$3,$4,$5) result',[aiChunk,JSON.stringify(aiChunk),'agent',[{item_id:aiItem.id,status:'applied',copy:{...copy,body:'Grounded AI text'}}],''])).rows[0].result;
+ assert.equal(aiApplied.job.status,'completed');
+ assert.equal((await db.query("SELECT provenance,copy->>'body' body FROM outbound_pipeline_drafts d JOIN outbound_pipeline_recipient_profiles r ON r.current_draft_id=d.id WHERE r.id='recipient'")).rows[0].provenance,'ai');
  }finally{await db.close()}
 })

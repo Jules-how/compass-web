@@ -66,7 +66,7 @@ export type Settings = {
   match_lead_esp?: boolean;
 };
 export type Context = {
-  pipeline?: {manifest_id:string;list_id:string;workflow_version_id:string;template_version_id:string};
+  pipeline?: {manifest_id:string;list_id:string;workflow_version_id:string;template_version_id:string;copy_mode?:"recipient_variables"|"existing_sequence";source_sequence?:OutboundSequence};
   campaign_id: string;
   offer_revision_id: string;
   market_test_id: string | null;
@@ -635,7 +635,7 @@ export function instantlyExpected(bundle: Bundle) {
           delay:
             i === bundle.context.sequence.steps.length - 1
               ? 0
-              : bundle.context.sequence.steps[i + 1].delay_days,
+              : Math.max(2, bundle.context.sequence.steps[i + 1].delay_days ?? 2),
           variants: [
             {
               subject: step.subject,

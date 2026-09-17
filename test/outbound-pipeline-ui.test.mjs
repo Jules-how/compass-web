@@ -18,5 +18,6 @@ test('preview serializes grounded scalar lists consistently with saved jobs',()=
  assert.deepEqual(previewSignalValues([{...fact,value:[['Ducted']]}],[definition]).values,{})
 })
 test('all-matching scope drops empty optional geography without changing entered scope',()=>{
- assert.deepEqual(runScopeFilters({q:'Installer',city:'',suburb:'',country:'AU',fit:'likely_fit',status:''}),{q:'Installer',country:'AU',fit:'likely_fit'})
+ assert.deepEqual(runScopeFilters({q:'Installer',city:'',suburb:'',country:'AU',administrative_region:'',fit:'likely_fit',status:''}),{q:'Installer',country:'AU',fit:'likely_fit'})
+ assert.deepEqual(runScopeFilters({q:'',city:'',suburb:'',country:'AU',administrative_region:'NSW',fit:'',status:''}),{country:'AU',administrative_region:'NSW'})
 })

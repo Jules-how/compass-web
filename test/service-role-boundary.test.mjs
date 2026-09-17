@@ -31,7 +31,9 @@ test('customer and legacy operator data routes never import a service-role clien
         !file.includes('/api/delivery-engine/') &&
         !file.endsWith('/api/expenses/route.ts') &&
         !file.includes('/api/leads/') &&
-        !file.includes('/api/reactivation/')
+        !file.includes('/api/reactivation/') &&
+        !file.includes('/api/day-planner/') &&
+        !file.includes('/api/goals/')
     )
     .filter((file) => /getSupabaseServiceClient|getPortalAdminClient|SUPABASE_SERVICE_ROLE_KEY/.test(readFileSync(file, 'utf8')))
     .map((file) => relative(appRoot.pathname, file))
@@ -59,11 +61,13 @@ test('service-role route inventory remains explicit', () => {
     'api/agent/crm/records/[kind]/[id]/route.ts',
     'api/agent/crm/research/route.ts',
     'api/agent/cs/route.ts',
+    'api/agent/goals/actions/route.ts',
     'api/agent/instantly/backfill/route.ts',
     'api/agent/instantly/duplicate-template/route.ts',
     'api/agent/instantly/ensure/route.ts',
     'api/agent/instantly/push-leads/route.ts',
     'api/agent/instantly/push-sequence/route.ts',
+    'api/agent/instructions/route.ts',
     'api/agent/leads/cohort/route.ts',
     'api/agent/leads/export/route.ts',
     'api/agent/leads/inventory/route.ts',
@@ -72,6 +76,7 @@ test('service-role route inventory remains explicit', () => {
     'api/agent/leads/route.ts',
     'api/agent/lists/[id]/members/route.ts',
     'api/agent/lists/route.ts',
+    'api/agent/offers/[id]/lineage/route.ts',
     'api/agent/offers/cells/route.ts',
     'api/agent/offers/desk/route.ts',
     'api/agent/operating/route.ts',
@@ -82,6 +87,7 @@ test('service-role route inventory remains explicit', () => {
     'api/agent/outbound/pathway/runs/route.ts',
     'api/agent/outbound/pipeline/capabilities/route.ts',
     'api/agent/outbound/pipeline/delivery/artifact/route.ts',
+    'api/agent/outbound/pipeline/delivery/readback/route.ts',
     'api/agent/outbound/pipeline/delivery/route.ts',
     'api/agent/outbound/pipeline/executor/route.ts',
     'api/agent/outbound/pipeline/jobs/artifact/route.ts',
@@ -96,6 +102,10 @@ test('service-role route inventory remains explicit', () => {
     'api/agent/workspace/route.ts',
     'api/clients/[id]/onboarding/route.ts',
     'api/cron/daily-sync/route.ts',
+    'api/day-planner/callback/route.ts',
+    'api/day-planner/google/route.ts',
+    'api/day-planner/repeat/route.ts',
+    'api/day-planner/route.ts',
     'api/delivery-engine/accounts/route.ts',
     'api/delivery-engine/intake/route.ts',
     'api/delivery-engine/route.ts',
@@ -103,6 +113,7 @@ test('service-role route inventory remains explicit', () => {
     'api/delivery-engine/webhooks/twilio/status/route.ts',
     'api/delivery-engine/worker/route.ts',
     'api/expenses/route.ts',
+    'api/goals/actions/route.ts',
     'api/ingest/comms/route.ts',
     'api/ingest/leads/route.ts',
     'api/ingest/site-events/route.ts',
@@ -121,6 +132,7 @@ test('service-role route inventory remains explicit', () => {
     'api/operator/operating/preparation/[id]/route.ts',
     'api/operator/outbound/pipeline/capabilities/route.ts',
     'api/operator/outbound/pipeline/delivery/artifact/route.ts',
+    'api/operator/outbound/pipeline/delivery/readback/route.ts',
     'api/operator/outbound/pipeline/delivery/route.ts',
     'api/operator/outbound/pipeline/executor/route.ts',
     'api/operator/outbound/pipeline/jobs/artifact/route.ts',

@@ -50,6 +50,7 @@ type Filters = {
   city: string;
   suburb: string;
   country: string;
+  administrative_region: string;
   fit: string;
   status: string;
 };
@@ -58,6 +59,7 @@ const emptyFilters: Filters = {
   city: "",
   suburb: "",
   country: "",
+  administrative_region: "",
   fit: "",
   status: "",
 };
@@ -582,27 +584,41 @@ export function WorkflowWorkspace() {
                 />
               </Field>
               <button disabled={false}>Search</button>
-              {(["country", "city", "suburb"] as const).map((key) => (
-                <Field
-                  key={key}
-                  label={key === "country" ? "Country code" : label(key)}
-                >
-                  <input
-                    value={filters[key]}
-                    maxLength={key === "country" ? 2 : undefined}
-                    placeholder={key === "country" ? "AU, NZ, US…" : undefined}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        [key]:
-                          key === "country"
-                            ? e.target.value.toUpperCase()
-                            : e.target.value,
-                      })
+              {(["country", "administrative_region", "city", "suburb"] as const).map(
+                (key) => (
+                  <Field
+                    key={key}
+                    label={
+                      key === "country"
+                        ? "Country code"
+                        : key === "administrative_region"
+                          ? "Region / state"
+                          : label(key)
                     }
-                  />
-                </Field>
-              ))}
+                  >
+                    <input
+                      value={filters[key]}
+                      maxLength={key === "country" ? 2 : undefined}
+                      placeholder={
+                        key === "country"
+                          ? "AU, NZ, US…"
+                          : key === "administrative_region"
+                            ? "NSW, California…"
+                            : undefined
+                      }
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          [key]:
+                            key === "country"
+                              ? e.target.value.toUpperCase()
+                              : e.target.value,
+                        })
+                      }
+                    />
+                  </Field>
+                ),
+              )}
               <Field label="ICP match">
                 <select
                   value={filters.fit}
@@ -882,6 +898,7 @@ export function WorkflowWorkspace() {
                           {[
                             (row as PipelineCompany).suburb,
                             (row as PipelineCompany).city,
+                            (row as PipelineCompany).administrative_region,
                             (row as PipelineCompany).country,
                           ]
                             .filter(Boolean)
@@ -1017,6 +1034,11 @@ export function WorkflowWorkspace() {
                 }}
                 companyIds={
                   stage !== "write" && !allMatching ? [...selected] : undefined
+                }
+                recipientIds={
+                  stage === "write" && !allMatching && selected.size
+                    ? [...selected]
+                    : undefined
                 }
                 onSaved={refresh}
               />
@@ -1209,7 +1231,12 @@ export function WorkflowWorkspace() {
             <Status value={company.fit} />
             <p>{company.reason || "No fit assessment recorded."}</p>
             <p>
-              {[company.suburb, company.city, company.country]
+              {[
+                company.suburb,
+                company.city,
+                company.administrative_region,
+                company.country,
+              ]
                 .filter(Boolean)
                 .join(", ")}
             </p>

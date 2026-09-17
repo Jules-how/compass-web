@@ -14,7 +14,7 @@ const DEFAULT_LIMIT = 50
 const EXPORT_MAX_LIMIT = 200
 const SEARCH_DEFAULT_LIMIT = 2000
 
-const pipelineReadProperties = Object.fromEntries(['collection','list_id','company_id','run_id','recipient_id','item_id','workflow_version_id','id','after','q','city','suburb','country','fit','stage','status','fields','changed_since','request_id'].map(key => [key, {type:'string'}]))
+const pipelineReadProperties = Object.fromEntries(['collection','list_id','company_id','run_id','recipient_id','item_id','workflow_version_id','id','after','q','city','suburb','country','administrative_region','fit','stage','status','draft_status','verification_status','fields','changed_since','request_id'].map(key => [key, {type:'string'}]))
 const commandSchema = {type:'object',required:['command'],properties:{command:{type:'object',additionalProperties:true}},additionalProperties:false}
 
 export const TOOLS = [
@@ -22,7 +22,9 @@ export const TOOLS = [
   {name:'outbound.pipeline.executor',description:'Read connected-agent adapter readiness, or register/heartbeat/attach an executor session using command. Register only actual read-only probes or confirmed recent successful tool execution, without secrets. Claim a work item then attach its lease before reserving provider calls. No automatic tool substitution.',inputSchema:{type:'object',properties:{command:{type:'object',additionalProperties:true}},additionalProperties:false}},
   {name:'outbound.pipeline',description:'Read the real company/list workflow ledger, versions, evidence, recipients, drafts, runs, items or uncertain-write receipts. Up to100 rows with scope-bound cursor. Defaults lists. Use saved policy and retained hold reasons.',inputSchema:{type:'object',properties:{...pipelineReadProperties,limit:{type:'integer',minimum:1,maximum:100}},additionalProperties:false}},
   {name:'outbound.pipeline.write',description:'Atomic revision-checked pipeline packet. Pass schema_version outbound.pipeline.v1, stable request_id, source and operations. Creates immutable workflow/template/draft versions and durable research records. Retry an uncertain command identically; never invent evidence or approvals.',inputSchema:commandSchema},
-  {name:'outbound.pipeline.jobs',description:'Read frozen template/export jobs or submit revision-checked preview/apply/export chunk commands. Preview freezes affected list/recipient/draft versions, including manual edits. Export data is distinct from approved paused delivery. Use exact request IDs and resume cursor; CSV artifacts download over HTTP.',inputSchema:{type:'object',properties:{job_id:{type:'string'},items:{type:'boolean'},after:{type:'string'},command:{type:'object',additionalProperties:true}},additionalProperties:false}},
+  {name:'outbound.pipeline.jobs',description:'Read frozen template/export/membership jobs or submit revision-checked preview/apply/export chunk commands. Preview freezes affected list/recipient/draft versions, including manual edits. AI apply_chunk requires grounded copies from the connected executor. Export data is distinct from approved paused delivery. Use exact request IDs and resume cursor; CSV artifacts download over HTTP.',inputSchema:{type:'object',properties:{job_id:{type:'string'},items:{type:'boolean'},after:{type:'string'},command:{type:'object',additionalProperties:true}},additionalProperties:false}},
+  {name:'outbound.pipeline.delivery',description:'Read or drive a frozen paused Instantly delivery manifest. Create/build/approve/reserve/configure without activating. GET with manifest_id; items=1 pages frozen recipients. No send.',inputSchema:{type:'object',properties:{manifest_id:{type:'string'},items:{type:'boolean'},after:{type:'string'},command:{type:'object',additionalProperties:true}},additionalProperties:false}},
+  {name:'outbound.pipeline.readback',description:'Resumable paused-provider baseline and reconcile readback. Page actual Instantly recipients 100 at a time, compare against the frozen manifest, then finish. Campaign stays paused. GET with readback_id; items=1 pages comparison results.',inputSchema:{type:'object',properties:{readback_id:{type:'string'},items:{type:'boolean'},after:{type:'string'},command:{type:'object',additionalProperties:true}},additionalProperties:false}},
   {name:'outbound.pipeline.run',description:'Control a saved workflow run: start, claim, heartbeat, reserve/report attempt, finish item, checkpoint, cancel or resume. Saved tools/order/fallback, budget, leases and immutable scope enforced. Agents cannot approve checkpoints. No automatic paid dispatch or activation.',inputSchema:commandSchema},
   {name:'crm.legacy',description:'Preview or apply a bounded, revision-checked legacy-to-company bridge. Preserves source snapshots, ambiguous records and historical lead state. Preview returns <=25 rows; import requires stable request_id and exact preview row IDs/updated_at. No outreach or qualification is inferred.',inputSchema:commandSchema},
   {name:'crm.read',description:'Read canonical CRM companies, evidence/contact collections, a company, lead links, method identity, exact record or command receipt. Real source-backed records; named-contact attribution and mailbox verification remain separate.',inputSchema:{type:'object',required:['action'],properties:{action:{type:'string',enum:['companies','company','collection','lead','receipt','method','record','capabilities']},id:{type:'string'},kind:{type:'string'},query:{type:'object',additionalProperties:{type:['string','number','boolean']}}},additionalProperties:false}},
@@ -358,10 +360,14 @@ export async function callTool(name, args = {}, { cfg, fetchImpl }) {
   if (!cfg.secret) return toolError('missing COMPASS_AGENT_SECRET')
 
   switch (name) {
-    case 'outbound.pipeline.jobs': {
+    case 'outbound.pipeline.jobs':
+    case 'outbound.pipeline.delivery':
+    case 'outbound.pipeline.readback': {
       if (args.command !== undefined && (!args.command || typeof args.command !== 'object' || Array.isArray(args.command))) return toolError('command must be an object');
-      const query=new URLSearchParams(['job_id','items','after'].filter(k=>args[k]!==undefined).map(k=>[k,k==='items'?(args[k]?'1':'0'):String(args[k])]));
-      const r=await compassFetch(cfg,{method:args.command ? 'POST' : 'GET',path:'/api/agent/outbound/pipeline/jobs'+(!args.command&&query.size?'?'+query:''),...(args.command ? {body:args.command} : {}),fetchImpl});
+      const keys = name === 'outbound.pipeline.jobs' ? ['job_id','items','after'] : name === 'outbound.pipeline.delivery' ? ['manifest_id','items','after'] : ['readback_id','items','after'];
+      const query=new URLSearchParams(keys.filter(k=>args[k]!==undefined).map(k=>[k,k==='items'?(args[k]?'1':'0'):String(args[k])]));
+      const path = name === 'outbound.pipeline.jobs' ? '/api/agent/outbound/pipeline/jobs' : name === 'outbound.pipeline.delivery' ? '/api/agent/outbound/pipeline/delivery' : '/api/agent/outbound/pipeline/delivery/readback';
+      const r=await compassFetch(cfg,{method:args.command ? 'POST' : 'GET',path:path+(!args.command&&query.size?'?'+query:''),...(args.command ? {body:args.command} : {}),fetchImpl});
       return r.status>=400 ? toolError(JSON.stringify(r.json)) : toolOk(r.json);
     }
     case 'outbound.pipeline.executor': {

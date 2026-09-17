@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { DeliveryReadbackPanel } from "./DeliveryReadbackPanel";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CompassCampaign } from "@/lib/campaigns";
 import { CAMPAIGNS_QUERY_KEY } from "@/lib/campaigns-client";
@@ -40,6 +41,9 @@ export function PipelineDeliveryPanel({
   writable: boolean;
   onSaved: () => void;
 }) {
+  const [copyMode, setCopyMode] = useState<
+    "recipient_variables" | "existing_sequence"
+  >("recipient_variables");
   const [campaignId, setCampaignId] = useState(""),
     [revision, setRevision] = useState(0),
     [building, setBuilding] = useState(false),
@@ -50,6 +54,7 @@ export function PipelineDeliveryPanel({
     `compass.pipeline.delivery.${listId}`,
     "",
   );
+  const [previewEvidence, setPreviewEvidence] = useEditorBuffer(`compass.pipeline.provider-preview.${manifestId}`, "");
   const campaigns = useCachedJson<{ campaigns: CompassCampaign[] }>(
     CAMPAIGNS_QUERY_KEY,
     "/api/campaigns",
@@ -85,7 +90,13 @@ export function PipelineDeliveryPanel({
   const manifest = state.data?.manifest;
   const blocked = command.busy || command.uncertain || building;
   async function send(
-    action: "create" | "build_chunk" | "approve" | "reserve",
+    action:
+      | "create"
+      | "build_chunk"
+      | "approve"
+      | "reserve"
+      | "configure_sequence"
+      | "approve_preview",
     id: string,
     expected_revision: number,
     data: object,
@@ -107,6 +118,7 @@ export function PipelineDeliveryPanel({
     setShowItems(false);
     await send("create", id, 0, {
       list_id: listId,
+      copy_mode: copyMode,
       campaign_id: campaignId,
       workflow_version_id: workflowId,
       template_version_id: templateId,
@@ -137,7 +149,7 @@ export function PipelineDeliveryPanel({
   }
   async function handoff() {
     if (!manifest) return;
-    const text = `Load the approved Compass outbound delivery manifest ${manifest.id} for campaign ${manifest.campaign_id}. Fetch its exact approved CSV artifact from /api/operator/outbound/pipeline/delivery/artifact?manifest_id=${manifest.id}. Use the connected Chrome CSV upload path, keep the target campaign paused, then reconcile actual provider recipients, merge values, copy and settings against this same frozen manifest. Resume partial imports by reconciling first. Do not activate or send.`;
+    const text = `Load the approved Compass outbound delivery manifest ${manifest.id} for campaign ${manifest.campaign_id}. Capture and approve the current provider baseline through /api/operator/outbound/pipeline/delivery/readback before upload. Fetch its exact approved missing-recipient CSV artifact from /api/operator/outbound/pipeline/delivery/artifact?manifest_id=${manifest.id}. Use the connected Chrome CSV upload path, keep the target campaign paused, then reconcile actual provider recipients, merge values, copy and settings against this same frozen manifest. Resume partial imports by reconciling first. Do not activate or send.`;
     try {
       await navigator.clipboard.writeText(text);
       setNotice(
@@ -169,6 +181,20 @@ export function PipelineDeliveryPanel({
               {campaign.name} · {campaign.status}
             </option>
           ))}
+        </select>
+      </Field>
+      <Field label="Provider copy format">
+        <select
+          value={copyMode}
+          onChange={(e) => setCopyMode(e.target.value as typeof copyMode)}
+          disabled={blocked}
+        >
+          <option value="recipient_variables">
+            Exact recipient drafts (empty paused campaign)
+          </option>
+          <option value="existing_sequence">
+            Keep existing compatible campaign sequence
+          </option>
         </select>
       </Field>
       {campaignId && (
@@ -317,6 +343,58 @@ export function PipelineDeliveryPanel({
               <p className="op-notice">
                 This exact manifest is approved. Held records remain excluded.
               </p>
+              {manifest.context.pipeline?.copy_mode ===
+                "recipient_variables" && (
+                <section>
+                  <h4>Exact recipient copy in Instantly</h4>
+                  <p>
+                    Configure the approved subject and body variables on an
+                    empty paused campaign before reserving the load. After
+                    upload, preview an actual selected lead in Instantly and
+                    record what you checked.
+                  </p>
+                  <button
+                    disabled={
+                      !writable || blocked || manifest.status !== "review"
+                    }
+                    onClick={() =>
+                      void send(
+                        "configure_sequence",
+                        manifest.id,
+                        manifest.revision,
+                        {},
+                      )
+                    }
+                  >
+                    Configure approved sequence on empty paused campaign
+                  </button>
+                  <Field label="Actual provider preview evidence">
+                    <textarea
+                      value={previewEvidence}
+                      onChange={(e) => setPreviewEvidence(e.target.value)}
+                      placeholder="Selected recipient, preview checked, and source or date"
+                    />
+                  </Field>
+                  <button
+                    disabled={
+                      !writable ||
+                      blocked ||
+                      previewEvidence.trim().length < 10 ||
+                      manifest.status === "review"
+                    }
+                    onClick={() =>
+                      void send(
+                        "approve_preview",
+                        manifest.id,
+                        manifest.revision,
+                        { evidence: previewEvidence.trim() },
+                      )
+                    }
+                  >
+                    Confirm actual selected-lead preview
+                  </button>
+                </section>
+              )}
               {manifest.status === "review" && (
                 <button
                   disabled={!writable || blocked}
@@ -327,16 +405,14 @@ export function PipelineDeliveryPanel({
                   Reserve paused browser load
                 </button>
               )}
-              <a
-                className="compass-btn-secondary"
-                href={`/api/operator/outbound/pipeline/delivery/artifact?manifest_id=${encodeURIComponent(manifest.id)}`}
-                download
-              >
-                Download exact upload CSV
-              </a>
-              <button onClick={() => void handoff()}>
-                Copy paused-load handoff
-              </button>
+              <DeliveryReadbackPanel
+                key={manifest.id}
+                manifestId={manifest.id}
+                intendedCount={manifest.pass_count}
+                writable={writable && !blocked && manifest.status !== "review"}
+                onSaved={refresh}
+                onHandoff={() => void handoff()}
+              />
             </>
           )}
           {manifest.status === "reserved" && (

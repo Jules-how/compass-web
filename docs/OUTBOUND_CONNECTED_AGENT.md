@@ -4,7 +4,7 @@ The first release uses an explicitly connected agent. Queuing a saved workflow i
 
 ## Connect and inspect
 
-Use `outbound.pipeline.capabilities`, `outbound.pipeline.executor`, and `outbound.pipeline` MCP tools. If an existing MCP process has not reloaded, use the corresponding authenticated HTTPS `/api/agent/outbound/pipeline` routes. Read `docs/OUTBOUND_PIPELINE.md` for packet schemas. Never print the secret.
+Use `outbound.pipeline.capabilities`, `outbound.pipeline.executor`, `outbound.pipeline`, `outbound.pipeline.jobs`, `outbound.pipeline.delivery`, and `outbound.pipeline.readback` MCP tools. If an existing MCP process has not reloaded, use the corresponding authenticated HTTPS `/api/agent/outbound/pipeline` routes. Read `docs/OUTBOUND_PIPELINE.md` for packet schemas. Never print the secret.
 
 Before work, inspect the current immutable workflow/template version, the run and remaining budget, and the actual tools available in this agent host. Map saved IDs to concrete adapters (for example `parallel.extract` to the currently connected Parallel extract tool). A tool name in a workflow is not proof it is installed or authenticated. Probe the actual adapter with a read-only capability/account check, or reuse a recent confirmed successful operation. Do not make paid prospect requests merely to check credentials. If no free probe exists, mark unavailable with the remedy; preserve the saved configuration.
 

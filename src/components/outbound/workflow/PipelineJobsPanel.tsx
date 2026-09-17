@@ -22,6 +22,7 @@ type Props = {
   dirty?: boolean;
   filters?: Record<string, string>;
   companyIds?: string[];
+  recipientIds?: string[];
   onSaved: () => void;
 };
 type JobResponse = { request_id: string; job: PipelineJob; processed?: number };
@@ -34,6 +35,7 @@ export function PipelineJobsPanel({
   dirty,
   filters,
   companyIds,
+  recipientIds,
   onSaved,
 }: Props) {
   const key = `${kind}.${listId}.${templateId || "dataset"}`;
@@ -76,6 +78,13 @@ export function PipelineJobsPanel({
     revision,
   );
   const job = state.data?.job;
+  const aiApply =
+    kind === "template_apply" &&
+    Boolean(
+      job?.config.policy &&
+        typeof job.config.policy === "object" &&
+        (job.config.policy as { mode?: string }).mode === "ai",
+    );
   const availableColumns =
     grain === "companies" ? COMPANY_EXPORT_COLUMNS : RECIPIENT_EXPORT_COLUMNS;
   async function send(
@@ -123,6 +132,10 @@ export function PipelineJobsPanel({
                     ),
                   )
                 : filters,
+            recipient_ids:
+              grain === "recipients" && recipientIds?.length
+                ? recipientIds
+                : undefined,
             company_ids:
               grain === "companies" && companyIds?.length
                 ? companyIds
@@ -131,13 +144,19 @@ export function PipelineJobsPanel({
     );
   }
   async function process() {
-    if (!job) return;
+    if (!job || aiApply) return;
     setProcessing(true);
     let current = job;
     try {
       while (
         live.current &&
-        !["completed", "attention"].includes(current.status)
+        !["completed", "attention"].includes(current.status) &&
+        !(
+          kind === "template_apply" &&
+          current.config.policy &&
+          typeof current.config.policy === "object" &&
+          (current.config.policy as { mode?: string }).mode === "ai"
+        )
       ) {
         const result = await send(
           kind === "template_apply" ? "apply_chunk" : "export_chunk",
@@ -217,7 +236,9 @@ export function PipelineJobsPanel({
           <p className="op-muted">
             {grain === "companies" && companyIds?.length
               ? `${companyIds.length} selected companies`
-              : "All matching records in the current list"}{" "}
+              : grain === "recipients" && recipientIds?.length
+                ? `${recipientIds.length} selected recipients`
+                : "All matching records in the current list"}{" "}
             · {columns.length} columns
           </p>
         </>
@@ -272,7 +293,7 @@ export function PipelineJobsPanel({
               remain in history.
             </p>
           )}
-          {["preview", "running"].includes(job.status) && (
+          {["preview", "running"].includes(job.status) && !aiApply && (
             <button
               className="compass-btn-primary"
               disabled={!writable || blocked}
@@ -284,6 +305,13 @@ export function PipelineJobsPanel({
                   ? "Apply frozen template changes"
                   : "Build CSV artifact"}
             </button>
+          )}
+          {aiApply && ["preview", "running"].includes(job.status) && (
+            <p className="op-notice">
+              Frozen AI application waits for the connected Write executor to
+              submit grounded copies. This operator control does not apply AI
+              copy.
+            </p>
           )}
           {job.status === "completed" && kind === "export" && (
             <a

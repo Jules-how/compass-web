@@ -48,8 +48,12 @@ export type LegacyImportContext = {
 };
 export function legacyOperations(
   lead: LegacyLead,
-  context: LegacyImportContext,
+  incoming: LegacyImportContext,
 ): { companyId: string; operations: CrmOperation[]; warnings: string[] } {
+  const context = {
+    existing: new Set(incoming.existing),
+    methodIds: new Map(incoming.methodIds),
+  };
   const companyId = legacyCompanyId(lead),
     sourceId = legacyId("source", [lead.id, lead.updated_at]),
     warnings: string[] = [];
@@ -217,11 +221,24 @@ export function legacyOperations(
     expected_lead_updated_at: lead.updated_at,
     ...primary,
   });
-  const parsed = parseCrmCommand({
-    schema_version: "crm.research.v1",
-    request_id: "legacy-validation",
-    source: "Legacy bridge",
-    operations,
-  });
-  return { companyId, operations: parsed.operations, warnings };
+  try {
+    const parsed = parseCrmCommand({
+      schema_version: "crm.research.v1",
+      request_id: "legacy-validation",
+      source: "Legacy bridge",
+      operations,
+    });
+    for (const key of context.existing) incoming.existing.add(key);
+    for (const [key, value] of context.methodIds)
+      incoming.methodIds.set(key, value);
+    return { companyId, operations: parsed.operations, warnings };
+  } catch {
+    // Preserve the source snapshot and let the rest of the bounded batch proceed.
+    // Never truncate an identity to force it through the canonical schema.
+    return {
+      companyId,
+      operations: [],
+      warnings: [...warnings, "legacy_record_requires_review"],
+    };
+  }
 }

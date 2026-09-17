@@ -100,8 +100,12 @@ GRANT USAGE,SELECT ON SEQUENCE public.outbound_pipeline_events_id_seq TO service
 CREATE INDEX pipeline_membership_list ON public.outbound_pipeline_memberships(list_id,active,company_id);
 CREATE INDEX pipeline_assessment_scope ON public.outbound_pipeline_assessments(company_id,workflow_version_id,
   created_at DESC,id DESC);
+CREATE INDEX pipeline_assessment_input ON public.outbound_pipeline_assessments(company_id,workflow_version_id,input_revision,created_at DESC,id DESC);
 CREATE INDEX pipeline_stage_scope ON public.outbound_pipeline_stages(list_id,company_id,stage,created_at DESC,
   id DESC);
+CREATE INDEX pipeline_stage_current ON public.outbound_pipeline_stages(list_id,company_id,workflow_version_id,stage,created_at DESC,id DESC) WHERE recipient_id IS NULL;
+CREATE INDEX pipeline_location_company ON public.crm_company_locations(company_id,city,suburb,administrative_region);
+CREATE INDEX pipeline_company_country ON public.crm_companies(country,id) WHERE NOT is_archived;
 CREATE INDEX pipeline_recipient_list ON public.outbound_pipeline_recipients(list_id,id);
 CREATE INDEX pipeline_draft_recipient ON public.outbound_pipeline_drafts(recipient_id,created_at DESC,
   id DESC);
@@ -218,6 +222,7 @@ BEGIN
   END IF;
   r:=r||'{"approved":false}'::jsonb;
  ELSIF k='stage' THEN
+  IF r->>'status'='completed' THEN RAISE EXCEPTION 'pipeline_stage_completion_requires_run';END IF;
   IF NOT EXISTS(SELECT 1 FROM outbound_pipeline_memberships WHERE list_id=r->>'list_id' AND company_id=r->>'company_id' AND active) THEN RAISE EXCEPTION 'pipeline_membership_required';
   END IF;
   IF r->>'recipient_id' IS NOT NULL AND NOT EXISTS(SELECT 1 FROM outbound_pipeline_recipients WHERE id=r->>'recipient_id' AND list_id=r->>'list_id' AND company_id=r->>'company_id') THEN RAISE EXCEPTION 'pipeline_stage_scope_mismatch';
@@ -253,32 +258,74 @@ REVOKE ALL ON FUNCTION public.outbound_pipeline_apply(jsonb,text,text) FROM PUBL
 GRANT EXECUTE ON FUNCTION public.outbound_pipeline_apply(jsonb,text,text) TO service_role;
 REVOKE ALL ON FUNCTION public.outbound_pipeline_capabilities() FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.outbound_pipeline_capabilities() TO authenticated,service_role;
-CREATE FUNCTION public.outbound_pipeline_companies(p_filters jsonb DEFAULT '{}') RETURNS TABLE(id text,
+CREATE FUNCTION public.outbound_pipeline_companies(p_filters jsonb DEFAULT '{}', p_after text DEFAULT '', p_limit integer DEFAULT NULL) RETURNS TABLE(id text,
   name text,country text,website text,revision integer,input_revision integer,list_id text,membership_id text,
   fit text,eligibility_override boolean,stage text,stage_status text,reason text,city text,suburb text,administrative_region text,
   timezone text) LANGUAGE sql STABLE SECURITY INVOKER AS $$
- SELECT c.id,c.name,c.country,c.website,c.revision,outbound_pipeline_input_revision(c.id),m.list_id,m.id,
-  coalesce(a.fit,'unknown'),coalesce(a.override_reason,'')<>'',coalesce(s.stage,p_filters->>'stage'),coalesce(s.status,CASE WHEN p_filters->>'stage'='contacts' AND coalesce(a.fit,
+ SELECT c.id,c.name,c.country,c.website,c.revision,(c.revision+coalesce(ir.evidence_revision,0)),scoped.list_id,scoped.membership_id,
+  coalesce(a.fit,'unknown'),coalesce(a.override_reason,'')<>'',coalesce(s.stage,p_filters->>'stage'),coalesce(CASE WHEN s.id IS NOT NULL AND s.input_hash IS DISTINCT FROM 'revision:'||(c.revision+coalesce(ir.evidence_revision,0)) THEN 'stale' ELSE s.status END,CASE WHEN p_filters->>'stage'='contacts' AND coalesce(a.fit,
   'unknown') NOT IN('likely_fit','sure_fit') AND coalesce(a.override_reason,'')='' THEN 'held' ELSE 'ready' END),coalesce(s.reason,a.reason,
   'Not started'),loc.city,loc.suburb,loc.administrative_region,loc.timezone
- FROM crm_companies c
- LEFT JOIN outbound_pipeline_memberships m ON m.company_id=c.id AND m.active AND m.list_id=p_filters->>'list_id'
- LEFT JOIN compass_lead_lists l ON l.id=m.list_id
- LEFT JOIN LATERAL(SELECT a.* FROM outbound_pipeline_assessments a WHERE a.company_id=c.id AND a.workflow_version_id=l.workflow_version_id AND a.input_revision=outbound_pipeline_input_revision(c.id) ORDER BY a.created_at DESC,
+ FROM (
+  SELECT m.company_id,m.list_id,m.id AS membership_id
+  FROM outbound_pipeline_memberships m
+  WHERE p_filters?'list_id' AND m.active AND m.list_id=p_filters->>'list_id'
+  AND (coalesce(p_after,'')='' OR m.company_id>p_after)
+  UNION ALL
+  SELECT c0.id,NULL::text,NULL::text FROM crm_companies c0
+  WHERE NOT p_filters?'list_id' AND NOT c0.is_archived AND (coalesce(p_after,'')='' OR c0.id>p_after)
+ ) scoped
+ JOIN crm_companies c ON c.id=scoped.company_id AND NOT c.is_archived
+ LEFT JOIN outbound_pipeline_input_revisions ir ON ir.company_id=c.id
+ LEFT JOIN compass_lead_lists l ON l.id=scoped.list_id
+ LEFT JOIN LATERAL(SELECT a.* FROM outbound_pipeline_assessments a WHERE a.company_id=c.id AND a.workflow_version_id=l.workflow_version_id AND a.input_revision=(c.revision+coalesce(ir.evidence_revision,0)) ORDER BY a.created_at DESC,
   a.id DESC LIMIT 1)a ON true
- LEFT JOIN LATERAL(SELECT s.* FROM outbound_pipeline_stages s WHERE s.company_id=c.id AND s.list_id=m.list_id AND s.workflow_version_id=l.workflow_version_id AND (NOT p_filters?'stage' OR s.stage=p_filters->>'stage') ORDER BY s.created_at DESC,
+ LEFT JOIN LATERAL(SELECT s.* FROM outbound_pipeline_stages s WHERE s.company_id=c.id AND s.list_id=scoped.list_id AND s.recipient_id IS NULL AND s.workflow_version_id=l.workflow_version_id AND (NOT p_filters?'stage' OR s.stage=p_filters->>'stage') ORDER BY s.created_at DESC,
   s.id DESC LIMIT 1)s ON true
- LEFT JOIN LATERAL(SELECT cl.* FROM crm_company_locations cl WHERE cl.company_id=c.id AND (NOT p_filters?'city' OR cl.city=p_filters->>'city') AND (NOT p_filters?'suburb' OR cl.suburb=p_filters->>'suburb') ORDER BY cl.id LIMIT 1)loc ON true
- WHERE NOT c.is_archived AND (NOT p_filters?'list_id' OR m.id IS NOT NULL)
- AND (NOT p_filters?'q' OR c.name ILIKE '%'||(p_filters->>'q')||'%')
+ LEFT JOIN LATERAL(SELECT cl.* FROM crm_company_locations cl WHERE cl.company_id=c.id AND (NOT p_filters?'city' OR cl.city=p_filters->>'city') AND (NOT p_filters?'suburb' OR cl.suburb=p_filters->>'suburb') AND (NOT p_filters?'administrative_region' OR cl.administrative_region=p_filters->>'administrative_region') ORDER BY cl.id LIMIT 1)loc ON true
+ WHERE (NOT p_filters?'q' OR c.name ILIKE '%'||(p_filters->>'q')||'%')
  AND (NOT p_filters?'country' OR c.country=p_filters->>'country')
  AND (NOT p_filters?'city' OR loc.city=p_filters->>'city') AND (NOT p_filters?'suburb' OR loc.suburb=p_filters->>'suburb')
+ AND (NOT p_filters?'administrative_region' OR loc.administrative_region=p_filters->>'administrative_region')
  AND (NOT p_filters?'fit' OR coalesce(a.fit,'unknown')=p_filters->>'fit')
- AND (NOT p_filters?'status' OR coalesce(s.status,CASE WHEN p_filters->>'stage'='contacts' AND coalesce(a.fit,
+ AND (NOT p_filters?'status' OR coalesce(CASE WHEN s.id IS NOT NULL AND s.input_hash IS DISTINCT FROM 'revision:'||(c.revision+coalesce(ir.evidence_revision,0)) THEN 'stale' ELSE s.status END,CASE WHEN p_filters->>'stage'='contacts' AND coalesce(a.fit,
   'unknown') NOT IN('likely_fit','sure_fit') AND coalesce(a.override_reason,'')='' THEN 'held' ELSE 'ready' END)=p_filters->>'status')
+ ORDER BY c.id
+ LIMIT COALESCE(p_limit,2147483647)
 $$;
-REVOKE ALL ON FUNCTION public.outbound_pipeline_companies(jsonb) FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.outbound_pipeline_companies(jsonb) TO authenticated,service_role;
+REVOKE ALL ON FUNCTION public.outbound_pipeline_companies(jsonb,text,integer) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.outbound_pipeline_companies(jsonb,text,integer) TO authenticated,service_role;
+CREATE FUNCTION public.outbound_pipeline_company_count(p_filters jsonb DEFAULT '{}') RETURNS bigint LANGUAGE sql STABLE SECURITY INVOKER AS $$
+ SELECT count(*) FROM (
+  SELECT m.company_id
+  FROM outbound_pipeline_memberships m
+  JOIN crm_companies c ON c.id=m.company_id AND NOT c.is_archived
+  LEFT JOIN outbound_pipeline_input_revisions ir ON ir.company_id=c.id
+  LEFT JOIN compass_lead_lists l ON l.id=m.list_id
+  LEFT JOIN LATERAL(SELECT a.fit,a.override_reason FROM outbound_pipeline_assessments a WHERE a.company_id=c.id AND a.workflow_version_id=l.workflow_version_id AND a.input_revision=(c.revision+coalesce(ir.evidence_revision,0)) ORDER BY a.created_at DESC,a.id DESC LIMIT 1)a ON true
+  LEFT JOIN LATERAL(SELECT s.id,s.status,s.input_hash FROM outbound_pipeline_stages s WHERE s.company_id=c.id AND s.list_id=m.list_id AND s.recipient_id IS NULL AND s.workflow_version_id=l.workflow_version_id AND (NOT p_filters?'stage' OR s.stage=p_filters->>'stage') ORDER BY s.created_at DESC,s.id DESC LIMIT 1)s ON true
+  LEFT JOIN LATERAL(SELECT cl.city,cl.suburb,cl.administrative_region FROM crm_company_locations cl WHERE cl.company_id=c.id AND (NOT p_filters?'city' OR cl.city=p_filters->>'city') AND (NOT p_filters?'suburb' OR cl.suburb=p_filters->>'suburb') AND (NOT p_filters?'administrative_region' OR cl.administrative_region=p_filters->>'administrative_region') ORDER BY cl.id LIMIT 1)loc ON true
+  WHERE p_filters?'list_id' AND m.active AND m.list_id=p_filters->>'list_id'
+  AND (NOT p_filters?'q' OR c.name ILIKE '%'||(p_filters->>'q')||'%')
+  AND (NOT p_filters?'country' OR c.country=p_filters->>'country')
+  AND (NOT p_filters?'city' OR loc.city=p_filters->>'city') AND (NOT p_filters?'suburb' OR loc.suburb=p_filters->>'suburb')
+  AND (NOT p_filters?'administrative_region' OR loc.administrative_region=p_filters->>'administrative_region')
+  AND (NOT p_filters?'fit' OR coalesce(a.fit,'unknown')=p_filters->>'fit')
+  AND (NOT p_filters?'status' OR coalesce(CASE WHEN s.id IS NOT NULL AND s.input_hash IS DISTINCT FROM 'revision:'||(c.revision+coalesce(ir.evidence_revision,0)) THEN 'stale' ELSE s.status END,CASE WHEN p_filters->>'stage'='contacts' AND coalesce(a.fit,'unknown') NOT IN('likely_fit','sure_fit') AND coalesce(a.override_reason,'')='' THEN 'held' ELSE 'ready' END)=p_filters->>'status')
+  UNION ALL
+  SELECT c.id
+  FROM crm_companies c
+  LEFT JOIN outbound_pipeline_input_revisions ir ON ir.company_id=c.id
+  LEFT JOIN LATERAL(SELECT cl.city,cl.suburb,cl.administrative_region FROM crm_company_locations cl WHERE cl.company_id=c.id AND (NOT p_filters?'city' OR cl.city=p_filters->>'city') AND (NOT p_filters?'suburb' OR cl.suburb=p_filters->>'suburb') AND (NOT p_filters?'administrative_region' OR cl.administrative_region=p_filters->>'administrative_region') ORDER BY cl.id LIMIT 1)loc ON true
+  WHERE NOT p_filters?'list_id' AND NOT c.is_archived
+  AND (NOT p_filters?'q' OR c.name ILIKE '%'||(p_filters->>'q')||'%')
+  AND (NOT p_filters?'country' OR c.country=p_filters->>'country')
+  AND (NOT p_filters?'city' OR loc.city=p_filters->>'city') AND (NOT p_filters?'suburb' OR loc.suburb=p_filters->>'suburb')
+  AND (NOT p_filters?'administrative_region' OR loc.administrative_region=p_filters->>'administrative_region')
+ ) scoped
+$$;
+REVOKE ALL ON FUNCTION public.outbound_pipeline_company_count(jsonb) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.outbound_pipeline_company_count(jsonb) TO authenticated,service_role;
 -- Suitability is independently derived from canonical attribution and saved roles.
 CREATE FUNCTION public.outbound_pipeline_candidate_suitable(p_candidate text,p_workflow text) RETURNS boolean LANGUAGE sql STABLE SECURITY INVOKER AS $$
  SELECT coalesce(bool_or(c.method_type='email' AND c.state<>'rejected' AND (
@@ -290,6 +337,28 @@ CREATE FUNCTION public.outbound_pipeline_candidate_suitable(p_candidate text,p_w
 $$;
 REVOKE ALL ON FUNCTION public.outbound_pipeline_candidate_suitable(text,text) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.outbound_pipeline_candidate_suitable(text,text) TO authenticated,service_role;
+CREATE FUNCTION public.outbound_pipeline_record_stage(p_run text,p_item text,p_actor text) RETURNS void LANGUAGE plpgsql SECURITY INVOKER SET search_path=public AS $$
+DECLARE run outbound_pipeline_runs;item outbound_pipeline_items;refs jsonb;predecessor text;aggregate_status text;pending integer;failed integer;held integer;total integer;
+BEGIN
+ SELECT * INTO run FROM outbound_pipeline_runs WHERE id=p_run;
+ SELECT * INTO item FROM outbound_pipeline_items WHERE id=p_item AND run_id=p_run;
+ PERFORM pg_advisory_xact_lock(hashtextextended('stage:'||run.list_id||':'||item.company_id||':'||run.stage,0));
+ SELECT coalesce(jsonb_agg(v),'[]') INTO refs FROM jsonb_each(item.result)e CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(e.value)='array' THEN e.value ELSE '[]'::jsonb END)v;
+ SELECT id INTO predecessor FROM outbound_pipeline_stages WHERE list_id=run.list_id AND company_id=item.company_id AND recipient_id IS NOT DISTINCT FROM item.recipient_id AND workflow_version_id=run.workflow_version_id AND stage=run.stage ORDER BY created_at DESC,id DESC LIMIT 1;
+ INSERT INTO outbound_pipeline_stages(id,list_id,company_id,recipient_id,workflow_version_id,stage,status,reason,input_hash,output_refs,supersedes_id,actor)
+ VALUES(gen_random_uuid()::text,run.list_id,item.company_id,item.recipient_id,run.workflow_version_id,run.stage,item.status,coalesce(item.result->>'reason','Saved workflow run: '||item.status),'revision:'||outbound_pipeline_input_revision(item.company_id),refs,predecessor,p_actor);
+ IF item.recipient_id IS NOT NULL THEN
+  SELECT count(*),count(*) FILTER(WHERE latest.status IS NULL OR latest.status NOT IN('completed','failed','held')),count(*) FILTER(WHERE latest.status='failed'),count(*) FILTER(WHERE latest.status='held') INTO total,pending,failed,held
+  FROM outbound_pipeline_recipients r LEFT JOIN LATERAL(SELECT s.status FROM outbound_pipeline_stages s WHERE s.list_id=run.list_id AND s.recipient_id=r.id AND s.workflow_version_id=run.workflow_version_id AND s.stage=run.stage AND s.input_hash='revision:'||outbound_pipeline_input_revision(item.company_id) ORDER BY s.created_at DESC,s.id DESC LIMIT 1)latest ON true
+  WHERE r.list_id=run.list_id AND r.company_id=item.company_id AND r.suitable AND outbound_pipeline_candidate_suitable(r.candidate_id,run.workflow_version_id);
+  aggregate_status:=CASE WHEN failed>0 THEN 'failed' WHEN held>0 THEN 'held' WHEN pending>0 OR total=0 THEN 'ready' ELSE 'completed' END;
+  SELECT id INTO predecessor FROM outbound_pipeline_stages WHERE list_id=run.list_id AND company_id=item.company_id AND recipient_id IS NULL AND workflow_version_id=run.workflow_version_id AND stage=run.stage ORDER BY created_at DESC,id DESC LIMIT 1;
+  INSERT INTO outbound_pipeline_stages(id,list_id,company_id,workflow_version_id,stage,status,reason,input_hash,output_refs,supersedes_id,actor)
+  VALUES(gen_random_uuid()::text,run.list_id,item.company_id,run.workflow_version_id,run.stage,aggregate_status,CASE WHEN pending>0 THEN pending||' of '||total||' suitable recipients still require work' ELSE total||' suitable recipients assessed' END,'revision:'||outbound_pipeline_input_revision(item.company_id),refs,predecessor,p_actor);
+ END IF;
+END $$;
+REVOKE ALL ON FUNCTION public.outbound_pipeline_record_stage(text,text,text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.outbound_pipeline_record_stage(text,text,text) TO service_role;
 CREATE FUNCTION public.outbound_pipeline_run(p_command jsonb,p_hash text,p_actor text) RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path=public AS $$
 DECLARE action text:=p_command->>'action';
   d jsonb:=p_command->'data';
@@ -356,6 +425,7 @@ BEGIN
   '')<>'')
    AND (run.stage<>'write' OR EXISTS(SELECT 1 FROM crm_verification_events v JOIN outbound_pipeline_workflows w ON w.id=run.workflow_version_id WHERE v.method_id=r.method_id AND v.attempt_state='completed' AND v.mailbox_result='valid' AND (((w.policy#>>'{verification,reuse_days}')::integer>0 AND v.checked_at >= now()-make_interval(days=>(w.policy#>>'{verification,reuse_days}')::integer)) OR ((w.policy#>>'{verification,reuse_days}')::integer=0 AND EXISTS(SELECT 1 FROM outbound_pipeline_runs vr JOIN outbound_pipeline_items vi ON vi.run_id=vr.id WHERE vr.id=d->>'verification_run_id' AND vr.list_id=run.list_id AND vr.workflow_version_id=run.workflow_version_id AND vr.stage='verify' AND vr.status='completed' AND vi.recipient_id=r.id AND vi.status='completed' AND vi.result->'verification_ids'?v.id))) AND NOT EXISTS(SELECT 1 FROM crm_verification_events n WHERE n.method_id=v.method_id AND n.checked_at>v.checked_at)));
   END IF;
+  IF EXISTS(SELECT 1 FROM outbound_pipeline_runs prior JOIN outbound_pipeline_items olditem ON olditem.run_id=prior.id JOIN outbound_pipeline_items newitem ON newitem.company_id=olditem.company_id AND newitem.run_id=run.id WHERE prior.list_id=run.list_id AND prior.workflow_version_id=run.workflow_version_id AND prior.status='checkpoint' AND array_position(ARRAY['list','research','contacts','verify','write'],prior.stage)<array_position(ARRAY['list','research','contacts','verify','write'],run.stage)) THEN RAISE EXCEPTION 'pipeline_upstream_checkpoint_required';END IF;
   UPDATE outbound_pipeline_runs SET scope_count=(SELECT count(*) FROM outbound_pipeline_items WHERE run_id=run.id),
   status=CASE WHEN EXISTS(SELECT 1 FROM outbound_pipeline_items WHERE run_id=run.id) THEN 'queued' ELSE 'blocked' END,
   checkpoint_reason=CASE WHEN EXISTS(SELECT 1 FROM outbound_pipeline_items WHERE run_id=run.id) THEN NULL ELSE 'No eligible records in selection' END WHERE id=run.id RETURNING * INTO run;
@@ -405,6 +475,7 @@ BEGIN
   END IF;
     IF action='heartbeat' THEN UPDATE outbound_pipeline_items SET lease_until=now()+interval '5 minutes',revision=revision+1,updated_at=now() WHERE id=item.id RETURNING * INTO item;
     ELSIF action='reserve_attempt' THEN
+     IF EXISTS(SELECT 1 FROM outbound_pipeline_runs prior JOIN outbound_pipeline_items olditem ON olditem.run_id=prior.id WHERE prior.list_id=run.list_id AND prior.workflow_version_id=run.workflow_version_id AND prior.status='checkpoint' AND olditem.company_id=item.company_id AND array_position(ARRAY['list','research','contacts','verify','write'],prior.stage)<array_position(ARRAY['list','research','contacts','verify','write'],run.stage)) THEN RAISE EXCEPTION 'pipeline_upstream_checkpoint_required';END IF;
      IF run.stage IN('verify','write') AND NOT EXISTS(SELECT 1 FROM outbound_pipeline_recipients r WHERE r.id=item.recipient_id AND r.suitable AND outbound_pipeline_candidate_suitable(r.candidate_id,run.workflow_version_id)) THEN RAISE EXCEPTION 'pipeline_contact_no_longer_suitable';END IF;
      IF run.stage<>'research' AND item.input_revision<>outbound_pipeline_input_revision(item.company_id) THEN RAISE EXCEPTION 'pipeline_stale_run_inputs';
   END IF;
@@ -462,6 +533,7 @@ BEGIN
      END IF;
      UPDATE outbound_pipeline_items SET status=d->>'status',result=coalesce(d->'result','{}'),lease_token=NULL,
   lease_until=NULL,revision=revision+1,updated_at=now() WHERE id=item.id RETURNING * INTO item;
+     PERFORM outbound_pipeline_record_stage(run.id,item.id,p_actor);
      IF NOT EXISTS(SELECT 1 FROM outbound_pipeline_items WHERE run_id=run.id AND status IN('queued','running')) THEN
       UPDATE outbound_pipeline_runs SET status=CASE WHEN EXISTS(SELECT 1 FROM outbound_pipeline_items WHERE run_id=run.id AND status IN('held',
   'failed')) THEN 'blocked' WHEN policy->'checkpoints'?run.stage THEN 'checkpoint' ELSE 'completed' END WHERE id=run.id;

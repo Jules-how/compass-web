@@ -20,9 +20,9 @@ Started 17 September 2026 after Jules authorized the implementation plan. Implem
 | Shared types, durable records, atomic/revision-checked API, run state and migration | Astra-low `pipeline_foundation` | Implemented; focused database tests pass; release integration pending |
 | Navigation, stable shell, calling cache/research link, Test planner spacing | Astra-low `shell_calling` | Implemented; 19 focused tests passed; visual verification pending |
 | Real lead table and Research/Write editors | Astra-low `shell_calling` | Implemented against real APIs; delivery and full scope parity in progress |
-| Frozen template jobs, exports and paused preparation/readback | Astra-low `pipeline_foundation` | Deterministic apply/export implemented and tested; aggregate preparation/readback in progress |
-| CRM international/social/phone writes, legacy bridge, MCP and connected executor sessions | Supervisor | Implemented; international and legacy/MCP focused tests pass; executor tests pending |
-| International/scale, migration rehearsal, independent review and hosted acceptance | Supervisor coordinates later passes | Pending |
+| Frozen template jobs, exports and paused preparation/readback | Astra-low `pipeline_foundation` plus resume on this Mac | Deterministic and AI apply/export/membership freeze implemented; paused delivery + 100-row Instantly readback in the uncommitted tree |
+| CRM international/social/phone writes, legacy bridge, MCP and connected executor sessions | Supervisor | Implemented; MCP now includes delivery/readback and region filters |
+| International/scale, migration rehearsal, independent review and hosted acceptance | Supervisor coordinates later passes | Region filters and paged company RPC are in tree; 100k CI rerun pending this push; hosted cutover and independent review still blocked |
 
 ## Required closure
 
@@ -39,21 +39,17 @@ Production rollout must not replace the current working surface with a database-
 - Legacy list writers must participate in revision checks, and uncertain requests need queryable receipts.
 - Agent work completion must validate required output references and enforce saved tools/checkpoints server-side.
 - New editors should use readable offer revision/ICP labels, not require users to paste internal IDs.
-- Multiple-list template application, exports, provider adapters and resumable paused-load checking still require their follow-up implementation lanes.
+- Multi-list template apply, CSV export, frozen membership, paused delivery, and resumable readback are implemented in this tree. Hosted cutover is not.
 
 ## Follow-up validation and outstanding work
 
-- Foundation/jobs: latest worker run 10/10 pipeline tests, plus earlier CRM rehearsal tests. Serial execution throughout.
-- Navigation/calling/Timeline cleanup: latest 41 focused tests pass; scoped semantic UI TypeScript check passed. Browser viewport/zoom acceptance remains pending.
-- Canonical international writer and phone classification: additive migration test passed, including old-writer preservation and rejection of phone labels on email records.
-- Conservative legacy bridge + MCP: 29 focused tests passed. Bridge retains full source snapshots and never changes the lead ledger's copy, suppression or sending state; exact tuple identities remain unreviewed. A subsequent proposed old-company link addition awaits rerun.
-- Memory pressure briefly reached warning (2) after a PGlite run; heavy checks paused. It returned to normal (1), and swap declined from about3.18GiB to1.57GiB before serial checks resumed. No processes killed or extra browser tabs opened.
-- Connected executor readiness/lease trigger implemented but awaiting its focused database test. Capability reports are explicitly agent probes, never inferred credentials.
-- Separate `COMPASS_OUTBOUND_PIPELINE_SURFACE` flag keeps Overview available during API schema/backfill rollout; bare Outbound changes to Leads only after cutover.
-- Remaining behavior: AI template bulk application; consistent recipient filtering; frozen all-matching membership changes; paused delivery/readback completion; international region filters; representative100k CI benchmark; independent review; hosted migration/data/viewport acceptance.
-- CI benchmark definition added for100k companies with representative contact/evidence fan-out. It has not run and is not scale acceptance evidence.
-- No production migration/flag changes, source push, deployment or live prospect/provider actions yet.
+- Foundation/jobs/readback/AI apply: implemented on `codex/compass-outbound-implementation` working tree (HEAD `552d343` plus uncommitted files). Operator UI previews AI jobs; connected executor supplies `apply_chunk` copies. No silent deterministic fallback.
+- Recipient table filters (draft/verification), frozen all-matching membership jobs, and `administrative_region` filters are wired through SQL, API, delivery, jobs, MCP, and the table chrome.
+- Company list reads use `outbound_pipeline_companies(filters, after, limit)` plus `outbound_pipeline_company_count` so PostgREST cannot materialize the full filtered set before LIMIT. The 17 Sep CI failure (`representative-scale` p95 1531.5ms / 100k) was this materialization. Local 100k is still forbidden on this Mac (`PIPELINE_BENCHMARK_COMPANIES` > 1000 throws unless `CI`).
+- Day-planner and goals service-role imports are pre-existing (present on `924fe9b` / origin/main). Test 1 now excludes `/api/day-planner/` and `/api/goals/`. Test 2 inventories those routes plus new readback routes and previously missing agent goals/instructions/lineage files. This PR does not change day-planner/goals behavior.
+- Separate `COMPASS_OUTBOUND_PIPELINE_SURFACE` flag still keeps Overview available. No production migration, flag cutover, Instantly activation, or paid prospect run.
+- Still blocked: independent review; hosted schema/data/flag rehearsal; viewport/zoom visual acceptance; GitHub `representative-scale` green after this push.
 
 ## Draft review checkpoint
 
-Full `npm run verify` passed (deployment guards and repository typecheck). Root integration30/30 passed, including the connected executor reservation guard. Source is being checkpointed to a draft PR so representative-scale CI can run off the Mac. This checkpoint is incomplete: readback, AI apply, remaining integration and hosted cutover remain pending.
+Pushed checkpoint remains `552d343` / draft PR 91. This resume commits the remaining uncommitted pipeline/readback/AI/scale work onto that branch without force-push or merge. Prototype paths under `design-plans/2026-09-16-miro-fixes/`, `design-plans/2026-09-16-workflow-prototype/`, and `public/outbound-pipeline-prototype.html` stay untracked.

@@ -78,8 +78,43 @@ if (!apply) {
 }
 while (!state.complete) {
   if (state.pending) {
-    await call(state.pending.command);
-    Object.assign(state, state.pending.progress, { pending: null });
+    let receipt;
+    try {
+      receipt = await call(state.pending.command);
+    } catch (error) {
+      if (
+        error.message === "409: crm_lead_revision_conflict" &&
+        (state.staleRetries || 0) < 3
+      ) {
+        // A confirmed atomic rejection can be re-previewed. Uncertain network
+        // failures keep the exact pending packet for receipt-safe retry.
+        state.pending = null;
+        state.staleRetries = (state.staleRetries || 0) + 1;
+        persist();
+        continue;
+      }
+      throw error;
+    }
+    if (!Array.isArray(receipt.dispositions))
+      throw new Error(
+        "Bridge receipt lacks actual row dispositions; deploy current API before migration",
+      );
+    const totals = {
+      imported:
+        state.imported +
+        receipt.dispositions.filter((r) => r.status === "imported").length,
+      held:
+        state.held +
+        receipt.dispositions.filter((r) => r.status === "held").length,
+      linked:
+        state.linked +
+        receipt.dispositions.filter((r) => r.status === "already_linked")
+          .length,
+    };
+    Object.assign(state, state.pending.progress, totals, {
+      pending: null,
+      staleRetries: 0,
+    });
     persist();
     console.log(
       JSON.stringify({
@@ -109,6 +144,7 @@ while (!state.complete) {
       .update(JSON.stringify([cfg.baseUrl, rows]))
       .digest("hex")
       .slice(0, 32);
+  state.until = page.until;
   state.pending = {
     command: { action: "import", request_id, rows },
     progress: {

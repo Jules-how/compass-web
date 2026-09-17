@@ -548,14 +548,21 @@ export function WriteEditor({
               {value.name}
             </label>
           ))}
-          {policy.mode==="ai"&&<p className="op-notice">AI revisions require the connected Write executor. Bulk deterministic application is unavailable for this template.</p>}
+          {policy.mode === "ai" && (
+            <p className="op-notice">
+              AI bulk application uses the same frozen preview as deterministic
+              templates. The connected Write executor submits grounded
+              apply_chunk copies; this surface does not generate or apply AI
+              copy.
+            </p>
+          )}
           <PipelineJobsPanel
             key={`apply.${list?.id || "none"}.${version?.id || "new"}`}
             kind="template_apply"
             listId={list?.id || ""}
             listIds={affected}
             templateId={version?.id}
-            writable={writable&&policy.mode==="deterministic"}
+            writable={writable}
             dirty={dirty}
             onSaved={() => {
               bump((v) => v + 1);

@@ -60,6 +60,8 @@ test('search, commit, ledger, and export tools', () => {
       'outbound.pipeline',
       'outbound.pipeline.write',
       'outbound.pipeline.jobs',
+      'outbound.pipeline.delivery',
+      'outbound.pipeline.readback',
       'outbound.pipeline.run',
       'crm.legacy',
       'crm.read',
@@ -338,4 +340,27 @@ test('pipeline and CRM tools retain exact command identity and bounded read scop
   assert.ok(String(seen[2].url).endsWith('/records/location/x%2Fy'))
   assert.equal((await callTool('crm.read',{action:'anything'},{cfg,fetchImpl})).isError,true)
   assert.equal(seen.length,3)
+})
+
+test('pipeline delivery, readback and region filters use the agent routes', async () => {
+  const seen=[]
+  const fetchImpl=async (url,init)=>{seen.push({url,init});return new Response(JSON.stringify({ok:true}),{status:200,headers:{'content-type':'application/json'}})}
+  const cfg={baseUrl:'https://compass.test',secret:'fixture'}
+  const command={schema_version:'outbound.pipeline.v1',request_id:'stable-delivery',source:'Fixture',manifest_id:'m',readback_id:'r',expected_revision:0,action:'start_baseline',data:{}}
+  await callTool('outbound.pipeline.delivery',{command},{cfg,fetchImpl})
+  assert.equal(String(seen[0].url),'https://compass.test/api/agent/outbound/pipeline/delivery')
+  assert.deepEqual(JSON.parse(seen[0].init.body),command)
+  await callTool('outbound.pipeline.delivery',{manifest_id:'m',items:true,after:'c'},{cfg,fetchImpl})
+  const deliveryRead=new URL(seen[1].url)
+  assert.equal(deliveryRead.pathname,'/api/agent/outbound/pipeline/delivery')
+  assert.equal(deliveryRead.searchParams.get('manifest_id'),'m')
+  assert.equal(deliveryRead.searchParams.get('items'),'1')
+  await callTool('outbound.pipeline.readback',{command},{cfg,fetchImpl})
+  assert.equal(String(seen[2].url),'https://compass.test/api/agent/outbound/pipeline/delivery/readback')
+  await callTool('outbound.pipeline.readback',{readback_id:'r',items:true},{cfg,fetchImpl})
+  assert.equal(new URL(seen[3].url).searchParams.get('readback_id'),'r')
+  await callTool('outbound.pipeline',{collection:'companies',administrative_region:'NSW'},{cfg,fetchImpl})
+  assert.equal(new URL(seen[4].url).searchParams.get('administrative_region'),'NSW')
+  assert.equal((await callTool('outbound.pipeline',{bogus:'1'},{cfg,fetchImpl})).isError,true)
+  assert.equal(seen.length,5)
 })

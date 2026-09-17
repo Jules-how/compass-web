@@ -62,7 +62,7 @@ BEGIN
  WHERE m.lead_id IN(SELECT value->>'lead_id' FROM jsonb_array_elements(p_rows))
  GROUP BY m.list_id,l.company_id ON CONFLICT(list_id,company_id) DO NOTHING;
  GET DIAGNOSTICS member_count=ROW_COUNT;
- result:=jsonb_build_object('request_id',p_request_id,'rows',row_count,'memberships_added',member_count,'packets',results);
+ result:=jsonb_build_object('request_id',p_request_id,'rows',row_count,'memberships_added',member_count,'packets',results,'dispositions',(SELECT jsonb_agg(jsonb_build_object('lead_id',value->>'lead_id','company_id',value->>'company_id','status',CASE WHEN value->>'company_id' IS NULL THEN 'held' WHEN value->'warnings'?'already_linked' THEN 'already_linked' ELSE 'imported' END,'warnings',value->'warnings')) FROM jsonb_array_elements(p_rows)));
  INSERT INTO crm_research_receipts(request_id,payload_hash,source,actor,receipt) VALUES(p_request_id,p_hash,'Legacy CRM bridge',p_actor,result);
  RETURN result;
 END $$;

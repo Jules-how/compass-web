@@ -27,14 +27,9 @@ const capability = z.strictObject({
   tool_name: z.string().min(1).max(300),
   probe: z.strictObject({
     status: z.enum(["ready", "unavailable"]),
-    checked_at: z.iso
-      .datetime({ offset: true })
-      .refine(
-        (v) =>
-          Date.parse(v) <= Date.now() + 60000 &&
-          Date.parse(v) > Date.now() - 600000,
-        "Probe must be within ten minutes",
-      ),
+    // Freshness is checked transactionally after receipt replay. A retry of an
+    // already committed registration must remain valid after its probe expires.
+    checked_at: z.iso.datetime({ offset: true }),
     detail: z.string().min(1).max(1000),
   }),
 });
@@ -65,48 +60,58 @@ export async function readOutboundExecutors(
     .limit(50);
   pipelineDatabaseError(result.error);
   const sessions = (result.data || []) as ExecutorSession[];
-  const catalogue: ExecutorCatalogue['tools'] = [...OUTBOUND_TOOL_CATALOGUE].map((tool) => {
-    const capabilities = sessions
-      .flatMap((s) => s.tools)
-      .filter(
-        (t) =>
-          t.id === tool.id &&
-          t.probe.status === "ready" &&
-          Date.parse(t.probe.checked_at) > Date.now() - 600000 &&
-          tool.stages.some((stage) => t.stages.includes(stage)),
-      );
-    const ready = capabilities.sort((a, b) =>
-      b.probe.checked_at.localeCompare(a.probe.checked_at),
-    )[0];
-    return {
-      ...tool,
-      available: !!ready,
-      available_stages: [...new Set(capabilities.flatMap((t) => t.stages))],
-      checked_at: ready?.probe.checked_at || null,
-      reason: ready
-        ? "Checked by connected agent"
-        : "Connect an agent and check this adapter before execution.",
-    };
-  });
-  for (const tool of sessions.flatMap((s) => s.tools)) {
-    if (catalogue.some((t) => t.id === tool.id)) continue;
-    catalogue.push({
-      id: tool.id,
-      label: tool.id,
-      stages: tool.stages,
+  const definitions = new Map<
+    string,
+    {
+      id: string;
+      label: string;
+      stages: readonly string[];
+      description: string;
+    }
+  >(OUTBOUND_TOOL_CATALOGUE.map((tool) => [tool.id, tool]));
+  for (const capability of sessions.flatMap((session) => session.tools)) {
+    if (definitions.has(capability.id)) continue;
+    definitions.set(capability.id, {
+      id: capability.id,
+      label: capability.id,
+      stages: [
+        ...new Set(
+          sessions
+            .flatMap((session) => session.tools)
+            .filter((tool) => tool.id === capability.id)
+            .flatMap((tool) => tool.stages),
+        ),
+      ],
       description: "Custom saved adapter reported by connected agent.",
-      available:
-        tool.probe.status === "ready" &&
-        Date.parse(tool.probe.checked_at) > Date.now() - 600000,
-      available_stages:
-        tool.probe.status === "ready" &&
-        Date.parse(tool.probe.checked_at) > Date.now() - 600000
-          ? tool.stages
-          : [],
-      checked_at: tool.probe.checked_at,
-      reason: tool.probe.detail,
     });
   }
+  const catalogue: ExecutorCatalogue["tools"] = [...definitions.values()].map(
+    (tool) => {
+      const capabilities = sessions
+        .flatMap((session) => session.tools)
+        .filter(
+          (capability) =>
+            capability.id === tool.id &&
+            capability.probe.status === "ready" &&
+            Date.parse(capability.probe.checked_at) > Date.now() - 600000 &&
+            tool.stages.some((stage) => capability.stages.includes(stage)),
+        );
+      const ready = capabilities.sort((a, b) =>
+        b.probe.checked_at.localeCompare(a.probe.checked_at),
+      )[0];
+      return {
+        ...tool,
+        available: !!ready,
+        available_stages: [
+          ...new Set(capabilities.flatMap((capability) => capability.stages)),
+        ],
+        checked_at: ready?.probe.checked_at || null,
+        reason: ready
+          ? "Checked by connected agent"
+          : "Connect an agent and check this adapter before execution.",
+      };
+    },
+  );
   return { executor: "connected_agent", sessions, tools: catalogue };
 }
 export async function writeOutboundExecutor(

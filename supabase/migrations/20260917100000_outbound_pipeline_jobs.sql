@@ -78,7 +78,6 @@ BEGIN
  IF action='preview_apply' THEN
   SELECT * INTO template FROM outbound_pipeline_templates WHERE id=d->>'template_version_id';
   IF template.id IS NULL THEN RAISE EXCEPTION 'pipeline_template_version_required';END IF;
-  IF template.policy->>'mode'<>'deterministic' THEN RAISE EXCEPTION 'pipeline_ai_executor_required';END IF;
   lists:=coalesce(d->'list_ids',jsonb_build_array(d->>'current_list_id'));
   IF jsonb_array_length(lists)=0 OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(lists)l WHERE NOT EXISTS(SELECT 1 FROM compass_lead_lists WHERE id=l)) THEN RAISE EXCEPTION 'pipeline_list_required';END IF;
   INSERT INTO outbound_pipeline_jobs(id,kind,status,config,actor,source)
@@ -112,7 +111,7 @@ BEGIN
    SELECT gen_random_uuid()::text,job.id,jsonb_build_object('row',to_jsonb(r)||coalesce(dr.copy,'{}'))
    FROM outbound_pipeline_recipients(filters) r
    LEFT JOIN outbound_pipeline_drafts dr ON dr.id=r.current_draft_id
-   WHERE r.list_id=d->>'list_id' AND (NOT d?'company_ids' OR d->'company_ids'?r.company_id);
+   WHERE r.list_id=d->>'list_id' AND (NOT d?'company_ids' OR d->'company_ids'?r.company_id) AND (NOT d?'recipient_ids' OR d->'recipient_ids'?r.id);
   END IF;
  ELSE RAISE EXCEPTION 'pipeline_invalid_job_action';END IF;
  UPDATE outbound_pipeline_jobs SET total_count=(SELECT count(*) FROM outbound_pipeline_job_items WHERE job_id=job.id),status=CASE WHEN EXISTS(SELECT 1 FROM outbound_pipeline_job_items WHERE job_id=job.id) THEN status ELSE 'completed' END WHERE id=job.id RETURNING * INTO job;
@@ -147,7 +146,7 @@ BEGIN
    ELSIF entry->>'status'='failed' THEN state:='failed';
    ELSE
     draft_id:=gen_random_uuid()::text;
-    child:=jsonb_build_object('schema_version','outbound.pipeline.v1','request_id',job.id||':'||item.id,'source',p_command->>'source','operations',jsonb_build_array(jsonb_build_object('kind','draft','expected_revision',0,'record',jsonb_build_object('id',draft_id,'list_id',item.payload->>'list_id','recipient_id',item.payload->>'recipient_id','template_version_id',job.config->>'template_version_id','copy',entry->'copy','provenance','template','input_refs',item.payload->'input_refs','previous_id',head))));
+    child:=jsonb_build_object('schema_version','outbound.pipeline.v1','request_id',job.id||':'||item.id,'source',p_command->>'source','operations',jsonb_build_array(jsonb_build_object('kind','draft','expected_revision',0,'record',jsonb_build_object('id',draft_id,'list_id',item.payload->>'list_id','recipient_id',item.payload->>'recipient_id','template_version_id',job.config->>'template_version_id','copy',entry->'copy','provenance',CASE WHEN job.config#>>'{policy,mode}'='ai' THEN 'ai' ELSE 'template' END,'input_refs',item.payload->'input_refs','previous_id',head))));
     PERFORM outbound_pipeline_apply(child,md5(child::text),p_actor);
    END IF;
   ELSIF job.kind='membership' THEN

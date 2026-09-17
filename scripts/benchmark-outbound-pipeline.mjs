@@ -74,14 +74,14 @@ try {
     });
     const page = await measure(
       "warm_filtered_page",
-      "SELECT * FROM outbound_pipeline_companies($1) WHERE id>$2 ORDER BY id LIMIT 51",
+      "SELECT * FROM outbound_pipeline_companies($1,$2,51)",
       [filter, "c-" + String(Math.floor(size / 2)).padStart(6, "0")],
     );
     if (page.rows.length !== 51)
       throw new Error("Benchmark fixture/page unexpectedly empty");
     await measure(
       "filtered_count",
-      "SELECT count(*) FROM outbound_pipeline_companies($1)",
+      "SELECT outbound_pipeline_company_count($1)",
       [filter],
     );
   }

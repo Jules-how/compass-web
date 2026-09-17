@@ -52,7 +52,7 @@ export async function readPipeline(db: SupabaseClient, params: URLSearchParams) 
     const collection = params.get("collection") || "lists";
     if (!(PIPELINE_COLLECTIONS as readonly string[]).includes(collection))
         throw new PipelineError("pipeline_invalid_collection");
-    const allowed = ["collection", "list_id", "company_id", "run_id", "recipient_id", "item_id", "workflow_version_id", "id", "after", "limit", "q", "city", "suburb", "country", "fit", "stage", "status", "fields", "changed_since", "request_id", "draft_status", "verification_status"];
+    const allowed = ["collection", "list_id", "company_id", "run_id", "recipient_id", "item_id", "workflow_version_id", "id", "after", "limit", "q", "city", "suburb", "country", "administrative_region", "fit", "stage", "status", "fields", "changed_since", "request_id", "draft_status", "verification_status"];
     for (const key of params.keys())
         if (!allowed.includes(key))
             throw new PipelineError("pipeline_invalid_filter");
@@ -87,20 +87,41 @@ export async function readPipeline(db: SupabaseClient, params: URLSearchParams) 
             if (params.has(key)) throw new PipelineError("pipeline_invalid_scope");
         }
         const filters: Record<string, string> = {};
-        for (const key of ["list_id", "q", "city", "suburb", "country", "fit", "stage", "status"])
+        for (const key of ["list_id", "q", "city", "suburb", "country", "administrative_region", "fit", "stage", "status"])
             if (params.has(key))
                 filters[key] = params.get(key)!;
+        const exactId = params.get("id") || params.get("company_id");
+        const counted = exactId ? null : await db.rpc("outbound_pipeline_company_count", { p_filters: filters });
+        if (counted)
+            pipelineDatabaseError(counted.error);
         query = db.rpc("outbound_pipeline_companies", {
-            p_filters: filters
-        }, {count: "exact"}).select("*");
+            p_filters: filters,
+            p_after: exactId ? "" : (after || ""),
+            p_limit: exactId ? null : limit + 1
+        }).select("*");
         if (params.has("id"))
             query = query.eq("id", params.get("id")!);
         if (params.has("company_id"))
             query = query.eq("id", params.get("company_id")!);
+        const page = await query.order("id");
+        pipelineDatabaseError(page.error);
+        let records = (page.data || []).slice(0, limit) as Record<string, unknown>[];
+        const next_after = (page.data || []).length > limit ? Buffer.from(JSON.stringify({
+            scope: fingerprint, id: String(records.at(-1)?.id)
+        })).toString("base64url") : null;
+        const fields = params.get("fields")?.split(",").filter(Boolean);
+        if (fields) {
+            if (fields.length > 30 || fields.some(f => !/^[a-z_]+$/.test(f)))
+                throw new PipelineError("pipeline_invalid_fields");
+            records = records.map(r => Object.fromEntries(["id", ...fields].filter(k => k in r).map(k => [k, r[k]])));
+        }
+        return {
+            schema_version: PIPELINE_VERSION, records, next_after, total_matching: exactId ? records.length : Number(counted?.data || 0)
+        };
     }
     else if (collection === "recipients") {
         const filters: Record<string,string> = {};
-        for (const key of ["list_id","q","city","suburb","country","fit","stage","status","draft_status","verification_status"]) if(params.has(key)) filters[key]=params.get(key)!;
+        for (const key of ["list_id","q","city","suburb","country","administrative_region","fit","stage","status","draft_status","verification_status"]) if(params.has(key)) filters[key]=params.get(key)!;
         query=db.rpc("outbound_pipeline_recipients",{p_filters:filters},{count:"exact"}).select("*");
         for(const key of ["id","company_id"]) if(params.has(key)) query=query.eq(key,params.get(key)!);
         if(params.has("changed_since")) query=query.gt("updated_at",params.get("changed_since")!);

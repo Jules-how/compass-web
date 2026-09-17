@@ -30,7 +30,7 @@ BEGIN
  IF (p_command->>'expected_revision')::integer<>0 THEN RAISE EXCEPTION 'pipeline_revision_conflict';END IF;
  SELECT w.policy INTO policy FROM outbound_pipeline_workflows w JOIN compass_lead_lists l ON l.workflow_version_id=w.id WHERE l.id=d->>'list_id' AND w.id=d->>'workflow_version_id';
  IF policy IS NULL OR NOT EXISTS(SELECT 1 FROM compass_pipeline_campaigns WHERE id=d->>'campaign_id' AND offer_revision_id=policy->>'offer_version_id' AND status NOT IN('cancelled','completed','archived')) THEN RAISE EXCEPTION 'pipeline_campaign_offer_mismatch';END IF;
- IF NOT EXISTS(SELECT 1 FROM compass_outbound_configs cfg JOIN compass_pipeline_campaigns c ON c.id=cfg.campaign_id WHERE c.id=d->>'campaign_id' AND cfg.settings=p_context->'settings' AND cfg.recipe=p_context->'recipe' AND c.sequence_draft=p_context->'sequence') THEN RAISE EXCEPTION 'pipeline_campaign_context_changed';END IF;
+ IF NOT EXISTS(SELECT 1 FROM compass_outbound_configs cfg JOIN compass_pipeline_campaigns c ON c.id=cfg.campaign_id WHERE c.id=d->>'campaign_id' AND cfg.settings=p_context->'settings' AND cfg.recipe=p_context->'recipe' AND c.sequence_draft=coalesce(p_context#>'{pipeline,source_sequence}',p_context->'sequence')) THEN RAISE EXCEPTION 'pipeline_campaign_context_changed';END IF;
  INSERT INTO outbound_pipeline_delivery_manifests(id,list_id,campaign_id,workflow_version_id,template_version_id,verification_run_id,context,actor,source)
  VALUES(p_command->>'manifest_id',d->>'list_id',d->>'campaign_id',d->>'workflow_version_id',d->>'template_version_id',d->>'verification_run_id',p_context,p_actor,p_command->>'source') RETURNING * INTO m;
  filters:=coalesce(d->'filters','{}')||jsonb_build_object('list_id',m.list_id);
@@ -55,6 +55,7 @@ BEGIN
  WHERE r.list_id=m.list_id AND (NOT d?'recipient_ids' OR d->'recipient_ids'?r.id);
  UPDATE outbound_pipeline_delivery_manifests SET total_count=(SELECT count(*) FROM outbound_pipeline_delivery_items WHERE manifest_id=m.id) WHERE id=m.id RETURNING * INTO m;
  IF m.total_count=0 THEN RAISE EXCEPTION 'pipeline_empty_preparation_scope';END IF;
+ IF EXISTS(SELECT 1 FROM outbound_pipeline_runs prior JOIN outbound_pipeline_items i ON i.run_id=prior.id JOIN outbound_pipeline_delivery_items chosen ON chosen.manifest_id=m.id AND chosen.snapshot#>>'{recipient,company_id}'=i.company_id WHERE prior.list_id=m.list_id AND prior.workflow_version_id=m.workflow_version_id AND prior.status='checkpoint') THEN RAISE EXCEPTION 'pipeline_upstream_checkpoint_required';END IF;
  receipt:=jsonb_build_object('request_id',p_command->>'request_id','manifest',to_jsonb(m));
  INSERT INTO outbound_pipeline_receipts VALUES(p_command->>'request_id',p_hash,p_actor,p_command->>'source',receipt,now());RETURN receipt;
 END $$;
@@ -102,7 +103,7 @@ BEGIN
  IF p.id IS NULL OR m.hash IS DISTINCT FROM p.hash OR m.pass_count<1 THEN RAISE EXCEPTION 'pipeline_preparation_not_ready';END IF;
  SELECT * INTO c FROM compass_pipeline_campaigns WHERE id=m.campaign_id FOR UPDATE;
  SELECT * INTO cfg FROM compass_outbound_configs WHERE campaign_id=m.campaign_id FOR SHARE;
- IF c.status IN('cancelled','completed','archived') OR c.sequence_draft IS DISTINCT FROM m.context->'sequence' OR cfg.settings IS DISTINCT FROM m.context->'settings' OR cfg.recipe IS DISTINCT FROM m.context->'recipe' OR c.offer_revision_id IS DISTINCT FROM m.context->>'offer_revision_id' THEN RAISE EXCEPTION 'preparation_stale';END IF;
+ IF c.status IN('cancelled','completed','archived') OR c.sequence_draft IS DISTINCT FROM coalesce(m.context#>'{pipeline,source_sequence}',m.context->'sequence') OR cfg.settings IS DISTINCT FROM m.context->'settings' OR cfg.recipe IS DISTINCT FROM m.context->'recipe' OR c.offer_revision_id IS DISTINCT FROM m.context->>'offer_revision_id' THEN RAISE EXCEPTION 'preparation_stale';END IF;
  IF NOT EXISTS(SELECT 1 FROM compass_lead_lists WHERE id=m.list_id AND workflow_version_id=m.workflow_version_id) THEN RAISE EXCEPTION 'pipeline_workflow_changed';END IF;
  FOR item IN SELECT * FROM outbound_pipeline_delivery_items WHERE manifest_id=m.id AND status='pass' ORDER BY recipient_id LOOP
   SELECT * INTO r FROM outbound_pipeline_recipients WHERE id=item.recipient_id;
@@ -159,9 +160,12 @@ BEGIN
  SELECT * INTO saved FROM outbound_pipeline_receipts WHERE request_id=p_command->>'request_id';
  IF FOUND THEN IF saved.payload_hash<>p_hash OR saved.actor<>p_actor THEN RAISE EXCEPTION 'pipeline_idempotency_conflict';END IF;RETURN saved.receipt;END IF;
  SELECT * INTO m FROM outbound_pipeline_delivery_manifests WHERE id=p_command->>'manifest_id';
- IF m.id IS NULL OR p_command->>'action' NOT IN('approve','reserve') THEN RAISE EXCEPTION 'pipeline_invalid_delivery_action';END IF;
- IF p_command->>'action'='approve' AND (p_actor NOT LIKE 'operator:%' OR NOT EXISTS(SELECT 1 FROM compass_outbound_approvals WHERE preparation_id=m.id AND hash=m.hash)) THEN RAISE EXCEPTION 'pipeline_operator_required';END IF;
+ IF m.id IS NULL OR p_command->>'action' NOT IN('approve','reserve','configure_sequence','approve_preview') THEN RAISE EXCEPTION 'pipeline_invalid_delivery_action';END IF;
+ IF p_command->>'action' IN('approve','configure_sequence','approve_preview') AND (p_actor NOT LIKE 'operator:%' OR NOT EXISTS(SELECT 1 FROM compass_outbound_approvals WHERE preparation_id=m.id AND hash=m.hash)) THEN RAISE EXCEPTION 'pipeline_operator_required';END IF;
  IF p_command->>'action'='reserve' AND NOT EXISTS(SELECT 1 FROM compass_outbound_loads WHERE preparation_id=m.id) THEN RAISE EXCEPTION 'pipeline_reservation_required';END IF;
+ IF p_command->>'action'='approve_preview' THEN
+  IF length(coalesce(p_command#>>'{data,evidence}',''))<10 THEN RAISE EXCEPTION 'pipeline_preview_evidence_required';END IF;
+ END IF;
  receipt:=jsonb_build_object('request_id',p_command->>'request_id','manifest',to_jsonb(m),'result',p_result);
  INSERT INTO outbound_pipeline_receipts VALUES(p_command->>'request_id',p_hash,p_actor,p_command->>'source',receipt,now());RETURN receipt;
 END $$;

@@ -82,7 +82,7 @@ const recordSchemas = {
     })
 };
 const filters = z.strictObject({
-    q: text.optional(), city: short.optional(), suburb: short.optional(), country: z.string().regex(/^[A-Z]{2}$/).optional(), fit: z.enum(['unknown', 'anti_icp', 'non_fit', 'likely_fit', 'sure_fit']).optional(), stage: stage.optional(), status: short.optional(), draft_status:z.enum(['drafted','undrafted']).optional(),verification_status:z.enum(['valid','invalid','catch_all','unknown','risky','unverified']).optional()
+    q: text.optional(), city: short.optional(), suburb: short.optional(), country: z.string().regex(/^[A-Z]{2}$/).optional(), administrative_region: short.optional(), fit: z.enum(['unknown', 'anti_icp', 'non_fit', 'likely_fit', 'sure_fit']).optional(), stage: stage.optional(), status: short.optional(), draft_status:z.enum(['drafted','undrafted']).optional(),verification_status:z.enum(['valid','invalid','catch_all','unknown','risky','unverified']).optional()
 });
 const leased = {
     item_id: id, lease_token: id
