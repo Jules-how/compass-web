@@ -33,11 +33,14 @@ jobs:
           paths = set()
           prepared = []
           for item in changes:
+              # Workflow edits are performed separately by the authorized connector.
+              if item['path'] == '.github/workflows/deploy-guards.yml':
+                  continue
               rel = pathlib.PurePosixPath(item['path'])
               assert not rel.is_absolute() and '..' not in rel.parts
               assert item['path'] not in paths
               paths.add(item['path'])
-              assert item['path'].startswith(('src/', 'test/', 'docs/design/')) or item['path'] == '.github/workflows/deploy-guards.yml'
+              assert item['path'].startswith(('src/', 'test/', 'docs/design/'))
               path = root / rel
               assert path.resolve().is_relative_to(root) and not path.is_symlink()
               old = path.read_bytes() if path.exists() else b''
@@ -53,10 +56,9 @@ jobs:
               path.parent.mkdir(parents=True, exist_ok=True)
               path.write_bytes(new)
           shutil.rmtree(transfer)
-          (root / '.github/workflows/outbound-review-workspace.yml').unlink()
-          print(f'Applied and verified {len(prepared)} source files; removed transfer helper and payload.')
+          print(f'Applied and verified {len(prepared)} source files; removed transfer payload.')
           PY
-          git add src test docs/design/OUTBOUND_VIDEO_FEEDBACK_2026-09-17.md .github
+          git add src test docs/design/OUTBOUND_VIDEO_FEEDBACK_2026-09-17.md .github/.outbound-transfer
           git diff --cached --check
           git diff --cached --stat
           git config user.name 'Julian Howard'
