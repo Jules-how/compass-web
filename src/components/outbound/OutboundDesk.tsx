@@ -16,7 +16,8 @@ import { useConsoleNav } from "@/components/ConsoleNav";
 import { loadOutboundRhythm } from "@/lib/console-destinations";
 import { ActivePane } from "@/components/ActivePane";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import "./workflow/pipeline-repair.css";
 import { TestPlanner } from "@/components/outbound/TestPlanner";
 import { OperatorShell } from "@/components/OperatorShell";
 import {
@@ -51,6 +52,10 @@ export function OutboundDesk() {
   const [desk, setDeskState] = useState<OutboundDeskId>(DEFAULT_OUTBOUND_DESK);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const leadQuery = useRef("desk=workflow");
+  useEffect(() => {
+    if (searchParams.get("desk") === "workflow" || (!searchParams.get("desk") && desk === "workflow")) leadQuery.current = searchParams.toString();
+  }, [desk, searchParams]);
   const [visited, setVisited] = useState<Set<OutboundDeskId>>(new Set());
   const [ready, setReady] = useState(false);
   const [prefs, setPrefs] = useCadencePrefs();
@@ -75,7 +80,9 @@ export function OutboundDesk() {
   const setDesk = useCallback((next: OutboundDeskId) => {
     setDeskState(writeOutboundDesk(next));
     setVisited((previous) => new Set([...previous, next]));
-    router.push(`/sales/outbound?desk=${next}`, { scroll: false });
+    const query = next === "workflow" ? new URLSearchParams(leadQuery.current) : new URLSearchParams();
+    query.set("desk", next);
+    router.push(`/sales/outbound?${query}`, { scroll: false });
   }, [router]);
 
   const slots = useMemo(() => {
@@ -91,52 +98,29 @@ export function OutboundDesk() {
   }, [campaignsQuery.data]);
 
   const switcher = (
-    <div
-      className="flex flex-wrap items-center gap-3"
-    >
+    <div className="flex flex-wrap items-center gap-3">
       <OutboundDeskSwitch value={desk} onChange={setDesk} />
-      {(
-        <>
-          <Link
-            className="compass-btn-secondary"
-            href="/sales/outbound/calling"
-          >
-            Calling
-          </Link>
-          <Link
-            className="compass-btn-primary"
-            href="/sales/outbound/rhythm"
-            onMouseEnter={() => {
-              void loadOutboundRhythm();
-            }}
-            onFocus={() => {
-              void loadOutboundRhythm();
-            }}
-            onClick={(event) => {
-              if (
-                !navigation ||
-                event.metaKey ||
-                event.ctrlKey ||
-                event.shiftKey ||
-                event.altKey
-              )
-                return;
-              event.preventDefault();
-              void loadOutboundRhythm();
-              navigation.navigate("/sales/outbound/rhythm");
-            }}
-          >
-            Today & follow-ups
-          </Link>
-        </>
-      )}
+      <Link className="compass-btn-secondary" href="/sales/outbound/calling">Calling</Link>
+      <details className="op-desk-menu">
+        <summary>More tools ▾</summary>
+        <nav aria-label="Other outbound tools">
+          <Link href="/sales/outbound/rhythm" onMouseEnter={() => { void loadOutboundRhythm(); }} onFocus={() => { void loadOutboundRhythm(); }} onClick={event => {
+            if (!navigation || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault(); void loadOutboundRhythm(); navigation.navigate("/sales/outbound/rhythm");
+          }}>Today & follow-ups</Link>
+          <Link href="/sales/outbound/craft">Writing library</Link>
+          <Link href="/sales/offers">Offers & tests</Link>
+          <Link href="/calendar">Calendar</Link>
+          <Link href="/sales">Sales overview</Link>
+        </nav>
+      </details>
     </div>
   );
 
   if (!ready) {
     return (
-      <OperatorShell title="Outbound" width="full">
-        {null}
+      <OperatorShell title="Outbound" width="full" hideRelatedLinks>
+        <div role="status" style={{ minHeight: 420 }}>Loading Outbound…</div>
       </OperatorShell>
     );
   }
@@ -145,6 +129,7 @@ export function OutboundDesk() {
     <OperatorShell
       title="Outbound"
       width="full"
+      hideRelatedLinks
       actions={
         <div className="flex flex-wrap items-end gap-3">
           {switcher}
