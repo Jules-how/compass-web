@@ -1,6 +1,10 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { MarketCards } from "./MarketCards";
+import { PipelinePicker } from "./PipelinePicker";
+import { PreparationFlow, VerificationGuide } from "./PreparationFlow";
+import { EMPTY_MARKET_SCOPE, filterMarketCompanies, marketPage, type MarketIndex, type MarketScope } from "@/lib/outbound-market";
 import { runScopeFilters } from "./pipeline-ui-state";
 import { ModalFrame } from "@/components/ui/ModalFrame";
 import {
@@ -34,6 +38,7 @@ import { ResearchEditor } from "./ResearchEditor";
 import { WriteEditor } from "./WriteEditor";
 import "./pipeline.css";
 import "./pipeline-repair.css";
+import "./pipeline-experience.css";
 import { useActivePane } from "@/components/ActivePane";
 import { PipelineTable } from "./PipelineTable";
 import { PipelineFilters } from "./PipelineFilters";
@@ -70,7 +75,6 @@ const emptyFilters: Filters = {
 };
 export function WorkflowWorkspace() {
   const tableScroll = useRef(0);
-  const router = useRouter();
   const searchParams = useSearchParams();
   const active = useActivePane();
   const lastActiveQuery = useRef(searchParams.toString());
@@ -81,6 +85,10 @@ export function WorkflowWorkspace() {
     ? (params.get("stage") as PipelineStage)
     : "list";
   const listId = params.get("list_id") || "";
+  const [standaloneWorkflowId, setStandaloneWorkflowId] = useState("");
+  const [newWorkflow, setNewWorkflow] = useState(false);
+  const [marketScope, setMarketScope] = useState<MarketScope>(EMPTY_MARKET_SCOPE);
+  const [listDisplay, setListDisplay] = useState<"cards" | "table">("cards");
   const [revision, setRevision] = useState(0),
     [filters, setFilters] = useState<Filters>(emptyFilters);
   const [pageScope, setPageScope] = useState("");
@@ -90,7 +98,7 @@ export function WorkflowWorkspace() {
     [history, setHistory] = useState<string[]>([]),
     [selected, setSelected] = useState<Set<string>>(new Set()),
     [allMatching, setAllMatching] = useState(false);
-  const [view, setView] = useState<"table" | "research" | "write">("table"),
+  const [view, setView] = useState<"table" | "research" | "write">(stage === "write" ? "write" : "table"),
     [dirty, setDirty] = useState(false);
   const [company, setCompany] = useState<PipelineCompany | null>(null),
     [recipient, setRecipient] = useState<RecipientRow | null>(null),
@@ -131,27 +139,28 @@ export function WorkflowWorkspace() {
     revision,
   );
   const selectedList = usePipelineRead<PipelinePage<PipelineList>>(
-    readable && listId ? queryPath("lists", { id: listId }) : null,
+    readable && listId && !lists.data?.records.some(value => value.id === listId) ? queryPath("lists", { id: listId }) : null,
     revision,
   );
   const list =
     selectedList.data?.records[0] ||
     lists.data?.records.find((value) => value.id === listId) ||
     null;
+  const activeWorkflowId = list?.workflow_version_id || standaloneWorkflowId;
   const selectedWorkflow = usePipelineRead<PipelinePage<WorkflowVersion>>(
-    readable && list?.workflow_version_id
-      ? queryPath("workflows", { id: list.workflow_version_id })
+    readable && activeWorkflowId && !workflows.data?.records.some(value => value.id === activeWorkflowId)
+      ? queryPath("workflows", { id: activeWorkflowId })
       : null,
     revision,
   );
   const workflow =
     selectedWorkflow.data?.records[0] ||
     workflows.data?.records.find(
-      (value) => value.id === list?.workflow_version_id,
+      (value) => value.id === activeWorkflowId,
     ) ||
     null;
   const selectedTemplate = usePipelineRead<PipelinePage<TemplateVersion>>(
-    readable && templateId ? queryPath("templates", { id: templateId }) : null,
+    readable && templateId && !templates.data?.records.some(value => value.id === templateId) ? queryPath("templates", { id: templateId }) : null,
     revision,
   );
   const template =
@@ -180,7 +189,9 @@ export function WorkflowWorkspace() {
       ),
     ).values(),
   ];
-  const scopeKey = JSON.stringify({ listId, stage, filters, recipientFilters });
+  const market = usePipelineRead<MarketIndex>(readable ? `/markets${listId ? `?list_id=${encodeURIComponent(listId)}` : ""}` : null, revision);
+  const marketRecords = useMemo(() => filterMarketCompanies(market.data?.records || [], filters, marketScope), [market.data, filters, marketScope]);
+  const scopeKey = JSON.stringify({ listId, stage, filters, recipientFilters, ...(stage === "list" ? { marketScope, listDisplay } : {}) });
   const queryAfter = pageScope === scopeKey ? after : "";
   const companyPath = queryPath("companies", {
     list_id: listId,
@@ -188,8 +199,10 @@ export function WorkflowWorkspace() {
     stage: stage === "list" ? undefined : stage,
     after: queryAfter,
   });
-  const rows = usePipelineRead<PipelinePage<PipelineCompany | RecipientRow>>(
-    readable
+  const basicCompanyTable = stage === "list" && listDisplay === "table" && !marketScope.profile && !marketScope.service;
+  const usesMarketRows = stage === "list" && !basicCompanyTable;
+  const remoteRows = usePipelineRead<PipelinePage<PipelineCompany | RecipientRow>>(
+    readable && (stage !== "list" || basicCompanyTable)
       ? stage === "write"
         ? queryPath("recipients", {
             list_id: listId,
@@ -202,6 +215,7 @@ export function WorkflowWorkspace() {
       : null,
     revision,
   );
+  const rows = usesMarketRows ? { loading: market.loading, error: market.error, data: market.data ? marketPage(marketRecords, queryAfter) : null } : remoteRows;
   const runs = usePipelineRead<PipelinePage<PipelineRun>>(
     readable && runsOpen ? queryPath("runs", { list_id: listId }) : null,
     revision,
@@ -227,17 +241,19 @@ export function WorkflowWorkspace() {
     setAllMatching(false);
   }, [scopeKey]);
   const linkedSelection = params.get("company_id");
+  const editorQuery = params.get("editor");
   useEffect(() => {
     if (linkedSelection) setSelected(new Set([linkedSelection]));
   }, [linkedSelection, listId, stage]);
   useEffect(() => {
-    setView("table");
+    setView(stage === "write" ? "write" : editorQuery === "research" ? "research" : "table");
     setRecipient(null);
     setVerificationRunId("");
     setExportOpen(false);
     setDetailOpen(false);
-  }, [listId, stage]);
+  }, [listId, stage, editorQuery]);
   useEffect(() => { setCompany(null); }, [listId]);
+  useEffect(() => { if (stage === "list") setFilters(value => value.status ? { ...value, status: "" } : value); }, [stage]);
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -294,12 +310,14 @@ export function WorkflowWorkspace() {
       return;
     setDirty(false);
     const query = new URLSearchParams(params.toString());
+    if (next.stage && !next.editor) query.delete("editor");
     query.set("desk", "workflow");
     query.delete("lead_id");
     query.delete("company_id");
     for (const [key, value] of Object.entries(next))
       value ? query.set(key, value) : query.delete(key);
-    router.push(`/sales/outbound?${query}`, { scroll: false });
+    // Query-only state: preserve the mounted workspace and avoid a redundant server navigation.
+    window.history.pushState(null, "", `/sales/outbound?${query}`);
   }
   function edit(next: "research" | "write") {
     if (
@@ -312,6 +330,12 @@ export function WorkflowWorkspace() {
       return;
     const main = document.getElementById("compass-main");
     if (view === "table") tableScroll.current = main?.scrollTop || 0;
+    if (stage !== next) {
+      const query = new URLSearchParams(params.toString());
+      query.set("desk", "workflow"); query.set("stage", next); query.set("editor", next);
+      query.delete("lead_id"); query.delete("company_id");
+      window.history.pushState(null, "", `/sales/outbound?${query}`);
+    }
     setView(next);
     requestAnimationFrame(() => {
       if (main) main.scrollTop = 0;
@@ -355,9 +379,9 @@ export function WorkflowWorkspace() {
           id: crypto.randomUUID(),
           name: listName.trim(),
           notes: listNotes || null,
-          workflow_version_id: null,
-          offer_version_id: null,
-          icp_version_id: null,
+          workflow_version_id: workflow?.id || null,
+          offer_version_id: workflow?.policy.offer_version_id || null,
+          icp_version_id: workflow?.policy.icp_version_id || null,
         },
       },
     ]);
@@ -369,8 +393,8 @@ export function WorkflowWorkspace() {
     }
   }
   async function attachWorkflow(id: string) {
-    if (!list) return;
-    const chosen = workflows.data?.records.find((value) => value.id === id);
+    if (!list) { setStandaloneWorkflowId(id); return; }
+    const chosen = workflowOptions.find((value) => value.id === id);
     if (!chosen) return;
     await command.save([
       {
@@ -463,19 +487,7 @@ export function WorkflowWorkspace() {
     <section className="op-pipeline" aria-label="Outbound lead pipeline">
       <header className="op-toolbar">
         <div className="op-inline">
-          <Field label="Working list">
-            <select
-              value={listId}
-              onChange={(e) => navigate({ list_id: e.target.value })}
-            >
-              <option value="">All companies</option>
-              {listOptions.map((value) => (
-                <option key={value.id} value={value.id}>
-                  {value.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <PipelinePicker label="Working list" value={listId} placeholder="All companies" options={[{ value: "", label: "All companies", description: "Browse markets before building a working list" }, ...listOptions.map(value => ({ value: value.id, label: value.name }))]} onChange={id => navigate({ list_id: id })} />
           <button onClick={() => setCreateOpen(true)} disabled={!writable}>
             New list
           </button>
@@ -484,14 +496,14 @@ export function WorkflowWorkspace() {
           <button
             onClick={() => {
               setRunsOpen(!runsOpen);
-              refresh();
             }}
             aria-expanded={runsOpen}
           >
             Runs
           </button>
           <button onClick={refresh} disabled={rows.loading}>Refresh</button>
-          <button id="outbound-export-toggle" aria-expanded={exportOpen} aria-controls="outbound-export-panel" disabled={!readable || view !== "table"} onClick={() => {
+          <button id="outbound-export-toggle" aria-expanded={exportOpen} aria-controls="outbound-export-panel" disabled={!readable || view !== "table" || (usesMarketRows && (!market.data || market.loading || Boolean(market.error) || (!selected.size && (marketRecords.length > 1000 || marketRecords.length === 0))))} onClick={() => {
+            if (stage === "list") setListDisplay("table");
             setExportOpen(value => !value);
             requestAnimationFrame(() => document.getElementById("outbound-export-panel")?.scrollIntoView({ block: "nearest" }));
           }}>Export / prepare</button>
@@ -515,21 +527,11 @@ export function WorkflowWorkspace() {
       )}
       {readable && (
         <>
-          <nav className="op-stages" aria-label="Pipeline stage">
-            {stages.map((value) => (
-              <button
-                key={value}
-                aria-current={stage === value ? "page" : undefined}
-                onClick={() => navigate({ stage: value })}
-              >
-                {PIPELINE_STAGE_INFO[value].label}
-              </button>
-            ))}
-          </nav>
+          <PreparationFlow stage={stage} onChange={value => navigate({ stage: value })} data={market.data} loading={market.loading} />
           <div className="op-stage-intro">
-            <div><h2>{view === "table" ? stageInfo.title : view === "research" ? "Research settings" : "Writing workspace"}</h2><p>{view === "table" ? stageInfo.description : "Changes save to the same Compass records used by your agent."}</p></div>
+            <div><h2>{view === "table" ? stageInfo.title : view === "research" ? "Research workflow" : "Writing workspace"}</h2><p>{view === "table" ? stageInfo.description : "Edit here, save a version, then review the selected accounts or recipients before running it."}</p></div>
             <div className="op-inline">
-              {view !== "table" ? <button onClick={returnToTable}>Back to leads</button> : stage === "research" ? <button onClick={() => edit("research")}>Research settings</button> : stage === "write" ? <button onClick={() => edit("write")}>Open writing editor</button> : null}
+              {view !== "table" ? <button onClick={returnToTable}>{view === "write" ? "Recipients & queue" : "Back to accounts"}</button> : stage === "research" ? <button onClick={() => edit("research")}>Research settings</button> : stage === "write" ? <button onClick={() => edit("write")}>Open writing editor</button> : null}
             </div>
           </div>
           {!writable && (
@@ -568,67 +570,46 @@ export function WorkflowWorkspace() {
                 {error}
               </p>
             ))}
-          <details className="op-setup">
-            <summary><span>List setup</span><span className="op-setup-summary">{workflow?.name || (list ? "Choose a workflow" : "Choose a list to configure its workflow")}</span></summary>
-          <div className="op-toolbar op-context-toolbar">
-            <div className="op-inline">
-              <Field label="Saved workflow">
-                <select
-                  value={list?.workflow_version_id || ""}
-                  disabled={!list || !writable || blocked}
-                  onChange={(e) => void attachWorkflow(e.target.value)}
-                >
-                  <option value="">Choose a workflow</option>
-                  {workflowOptions.map((value) => (
-                    <option key={value.id} value={value.id}>
-                      {value.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <button onClick={() => edit("research")}>Edit research</button>
-              <Field label="Writing template">
-                <select
-                  value={templateId}
-                  onChange={(e) => {
-                    if (
-                      !dirty ||
-                      window.confirm(
-                        "Switch template? Unsaved changes remain in this browser tab.",
-                      )
-                    ) {
-                      setDirty(false);
-                      setTemplateId(e.target.value);
-                    }
-                  }}
-                >
-                  <option value="">New template</option>
-                  {templateOptions.map((value) => (
-                    <option key={value.id} value={value.id}>
-                      {value.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <button onClick={() => edit("write")}>Edit writing</button>
+          <section className="op-workspace-setup" aria-label="Working list configuration">
+            <div className="op-setup-heading"><strong>{list ? list.name : "Build a reusable outbound workflow"}</strong><span>{list ? "Saved list · shared with your connected agent" : "Choose an offer and ICP once; reuse the workflow across city lists."}</span></div>
+            <div className="op-setup-controls">
+              <PipelinePicker label="Research workflow" value={activeWorkflowId} placeholder="Choose or create a workflow" disabled={!writable || blocked} options={workflowOptions.map(value => ({ value: value.id, label: value.name, description: `${value.policy.criteria.length} ICP rules · ${value.policy.signals.length} writing signals` }))} onChange={id => void attachWorkflow(id)} onCreate={() => { setNewWorkflow(true); edit("research"); }} createLabel="Create research workflow" />
+              <button onClick={() => { setNewWorkflow(false); edit("research"); }}>{workflow ? "Edit workflow" : "Create workflow"}</button>
+              <PipelinePicker label="Writing template" value={templateId} placeholder="Start a new message template" options={templateOptions.map(value => ({ value: value.id, label: value.name, description: `${value.policy.variations?.length || 0} signal variations` }))} onChange={id => {
+                if (!dirty || window.confirm("Switch template? Unsaved changes remain in this browser tab.")) { setDirty(false); setTemplateId(id); edit("write"); }
+              }} onCreate={() => { if (!dirty || window.confirm("Start a new template? Your current draft remains in this tab.")) { setDirty(false); setTemplateId(""); edit("write"); } }} createLabel="Create writing template" />
+              <button onClick={() => edit("write")}>Write messages</button>
             </div>
-            {view !== "table" && (
-              <button onClick={returnToTable}>Back to table</button>
-            )}
-          </div>
-          </details>
+            {!list && <p>Creating a workflow does not need a list. Choose <strong>New list</strong> to save a working list with this workflow; add selected accounts to it below.</p>}
+          </section>
+          {stage === "verify" && view === "table" && <VerificationGuide />}
+          {stage === "contacts" && view === "table" && <p className="op-notice">Companies are business accounts. This step finds the people and contact routes inside each account. Open a company to inspect its owner, work email, business phone or unresolved candidates.</p>}
+          {stage === "list" && view === "table" && <section className="op-market-controls" aria-label="Market and ICP filters">
+            <PipelinePicker label="Saved ICP profile" value={marketScope.profile} placeholder="All profiles" options={[{ value: "", label: "All profiles", description: "Do not filter by an assessment profile" }, ...workflowOptions.map(value => ({ value: value.id, label: value.policy.icp_name || value.name, description: value.name }))]} onChange={id => setMarketScope({ ...marketScope, profile: id, outcome: "all" })} onCreate={() => { setNewWorkflow(true); edit("research"); }} createLabel="Create an ICP in a workflow" />
+            {marketScope.profile && <Field label="ICP outcome"><select value={marketScope.outcome} onChange={event => setMarketScope({ ...marketScope, outcome: event.target.value as MarketScope["outcome"] })}><option value="matches">Likely or confirmed matches</option><option value="all">All accounts, including unassessed</option><option value="unknown">Unassessed / unknown only</option><option value="nonmatches">Non-matches and exclusions</option></select></Field>}
+            {marketScope.service && <button className="op-chip" onClick={() => setMarketScope({ ...marketScope, service: "" })}>Service: {marketScope.service} ×</button>}
+            <div className="op-segmented" role="group" aria-label="Company view"><button aria-pressed={listDisplay === "cards"} onClick={() => setListDisplay("cards")}>Market cards</button><button aria-pressed={listDisplay === "table"} onClick={() => setListDisplay("table")}>Accounts table</button></div>
+            <small>Choose a saved profile, then select a fit outcome to filter. Unknown accounts remain visible until you choose matches only. Add a filtered selection to a list before researching it.</small>
+          </section>}
           <div hidden={view !== "table"}>
             <PipelineFilters stage={stage} value={filters} recipientValue={recipientFilters} onApply={(next, recipients) => {
               setFilters(next);
               setRecipientFilters(recipients);
             }} />
+            {stage === "list" && listDisplay === "cards" && <MarketCards records={marketRecords} profile={marketScope.profile} workflow={workflowOptions.find(value => value.id === marketScope.profile) || workflow} loading={market.loading} error={market.error} onRetry={refresh} onCity={city => { setFilters({ ...filters, city }); setListDisplay("table"); }} onService={service => { setMarketScope({ ...marketScope, service }); setListDisplay("table"); }} />}
+            <div hidden={stage === "list" && listDisplay === "cards"}>
             <div className="op-selection">
               <div className="op-selection-text">
                 <strong>{rows.data ? `${rows.data.total_matching.toLocaleString()} ${stage === "write" ? "recipients" : "companies"}` : rows.error ? "View unavailable" : "Loading records…"}</strong>
                 {(selected.size > 0 || allMatching) && <small>{allMatching ? "All matching selected" : `${selected.size} selected`}</small>}
               </div>
               <div className="op-inline">
-                {selected.size > 0 && !allMatching && <button disabled={rows.loading || Boolean(rows.error)} onClick={() => setAllMatching(true)}>Select all matching</button>}
+                {selected.size > 0 && !allMatching && <button disabled={rows.loading || Boolean(rows.error)} onClick={() => {
+                  if (usesMarketRows) {
+                    if (marketRecords.length > 1000) { setNotice("Narrow this market to 1,000 accounts or fewer, or select individual pages. No broader scope will be queued."); return; }
+                    setSelected(new Set(marketRecords.map(row => row.id))); setAllMatching(false);
+                  } else setAllMatching(true);
+                }}>Select all matching</button>}
                 {(selected.size > 0 || allMatching) && <button onClick={() => { setSelected(new Set()); setAllMatching(false); }}>Clear selection</button>}
                 {stage !== "list" ? <div className="op-next-action"><button className="compass-btn-primary" disabled={Boolean(runBlocker)} aria-describedby="outbound-run-help" onClick={() => void startRun()}>{stageInfo.action}</button><small id="outbound-run-help">{runBlocker || "Queues work for your connected agent; it does not send emails."}</small></div> : <button disabled={!list} onClick={() => navigate({ stage: "research" })}>Open research <span aria-hidden="true">→</span></button>}
               </div>
@@ -792,7 +773,7 @@ export function WorkflowWorkspace() {
                   ...(stage !== "list" ? { stage } : {}),
                 }}
                 companyIds={
-                  stage !== "write" && !allMatching && selected.size ? [...selected] : undefined
+                  usesMarketRows ? (selected.size ? [...selected] : marketRecords.map(row => row.id)) : stage !== "write" && !allMatching && selected.size ? [...selected] : undefined
                 }
                 recipientIds={
                   stage === "write" && !allMatching && selected.size
@@ -825,16 +806,18 @@ export function WorkflowWorkspace() {
                 </button>
               )}
             </section>
+            </div>
           </div>
-          {view === "research" && list?.workflow_version_id && !workflow && (
+          {view === "research" && !newWorkflow && activeWorkflowId && !workflow && (
             <p role="status">
               {selectedWorkflow.error || "Loading saved workflow…"}
             </p>
           )}
-          {view === "research" && (!list?.workflow_version_id || workflow) && (
+          {view === "research" && (newWorkflow || !activeWorkflowId || workflow) && (
             <ResearchEditor
-              key={`${listId}:${workflow?.id || "new"}`}
-              version={workflow}
+              key={`${listId}:${newWorkflow ? "new" : workflow?.id || "new"}`}
+              version={newWorkflow ? null : workflow}
+              onVersionSaved={id => { setNewWorkflow(false); setStandaloneWorkflowId(id); }}
               workflows={workflowOptions}
               list={list}
               company={company}

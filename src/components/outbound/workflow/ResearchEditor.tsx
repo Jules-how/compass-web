@@ -8,6 +8,8 @@ import type {
   WorkflowVersion,
 } from "@/lib/outbound-pipeline";
 import type { ExecutorCatalogue } from "@/lib/outbound-executor";
+import { ResearchCards } from "./ResearchCards";
+import { NumberField, useDraftHistory } from "./useDraftHistory";
 import { OfferProfile } from "./OfferProfile";
 import { Field, CommandNotice } from "./PipelineForms";
 import { useEditorBuffer, usePipelineCommand, usePipelineRead } from "./pipeline-client";
@@ -34,7 +36,9 @@ export function ResearchEditor({
   onSaved,
   onDirty,
   workflows,
+  onVersionSaved,
 }: {
+  onVersionSaved: (id: string) => void;
   workflows: WorkflowVersion[];
   version: WorkflowVersion | null;
   list: PipelineList | null;
@@ -48,22 +52,19 @@ export function ResearchEditor({
     `compass.pipeline.research.${list?.id || "new"}.${version?.id || "new"}.name`,
     version?.name || "",
   );
-  const [policy, setPolicy] = useEditorBuffer<WorkflowPolicy>(
+  const [policy, persistPolicy] = useEditorBuffer<WorkflowPolicy>(
     `compass.pipeline.research.${list?.id || "new"}.${version?.id || "new"}.policy`,
     structuredClone(version?.policy || emptyPolicy()),
   );
+  const history = useDraftHistory(policy, persistPolicy);
+  const setPolicy = history.change;
   const [dirty, setDirty] = useState(false);
   const command = usePipelineCommand(
     onSaved,
     `research.${list?.id || "new"}.${version?.id || "new"}`,
   );
   useEffect(() => {
-    if (
-      name !== (version?.name || "") ||
-      JSON.stringify(policy) !==
-        JSON.stringify(version?.policy || emptyPolicy())
-    )
-      setDirty(true);
+    setDirty(name !== (version?.name || "") || JSON.stringify(policy) !== JSON.stringify(version?.policy || emptyPolicy()));
   }, [name, policy, version]);
   useEffect(() => {
     onDirty(dirty);
@@ -91,7 +92,7 @@ export function ResearchEditor({
     const savedPolicy = {
       ...policy,
       icp_version_id: crypto.randomUUID(),
-      icp_name: name,
+      icp_name: policy.icp_name?.trim() || name.trim(),
       target_roles: policy.target_roles.filter(Boolean),
       tools: policy.tools.map((tool) => ({
         ...tool,
@@ -126,7 +127,7 @@ export function ResearchEditor({
           ]
         : []),
     ]);
-    if (result) setDirty(false);
+    if (result) { setDirty(false); onVersionSaved(id); }
   }
   return (
     <div className="op-editor-layout">
@@ -139,7 +140,7 @@ export function ResearchEditor({
       >
         <div className="op-editor-heading">
           <div>
-            <h2>Research configuration</h2>
+            <h2>Build your research workflow</h2>
             <p>
               Save a new version for {list?.name || "future lists"}. Existing
               evidence and active runs retain their original version.
@@ -153,12 +154,14 @@ export function ResearchEditor({
               command.uncertain ||
               !name.trim() ||
               !policy.offer_version_id ||
-              !policy.icp_version_id
+              !policy.icp_version_id ||
+              !policy.criteria.length
             }
           >
-            {command.busy ? "Saving…" : "Save version"}
+            {command.busy ? "Saving…" : "Save workflow"}
           </button>
         </div>
+        <div className="op-editor-history"><span>{dirty ? "Draft kept in this browser tab" : "Saved workflow"}</span><div className="op-inline"><button type="button" disabled={!history.canUndo || command.busy || command.uncertain} onClick={history.undo}>Undo</button><button type="button" disabled={!history.canRedo || command.busy || command.uncertain} onClick={history.redo}>Redo</button><button type="button" disabled={!dirty || command.busy || command.uncertain} onClick={() => { if (window.confirm("Revert to the saved workflow? Undo can recover this draft.")) { setPolicy(structuredClone(version?.policy || emptyPolicy())); setName(version?.name || ""); } }}>Revert to saved</button></div></div>
         <CommandNotice state={command} />
         <fieldset disabled={!writable || command.busy || command.uncertain}>
           <Field label="Workflow name">
@@ -179,242 +182,10 @@ export function ResearchEditor({
               setDirty(true);
             }}
           />
+          <ResearchCards policy={policy} onChange={setPolicy} />
           <section>
             <div className="op-section-heading">
-              <h3>Fit and exclusion criteria</h3>
-              <button
-                type="button"
-                onClick={() =>
-                  update("criteria", [
-                    ...policy.criteria,
-                    {
-                      id: crypto.randomUUID(),
-                      label: "",
-                      instructions: "",
-                      required: true,
-                      exclusion: false,
-                    },
-                  ])
-                }
-              >
-                Add criterion
-              </button>
-            </div>
-            <p className="op-muted">
-              Missing evidence stays unknown. Exclusions take precedence; failed
-              required criteria produce non-fit.
-            </p>
-            {policy.criteria.map((criterion, index) => (
-              <div className="op-config-row" key={criterion.id}>
-                <div className="op-section-heading">
-                  <strong>Criterion {index + 1}</strong>
-                  <button
-                    type="button"
-                    aria-label={`Remove criterion ${index + 1}`}
-                    onClick={() =>
-                      update(
-                        "criteria",
-                        policy.criteria.filter((_, i) => i !== index),
-                      )
-                    }
-                  >
-                    Remove
-                  </button>
-                </div>
-                <Field label="Criterion">
-                  <input
-                    value={criterion.label}
-                    required
-                    onChange={(e) =>
-                      update(
-                        "criteria",
-                        policy.criteria.map((v, i) =>
-                          i === index ? { ...v, label: e.target.value } : v,
-                        ),
-                      )
-                    }
-                  />
-                </Field>
-                <Field label="Assessment instructions">
-                  <textarea
-                    value={criterion.instructions}
-                    onChange={(e) =>
-                      update(
-                        "criteria",
-                        policy.criteria.map((v, i) =>
-                          i === index
-                            ? { ...v, instructions: e.target.value }
-                            : v,
-                        ),
-                      )
-                    }
-                  />
-                </Field>
-                <div className="op-inline">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={criterion.required}
-                      onChange={(e) =>
-                        update(
-                          "criteria",
-                          policy.criteria.map((v, i) =>
-                            i === index
-                              ? { ...v, required: e.target.checked }
-                              : v,
-                          ),
-                        )
-                      }
-                    />{" "}
-                    Required
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={criterion.exclusion}
-                      onChange={(e) =>
-                        update(
-                          "criteria",
-                          policy.criteria.map((v, i) =>
-                            i === index
-                              ? { ...v, exclusion: e.target.checked }
-                              : v,
-                          ),
-                        )
-                      }
-                    />{" "}
-                    Exclusion
-                  </label>
-                </div>
-              </div>
-            ))}
-          </section>
-          <section>
-            <div className="op-section-heading">
-              <h3>Signals to collect</h3>
-              <button
-                type="button"
-                onClick={() =>
-                  update("signals", [
-                    ...policy.signals,
-                    {
-                      id: crypto.randomUUID(),
-                      label: "",
-                      value_type: "text",
-                      required: false,
-                      collection_instructions: "",
-                      acceptable_evidence: "",
-                      usefulness_guidance: "",
-                      writing_eligible: true,
-                    },
-                  ])
-                }
-              >
-                Add signal
-              </button>
-            </div>
-            {policy.signals.map((signal, index) => {
-              const change = (patch: Partial<typeof signal>) =>
-                update(
-                  "signals",
-                  policy.signals.map((v, i) =>
-                    i === index ? { ...v, ...patch } : v,
-                  ),
-                );
-              return (
-                <div className="op-config-row" key={signal.id}>
-                  <div className="op-section-heading">
-                    <strong>Signal {index + 1}</strong>
-                    <button
-                      type="button"
-                      aria-label={`Remove signal ${index + 1}`}
-                      onClick={() =>
-                        update(
-                          "signals",
-                          policy.signals.filter((_, i) => i !== index),
-                        )
-                      }
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <div className="op-grid-two">
-                    <Field label="Signal label">
-                      <input
-                        required
-                        value={signal.label}
-                        onChange={(e) => change({ label: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Value type">
-                      <select
-                        value={signal.value_type}
-                        onChange={(e) =>
-                          change({
-                            value_type: e.target
-                              .value as typeof signal.value_type,
-                          })
-                        }
-                      >
-                        {["text", "number", "boolean", "date", "list"].map(
-                          (v) => (
-                            <option key={v}>{v}</option>
-                          ),
-                        )}
-                      </select>
-                    </Field>
-                  </div>
-                  <Field label="Collection instructions">
-                    <textarea
-                      value={signal.collection_instructions}
-                      onChange={(e) =>
-                        change({ collection_instructions: e.target.value })
-                      }
-                    />
-                  </Field>
-                  <Field label="Acceptable evidence">
-                    <textarea
-                      value={signal.acceptable_evidence}
-                      onChange={(e) =>
-                        change({ acceptable_evidence: e.target.value })
-                      }
-                    />
-                  </Field>
-                  <Field label="Usefulness for personalisation">
-                    <textarea
-                      value={signal.usefulness_guidance}
-                      onChange={(e) =>
-                        change({ usefulness_guidance: e.target.value })
-                      }
-                    />
-                  </Field>
-                  <div className="op-inline">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={signal.required}
-                        onChange={(e) => change({ required: e.target.checked })}
-                      />{" "}
-                      Required collection
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={signal.writing_eligible}
-                        onChange={(e) =>
-                          change({ writing_eligible: e.target.checked })
-                        }
-                      />{" "}
-                      Eligible for writing
-                    </label>
-                  </div>
-                </div>
-              );
-            })}
-          </section>
-          <section>
-            <div className="op-section-heading">
-              <h3>Tools and fallback order</h3>
+              <h3>How should the agent research?</h3>
               <button
                 type="button"
                 onClick={() =>
@@ -540,25 +311,19 @@ export function ResearchEditor({
                   </div>
                   <div className="op-grid-two">
                     <Field label="Maximum attempts">
-                      <input
-                        type="number"
-                        min="1"
-                        max="10"
+                      <NumberField min={1}
+                        max={10}
                         value={tool.max_attempts}
-                        onChange={(e) =>
-                          change({ max_attempts: Number(e.target.value) })
-                        }
-                      />
+                        onValue={(value) =>
+                          change({ max_attempts: value })
+                        } />
                     </Field>
                     <Field label="Reuse cached evidence (days)">
-                      <input
-                        type="number"
-                        min="0"
+                      <NumberField min={0}
                         value={tool.cache_max_age_days}
-                        onChange={(e) =>
-                          change({ cache_max_age_days: Number(e.target.value) })
-                        }
-                      />
+                        onValue={(value) =>
+                          change({ cache_max_age_days: value })
+                        } />
                     </Field>
                   </div>
                 </div>
@@ -585,35 +350,29 @@ export function ResearchEditor({
               label="Reuse valid verification (days)"
               hint="Zero requires verification in the current preparation run. Only explicitly valid results advance."
             >
-              <input
-                type="number"
-                min="0"
+              <NumberField min={0}
                 value={policy.verification.reuse_days}
-                onChange={(e) =>
+                onValue={(value) =>
                   update("verification", {
                     accepted: ["valid"],
-                    reuse_days: Number(e.target.value),
+                    reuse_days: value,
                   })
-                }
-              />
+                } />
             </Field>
           </section>
           <section>
-            <h3>Execution limits and checkpoints</h3>
+            <h3>Budget and review points</h3><p className="op-muted">A spending ceiling is not an instruction to spend. Work only starts when you queue a run and a connected agent claims it. Pause points let you review results before the next stage.</p>
             <div className="op-grid-two">
               <Field label="Spending limit">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
+                <NumberField min={0}
+                  step={0.01}
                   value={policy.budget.amount}
-                  onChange={(e) =>
+                  onValue={(value) =>
                     update("budget", {
                       ...policy.budget,
-                      amount: Number(e.target.value),
+                      amount: value,
                     })
-                  }
-                />
+                  } />
               </Field>
               <Field label="Currency">
                 <input
@@ -629,13 +388,10 @@ export function ResearchEditor({
               </Field>
             </div>
             <Field label="Concurrent work items">
-              <input
-                type="number"
-                min="1"
-                max="10"
+              <NumberField min={1}
+                max={10}
                 value={policy.concurrency}
-                onChange={(e) => update("concurrency", Number(e.target.value))}
-              />
+                onValue={(value) => update("concurrency", value)} />
             </Field>
             <div
               className="op-inline"

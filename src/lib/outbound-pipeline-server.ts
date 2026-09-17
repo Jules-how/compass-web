@@ -91,9 +91,7 @@ export async function readPipeline(db: SupabaseClient, params: URLSearchParams) 
             if (params.has(key))
                 filters[key] = params.get(key)!;
         const exactId = params.get("id") || params.get("company_id");
-        const counted = exactId ? null : await db.rpc("outbound_pipeline_company_count", { p_filters: filters });
-        if (counted)
-            pipelineDatabaseError(counted.error);
+        const countRequest = exactId ? Promise.resolve(null) : db.rpc("outbound_pipeline_company_count", { p_filters: filters });
         query = db.rpc("outbound_pipeline_companies", {
             p_filters: filters,
             p_after: exactId ? "" : (after || ""),
@@ -103,7 +101,8 @@ export async function readPipeline(db: SupabaseClient, params: URLSearchParams) 
             query = query.eq("id", params.get("id")!);
         if (params.has("company_id"))
             query = query.eq("id", params.get("company_id")!);
-        const page = await query.order("id");
+        const [counted, page] = await Promise.all([countRequest, query.order("id")]);
+        if (counted) pipelineDatabaseError(counted.error);
         pipelineDatabaseError(page.error);
         let records = (page.data || []).slice(0, limit) as Record<string, unknown>[];
         const next_after = (page.data || []).length > limit ? Buffer.from(JSON.stringify({
