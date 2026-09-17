@@ -1,738 +1,120 @@
-"use client";
-import { useEffect, useMemo, useState } from "react";
-import {
-  renderPipelineTemplate,
-  selectPipelineVariation,
-  type Copy,
-  type Draft,
-  type PipelineList,
-  type PipelinePage,
-  type Recipient,
-  type SignalDefinition,
-  type SignalObservation,
-  type TemplatePolicy,
-  type TemplateVersion,
-} from "@/lib/outbound-pipeline";
-import { SignalVariations } from "./SignalVariations";
-import { useDraftHistory } from "./useDraftHistory";
-import { previewSignalValues } from "./pipeline-ui-state";
-import { PipelineJobsPanel } from "./PipelineJobsPanel";
-import { EvidenceSource } from "./EvidenceSource";
-import { Field, CommandNotice } from "./PipelineForms";
-import {
-  queryPath,
-  useEditorBuffer,
-  usePipelineCommand,
-  usePipelineRead,
-  usePipelineCatalogue,
-} from "./pipeline-client";
-const parts = ["subject", "opener", "body", "cta", "unsubscribe"] as const;
-const names = {
-  subject: "Subject",
-  opener: "Opener",
-  body: "Body",
-  cta: "Call to action",
-  unsubscribe: "Unsubscribe",
-};
-const emptyTemplate = (): TemplatePolicy => ({
-  mode: "deterministic",
-  subject: "",
-  opener: "",
-  body: "",
-  cta: "",
-  unsubscribe: "",
-  slots: {},
-  followups: [],
-});
-export function WriteEditor({
-  version,
-  lists,
-  list,
-  recipient,
-  signals,
-  writable,
-  onSaved,
-  onDirty,
-  onVersionSaved,
-}: {
-  version: TemplateVersion | null;
-  lists: PipelineList[];
-  list: PipelineList | null;
-  recipient: Recipient | null;
-  signals: SignalDefinition[];
-  writable: boolean;
-  onSaved: () => void;
-  onDirty: (dirty: boolean) => void;
-  onVersionSaved: (id: string) => void;
-}) {
-  const [name, setName] = useEditorBuffer(
-      `compass.pipeline.write.${list?.id || "new"}.${version?.id || "new"}.name`,
-      version?.name || "",
-    ),
-    [policy, persistPolicy] = useEditorBuffer<TemplatePolicy>(
-      `compass.pipeline.write.${list?.id || "new"}.${version?.id || "new"}.policy`,
-      structuredClone(version?.policy || emptyTemplate()),
-    ),
-    [dirty, setDirty] = useState(false),
-    [slotName, setSlotName] = useState("");
-  const history = useDraftHistory(policy, persistPolicy);
-  const setPolicy = history.change;
-  const previousTemplate = usePipelineRead<PipelinePage<TemplateVersion>>(
-    version?.parent_id
-      ? queryPath("templates", { id: version.parent_id })
-      : null,
-  );
-  const [affected, setAffected] = useState<string[]>(list ? [list.id] : []);
-  const [revision, bump] = useState(0);
-  const command = usePipelineCommand(
-    () => {
-      bump((v) => v + 1);
-      onSaved();
-    },
-    `write.${list?.id || "new"}.${version?.id || "new"}`,
-  );
-  const observations = usePipelineRead<PipelinePage<SignalObservation>>(
-    recipient
-      ? queryPath("signals", { company_id: recipient.company_id })
-      : null,
-    revision,
-  );
-  const drafts = usePipelineCatalogue<Draft>(
-    "drafts",
-    Boolean(recipient),
-    revision,
-    { recipient_id: recipient?.id },
-  );
-  const recipientState = usePipelineRead<
-    PipelinePage<Recipient & { current_draft_id: string | null }>
-  >(recipient ? queryPath("recipients", { id: recipient.id }) : null, revision);
-  const currentDraftId = recipientState.data?.records[0]?.current_draft_id;
-  const currentDraftState = usePipelineRead<PipelinePage<Draft>>(
-    currentDraftId ? queryPath("drafts", { id: currentDraftId }) : null,
-    revision,
-  );
-  const currentDraft = currentDraftState.data?.records[0] || null;
-  const [manual, setManual] = useEditorBuffer<{
-    copy: Copy;
-    previousId: string;
-  } | null>(
-    `compass.pipeline.recipient.${recipient?.id || "none"}.draft`,
-    null,
-  );
-  useEffect(() => {
-    setDirty(name !== (version?.name || "") || JSON.stringify(policy) !== JSON.stringify(version?.policy || emptyTemplate()));
-  }, [name, policy, version]);
-  useEffect(() => {
-    onDirty(dirty || Boolean(manual));
-    return () => onDirty(false);
-  }, [dirty, manual, onDirty]);
-  useEffect(() => {
-    const handler = (event: BeforeUnloadEvent) => {
-      if (dirty || manual) {
-        event.preventDefault();
-        event.returnValue = "";
-      }
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [dirty, manual]);
-  const evidence = useMemo(() => {
-    const values = observations.data?.records || [];
-    const superseded = new Set(values.map((v) => v.supersedes_id));
-    return values.filter((v) => !superseded.has(v.id));
-  }, [observations.data]);
-  const preview = useMemo(() => {
-    if (policy.mode === "ai") return null;
-    const { values } = previewSignalValues(evidence, signals);
-    return renderPipelineTemplate(policy, values);
-  }, [policy, evidence, signals]);
-  function update(patch: Partial<TemplatePolicy>) {
-    setPolicy((old) => ({ ...old, ...patch }));
-    setDirty(true);
+'use client';
+import { useEffect, useMemo, useState } from 'react';
+import { renderPipelineTemplate, type Copy, type Draft, type PipelineList, type PipelinePage, type Recipient, type SignalDefinition, type SignalObservation, type TemplatePolicy, type TemplateVersion, type WorkflowVersion } from '@/lib/outbound-pipeline';
+import { COPY_PARTS, COPY_LABELS, copyControlFromTemplate, copyControlIssues, renderCopyControl, studioTemplate, type CopyRenderContext, type CopySignal } from '@/lib/copy-control';
+import { CopyControlStudio } from './CopyControlStudio';
+import { CopyControlResults } from './CopyControlResults';
+import { SignalVariations } from './SignalVariations';
+import { PipelineJobsPanel } from './PipelineJobsPanel';
+import { EvidenceSource } from './EvidenceSource';
+import { useDraftHistory } from './useDraftHistory';
+import { Field, CommandNotice } from './PipelineForms';
+import { PIPELINE_API, queryPath, useEditorBuffer, usePipelineCommand, usePipelineRead, usePipelineCatalogue } from './pipeline-client';
+import './copy-control.css';
+const emptyTemplate = (): TemplatePolicy => ({ mode: 'deterministic', subject: '', opener: '', body: '', cta: '', unsubscribe: "Reply 'no thanks' and I won't contact you again.", slots: {}, followups: [] });
+type Context = { list: PipelineList; workflow: WorkflowVersion; recipient: (Recipient & { current_draft_id?: string }) | null; offer: { id: string; version_no: number; snapshot: Record<string, unknown> } | null; inputs: { signals: Record<string, CopySignal>; values: Record<string, string>; conflicts: string[] }; observations: SignalObservation[]; context: CopyRenderContext; preview_hash: string };
+function DocumentValue({ value }: { value: unknown }) {
+  if (Array.isArray(value)) return <div>{value.map((item, i) => <DocumentValue key={i} value={item} />)}</div>;
+  if (value && typeof value === 'object') return <dl>{Object.entries(value).map(([key, item]) => <div key={key}><dt>{key.replaceAll('_', ' ')}</dt><dd><DocumentValue value={item} /></dd></div>)}</dl>;
+  return <p className="op-copy-text">{value == null ? 'Not specified' : String(value)}</p>;
+}
+export function WriteEditor({ version, lists, list, recipient, signals, writable, onSaved, onDirty, onVersionSaved, onSelectRecipient }: { version: TemplateVersion | null; lists: PipelineList[]; list: PipelineList | null; recipient: Recipient | null; signals: SignalDefinition[]; writable: boolean; onSaved: () => void; onDirty: (dirty: boolean) => void; onVersionSaved: (id: string) => void; onSelectRecipient?: (recipient: Recipient) => void }) {
+  const key = `compass.pipeline.write.${list?.id || 'new'}.${version?.id || 'new'}`;
+  const [name, setName] = useEditorBuffer(`${key}.name`, version?.name || '');
+  const [policy, persistPolicy] = useEditorBuffer<TemplatePolicy>(`${key}.policy`, structuredClone(version?.policy || emptyTemplate()));
+  const history = useDraftHistory(policy, persistPolicy), setPolicy = history.change;
+  const config = useMemo(() => policy.copy_control || copyControlFromTemplate(policy), [policy]);
+  const effective = useMemo(() => studioTemplate(policy, config), [policy, config]);
+  const issues = copyControlIssues(config);
+  const dirty = name !== (version?.name || '') || JSON.stringify(policy) !== JSON.stringify(version?.policy || emptyTemplate());
+  const [revision, bump] = useState(0), [previewOpen, setPreviewOpen] = useState(false), [sampleMode, setSampleMode] = useState(false), [sampleId, setSampleId] = useState('sample-1'), [query, setQuery] = useState(''), [previewVariant, setPreviewVariant] = useState('');
+  const [samples, setSamples] = useEditorBuffer<{ id: string; name: string; values: Record<string, string> }[]>('compass.copy-control.samples.v1', [{ id: 'sample-1', name: 'Test lead 1', values: {} }]);
+  const [affected, setAffected] = useState<string[]>(list ? [list.id] : []), [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [generated, setGenerated] = useState<{ generated: Record<string, string>; preview_hash: string; generation_request_id: string } | null>(null), [generationBusy, setGenerationBusy] = useState(false), [generationError, setGenerationError] = useState('');
+  const [generationRequest, setGenerationRequest] = useEditorBuffer<object | null>(`${key}.${recipient?.id || 'none'}.generation-request`, null);
+  const command = usePipelineCommand(() => { bump(v => v + 1); onSaved(); }, `${key}.${recipient?.id || 'none'}`);
+  const state = usePipelineRead<Context>(list && previewOpen ? `/copy-control?list_id=${encodeURIComponent(list.id)}${recipient ? `&recipient_id=${encodeURIComponent(recipient.id)}` : ''}` : null, revision);
+  const context = state.data;
+  const candidates = usePipelineCatalogue<Recipient>('recipients', previewOpen && Boolean(list), revision, { list_id: list?.id, q: query || undefined });
+  const drafts = usePipelineCatalogue<Draft>('drafts', previewOpen && Boolean(recipient), revision, { recipient_id: recipient?.id });
+  const currentDraftId = context?.recipient?.current_draft_id;
+  const currentDraftRead = usePipelineRead<PipelinePage<Draft>>(currentDraftId ? queryPath('drafts', { id: currentDraftId }) : null, revision);
+  const currentDraft = currentDraftRead.data?.records[0] || null;
+  const [manual, setManual] = useEditorBuffer<{ copy: Copy; previousId: string } | null>(`compass.pipeline.recipient.${recipient?.id || 'none'}.draft`, null);
+  useEffect(() => { onDirty(dirty || Boolean(manual)); return () => onDirty(false); }, [dirty, manual, onDirty]);
+  useEffect(() => { const handler = (e: BeforeUnloadEvent) => { if (dirty || manual) { e.preventDefault(); e.returnValue = ''; } }; window.addEventListener('beforeunload', handler); return () => window.removeEventListener('beforeunload', handler); }, [dirty, manual]);
+  useEffect(() => { setGenerated(null); setOverrides({}); setGenerationError(''); }, [recipient?.id, version?.id]);
+  useEffect(() => { setGenerated(null); }, [policy, overrides, context?.preview_hash]);
+  const sample = samples.find(s => s.id === sampleId) || samples[0];
+  const inputs = sampleMode ? sample?.values || {} : context?.inputs.values || {};
+  const evidence = sampleMode ? Object.fromEntries(signals.map(s => [s.id, { id: s.id, category: s.category || `uncategorised:${s.id}`, value: inputs[s.id] || '', evidence_ids: [], source_ids: [], strength: 0, usefulness: 0, observed_at: '' }])) : context?.inputs.signals || {};
+  const renderContext: CopyRenderContext = { ...context?.context, template_version_id: version?.id, evidence, overrides, generated: sampleMode ? undefined : generated?.generated, synthetic: sampleMode || !recipient };
+  const previewConfig = useMemo(() => {
+    if (!previewVariant) return config;
+    const [componentId, variantId] = previewVariant.split('/');
+    return { ...config, experiment: null, components: config.components.map(c => c.id === componentId ? { ...c, enabled: true, pinned_variant_id: variantId, variants: c.variants.map(v => v.id === variantId ? { ...v, enabled: true } : v) } : c) };
+  }, [config, previewVariant]);
+  if (previewVariant) renderContext.synthetic = true;
+  const plan = renderCopyControl(previewConfig, inputs, [], renderContext);
+  const preview = renderPipelineTemplate({ ...effective, copy_control: previewConfig }, inputs, renderContext);
+  const blocked = !writable || command.busy || command.uncertain || generationBusy;
+  async function post(body: object) {
+    const response = await fetch(PIPELINE_API + '/copy-control', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Could not complete this action.'); return result;
   }
-  const selectedVariation = selectPipelineVariation(policy, previewSignalValues(evidence, signals).values);
   async function saveTemplate() {
-    const result = await command.save([
-      {
-        kind: "template",
-        expected_revision: 0,
-        record: {
-          id: crypto.randomUUID(),
-          name,
-          parent_id: version?.id || null,
-          policy,
-        },
-      },
-    ]);
-    if (result) {
-      setDirty(false);
-      onVersionSaved(result.results[0].id);
-    }
+    const result = await command.save([{ kind: 'template', expected_revision: 0, record: { id: crypto.randomUUID(), name, parent_id: version?.id || null, policy: effective } }]);
+    if (result) onVersionSaved(result.results[0].id);
   }
-  async function saveDraft(
-    copy: Copy,
-    provenance: "manual" | "restore",
-    input_refs: string[],
-    restoredTemplateId?: string,
-  ) {
-    if (!recipient || !version) return;
-    const result = await command.save([
-      {
-        kind: "draft",
-        expected_revision: 0,
-        record: {
-          id: crypto.randomUUID(),
-          list_id: recipient.list_id,
-          recipient_id: recipient.id,
-          template_version_id:
-            restoredTemplateId ||
-            currentDraft?.template_version_id ||
-            version.id,
-          copy,
-          provenance,
-          input_refs,
-          previous_id:
-            provenance === "manual" && manual
-              ? manual.previousId
-              : currentDraft?.id || null,
-        },
-      },
-    ]);
+  async function generate(checkPrevious = false) {
+    if (!list || !recipient || !version || !context) return;
+    if (!checkPrevious && !window.confirm('Generate the selected AI components for this one recipient? This uses the configured AI provider and may incur a charge. It does not send an email.')) return;
+    const request = checkPrevious ? generationRequest : { action: 'generate', request_id: crypto.randomUUID(), list_id: list.id, recipient_id: recipient.id, template_version_id: version.id, input_hash: context.preview_hash, confirm_spend: true, overrides };
+    if (!request) return;
+    setGenerationRequest(request); setGenerationBusy(true); setGenerationError('');
+    try { const result = await post(request); setGenerated(result); setGenerationRequest(null); }
+    catch (e) { setGenerationError((e as Error).message + ' The same request can be checked without starting a second provider call.'); }
+    finally { setGenerationBusy(false); }
+  }
+  async function savePreview() {
+    if (!list || !recipient || !version || !context) return;
+    setGenerationError('');
+    try {
+      const check = await post({ action: 'preview', list_id: list.id, recipient_id: recipient.id, template_version_id: version.id, overrides });
+      if (check.context_hash !== context.preview_hash) { bump(v => v + 1); throw new Error('Evidence changed. Review the refreshed preview before saving.'); }
+      await command.command('/copy-control', { action: 'save', request_id: crypto.randomUUID(), list_id: list.id, recipient_id: recipient.id, template_version_id: version.id, preview_hash: generated?.preview_hash || check.preview_hash, previous_id: currentDraftId || null, overrides, ...(generated ? { generated: generated.generated, generation_request_id: generated.generation_request_id } : {}) });
+    } catch (e) { setGenerationError((e as Error).message); }
+  }
+  async function saveRevision(copy: Copy, provenance: 'manual' | 'restore', refs: string[], templateId: string, previousId: string | null) {
+    if (!recipient) return;
+    const adjusted = provenance === 'manual' && copy.copy_control ? { ...copy, copy_control: { ...copy.copy_control, human_edited: true } } : copy;
+    const result = await command.save([{ kind: 'draft', expected_revision: 0, record: { id: crypto.randomUUID(), list_id: recipient.list_id, recipient_id: recipient.id, template_version_id: templateId, copy: adjusted, provenance, input_refs: refs, previous_id: previousId } }]);
     if (result) setManual(null);
   }
-  return (
-    <div className="op-editor-layout op-write-layout">
-      <div className="op-document">
-        <div className="op-editor-heading">
-          <div>
-            <h2>Write your outreach</h2>
-            <p>
-              Draft recipients retain their company, evidence and exact previous
-              copy.
-            </p>
-          </div>
-          <button
-            className="compass-btn-primary"
-            disabled={
-              !writable || command.busy || command.uncertain || !name.trim()
-            }
-            type="submit" form="op-writing-config"
-          >
-            Save template version
-          </button>
-        </div>
-        <div className="op-editor-history"><span>{dirty ? "Draft kept in this browser tab" : "Saved template"}</span><div className="op-inline"><button type="button" disabled={!history.canUndo || command.busy || command.uncertain} onClick={history.undo}>Undo</button><button type="button" disabled={!history.canRedo || command.busy || command.uncertain} onClick={history.redo}>Redo</button><button type="button" disabled={!dirty || command.busy || command.uncertain} onClick={() => { if (window.confirm("Revert the template to its saved version? Undo can recover this draft. Recipient revisions are unchanged.")) { setPolicy(structuredClone(version?.policy || emptyTemplate())); setName(version?.name || ""); } }}>Revert to saved</button></div></div>
-        <CommandNotice state={command} />
-        <form id="op-writing-config" onSubmit={event => { event.preventDefault(); void saveTemplate(); }}>
-        <fieldset disabled={!writable || command.busy || command.uncertain}>
-          <Field label="Template name">
-            <input
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                setDirty(true);
-              }}
-            />
-          </Field>
-          <Field label="Writing mode">
-            <select
-              value={policy.mode}
-              onChange={(e) =>
-                (e.target.value !== "ai" || !policy.variations?.length || window.confirm("AI mode cannot use deterministic variations. Remove the variations and switch? Undo restores them.")) &&
-                update({ mode: e.target.value as TemplatePolicy["mode"], ...(e.target.value === "ai" ? { variations: [] } : {}) })
-              }
-            >
-              <option value="deterministic">
-                Signal-based variations and slots
-              </option>
-              <option value="ai">AI writing from recorded evidence</option>
-            </select>
-          </Field>
-          {policy.mode === "ai" && (
-            <>
-              <p className="op-notice">
-                AI output requires a connected executor. The saved result is
-                reused for export; preview does not generate new copy.
-              </p>
-              <Field label="Model">
-                <input
-                  value={policy.ai?.model || ""}
-                  onChange={(e) =>
-                    update({
-                      ai: {
-                        model: e.target.value,
-                        prompt: policy.ai?.prompt || "",
-                      },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Grounded writing instructions">
-                <textarea
-                  value={policy.ai?.prompt || ""}
-                  onChange={(e) =>
-                    update({
-                      ai: {
-                        model: policy.ai?.model || "",
-                        prompt: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </Field>
-            </>
-          )}
-          <SignalVariations policy={policy} signals={signals} onChange={update} />
-          <section>
-            <div className="op-section-heading">
-              <h3>Signal slots</h3>
-            </div>
-            <p className="op-muted">
-              Use [[slot_name]] in copy. Priority follows the selected signal
-              order. Required missing slots block preparation.
-            </p>
-            {Object.entries(policy.slots).map(([key, slot]) => (
-              <div className="op-config-row" key={key}>
-                <div className="op-section-heading">
-                  <strong>[[{key}]]</strong>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = { ...policy.slots };
-                      delete next[key];
-                      update({ slots: next });
-                    }}
-                  >
-                    Remove
-                  </button>
-                </div>
-                <Field label="Signal priority (first supported value wins)">
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      if (
-                        e.target.value &&
-                        !slot.signal_ids.includes(e.target.value)
-                      )
-                        update({
-                          slots: {
-                            ...policy.slots,
-                            [key]: {
-                              ...slot,
-                              signal_ids: [...slot.signal_ids, e.target.value],
-                            },
-                          },
-                        });
-                    }}
-                  >
-                    <option value="">Add a signal</option>
-                    {signals
-                      .filter((v) => v.writing_eligible)
-                      .map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.label}
-                        </option>
-                      ))}
-                  </select>
-                </Field>
-                <ol className="op-slot-order">
-                  {slot.signal_ids.map((id, index) => (
-                    <li key={id}>
-                      <span>
-                        {signals.find((v) => v.id === id)?.label ||
-                          "Previously configured signal"}
-                      </span>
-                      <button type="button"
-
-                        disabled={index === 0}
-                        onClick={() => {
-                          const ids = [...slot.signal_ids];
-                          [ids[index - 1], ids[index]] = [
-                            ids[index],
-                            ids[index - 1],
-                          ];
-                          update({
-                            slots: {
-                              ...policy.slots,
-                              [key]: { ...slot, signal_ids: ids },
-                            },
-                          });
-                        }}
-                      >
-                        Move up
-                      </button>
-                      <button type="button"
-
-                        onClick={() =>
-                          update({
-                            slots: {
-                              ...policy.slots,
-                              [key]: {
-                                ...slot,
-                                signal_ids: slot.signal_ids.filter(
-                                  (v) => v !== id,
-                                ),
-                              },
-                            },
-                          })
-                        }
-                      >
-                        Remove
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-                <Field label="Fallback text">
-                  <textarea
-                    value={slot.fallback}
-                    onChange={(e) =>
-                      update({
-                        slots: {
-                          ...policy.slots,
-                          [key]: { ...slot, fallback: e.target.value },
-                        },
-                      })
-                    }
-                  />
-                </Field>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={slot.required}
-                    onChange={(e) =>
-                      update({
-                        slots: {
-                          ...policy.slots,
-                          [key]: { ...slot, required: e.target.checked },
-                        },
-                      })
-                    }
-                  />{" "}
-                  Required
-                </label>
-              </div>
-            ))}
-            <div className="op-inline">
-              <Field label="New slot name">
-                <input
-                  value={slotName}
-                  onChange={(e) =>
-                    setSlotName(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))
-                  }
-                />
-              </Field>
-              <button
-                type="button"
-                disabled={!slotName || Boolean(policy.slots[slotName])}
-                onClick={() => {
-                  update({
-                    slots: {
-                      ...policy.slots,
-                      [slotName]: {
-                        signal_ids: [],
-                        required: true,
-                        fallback: "",
-                      },
-                    },
-                  });
-                  setSlotName("");
-                }}
-              >
-                Add slot
-              </button>
-            </div>
-          </section>
-          <section>
-            <div className="op-section-heading">
-              <h3>Follow-ups</h3>
-              <button
-                type="button"
-                onClick={() =>
-                  update({
-                    followups: [
-                      ...policy.followups,
-                      { delay_days: 2, subject: "", body: "" },
-                    ],
-                  })
-                }
-              >
-                Add follow-up
-              </button>
-            </div>
-            {policy.followups.map((step, index) => (
-              <div className="op-config-row" key={index}>
-                <div className="op-section-heading">
-                  <strong>Follow-up {index + 1}</strong>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      update({
-                        followups: policy.followups.filter(
-                          (_, i) => i !== index,
-                        ),
-                      })
-                    }
-                  >
-                    Remove
-                  </button>
-                </div>
-                <Field label="Days after previous email">
-                  <input
-                    type="number"
-                    min={2}
-                    value={step.delay_days}
-                    onChange={(e) =>
-                      update({
-                        followups: policy.followups.map((v, i) =>
-                          i === index
-                            ? { ...v, delay_days: Number(e.target.value) }
-                            : v,
-                        ),
-                      })
-                    }
-                  />
-                </Field>
-                <Field label="Subject">
-                  <input
-                    value={step.subject}
-                    onChange={(e) =>
-                      update({
-                        followups: policy.followups.map((v, i) =>
-                          i === index ? { ...v, subject: e.target.value } : v,
-                        ),
-                      })
-                    }
-                  />
-                </Field>
-                <Field label="Body">
-                  <textarea
-                    value={step.body}
-                    onChange={(e) =>
-                      update({
-                        followups: policy.followups.map((v, i) =>
-                          i === index ? { ...v, body: e.target.value } : v,
-                        ),
-                      })
-                    }
-                  />
-                </Field>
-              </div>
-            ))}
-          </section>
-        </fieldset>
-        </form>
-        <section>
-          <h3>Apply to lists</h3>
-          <p>
-            Template application replaces draft copy including manual edits,
-            retaining the previous template and exact draft history.
-          </p>
-          {lists.map((value) => (
-            <label className="op-check" key={value.id}>
-              <input
-                type="checkbox"
-                checked={affected.includes(value.id)}
-                onChange={(e) =>
-                  setAffected(
-                    e.target.checked
-                      ? [...affected, value.id]
-                      : affected.filter((id) => id !== value.id),
-                  )
-                }
-              />
-              {value.name}
-            </label>
-          ))}
-          {policy.mode === "ai" && (
-            <p className="op-notice">
-              AI bulk application uses the same frozen preview as deterministic
-              templates. The connected Write executor submits grounded
-              apply_chunk copies; this surface does not generate or apply AI
-              copy.
-            </p>
-          )}
-          <PipelineJobsPanel
-            key={`apply.${list?.id || "none"}.${version?.id || "new"}`}
-            kind="template_apply"
-            listId={list?.id || ""}
-            listIds={affected}
-            templateId={version?.id}
-            writable={writable}
-            dirty={dirty}
-            onSaved={() => {
-              bump((v) => v + 1);
-              onSaved();
-            }}
-          />
-        </section>
-        {version?.parent_id && (
-          <details>
-            <summary>Previous saved template</summary>
-            {parts.map((part) => (
-              <section key={part}>
-                <h4>{names[part]}</h4>
-                <p className="op-copy-text">
-                  {previousTemplate.data?.records[0]?.policy[part] ||
-                    (previousTemplate.loading
-                      ? "Loading previous template…"
-                      : "Empty")}
-                </p>
-              </section>
-            ))}
-          </details>
-        )}
-      </div>
-      <aside className="op-context">
-        <h3>{recipient ? "Recipient preview" : "Default message preview"}</h3>
-        <p className="op-muted">{recipient ? `Matched: ${selectedVariation?.name || "Default message"}. Only supported, non-conflicting evidence fills slots.` : "No recipient selected. This shows the fallback copy, not researched personalisation. Open Recipients above to choose a real lead."}</p>
-        {recipient ? (
-          <>
-            <strong>{recipient.mailbox}</strong>
-            {observations.loading && <p role="status">Loading evidence…</p>}
-            {observations.error && <p role="alert">{observations.error}</p>}
-            {preview ? (
-              <>
-                {preview.missing.length > 0 && (
-                  <p className="op-error" role="status">
-                    Missing required slots: {preview.missing.join(", ")}
-                  </p>
-                )}
-                <div className="op-email-preview">
-                  {parts.map((part) => (
-                    <section key={part}>
-                      <h4>{names[part]}</h4>
-                      <p className="op-copy-text">
-                        {preview.copy[part] || "—"}
-                      </p>
-                    </section>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <p>
-                AI preview appears after a grounded result is saved by the
-                executor.
-              </p>
-            )}
-            <h3>Grounding evidence</h3>
-            {evidence.length ? (
-              evidence.map((value) => (
-                <article className="op-evidence" key={value.id}>
-                  <strong>
-                    {signals.find((v) => v.id === value.signal_id)?.label ||
-                      "Saved signal"}
-                  </strong>
-                  <blockquote>{value.quote}</blockquote>
-                  <EvidenceSource id={value.source_id} />
-                  <p>
-                    Evidence: {value.evidence_strength} · Usefulness:{" "}
-                    {value.usefulness}
-                  </p>
-                  <small>
-                    Observed{" "}
-                    {new Date(value.observed_at).toLocaleDateString("en-AU")}
-                  </small>
-                </article>
-              ))
-            ) : (
-              <p>No evidence is available for this recipient’s company.</p>
-            )}
-            <h3>Saved recipient draft</h3>
-            {drafts.error && <p role="alert">{drafts.error}</p>}
-            {currentDraft ? (
-              <>
-                <p>
-                  {currentDraft.provenance} · revision {currentDraft.revision}
-                  {currentDraft.approved ? " · approved snapshot" : ""}
-                </p>
-                {parts.map((part) => (
-                  <Field key={part} label={names[part]}>
-                    <textarea
-                      value={(manual?.copy || currentDraft.copy)[part]}
-                      disabled={!writable || command.busy || command.uncertain}
-                      onChange={(e) =>
-                        setManual({
-                          copy: {
-                            ...(manual?.copy || currentDraft.copy),
-                            [part]: e.target.value,
-                          },
-                          previousId: manual?.previousId || currentDraft.id,
-                        })
-                      }
-                    />
-                  </Field>
-                ))}
-                <button type="button"
-                  disabled={
-                    !manual ||
-                    !version ||
-                    !writable ||
-                    command.busy ||
-                    command.uncertain
-                  }
-                  onClick={() =>
-                    manual &&
-                    void saveDraft(
-                      manual.copy,
-                      "manual",
-                      currentDraft.input_refs,
-                    )
-                  }
-                >
-                  Save recipient revision
-                </button>
-                <details>
-                  <summary>Previous exact drafts</summary>
-                  {drafts.data?.next_after && (
-                    <button disabled={drafts.loading} onClick={drafts.loadMore}>
-                      Load older drafts
-                    </button>
-                  )}
-                  {(drafts.data?.records || [])
-                    .filter((v) => v.id !== currentDraft.id)
-                    .map((value) => (
-                      <article className="op-evidence" key={value.id}>
-                        <p>
-                          {value.provenance} ·{" "}
-                          {new Date(value.created_at).toLocaleString("en-AU")}
-                        </p>
-                        <p className="op-copy-text">
-                          {parts
-                            .map((part) => value.copy[part])
-                            .filter(Boolean)
-                            .join("\n\n")}
-                        </p>
-                        <button type="button"
-                          disabled={
-                            !writable || command.busy || command.uncertain
-                          }
-                          onClick={() =>
-                            void saveDraft(
-                              value.copy,
-                              "restore",
-                              value.input_refs,
-                              value.template_version_id,
-                            )
-                          }
-                        >
-                          Restore as new revision
-                        </button>
-                      </article>
-                    ))}
-                </details>
-              </>
-            ) : (
-              <p>
-                No saved draft. Queue the Write stage after saving a template.
-              </p>
-            )}
-          </>
-        ) : (
-          <div className="op-email-preview">
-            {parts.map(part => <section key={part}><h4>{names[part]}</h4><p className="op-copy-text">{policy[part] || "—"}</p></section>)}
-          </div>
-        )}
-      </aside>
-    </div>
-  );
+  return <div className="cc-workspace">
+    <header className="cc-header"><div><h2>Copy Control</h2><p>Write the words. Choose the facts. Review the match.</p></div><div className="op-inline"><button type="button" onClick={() => setPreviewOpen(v => !v)} aria-expanded={previewOpen}>{previewOpen ? 'Close preview' : 'Preview & review'}</button><button className="compass-btn-primary" type="submit" form="op-writing-config" disabled={blocked || !name.trim() || issues.length > 0 || !effective.unsubscribe.trim()}>Save template version</button></div></header>
+    <div className="cc-version"><input aria-label="Template name" value={name} placeholder="Name this writing template" onChange={e => setName(e.target.value)} disabled={blocked} /><span>{dirty ? 'Unsaved · recovery in this tab' : version ? 'Saved version · edits create a new version' : 'New template'}</span><button type="button" disabled={!history.canUndo || blocked} onClick={history.undo}>Undo</button><button type="button" disabled={!history.canRedo || blocked} onClick={history.redo}>Redo</button><button type="button" disabled={!dirty || blocked} onClick={() => { if (window.confirm('Revert to the saved template? Recipient drafts remain unchanged.')) { setPolicy(structuredClone(version?.policy || emptyTemplate())); setName(version?.name || ''); } }}>Revert</button></div>
+    <CommandNotice state={command} />
+    {issues.length > 0 && <div className="op-notice" role="status">Before saving: {issues.join(' ')}</div>}
+    <form id="op-writing-config" onSubmit={e => { e.preventDefault(); void saveTemplate(); }}><fieldset disabled={blocked}>
+      <CopyControlStudio value={config} signals={signals} onChange={next => setPolicy(old => studioTemplate(old, next))} onPreviewVariant={(componentId, variantId) => { setPreviewVariant(`${componentId}/${variantId}`); setPreviewOpen(true); }} />
+      <details className="cc-followups"><summary>Follow-ups <span>{policy.followups.length}</span></summary><p>Follow-ups use the existing shared variables and wait at least two days. They are not included in initial-email A/B results.</p>{policy.followups.map((step, i) => <section className="cc-slot" key={i}><div className="op-section-heading"><h4>Follow-up {i + 1}</h4><button type="button" onClick={() => setPolicy(old => ({ ...old, followups: old.followups.filter((_, n) => n !== i) }))}>Remove</button></div><Field label="Days after previous message"><input type="number" min={2} value={step.delay_days} onChange={e => setPolicy(old => ({ ...old, followups: old.followups.map((s, n) => n === i ? { ...s, delay_days: Number(e.target.value) } : s) }))} /></Field>{(['subject', 'body'] as const).map(part => <Field key={part} label={COPY_LABELS[part]}><textarea value={step[part]} onChange={e => setPolicy(old => ({ ...old, followups: old.followups.map((s, n) => n === i ? { ...s, [part]: e.target.value } : s) }))} /></Field>)}</section>)}<button type="button" disabled={policy.followups.length >= 10} onClick={() => setPolicy(old => ({ ...old, followups: [...old.followups, { delay_days: 2, subject: '', body: '' }] }))}>Add follow-up</button><details><summary>Shared follow-up variables</summary><p>Reuse a configured component variable in your follow-ups. This copies its signal priority and fallback into this template’s shared slots; later component edits do not silently change follow-ups.</p><select aria-label="Copy component variable to follow-ups" value="" onChange={e => { const [componentId, variantId, key] = e.target.value.split('/'); const slot = config.components.find(c => c.id === componentId)?.variants.find(v => v.id === variantId)?.slots[key]; if (slot && (!policy.slots[key] || window.confirm(`Replace shared follow-up variable ${key}?`))) setPolicy(old => ({ ...old, slots: { ...old.slots, [key]: { signal_ids: [...slot.signal_ids], required: slot.required, fallback: slot.fallback } } })); }}><option value="">Copy a component variable…</option>{config.components.flatMap(c => c.variants.flatMap(v => Object.keys(v.slots).map(key => <option key={`${c.id}/${v.id}/${key}`} value={`${c.id}/${v.id}/${key}`}>{c.name} · {v.name} · {key}</option>)))}</select>{Object.entries(policy.slots).map(([key, slot]) => <section key={key}><p><strong>[[{key}]]</strong> → {slot.signal_ids.map(id => signals.find(s => s.id === id)?.label || id).join(' / ')}</p><Field label={`Fallback for ${key}`}><input value={slot.fallback} onChange={e => setPolicy(old => ({ ...old, slots: { ...old.slots, [key]: { ...slot, fallback: e.target.value } } }))} /></Field><button type="button" onClick={() => setPolicy(old => ({ ...old, slots: Object.fromEntries(Object.entries(old.slots).filter(([name]) => name !== key)) }))}>Remove shared variable</button></section>)}</details></details>
+    </fieldset></form>
+    {previewOpen && <section className="cc-preview" aria-label="Copy preview and review">
+      <div className="op-section-heading"><h3>Review the match</h3><div className="op-segmented"><button type="button" aria-pressed={!sampleMode} onClick={() => setSampleMode(false)}>Real leads</button><button type="button" aria-pressed={sampleMode} onClick={() => setSampleMode(true)}>Test leads</button></div></div>
+      {previewVariant && <p className="op-notice">Testing the selected variant only. Automatic matching may choose a different variant. This test cannot be saved as recipient copy. <button type="button" onClick={() => setPreviewVariant('')}>Return to automatic matching</button></p>}
+      {!list && <p className="op-notice">Choose a working list to load its research, offer and real recipients. Test leads never leave this browser.</p>}
+      {sampleMode ? <div className="cc-samples"><p className="op-notice">Synthetic test data. Not a real lead, not evidence, and never saved as a recipient draft or counted in results.</p><div className="op-inline"><select aria-label="Test lead" value={sample?.id || ''} onChange={e => setSampleId(e.target.value)}>{samples.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select><button type="button" onClick={() => { const id = crypto.randomUUID(); setSamples(old => [...old, { id, name: `Test lead ${old.length + 1}`, values: {} }]); setSampleId(id); }}>New test lead</button>{sample && <input aria-label="Test lead name" value={sample.name} onChange={e => setSamples(old => old.map(s => s.id === sample.id ? { ...s, name: e.target.value } : s))} />}</div><details><summary>Set test signal values</summary>{signals.filter(s => s.writing_eligible).map(s => <Field key={s.id} label={s.label}><input value={sample?.values[s.id] || ''} onChange={e => setSamples(old => old.map(item => item.id === sample?.id ? { ...item, values: { ...item.values, [s.id]: e.target.value } } : item))} /></Field>)}</details></div> : <><div className="op-inline"><input aria-label="Search preview leads" value={query} onChange={e => setQuery(e.target.value)} placeholder="Find a recipient…" /><select aria-label="Preview recipient" value={recipient?.id || ''} onChange={e => { const r = candidates.data?.records.find(r => r.id === e.target.value); if (r) onSelectRecipient?.(r); }}><option value="">Choose a researched recipient</option>{recipient && !candidates.data?.records.some(r => r.id === recipient.id) && <option value={recipient.id}>{recipient.mailbox}</option>}{candidates.data?.records.map(r => <option key={r.id} value={r.id}>{r.mailbox}</option>)}</select>{candidates.data?.next_after && <button type="button" disabled={candidates.loading} onClick={candidates.loadMore}>More recipients</button>}<button type="button" onClick={() => bump(v => v + 1)}>Refresh evidence</button></div>{candidates.error && <p role="alert">{candidates.error}</p>}{state.loading && <p role="status">Loading the complete evidence snapshot…</p>}{state.error && <p role="alert">{state.error}</p>}</>}
+      {context?.inputs.conflicts.length && !sampleMode ? <p className="op-notice">Conflicting signals excluded: {context.inputs.conflicts.map(id => signals.find(s => s.id === id)?.label || id).join(', ')}</p> : null}
+      {preview.missing.length > 0 && <p className="op-notice" role="status">Held: {preview.missing.join(' · ')}</p>}
+      <article className="cc-email" aria-label="Rendered email"><header>{preview.copy.subject || 'Subject not ready'}</header>{(['opener', 'body', 'cta', 'unsubscribe'] as const).map(part => preview.copy[part] && <p className="op-copy-text" key={part}>{preview.copy[part]}</p>)}</article>
+      <details className="cc-match"><summary>Why this copy? <span>{plan.trace.signal_combination.join(' + ') || 'No signals selected'}</span></summary>{plan.trace.components.map(c => <section key={c.component_id}><h4>{COPY_LABELS[c.kind]} · {c.variant_name} · {c.mode}</h4>{c.signals.map(s => { const slot = config.components.find(v => v.id === c.component_id)?.variants.find(v => v.id === c.variant_id)?.slots[s.slot]; const overrideKey = `${c.component_id}/${c.variant_id}/${s.slot}`; return <div className="cc-matched" key={s.slot}><strong>[[{s.slot}]] → {s.value}</strong><small>{s.category} · evidence strength {s.strength}/3 · {s.selection}</small>{slot && <select aria-label={`Override ${c.variant_name} ${s.slot}`} value={overrides[overrideKey] || ''} onChange={e => setOverrides(old => e.target.value ? { ...old, [overrideKey]: e.target.value } : Object.fromEntries(Object.entries(old).filter(([key]) => key !== overrideKey)))}><option value="">Use configured selection</option>{slot.signal_ids.filter(id => inputs[id]).map(id => <option key={id} value={id}>{signals.find(v => v.id === id)?.label || id}: {inputs[id]}</option>)}</select>}{!sampleMode && s.source_ids.map(id => <EvidenceSource key={id} id={id} />)}</div>; })}{c.fallback_slots.length > 0 && <p>Fallback text used for: {c.fallback_slots.join(', ')}</p>}</section>)}{plan.trace.experiment && <p>A/B: {plan.trace.experiment.eligible ? `assigned ${plan.trace.experiment.arm}` : plan.trace.experiment.reason}</p>}</details>
+      {!sampleMode && <><div className="op-inline">{plan.pending_ai.length > 0 && <button type="button" disabled={blocked || dirty || Boolean(previewVariant) || !version?.policy.copy_control || !context || !recipient || Boolean(generationRequest)} onClick={() => void generate()}>Generate AI components</button>}{generationRequest && <><button type="button" disabled={generationBusy} onClick={() => void generate(true)}>Check previous generation</button><button type="button" disabled={generationBusy} onClick={() => { if (window.confirm('Keep the previous request recorded but allow a new attempt? The previous provider call may have incurred a charge.')) setGenerationRequest(null); }}>Allow a new attempt</button></>}<button type="button" disabled={blocked || dirty || Boolean(previewVariant) || !version?.policy.copy_control || !context || Boolean(state.error) || state.loading || !recipient || preview.missing.length > 0 || Boolean(manual)} onClick={() => void savePreview()}>Save recipient draft</button></div>{(dirty || !version?.policy.copy_control) && <p className="op-muted">Save a Copy Control template version before generating or saving recipient copy. Your live preview can still be edited.</p>}{generated && <p className="op-notice">AI draft generated. Check every claim and the full email before saving. Nothing has been sent.</p>}{generationError && <p role="alert">{generationError}</p>}</>}
+      <details className="cc-offer"><summary>Offer & audience used by this list</summary>{context?.offer ? <><p>Offer snapshot v{context.offer.version_no} · {context.offer.id}</p><DocumentValue value={context.offer.snapshot} /><h4>Audience criteria · {context.workflow.policy.icp_name || context.workflow.name}</h4>{context.workflow.policy.criteria.map(c => <p key={c.id}>{c.label}: {c.instructions}</p>)}</> : <p>No saved offer document is available for this list. AI generation is held until one is linked.</p>}</details>
+      {recipient && !sampleMode && <details className="cc-drafts"><summary>Saved recipient draft & history</summary>{currentDraftRead.error && <p role="alert">{currentDraftRead.error}</p>}{drafts.error && <p role="alert">{drafts.error}</p>}{currentDraft ? <><p>{currentDraft.provenance} · {currentDraft.approved ? 'Approved snapshot' : 'Unapproved draft'} · edits create a new revision.</p>{COPY_PARTS.map(part => <Field key={part} label={COPY_LABELS[part]}><textarea value={(manual?.copy || currentDraft.copy)[part]} disabled={blocked} onChange={e => setManual({ copy: { ...(manual?.copy || currentDraft.copy), [part]: e.target.value }, previousId: manual?.previousId || currentDraft.id })} /></Field>)}<button type="button" disabled={blocked || !manual} onClick={() => manual && void saveRevision(manual.copy, 'manual', currentDraft.input_refs, currentDraft.template_version_id, manual.previousId)}>Save recipient revision</button>{manual && <button type="button" onClick={() => { if (window.confirm('Discard only this unsaved recipient edit?')) setManual(null); }}>Discard recipient edit</button>}</> : <p>No recipient draft yet. Review the copy above and save it.</p>}{drafts.data?.records.filter(d => d.id !== currentDraft?.id).map(d => <article className="cc-old-draft" key={d.id}><strong>{d.provenance} · {new Date(d.created_at).toLocaleString('en-AU')}</strong><p className="op-copy-text">{COPY_PARTS.map(part => d.copy[part]).filter(Boolean).join('\n\n')}</p><button type="button" disabled={blocked || Boolean(manual)} onClick={() => void saveRevision(d.copy, 'restore', d.input_refs, d.template_version_id, currentDraft?.id || null)}>Restore as new revision</button></article>)}{drafts.data?.next_after && <button type="button" disabled={drafts.loading} onClick={drafts.loadMore}>Older drafts</button>}</details>}
+    </section>}
+    <details className="cc-apply"><summary>Apply saved template to lists</summary><p>Freeze the affected recipients before applying. Manual edits are protected by default. Initial drafts can be saved from Preview or created by the connected Write executor; this bulk tool revises existing drafts.</p>{lists.map(item => <label className="op-check" key={item.id}><input type="checkbox" checked={affected.includes(item.id)} onChange={e => setAffected(old => e.target.checked ? [...old, item.id] : old.filter(id => id !== item.id))} />{item.name}</label>)}<PipelineJobsPanel key={`apply.${list?.id}.${version?.id}`} kind="template_apply" listId={list?.id || ''} listIds={affected} templateId={version?.id} writable={writable} dirty={dirty} onSaved={() => { bump(v => v + 1); onSaved(); }} /></details>
+    <CopyControlResults writable={writable} />
+    {version && !version.policy.copy_control && <details className="cc-legacy"><summary>Original legacy template · read only</summary><p>Saving the editor above creates a new component-based version. This original remains unchanged.</p><fieldset disabled><SignalVariations policy={version.policy} signals={signals} onChange={() => {}} /></fieldset></details>}
+  </div>;
 }

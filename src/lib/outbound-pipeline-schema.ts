@@ -1,3 +1,4 @@
+import { copyControlSchema, copyControlTraceSchema } from './copy-control-schema';
 import { z } from 'zod';
 import { PIPELINE_VERSION, type PipelineCommand, type RunCommand } from './outbound-pipeline';
 export class PipelineError extends Error {
@@ -13,13 +14,14 @@ const criterion = z.strictObject({
     id, label: short, instructions: text, required: z.boolean(), exclusion: z.boolean()
 });
 const copy = z.strictObject({
+    copy_control: copyControlTraceSchema.optional(),
     subject: text, opener: text, body: text, cta: text, unsubscribe: short, followups: z.array(z.strictObject({
         delay_days: z.number().int().min(2), subject: text, body: text
     })).max(10)
 });
 const workflow = z.strictObject({
     offer_version_id: id, icp_version_id: id, icp_name: short.optional(), criteria: z.array(criterion).min(1).max(100), signals: z.array(z.strictObject({
-        id, label: short, collection_instructions: text, acceptable_evidence: text, usefulness_guidance: text, writing_eligible: z.boolean(), value_type: z.enum(['text', 'number', 'boolean', 'date', 'list']), required: z.boolean()
+        id, label: short, category: z.string().trim().min(1).max(160).optional(), collection_instructions: text, acceptable_evidence: text, usefulness_guidance: text, writing_eligible: z.boolean(), value_type: z.enum(['text', 'number', 'boolean', 'date', 'list']), required: z.boolean()
     })).max(100), tools: z.array(z.strictObject({
         id, stage, fallback_on: z.array(z.enum(['empty', 'insufficient', 'retryable'])).max(3), missing_fields: z.array(id).max(100), max_attempts: z.number().int().min(1).max(10), cache_max_age_days: z.number().int().min(0).max(365)
     })).max(30), checkpoints: z.array(stage).max(5), target_roles: z.array(short).max(100), verification: z.strictObject({
@@ -29,12 +31,13 @@ const workflow = z.strictObject({
     }), concurrency: z.number().int().min(1).max(20)
 });
 const template = copy.extend({
+    copy_control: copyControlSchema.optional(),
     mode: z.enum(['deterministic', 'ai']),
     variations: z.array(z.strictObject({
         id, name: short, enabled: z.boolean(), match: z.enum(['all', 'any']),
         when: z.array(z.strictObject({signal_id: id, operator: z.enum(['present', 'equals', 'contains']), value: text})
             .refine(rule => rule.operator === 'present' || Boolean(rule.value.trim()), 'A comparison value is required')).min(1).max(20),
-        copy: copy.omit({followups: true})
+        copy: copy.omit({followups: true, copy_control: true})
     })).max(20).optional(), slots: z.record(z.string().regex(/^[a-zA-Z0-9_]+$/), z.strictObject({
         signal_ids: z.array(id).max(100), required: z.boolean(), fallback: text
     })), ai: z.strictObject({
@@ -82,6 +85,12 @@ const recordSchemas = {
     }),
     draft: z.strictObject({
         id, list_id: id, recipient_id: id, template_version_id: id, copy, provenance: z.enum(['template', 'manual', 'ai', 'restore']), input_refs: z.array(id).max(100), previous_id: nullable
+    }).superRefine((value, ctx) => {
+        const trace = value.copy.copy_control;
+        if (!trace) return;
+        if (trace.synthetic || trace.list_id !== value.list_id || trace.recipient_id !== value.recipient_id || trace.template_version_id !== value.template_version_id) ctx.addIssue({ code: 'custom', message: 'Copy trace scope must match the real draft' });
+        if (trace.components.flatMap(c => c.signals.flatMap(s => s.evidence_ids)).some(ref => !value.input_refs.includes(ref))) ctx.addIssue({ code: 'custom', message: 'Copy evidence references must be retained on the draft' });
+        if (value.provenance === 'manual' && !trace.human_edited) ctx.addIssue({ code: 'custom', message: 'Manual changes must be marked in the copy trace' });
     }),
     signal: z.strictObject({
         id, company_id: id, workflow_version_id: id, signal_id: id, value: z.json(), source_id: id, observed_at: z.iso.datetime({

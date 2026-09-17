@@ -2,9 +2,13 @@ name: Copy Control
 
 on:
   push:
-    branches: [feat/write-copy-control-studio]
+    branches: [main, feat/write-copy-control-studio]
   pull_request:
-    paths: ['src/**', 'test/**', 'mcp/**', '.github/workflows/copy-control.yml']
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - 'mcp/**'
+      - '.github/workflows/copy-control.yml'
 
 permissions:
   contents: read
@@ -24,19 +28,9 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - name: Disposable verification dependencies
-        run: tar -czf /tmp/compass-dependencies.tar.gz node_modules
-      - uses: actions/upload-artifact@v4
-        with:
-          name: compass-dependencies
-          path: /tmp/compass-dependencies.tar.gz
-          retention-days: 1
       - run: npm run verify
-      - name: Copy Control unit and integration tests
-        run: |
-          if compgen -G 'test/copy-control*.test.mjs' > /dev/null; then
-            node --test test/copy-control*.test.mjs
-          fi
+      - name: Copy Control engine, routes, attribution and executor tests
+        run: node --test test/copy-control*.test.mjs
       - name: Production build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co

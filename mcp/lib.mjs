@@ -18,6 +18,7 @@ const pipelineReadProperties = Object.fromEntries(['collection','list_id','compa
 const commandSchema = {type:'object',required:['command'],properties:{command:{type:'object',additionalProperties:true}},additionalProperties:false}
 
 export const TOOLS = [
+  {name:'outbound.copy_control',description:'Read a complete list/recipient evidence and offer snapshot, or signal/variant/mode/experiment results. POST actions preview, generate, save, import_outcomes share the operator Copy Control engine. Save needs immutable template ID, current previous_id, preview_hash and stable request_id. Generation needs input_hash, confirm_spend:true and a stable request_id; never retry an uncertain provider request with a new ID automatically. Agent-authenticated save can supply generated component text; no sending or approvals. See docs/COPY_CONTROL_SPEC.md for exact contracts.',inputSchema:{type:'object',properties:{view:{type:'string',enum:['context','metrics']},list_id:{type:'string'},recipient_id:{type:'string'},campaign_id:{type:'string'},group:{type:'string',enum:['signals','variant','mode','experiment']},command:{type:'object',additionalProperties:true}},additionalProperties:false}},
   {name:'outbound.pipeline.capabilities',description:'Check durable pipeline API/schema readiness, available execution adapters and constraints before starting work. Never spends or sends.',inputSchema:{type:'object',properties:{},additionalProperties:false}},
   {name:'outbound.pipeline.executor',description:'Read connected-agent adapter readiness, or register/heartbeat/attach an executor session using command. Register only actual read-only probes or confirmed recent successful tool execution, without secrets. Claim a work item then attach its lease before reserving provider calls. No automatic tool substitution.',inputSchema:{type:'object',properties:{command:{type:'object',additionalProperties:true}},additionalProperties:false}},
   {name:'outbound.pipeline',description:'Read the real company/list workflow ledger, versions, evidence, recipients, drafts, runs, items or uncertain-write receipts. Up to100 rows with scope-bound cursor. Defaults lists. Use saved policy and retained hold reasons.',inputSchema:{type:'object',properties:{...pipelineReadProperties,limit:{type:'integer',minimum:1,maximum:100}},additionalProperties:false}},
@@ -360,6 +361,14 @@ export async function callTool(name, args = {}, { cfg, fetchImpl }) {
   if (!cfg.secret) return toolError('missing COMPASS_AGENT_SECRET')
 
   switch (name) {
+    case 'outbound.copy_control': {
+      const keys=['view','list_id','recipient_id','campaign_id','group'];
+      if(Object.keys(args).some(key=>![...keys,'command'].includes(key)))return toolError('Unknown Copy Control parameter');
+      if(args.command!==undefined&&(!args.command||typeof args.command!=='object'||Array.isArray(args.command)))return toolError('command must be an object');
+      const query=new URLSearchParams(keys.filter(k=>args[k]!==undefined).map(k=>[k,String(args[k])]));
+      const r=await compassFetch(cfg,{method:args.command?'POST':'GET',path:'/api/agent/outbound/pipeline/copy-control'+(!args.command&&query.size?'?'+query:''),...(args.command?{body:args.command}:{}),fetchImpl});
+      return r.status>=400?toolError(JSON.stringify(r.json)):toolOk(r.json);
+    }
     case 'outbound.pipeline.jobs':
     case 'outbound.pipeline.delivery':
     case 'outbound.pipeline.readback': {
