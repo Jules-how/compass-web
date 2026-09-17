@@ -1,6 +1,6 @@
-/** Operator-console convenience. Enabled by default; set COMPASS_OPEN_OPERATOR=0 to require login. */
+/** Explicit local development convenience; never enabled on a hosted deployment. */
 export function isOpenOperatorEnabled(): boolean {
-  return process.env.COMPASS_OPEN_OPERATOR !== '0'
+  return process.env.NODE_ENV === 'development' && process.env.COMPASS_OPEN_OPERATOR === '1'
 }
 
 export function openOperatorCredentials(): { email: string; password: string } | null {
