@@ -55,6 +55,7 @@ test('search, commit, ledger, and export tools', () => {
   assert.deepEqual(
     TOOLS.map((t) => t.name),
     [
+      'outbound.copy_control',
       'outbound.pipeline.capabilities',
       'outbound.pipeline.executor',
       'outbound.pipeline',
