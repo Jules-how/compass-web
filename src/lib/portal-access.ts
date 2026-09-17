@@ -1,5 +1,7 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 
+import { getPortalAdminClient } from './portal-admin'
+import { isOpenOperatorEnabled } from './open-operator'
 import { getSupabaseServerClient } from './supabase-server'
 import { isSessionCurrent } from './session-current'
 import { isOperatorRole, type PortalRole } from './portal-redirect'
@@ -54,6 +56,32 @@ export function isDeliveryPortalEnabled(): boolean {
   return process.env.COMPASS_PORTAL_V1 === '1'
 }
 
+function openOperatorAccess(): PortalAccess {
+  const primary: PortalMembership = {
+    tenantId: 'open-operator',
+    tenantName: 'Switchflow',
+    role: 'owner',
+    landingPath: '/home'
+  }
+  const user = {
+    id: 'open-operator',
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: 'open-operator@compass.local',
+    app_metadata: { provider: 'open-operator', providers: ['open-operator'] },
+    user_metadata: {},
+    created_at: '1970-01-01T00:00:00.000Z'
+  } as User
+
+  return {
+    supabase: getPortalAdminClient(),
+    user,
+    memberships: [primary],
+    primary,
+    isOperator: true
+  }
+}
+
 function mapMemberships(data: unknown): PortalMembership[] {
   return ((data ?? []) as AccessRow[])
     .filter(
@@ -76,6 +104,14 @@ export async function requirePortalAccess(
   options: { operator?: boolean; delivery?: boolean } = {}
 ): Promise<PortalAccess> {
   if (options.delivery && !isDeliveryPortalEnabled()) throw new PortalAccessError('not_found')
+
+  // Compass is an owner-operated internal console. In open-operator mode the
+  // operator surface uses the existing server-only admin client and never
+  // exposes the service-role key to the browser. Customer/delivery access keeps
+  // its normal authenticated, tenant-scoped path below.
+  if (options.operator && !options.delivery && isOpenOperatorEnabled()) {
+    return openOperatorAccess()
+  }
 
   const supabase = await getSupabaseServerClient()
   const {
