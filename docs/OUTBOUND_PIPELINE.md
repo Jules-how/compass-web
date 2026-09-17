@@ -53,7 +53,7 @@ Every action returns `{request_id,run,item,attempt}`. Use its new run revision f
 
 ## Remaining release work and extension points
 
-This branch now includes frozen template/export/membership jobs, paused Instantly delivery, resumable provider readback (100-row pages, repeated-cursor detection), AI bulk apply via connected-executor copies, recipient/region filters, and MCP tools for pipeline/jobs/delivery/readback. GitHub `representative-scale` on `17e61ef` met the 100k p95 target (815.5ms). Remaining before production: independent review; hosted migration/flag rehearsal and cutover; viewport/zoom visual acceptance. Do not activate campaigns or run paid prospecting from this work.
+This branch now includes frozen template/export/membership jobs, paused Instantly delivery, resumable provider readback (100-row pages, repeated-cursor detection), AI bulk apply via connected-executor copies, recipient/region filters, and MCP tools for pipeline/jobs/delivery/readback. GitHub `representative-scale` on `17e61ef` met the 100k p95 target (815.5ms, later 630.3ms on `4d51fb5`). Production cutover is live on `https://compass-web-eosin.vercel.app` with hosted schema, CRM/pipeline/surface flags, and the legacy company import (17,752 imported / 343 held of 18,095). Remaining: independent review; viewport/zoom visual acceptance. Do not activate campaigns or run paid prospecting from this work.
 
 Run item completion records durable evidence, not campaign sends. Historical assignments do not establish past outreach. Preparation must still enforce actual prior sends and fresh suppression, exact copy, sender/settings policy and approval independently.
 
@@ -75,7 +75,7 @@ Verify/Write run creation expands all eligible canonical email candidates, prese
 
 ## Cutover and legacy compatibility
 
-`COMPASS_OUTBOUND_PIPELINE_SURFACE=1` is a separate UI cutover flag. Core CRM/pipeline flags can enable schema rehearsal and backfill while a bare Outbound navigation still opens the existing Overview. Set the surface flag only after migration, legacy reconciliation and hosted read/write checks; explicit Leads links remain available for testing real records.
+`COMPASS_OUTBOUND_PIPELINE_SURFACE=1` is a separate UI cutover flag. Core CRM/pipeline flags can enable schema rehearsal and backfill while a bare Outbound navigation still opens the existing Overview. Production now has the surface flag on after hosted schema and the legacy company import. Explicit Leads links remain available.
 
 Apply the international contacts and legacy bridge migrations after the foundation, then the jobs/delivery/executor migrations in timestamp order. The canonical CRM writer accepts international fields and preserves them when an older client omits them. Social routes remain separate methods; phone classification belongs to the company/contact candidate. Existing raw values are preserved.
 

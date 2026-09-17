@@ -17,7 +17,7 @@ export const legacyBridgeCommandSchema = z.discriminatedUnion("action", [
     action: z.literal("preview"),
     after: z.string().max(160).default(""),
     until: crmLeadId.nullable().default(null),
-    limit: z.number().int().min(1).max(25).default(25),
+    limit: z.number().int().min(1).max(100).default(25),
   }),
   z.strictObject({
     action: z.literal("import"),
@@ -27,7 +27,7 @@ export const legacyBridgeCommandSchema = z.discriminatedUnion("action", [
         z.strictObject({ id: crmLeadId, updated_at: z.string().nullable() }),
       )
       .min(1)
-      .max(25),
+      .max(100),
   }),
 ]);
 

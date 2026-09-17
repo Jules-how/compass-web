@@ -38,7 +38,7 @@ test('bounded legacy bridge is atomic, idempotent, source-preserving and leaves 
  CREATE TABLE compass_offer_revisions(id text PRIMARY KEY);
  CREATE TABLE compass_outbound_companies(id text PRIMARY KEY,name text,website text);CREATE TABLE compass_lead_list_members(lead_id text,list_id text);
  CREATE TABLE compass_lead_lists(id text PRIMARY KEY,name text NOT NULL,notes text,created_at timestamptz DEFAULT now(),updated_at timestamptz DEFAULT now());`)
- for(const file of ['20260915090000_crm_research.sql','20260917090000_outbound_pipeline.sql','20260917091500_crm_international_contacts.sql','20260917092000_crm_legacy_bridge.sql'])await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8'))
+ for(const file of ['20260915090000_crm_research.sql','20260917090000_outbound_pipeline.sql','20260917091500_crm_international_contacts.sql','20260917092000_crm_legacy_bridge.sql','20260917140000_crm_legacy_bridge_page_100.sql'])await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8'))
  await db.query('INSERT INTO lead_contacts VALUES($1,$2,$3,$4,$5,$6,$7)',[lead.id,lead.email,lead.phone,lead.company,lead.updated_at,lead.outbound_status,lead.suppression_reason])
  await db.exec("INSERT INTO compass_lead_lists(id,name) VALUES('list','Legacy list');INSERT INTO compass_lead_list_members VALUES('lead-a','list')")
  const built=legacyOperations(lead,{existing:new Set(),methodIds:new Map()})

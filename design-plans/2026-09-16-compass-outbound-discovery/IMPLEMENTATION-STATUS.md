@@ -22,7 +22,7 @@ Started 17 September 2026 after Jules authorized the implementation plan. Implem
 | Real lead table and Research/Write editors | Astra-low `shell_calling` | Implemented against real APIs; delivery and full scope parity in progress |
 | Frozen template jobs, exports and paused preparation/readback | Astra-low `pipeline_foundation` plus resume on this Mac | Deterministic and AI apply/export/membership freeze implemented; paused delivery + 100-row Instantly readback on `17e61ef` |
 | CRM international/social/phone writes, legacy bridge, MCP and connected executor sessions | Supervisor | Implemented; MCP now includes delivery/readback and region filters |
-| International/scale, migration rehearsal, independent review and hosted acceptance | Supervisor coordinates later passes | Region filters and paged company RPC are in tree; GitHub 100k `representative-scale` green on `17e61ef` (p95 815.5ms); hosted cutover and independent review still blocked |
+| International/scale, migration rehearsal, independent review and hosted acceptance | Supervisor coordinates later passes | Region filters and paged company RPC are in tree; GitHub 100k `representative-scale` green (p95 815.5ms then 630.3ms). Hosted schema, flags, production deploy and legacy company import are live on `main`. Independent review and Instantly/paid runs remain blocked |
 
 ## Required closure
 
@@ -39,7 +39,7 @@ Production rollout must not replace the current working surface with a database-
 - Legacy list writers must participate in revision checks, and uncertain requests need queryable receipts.
 - Agent work completion must validate required output references and enforce saved tools/checkpoints server-side.
 - New editors should use readable offer revision/ICP labels, not require users to paste internal IDs.
-- Multi-list template apply, CSV export, frozen membership, paused delivery, and resumable readback are implemented in this tree. Hosted cutover is not.
+- Multi-list template apply, CSV export, frozen membership, paused delivery, and resumable readback are implemented and hosted. Instantly activation is still off.
 
 ## Follow-up validation and outstanding work
 
@@ -47,9 +47,10 @@ Production rollout must not replace the current working surface with a database-
 - Recipient table filters (draft/verification), frozen all-matching membership jobs, and `administrative_region` filters are wired through SQL, API, delivery, jobs, MCP, and the table chrome.
 - Company list reads use `outbound_pipeline_companies(filters, after, limit)` plus `outbound_pipeline_company_count` so PostgREST cannot materialize the full filtered set before LIMIT. The 17 Sep CI failure (`representative-scale` p95 1531.5ms / 100k) was this materialization. GitHub rerun on `17e61ef` passed: p95 **815.5ms** / 100k, `target_met: true`. Local 100k is still forbidden on this Mac (`PIPELINE_BENCHMARK_COMPANIES` > 1000 throws unless `CI`).
 - Day-planner and goals service-role imports are pre-existing (present on `924fe9b` / origin/main). Test 1 now excludes `/api/day-planner/` and `/api/goals/`. Test 2 inventories those routes plus new readback routes and previously missing agent goals/instructions/lineage files. This PR does not change day-planner/goals behavior. Deploy-guards `verify` on `17e61ef` succeeded with that inventory.
-- Separate `COMPASS_OUTBOUND_PIPELINE_SURFACE` flag still keeps Overview available. No production migration, flag cutover, Instantly activation, or paid prospect run.
-- Still blocked: independent review; hosted schema/data/flag rehearsal; viewport/zoom visual acceptance. Instantly activation and paid prospect runs remain out of scope.
+- Production cutover 17 Sep 2026: PR 91 merged to `main`. Hosted schema applied on `prllawgzxzrjitnjxgkn`. Production env has `COMPASS_CRM_RESEARCH`, `COMPASS_CRM_RESEARCH_WRITES`, `COMPASS_OUTBOUND_PIPELINE`, `COMPASS_OUTBOUND_PIPELINE_WRITES`, and `COMPASS_OUTBOUND_PIPELINE_SURFACE`. Live alias `https://compass-web-eosin.vercel.app`. Agent capabilities: `schema_ready`/`surface_ready`/`writable` true, `activation` false.
+- Legacy import finished against production: 18,095 leads, 17,752 imported, 343 held (`missing_company_name`), 17,741 `crm_companies`, 17,752 confirmed `crm_lead_links`, 0 pipeline memberships (no saved lists). Instantly mailbox lead ids (`inst-mail-*@*`) are accepted. Packet size raised to 100.
+- Still blocked: independent review; viewport/zoom visual acceptance. Instantly activation and paid prospect runs remain out of scope.
 
-## Draft review checkpoint
+## Live checkpoint
 
-Pushed checkpoint is `17e61ef` on draft PR 91. Remaining pipeline/readback/AI/scale work from the dirty tree is on that commit. Prototype paths under `design-plans/2026-09-16-miro-fixes/`, `design-plans/2026-09-16-workflow-prototype/`, and `public/outbound-pipeline-prototype.html` stay untracked.
+Production is `main` after the mailbox-id hotfix plus this packet-limit/docs follow-up. Implementation SHA `17e61ef`. Prototype paths under `design-plans/2026-09-16-miro-fixes/`, `design-plans/2026-09-16-workflow-prototype/`, and `public/outbound-pipeline-prototype.html` stay untracked.

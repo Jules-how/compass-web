@@ -40,7 +40,7 @@ async function call(body) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(60000),
+        signal: AbortSignal.timeout(120000),
   });
   const result = await response.json();
   if (!response.ok)
@@ -56,7 +56,7 @@ if (!apply) {
     action: "preview",
     after: "",
     until: null,
-    limit: 25,
+    limit: 100,
   });
   console.log(
     JSON.stringify(
@@ -132,7 +132,7 @@ while (!state.complete) {
     action: "preview",
     after: state.after,
     until: state.until,
-    limit: 25,
+    limit: 100,
   });
   if (!page.rows.length) {
     state.complete = true;
