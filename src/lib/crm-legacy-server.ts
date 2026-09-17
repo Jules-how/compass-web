@@ -1,6 +1,5 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { z } from "zod";
 import { CrmValidationError } from "./crm-research-schema";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -9,40 +8,19 @@ import {
   requireCrmResearch,
 } from "./crm-research-server";
 import {
+  legacyBridgeCommandSchema,
   legacyId,
   legacyOperations,
   type LegacyLead,
 } from "./crm-legacy-import";
 import { canonicalPipeline } from "./outbound-pipeline-schema";
 import { requirePipeline } from "./outbound-pipeline-server";
-
-const id = z
-  .string()
-  .min(1)
-  .max(160)
-  .regex(/^[a-zA-Z0-9_:.-]+$/);
-const commandSchema = z.discriminatedUnion("action", [
-  z.strictObject({
-    action: z.literal("preview"),
-    after: z.string().max(160).default(""),
-    until: id.nullable().default(null),
-    limit: z.number().int().min(1).max(25).default(25),
-  }),
-  z.strictObject({
-    action: z.literal("import"),
-    request_id: id,
-    rows: z
-      .array(z.strictObject({ id, updated_at: z.string().nullable() }))
-      .min(1)
-      .max(25),
-  }),
-]);
 export async function bridgeLegacyCrm(
   db: SupabaseClient,
   input: unknown,
   actor: string,
 ) {
-  const parsed = commandSchema.safeParse(input);
+  const parsed = legacyBridgeCommandSchema.safeParse(input);
   if (!parsed.success)
     throw new CrmValidationError(
       parsed.error.issues.map((i) => ({

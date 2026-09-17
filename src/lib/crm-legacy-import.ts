@@ -1,9 +1,35 @@
 import { createHash } from "node:crypto";
+import { z } from "zod";
 import {
   parseCrmCommand,
   normalizeCrmMethod,
+  crmLeadId,
   type CrmOperation,
 } from "./crm-research-schema";
+
+const requestId = z
+  .string()
+  .min(1)
+  .max(160)
+  .regex(/^[a-zA-Z0-9_:.-]+$/);
+export const legacyBridgeCommandSchema = z.discriminatedUnion("action", [
+  z.strictObject({
+    action: z.literal("preview"),
+    after: z.string().max(160).default(""),
+    until: crmLeadId.nullable().default(null),
+    limit: z.number().int().min(1).max(25).default(25),
+  }),
+  z.strictObject({
+    action: z.literal("import"),
+    request_id: requestId,
+    rows: z
+      .array(
+        z.strictObject({ id: crmLeadId, updated_at: z.string().nullable() }),
+      )
+      .min(1)
+      .max(25),
+  }),
+]);
 
 export type LegacyLead = Record<string, unknown> & {
   id: string;

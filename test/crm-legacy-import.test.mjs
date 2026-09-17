@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import {PGlite} from '@electric-sql/pglite'
 import {loadTypescript} from './helpers/load-typescript.mjs'
-const {legacyOperations,legacyCompanyId}=loadTypescript('src/lib/crm-legacy-import.ts')
+const {legacyOperations,legacyCompanyId,legacyBridgeCommandSchema}=loadTypescript('src/lib/crm-legacy-import.ts')
+const schema=loadTypescript('src/lib/crm-research-schema.ts')
 const lead={id:'lead-a',updated_at:'2026-09-01T00:00:00Z',company:'Example HVAC',website:'https://example.test/',city:'Sydney',state:'NSW',name:'Jo',role:'Owner',email:'jo@example.test',phone:'02 9000 0000',icp_status:'qualified',email_verify_status:'valid',opener:'Historical exact copy',outbound_status:'replied',suppression_reason:'opt_out'}
 
 test('legacy bridge separates shared domains and preserves uncertain attribution',()=>{
@@ -17,6 +18,17 @@ test('legacy bridge separates shared domains and preserves uncertain attribution
  assert.equal(built.operations.find(o=>o.kind==='company').record.identity_status,'unreviewed')
  assert.equal(built.operations.find(o=>o.kind==='affiliation').record.state,'unknown')
  assert.equal(legacyOperations({...lead,company:''},{existing:new Set(),methodIds:new Map()}).operations.length,0)
+})
+
+test('legacy bridge accepts Instantly mailbox lead ids without holding the packet',()=>{
+ const mailbox='inst-mail-accounts@roofright.net.au'
+ const parsed=legacyBridgeCommandSchema.safeParse({action:'import',request_id:'legacy-bridge-abc',rows:[{id:mailbox,updated_at:lead.updated_at}]})
+ assert.equal(parsed.success,true)
+ assert.equal(legacyBridgeCommandSchema.safeParse({action:'import',request_id:'legacy-bridge-abc',rows:[{id:'inst-mail-foo bar',updated_at:null}]}).success,false)
+ const built=legacyOperations({...lead,id:mailbox},{existing:new Set(),methodIds:new Map()})
+ assert.ok(built.operations.length)
+ assert.equal(built.operations.find(o=>o.kind==='lead_link').record.lead_id,mailbox)
+ assert.doesNotThrow(()=>schema.parseCrmCommand({schema_version:'crm.research.v1',request_id:'legacy-validation',source:'Legacy bridge',operations:built.operations}))
 })
 
 test('bounded legacy bridge is atomic, idempotent, source-preserving and leaves sending state intact',async()=>{

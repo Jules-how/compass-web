@@ -14,6 +14,12 @@ test('strict packets reject unknown fields and invalid observations before any p
   assert.throws(()=>schema.parseCrmCommand(packet([op('observation',{...observation,observed_at:null})])),/observation date/)
   assert.throws(()=>schema.parseCrmCommand(packet([op('company',{id:'c',name:'Company'}),op('company',{id:'c',name:'Other'})])),/One operation/)
 })
+test('lead links accept Instantly mailbox ids while record ids stay strict',()=>{
+  const mailbox='inst-mail-accounts@roofright.net.au'
+  assert.equal(schema.crmLeadId.safeParse(mailbox).success,true)
+  assert.equal(schema.parseCrmCommand(packet([op('lead_link',{id:'link',lead_id:mailbox,company_id:'company',match_state:'confirmed',reason:'Deterministic source-row mapping; company identity remains unreviewed.',source_id:'source'})])).operations[0].record.lead_id,mailbox)
+  assert.throws(()=>schema.parseCrmCommand(packet([op('company',{id:mailbox,name:'Company'})])),schema.CrmValidationError)
+})
 test('mailbox validity cannot establish personal attribution',()=>{
   for(const evidence_type of ['provider_assertion','generation','legacy_import'])assert.throws(()=>schema.parseCrmCommand(packet([op('observation',{...observation,company_id:null,candidate_id:'candidate',fact_key:'person_attribution',value:'supported',evidence_type})])),/cannot establish/)
   for(const mailbox_result of ['catch_all','unknown','invalid','valid','risky'])assert.equal(schema.parseCrmCommand(packet([op('verification',{id:'v',method_id:'m',provider:'Fixture',provider_request_id:'p',submitted_address:'JO@EXAMPLE.TEST',checked_at:'2026-09-01T00:00:00Z',attempt_state:'completed',mailbox_result})])).operations[0].record.mailbox_result,mailbox_result)

@@ -45,7 +45,9 @@ async function call(body) {
   const result = await response.json();
   if (!response.ok)
     throw new Error(
-      `${response.status}: ${result.error || "legacy bridge failed"}`,
+      `${response.status}: ${result.error || "legacy bridge failed"}${
+        result.issues ? " " + JSON.stringify(result.issues) : ""
+      }`,
     );
   return result;
 }
