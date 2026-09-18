@@ -11,14 +11,10 @@ import './documents-workspace.css'
 import './projects-workspace.css'
 import { AuthProvider } from '@/components/AuthProvider'
 
+// Next generates typed, cache-versioned links from icon.svg, favicon.ico and apple-icon.png.
 export const metadata: Metadata = {
   title: 'Compass',
-  description: 'Operator management console for switchflow.',
-  icons: {
-    icon: '/icon.svg',
-    shortcut: '/icon.svg',
-    apple: '/icon.svg'
-  }
+  description: 'Operator management console for switchflow.'
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
