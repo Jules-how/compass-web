@@ -29,6 +29,7 @@ export function ResearchCards({ policy, onChange }: { policy: WorkflowPolicy; on
         return <article key={signal.id} className="op-research-card">
           <div className="op-card-top"><span className="op-chip">{signal.writing_eligible ? "Available in writing" : "Research only"}</span><button type="button" className="op-icon-button" aria-label={`Remove signal ${index + 1}`} onClick={() => onChange({ ...policy, signals: policy.signals.filter(value => value.id !== signal.id) })}><X size={14} /></button></div>
           <Field label="Signal"><input required placeholder="For example: ducted installation service" value={signal.label} onChange={event => update({ label: event.target.value })} /></Field>
+          <Field label="Signal category" hint="For example: service, location, founder or recent event. Used in copy results."><input value={signal.category || ""} onChange={event => update({ category: event.target.value || undefined })} placeholder="service" /></Field>
           <Field label="What to collect"><textarea rows={2} value={signal.collection_instructions} onChange={event => update({ collection_instructions: event.target.value })} /></Field>
           <details className="op-card-settings"><summary><SlidersHorizontal size={13} aria-hidden="true" />Evidence and writing settings</summary>
             <Field label="Acceptable evidence"><textarea rows={2} value={signal.acceptable_evidence} onChange={event => update({ acceptable_evidence: event.target.value })} /></Field>

@@ -1,0 +1,39 @@
+name: Copy Control
+
+on:
+  push:
+    branches: [main, feat/write-copy-control-studio]
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - 'mcp/**'
+      - '.github/workflows/copy-control.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: copy-control-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - name: Copy Control engine, routes, attribution and executor tests
+        run: node --test test/copy-control*.test.mjs
+      - name: Production build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: public-anon-key
+          COMPASS_OPEN_OPERATOR: '1'
+        run: npm run build

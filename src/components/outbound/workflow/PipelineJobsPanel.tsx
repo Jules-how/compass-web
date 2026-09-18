@@ -1,4 +1,6 @@
 "use client";
+import { copyControlNeedsAI } from '@/lib/copy-control';
+import type { TemplatePolicy } from '@/lib/outbound-pipeline';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PIPELINE_VERSION } from "@/lib/outbound-pipeline";
 import {
@@ -49,6 +51,7 @@ export function PipelineJobsPanel({
       "city",
       "fit",
     ]);
+  const [overwriteManual, setOverwriteManual] = useState(false);
   const [processing, setProcessing] = useState(false),
     [showItems, setShowItems] = useState(false),
     [after, setAfter] = useState("");
@@ -83,7 +86,7 @@ export function PipelineJobsPanel({
     Boolean(
       job?.config.policy &&
         typeof job.config.policy === "object" &&
-        (job.config.policy as { mode?: string }).mode === "ai",
+        ((job.config.policy as { mode?: string }).mode === "ai" || copyControlNeedsAI((job.config.policy as TemplatePolicy).copy_control)),
     );
   const availableColumns =
     grain === "companies" ? COMPANY_EXPORT_COLUMNS : RECIPIENT_EXPORT_COLUMNS;
@@ -145,6 +148,7 @@ export function PipelineJobsPanel({
   }
   async function process() {
     if (!job || aiApply) return;
+    if (overwriteManual && !window.confirm("Replace manual recipient edits in this frozen scope? Their exact history is retained.")) return;
     setProcessing(true);
     let current = job;
     try {
@@ -155,14 +159,14 @@ export function PipelineJobsPanel({
           kind === "template_apply" &&
           current.config.policy &&
           typeof current.config.policy === "object" &&
-          (current.config.policy as { mode?: string }).mode === "ai"
+          ((current.config.policy as { mode?: string }).mode === "ai" || copyControlNeedsAI((current.config.policy as TemplatePolicy).copy_control))
         )
       ) {
         const result = await send(
           kind === "template_apply" ? "apply_chunk" : "export_chunk",
           current.id,
           current.revision,
-          {},
+          kind === "template_apply" ? { overwrite_manual: overwriteManual } : {},
         );
         if (!result) break;
         current = result.job;
@@ -180,6 +184,7 @@ export function PipelineJobsPanel({
         kind === "template_apply" ? "Template application" : "CSV export"
       }
     >
+      {kind === "template_apply" && <label className="op-check"><input type="checkbox" checked={overwriteManual} disabled={blocked} onChange={e => setOverwriteManual(e.target.checked)} />Explicitly allow replacing manual edits (new Copy Control templates protect them by default)</label>}
       {kind === "export" && (
         <>
           <h3>CSV export</h3>

@@ -484,10 +484,11 @@ export function WorkflowWorkspace() {
     requiresVerificationRun: workflow?.policy.verification.reuse_days === 0, verificationRunId,
   });
   return (
-    <section className="op-pipeline" aria-label="Outbound lead pipeline">
+    <section className={`op-pipeline ${view === "write" ? "op-copy-focused" : ""}`} aria-label="Outbound lead pipeline">
       <header className="op-toolbar">
         <div className="op-inline">
           <PipelinePicker label="Working list" value={listId} placeholder="All companies" options={[{ value: "", label: "All companies", description: "Browse markets before building a working list" }, ...listOptions.map(value => ({ value: value.id, label: value.name }))]} onChange={id => navigate({ list_id: id })} />
+          {view === "write" && <PipelinePicker label="Writing template" value={templateId} placeholder="New template" options={templateOptions.map(value => ({ value: value.id, label: value.name }))} onChange={id => { if (!dirty || window.confirm("Switch template? Unsaved edits stay in this tab.")) { setDirty(false); setTemplateId(id); } }} onCreate={() => { if (!dirty || window.confirm("Start a new template? Unsaved edits stay in this tab.")) { setDirty(false); setTemplateId(""); } }} createLabel="New writing template" />}
           <button onClick={() => setCreateOpen(true)} disabled={!writable}>
             New list
           </button>
@@ -502,7 +503,7 @@ export function WorkflowWorkspace() {
             Runs
           </button>
           <button onClick={refresh} disabled={rows.loading}>Refresh</button>
-          <button id="outbound-export-toggle" aria-expanded={exportOpen} aria-controls="outbound-export-panel" disabled={!readable || view !== "table" || (usesMarketRows && (!market.data || market.loading || Boolean(market.error) || (!selected.size && (marketRecords.length > 1000 || marketRecords.length === 0))))} onClick={() => {
+          <button hidden={view === "write"} id="outbound-export-toggle" aria-expanded={exportOpen} aria-controls="outbound-export-panel" disabled={!readable || view !== "table" || (usesMarketRows && (!market.data || market.loading || Boolean(market.error) || (!selected.size && (marketRecords.length > 1000 || marketRecords.length === 0))))} onClick={() => {
             if (stage === "list") setListDisplay("table");
             setExportOpen(value => !value);
             requestAnimationFrame(() => document.getElementById("outbound-export-panel")?.scrollIntoView({ block: "nearest" }));
@@ -570,18 +571,18 @@ export function WorkflowWorkspace() {
                 {error}
               </p>
             ))}
-          <section className="op-workspace-setup" aria-label="Working list configuration">
-            <div className="op-setup-heading"><strong>{list ? list.name : "Build a reusable outbound workflow"}</strong><span>{list ? "Saved list · shared with your connected agent" : "Choose an offer and ICP once; reuse the workflow across city lists."}</span></div>
+          <details className="op-workspace-setup" aria-label="Working list configuration" open={view === "write" ? undefined : true}>
+            <summary className="op-setup-heading"><strong>{view === "write" ? "List & research settings" : list ? list.name : "Build a reusable outbound workflow"}</strong><span>{view === "write" ? workflow?.name || "Choose a research workflow" : list ? "Saved list · shared with your connected agent" : "Choose an offer and ICP once; reuse the workflow across city lists."}</span></summary>
             <div className="op-setup-controls">
               <PipelinePicker label="Research workflow" value={activeWorkflowId} placeholder="Choose or create a workflow" disabled={!writable || blocked} options={workflowOptions.map(value => ({ value: value.id, label: value.name, description: `${value.policy.criteria.length} ICP rules · ${value.policy.signals.length} writing signals` }))} onChange={id => void attachWorkflow(id)} onCreate={() => { setNewWorkflow(true); edit("research"); }} createLabel="Create research workflow" />
               <button onClick={() => { setNewWorkflow(false); edit("research"); }}>{workflow ? "Edit workflow" : "Create workflow"}</button>
-              <PipelinePicker label="Writing template" value={templateId} placeholder="Start a new message template" options={templateOptions.map(value => ({ value: value.id, label: value.name, description: `${value.policy.variations?.length || 0} signal variations` }))} onChange={id => {
+              <PipelinePicker label="Writing template" value={templateId} placeholder="Start a new message template" options={templateOptions.map(value => ({ value: value.id, label: value.name, description: value.policy.copy_control ? `${value.policy.copy_control.components.reduce((n, c) => n + c.variants.length, 0)} component variants` : `${value.policy.variations?.length || 0} signal variations` }))} onChange={id => {
                 if (!dirty || window.confirm("Switch template? Unsaved changes remain in this browser tab.")) { setDirty(false); setTemplateId(id); edit("write"); }
               }} onCreate={() => { if (!dirty || window.confirm("Start a new template? Your current draft remains in this tab.")) { setDirty(false); setTemplateId(""); edit("write"); } }} createLabel="Create writing template" />
               <button onClick={() => edit("write")}>Write messages</button>
             </div>
             {!list && <p>Creating a workflow does not need a list. Choose <strong>New list</strong> to save a working list with this workflow; add selected accounts to it below.</p>}
-          </section>
+          </details>
           {stage === "verify" && view === "table" && <VerificationGuide />}
           {stage === "contacts" && view === "table" && <p className="op-notice">Companies are business accounts. This step finds the people and contact routes inside each account. Open a company to inspect its owner, work email, business phone or unresolved candidates.</p>}
           {stage === "list" && view === "table" && <section className="op-market-controls" aria-label="Market and ICP filters">
@@ -833,12 +834,13 @@ export function WorkflowWorkspace() {
           )}
           {view === "write" && (!templateId || template) && (
             <WriteEditor
-              key={`${listId}:${templateId}:${recipient?.id || "none"}`}
+              key={`${listId}:${templateId}`}
               version={template}
               onVersionSaved={setTemplateId}
               lists={listOptions}
               list={list}
               recipient={recipient}
+              onSelectRecipient={value => setRecipient(value as RecipientRow)}
               signals={workflow?.policy.signals || []}
               writable={writable}
               onSaved={refresh}

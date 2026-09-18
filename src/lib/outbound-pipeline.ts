@@ -1,3 +1,4 @@
+import { renderCopyControl, type CopyControlConfig, type CopyControlTrace, type CopyRenderContext } from './copy-control';
 /** Shared durable outbound contract. IDs reuse CRM/list identities; new IDs are UUIDs. */
 export const PIPELINE_VERSION = 'outbound.pipeline.v1' as const;
 export type PipelineStage = 'list' | 'research' | 'contacts' | 'verify' | 'write';
@@ -11,6 +12,8 @@ export type Criterion = {
     evidence_ids: string[];
 };
 export type SignalDefinition = {
+    /** Explicit research taxonomy; legacy signals remain individually uncategorised. */
+    category?: string;
     id: string;
     label: string;
     collection_instructions: string;
@@ -64,6 +67,7 @@ export type SignalVariation = {
     copy: Pick<Copy, 'subject' | 'opener' | 'body' | 'cta' | 'unsubscribe'>;
 };
 export type TemplatePolicy = {
+    copy_control?: CopyControlConfig;
     mode: 'deterministic' | 'ai';
     variations?: SignalVariation[];
     subject: string;
@@ -87,6 +91,7 @@ export type TemplatePolicy = {
     }[];
 };
 export type Copy = {
+    copy_control?: CopyControlTrace;
     subject: string;
     opener: string;
     body: string;
@@ -300,10 +305,17 @@ export function selectPipelineVariation(policy: TemplatePolicy, signals: Record<
         return variation.match === 'all' ? matches.every(Boolean) : matches.some(Boolean);
     }) || null;
 }
-export function renderPipelineTemplate(policy: TemplatePolicy, signals: Record<string, string>): {
+export function renderPipelineTemplate(policy: TemplatePolicy, signals: Record<string, string>, context: CopyRenderContext = {}): {
     copy: Copy;
     missing: string[];
 } {
+    if (policy.copy_control) {
+        const plan = renderCopyControl(policy.copy_control, signals, [], context);
+        // Follow-ups retain their existing shared-slot contract; do not leak unresolved tokens.
+        const legacy = renderPipelineTemplate({ ...policy, mode: 'deterministic', copy_control: undefined, variations: [], subject: '', opener: '', body: '', cta: '', unsubscribe: '' }, signals);
+        plan.copy.followups = legacy.copy.followups;
+        return { copy: plan.copy, missing: [...new Set([...plan.missing, ...legacy.missing, ...plan.pending_ai.map(p => `AI generation required: ${p.component_id}`)])] };
+    }
     if (policy.mode !== 'deterministic')
         throw new Error('pipeline_ai_executor_required');
     const content = selectPipelineVariation(policy, signals)?.copy || policy;
